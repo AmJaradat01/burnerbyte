@@ -1,0 +1,51 @@
+.PHONY: run-api run-smtp build lint docker-up docker-down migrate-up migrate-down migrate-create migrate-test
+
+DATABASE_URL ?= postgres://burnerbyte:burnerbyte@localhost:5432/burnerbyte?sslmode=disable
+MIGRATE := migrate -database "$(DATABASE_URL)" -path migrations
+
+# ── Run ──
+
+run-api:
+	go run ./cmd/api
+
+run-smtp:
+	go run ./cmd/smtpd
+
+# ── Build ──
+
+build:
+	CGO_ENABLED=0 go build -o bin/api ./cmd/api
+	CGO_ENABLED=0 go build -o bin/smtpd ./cmd/smtpd
+
+lint:
+	golangci-lint run ./...
+
+# ── Docker ──
+
+docker-up:
+	docker compose up -d
+
+docker-down:
+	docker compose down
+
+# ── Migrations ──
+
+migrate-up:
+	$(MIGRATE) up
+
+migrate-down:
+	$(MIGRATE) down 1
+
+migrate-create:
+	@read -p "Migration name: " name; \
+	$(MIGRATE) create -ext sql -dir migrations -seq $$name
+
+migrate-test:
+	@echo "Testing migrations (up then down for each)..."
+	@for i in $$(seq 1 $$(ls migrations/*.up.sql 2>/dev/null | wc -l)); do \
+		echo "  Migration $$i: up..."; \
+		$(MIGRATE) up 1 || exit 1; \
+		echo "  Migration $$i: down..."; \
+		$(MIGRATE) down 1 || exit 1; \
+	done
+	@echo "All migrations passed."
