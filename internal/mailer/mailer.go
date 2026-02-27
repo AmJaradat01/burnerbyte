@@ -102,3 +102,7 @@ func truncate(s string, n int) string {
 	}
 	return s[:n] + "..."
 }
+
+func (m *Mailer) Reconfigure(cfg config.MailerConfig) {
+	m.cfg = cfg
+}
