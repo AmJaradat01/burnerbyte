@@ -73,6 +73,8 @@ func main() {
 	teamRepo := postgres.NewTeamRepo(pool)
 	assignmentRepo := postgres.NewDomainAssignmentRepo(pool)
 	inboxRepo := postgres.NewInboxRepo(pool)
+	emailRepo := postgres.NewEmailRepo(pool)
+	attachmentRepo := postgres.NewAttachmentRepo(pool)
 
 	// Services
 	authSvc := service.NewAuthService(pool, userRepo, sessionRepo, tokenMgr, lockout, ml, cfg)
@@ -82,6 +84,8 @@ func main() {
 	assignmentSvc := service.NewDomainAssignmentService(assignmentRepo, domainRepo)
 	redisInboxRepo := redisrepo.NewInboxRepo(rdb)
 	inboxSvc := service.NewInboxService(inboxRepo, redisInboxRepo, assignmentRepo, domainRepo, orgRepo, cfg)
+	emailSvc := service.NewEmailService(emailRepo, inboxRepo)
+	_ = attachmentRepo // Used in attachment handler, wired below
 
 	// Handlers
 	authHandler := handler.NewAuthHandler(authSvc)
@@ -90,6 +94,7 @@ func main() {
 	teamHandler := handler.NewTeamHandler(teamSvc)
 	assignmentHandler := handler.NewDomainAssignmentHandler(assignmentSvc)
 	inboxHandler := handler.NewInboxHandler(inboxSvc)
+	emailHandler := handler.NewEmailHandler(emailSvc)
 
 	// Auth middleware
 	authMw := auth.Middleware(tokenMgr, userRepo)
@@ -123,6 +128,7 @@ func main() {
 		teamHandler.Routes(r, authMw)
 		assignmentHandler.Routes(r, authMw)
 		inboxHandler.Routes(r, authMw)
+		emailHandler.Routes(r, authMw)
 	})
 
 	addr := fmt.Sprintf(":%d", cfg.Server.Port)
