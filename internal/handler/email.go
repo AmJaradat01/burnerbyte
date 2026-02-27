@@ -19,14 +19,11 @@ func NewEmailHandler(svc *service.EmailService) *EmailHandler {
 	return &EmailHandler{svc: svc}
 }
 
-func (h *EmailHandler) Routes(r chi.Router, authMw func(http.Handler) http.Handler) {
-	r.Group(func(r chi.Router) {
-		r.Use(authMw)
+func (h *EmailHandler) Routes(r chi.Router) {
 		r.Get("/inboxes/{inboxId}/emails", h.ListEmails)
 		r.Get("/emails/{emailId}", h.GetEmail)
 		r.Patch("/emails/{emailId}", h.MarkReadUnread)
 		r.Delete("/emails/{emailId}", h.DeleteEmail)
-	})
 }
 
 func (h *EmailHandler) ListEmails(w http.ResponseWriter, r *http.Request) {

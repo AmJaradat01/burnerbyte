@@ -15,14 +15,11 @@ func NewAnalyticsHandler(svc *service.AnalyticsService) *AnalyticsHandler {
 	return &AnalyticsHandler{svc: svc}
 }
 
-func (h *AnalyticsHandler) Routes(r chi.Router, authMw func(http.Handler) http.Handler) {
-	r.Group(func(r chi.Router) {
-		r.Use(authMw)
+func (h *AnalyticsHandler) Routes(r chi.Router) {
 		r.Get("/orgs/{orgId}/analytics", h.OrgAnalytics)
 		r.Get("/orgs/{orgId}/analytics/emails-per-day", h.OrgEmailsPerDay)
 		r.Get("/orgs/{orgId}/teams/{teamId}/analytics", h.TeamAnalytics)
 		r.Get("/orgs/{orgId}/teams/{teamId}/analytics/emails-per-day", h.TeamEmailsPerDay)
-	})
 }
 
 func (h *AnalyticsHandler) OrgAnalytics(w http.ResponseWriter, r *http.Request) {
