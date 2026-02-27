@@ -9,9 +9,15 @@ export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient({
     defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
   }));
+  const [mounted, setMounted] = useState(false);
   const fetchMe = useAuthStore((s) => s.fetchMe);
 
-  useEffect(() => { fetchMe(); }, [fetchMe]);
+  useEffect(() => {
+    setMounted(true);
+    fetchMe();
+  }, [fetchMe]);
+
+  if (!mounted) return null;
 
   return (
     <QueryClientProvider client={queryClient}>
