@@ -13,9 +13,17 @@ import (
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/redis/go-redis/v9"
 
+	"gitlab.com/amjaradat01/burnerbyte/internal/auth"
 	"gitlab.com/amjaradat01/burnerbyte/internal/config"
+	"gitlab.com/amjaradat01/burnerbyte/internal/database"
+	"gitlab.com/amjaradat01/burnerbyte/internal/handler"
+	"gitlab.com/amjaradat01/burnerbyte/internal/mailer"
+	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
+	"gitlab.com/amjaradat01/burnerbyte/internal/service"
 )
 
 func main() {
@@ -28,9 +36,49 @@ func main() {
 	logger := setupLogger(cfg.Logging)
 	slog.SetDefault(logger)
 
-	r := chi.NewRouter()
+	ctx := context.Background()
 
-	// Middleware stack
+	// Database connections
+	pool, err := database.NewPostgres(ctx, cfg.Database)
+	if err != nil {
+		slog.Error("failed to connect to postgres", "error", err)
+		os.Exit(1)
+	}
+	defer pool.Close()
+
+	rdb, err := database.NewRedis(ctx, cfg.Redis)
+	if err != nil {
+		slog.Error("failed to connect to redis", "error", err)
+		os.Exit(1)
+	}
+	defer rdb.Close()
+
+	// Mailer
+	ml, err := mailer.New(cfg.Mailer)
+	if err != nil {
+		slog.Error("failed to init mailer", "error", err)
+		os.Exit(1)
+	}
+
+	// Auth components
+	tokenMgr := auth.NewTokenManager(cfg.JWT)
+	lockout := auth.NewLockout(rdb, cfg.Lockout.MaxAttempts, cfg.Lockout.Duration)
+
+	// Repositories
+	userRepo := postgres.NewUserRepo(pool)
+	sessionRepo := postgres.NewSessionRepo(pool)
+
+	// Services
+	authSvc := service.NewAuthService(pool, userRepo, sessionRepo, tokenMgr, lockout, ml, cfg)
+
+	// Handlers
+	authHandler := handler.NewAuthHandler(authSvc)
+
+	// Auth middleware
+	authMw := auth.Middleware(tokenMgr, userRepo)
+
+	// Router
+	r := chi.NewRouter()
 	r.Use(chimw.RequestID)
 	r.Use(chimw.RealIP)
 	r.Use(requestLogger(logger))
@@ -45,13 +93,15 @@ func main() {
 
 	// Health & metrics
 	r.Get("/healthz", healthz)
-	r.Get("/readyz", readyz)
+	r.Get("/readyz", readyz(pool, rdb))
 	if cfg.Metrics.Enabled {
 		r.Handle(cfg.Metrics.Path, promhttp.Handler())
 	}
 
-	// API v1 placeholder — routes added in subsequent feature branches
-	r.Route("/api/v1", func(r chi.Router) {})
+	// API v1
+	r.Route("/api/v1", func(r chi.Router) {
+		authHandler.Routes(r, authMw)
+	})
 
 	addr := fmt.Sprintf(":%d", cfg.Server.Port)
 	srv := &http.Server{
@@ -62,7 +112,6 @@ func main() {
 		IdleTimeout:  cfg.Server.IdleTimeout,
 	}
 
-	// Graceful shutdown
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, syscall.SIGINT, syscall.SIGTERM)
 
@@ -77,13 +126,12 @@ func main() {
 	<-done
 	slog.Info("shutting down api server")
 
-	ctx, cancel := context.WithTimeout(context.Background(), cfg.Server.ShutdownTimeout)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.Server.ShutdownTimeout)
 	defer cancel()
 
-	if err := srv.Shutdown(ctx); err != nil {
+	if err := srv.Shutdown(shutdownCtx); err != nil {
 		slog.Error("shutdown error", "error", err)
 	}
-
 	slog.Info("api server stopped")
 }
 
@@ -93,11 +141,29 @@ func healthz(w http.ResponseWriter, _ *http.Request) {
 	w.Write([]byte(`{"status":"ok"}`))
 }
 
-func readyz(w http.ResponseWriter, _ *http.Request) {
-	// TODO(feature/002): check DB + Redis connectivity
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"status":"ok"}`))
+func readyz(pool *pgxpool.Pool, rdb *redis.Client) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+		defer cancel()
+
+		if err := pool.Ping(ctx); err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusServiceUnavailable)
+			w.Write([]byte(`{"status":"error","detail":"database unavailable"}`))
+			return
+		}
+
+		if err := rdb.Ping(ctx).Err(); err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusServiceUnavailable)
+			w.Write([]byte(`{"status":"error","detail":"redis unavailable"}`))
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status":"ok"}`))
+	}
 }
 
 func setupLogger(cfg config.LoggingConfig) *slog.Logger {
@@ -114,14 +180,13 @@ func setupLogger(cfg config.LoggingConfig) *slog.Logger {
 	}
 
 	opts := &slog.HandlerOptions{Level: level}
-	var handler slog.Handler
+	var h slog.Handler
 	if cfg.Format == "text" {
-		handler = slog.NewTextHandler(os.Stdout, opts)
+		h = slog.NewTextHandler(os.Stdout, opts)
 	} else {
-		handler = slog.NewJSONHandler(os.Stdout, opts)
+		h = slog.NewJSONHandler(os.Stdout, opts)
 	}
-
-	return slog.New(handler)
+	return slog.New(h)
 }
 
 func requestLogger(logger *slog.Logger) func(http.Handler) http.Handler {
