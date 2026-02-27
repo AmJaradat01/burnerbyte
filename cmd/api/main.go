@@ -23,6 +23,7 @@ import (
 	"gitlab.com/amjaradat01/burnerbyte/internal/handler"
 	"gitlab.com/amjaradat01/burnerbyte/internal/mailer"
 	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
+	redisrepo "gitlab.com/amjaradat01/burnerbyte/internal/repository/redis"
 	"gitlab.com/amjaradat01/burnerbyte/internal/service"
 )
 
@@ -71,6 +72,7 @@ func main() {
 	domainRepo := postgres.NewDomainRepo(pool)
 	teamRepo := postgres.NewTeamRepo(pool)
 	assignmentRepo := postgres.NewDomainAssignmentRepo(pool)
+	inboxRepo := postgres.NewInboxRepo(pool)
 
 	// Services
 	authSvc := service.NewAuthService(pool, userRepo, sessionRepo, tokenMgr, lockout, ml, cfg)
@@ -78,6 +80,8 @@ func main() {
 	domainSvc := service.NewDomainService(domainRepo, orgRepo, cfg)
 	teamSvc := service.NewTeamService(pool, teamRepo, orgRepo, cfg)
 	assignmentSvc := service.NewDomainAssignmentService(assignmentRepo, domainRepo)
+	redisInboxRepo := redisrepo.NewInboxRepo(rdb)
+	inboxSvc := service.NewInboxService(inboxRepo, redisInboxRepo, assignmentRepo, domainRepo, orgRepo, cfg)
 
 	// Handlers
 	authHandler := handler.NewAuthHandler(authSvc)
@@ -85,6 +89,7 @@ func main() {
 	domainHandler := handler.NewDomainHandler(domainSvc)
 	teamHandler := handler.NewTeamHandler(teamSvc)
 	assignmentHandler := handler.NewDomainAssignmentHandler(assignmentSvc)
+	inboxHandler := handler.NewInboxHandler(inboxSvc)
 
 	// Auth middleware
 	authMw := auth.Middleware(tokenMgr, userRepo)
@@ -117,6 +122,7 @@ func main() {
 		domainHandler.Routes(r, authMw)
 		teamHandler.Routes(r, authMw)
 		assignmentHandler.Routes(r, authMw)
+		inboxHandler.Routes(r, authMw)
 	})
 
 	addr := fmt.Sprintf(":%d", cfg.Server.Port)
