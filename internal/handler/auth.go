@@ -23,28 +23,23 @@ func NewAuthHandler(svc *service.AuthService) *AuthHandler {
 	return &AuthHandler{svc: svc}
 }
 
-func (h *AuthHandler) Routes(r chi.Router, authMw func(http.Handler) http.Handler) {
-	r.Route("/auth", func(r chi.Router) {
-		// Public
-		r.Post("/register", h.Register)
-		r.Post("/login", h.Login)
-		r.Post("/refresh", h.Refresh)
-		r.Post("/forgot-password", h.ForgotPassword)
-		r.Post("/reset-password", h.ResetPassword)
-		r.Get("/verify-email/{token}", h.VerifyEmail)
+func (h *AuthHandler) PublicRoutes(r chi.Router) {
+	r.Post("/auth/register", h.Register)
+	r.Post("/auth/login", h.Login)
+	r.Post("/auth/refresh", h.Refresh)
+	r.Post("/auth/forgot-password", h.ForgotPassword)
+	r.Post("/auth/reset-password", h.ResetPassword)
+	r.Get("/auth/verify-email/{token}", h.VerifyEmail)
+}
 
-		// Authenticated
-		r.Group(func(r chi.Router) {
-			r.Use(authMw)
-			r.Get("/me", h.GetMe)
-			r.Patch("/me", h.UpdateProfile)
-			r.Put("/me/password", h.ChangePassword)
-			r.Delete("/me", h.DeleteAccount)
-			r.Get("/sessions", h.ListSessions)
-			r.Delete("/sessions/{sessionId}", h.RevokeSession)
-			r.Delete("/sessions", h.RevokeAllSessions)
-		})
-	})
+func (h *AuthHandler) AuthenticatedRoutes(r chi.Router) {
+	r.Get("/auth/me", h.GetMe)
+	r.Patch("/auth/me", h.UpdateProfile)
+	r.Put("/auth/me/password", h.ChangePassword)
+	r.Delete("/auth/me", h.DeleteAccount)
+	r.Get("/auth/sessions", h.ListSessions)
+	r.Delete("/auth/sessions/{sessionId}", h.RevokeSession)
+	r.Delete("/auth/sessions", h.RevokeAllSessions)
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {

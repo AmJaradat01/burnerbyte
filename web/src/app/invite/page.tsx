@@ -15,7 +15,7 @@ export default function InvitePage() {
 
   const accept = async () => {
     try {
-      await api.post("/invites/accept", { token });
+      await api.post(`/invites/${token}/accept`);
       setStatus("accepted");
       toast.success("Invite accepted");
     } catch (err) {

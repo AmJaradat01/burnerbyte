@@ -22,23 +22,17 @@ func NewTeamHandler(svc *service.TeamService) *TeamHandler {
 	return &TeamHandler{svc: svc}
 }
 
-func (h *TeamHandler) Routes(r chi.Router, authMw func(http.Handler) http.Handler) {
-	r.Group(func(r chi.Router) {
-		r.Use(authMw)
+func (h *TeamHandler) Routes(r chi.Router) {
 
 		r.Post("/orgs/{orgId}/teams", h.CreateTeam)
 		r.Get("/orgs/{orgId}/teams", h.ListTeams)
-
-		r.Route("/teams/{teamId}", func(r chi.Router) {
-			r.Get("/", h.GetTeam)
-			r.Patch("/", h.UpdateTeam)
-			r.Delete("/", h.DeleteTeam)
-			r.Post("/members", h.AddMember)
-			r.Get("/members", h.ListMembers)
-			r.Patch("/members/{userId}", h.ChangeRole)
-			r.Delete("/members/{userId}", h.RemoveMember)
-		})
-	})
+		r.Get("/orgs/{orgId}/teams/{teamId}", h.GetTeam)
+		r.Patch("/orgs/{orgId}/teams/{teamId}", h.UpdateTeam)
+		r.Delete("/orgs/{orgId}/teams/{teamId}", h.DeleteTeam)
+		r.Post("/orgs/{orgId}/teams/{teamId}/members", h.AddMember)
+		r.Get("/orgs/{orgId}/teams/{teamId}/members", h.ListMembers)
+		r.Patch("/orgs/{orgId}/teams/{teamId}/members/{userId}", h.ChangeRole)
+		r.Delete("/orgs/{orgId}/teams/{teamId}/members/{userId}", h.RemoveMember)
 }
 
 func (h *TeamHandler) CreateTeam(w http.ResponseWriter, r *http.Request) {

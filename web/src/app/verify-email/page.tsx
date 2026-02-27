@@ -13,7 +13,7 @@ export default function VerifyEmailPage() {
 
   useEffect(() => {
     if (!token) { setStatus("error"); return; }
-    api.post("/auth/verify-email", { token })
+    api.get(`/auth/verify-email/${token}`)
       .then(() => setStatus("success"))
       .catch(() => setStatus("error"));
   }, [token]);

@@ -80,3 +80,44 @@ func (r *AnalyticsRepo) GetSystemStats(ctx context.Context) (*domain.SystemStats
 	r.db.QueryRow(ctx, `SELECT COUNT(*) FROM inboxes WHERE is_active = TRUE`).Scan(&stats.TotalInboxes)
 	return stats, nil
 }
+
+func (r *AnalyticsRepo) GetOrgEmailsPerDay(ctx context.Context, orgID uuid.UUID) ([]domain.TimeSeriesPoint, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT DATE(e.received_at) as d, COUNT(*) FROM emails e
+		 JOIN inboxes i ON e.inbox_id = i.id
+		 JOIN domain_assignments da ON i.domain_assignment_id = da.id
+		 JOIN domains dm ON da.domain_id = dm.id
+		 WHERE dm.org_id = $1 AND e.received_at > NOW() - INTERVAL '30 days'
+		 GROUP BY d ORDER BY d`, orgID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var points []domain.TimeSeriesPoint
+	for rows.Next() {
+		var p domain.TimeSeriesPoint
+		rows.Scan(&p.Date, &p.Count)
+		points = append(points, p)
+	}
+	return points, nil
+}
+
+func (r *AnalyticsRepo) GetTeamEmailsPerDay(ctx context.Context, teamID uuid.UUID) ([]domain.TimeSeriesPoint, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT DATE(e.received_at) as d, COUNT(*) FROM emails e
+		 JOIN inboxes i ON e.inbox_id = i.id
+		 JOIN domain_assignments da ON i.domain_assignment_id = da.id
+		 WHERE da.team_id = $1 AND e.received_at > NOW() - INTERVAL '30 days'
+		 GROUP BY d ORDER BY d`, teamID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var points []domain.TimeSeriesPoint
+	for rows.Next() {
+		var p domain.TimeSeriesPoint
+		rows.Scan(&p.Date, &p.Count)
+		points = append(points, p)
+	}
+	return points, nil
+}

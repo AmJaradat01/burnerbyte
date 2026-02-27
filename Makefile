@@ -1,6 +1,6 @@
 .PHONY: run-api run-smtp build lint docker-up docker-down migrate-up migrate-down migrate-create migrate-test
 
-DATABASE_URL ?= postgres://burnerbyte:burnerbyte@localhost:5432/burnerbyte?sslmode=disable
+DATABASE_URL ?= postgres://postgres:password@localhost:5432/burnerbyte?sslmode=disable
 MIGRATE := migrate -database "$(DATABASE_URL)" -path migrations
 
 # ── Run ──
