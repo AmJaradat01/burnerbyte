@@ -67,12 +67,15 @@ func main() {
 	// Repositories
 	userRepo := postgres.NewUserRepo(pool)
 	sessionRepo := postgres.NewSessionRepo(pool)
+	orgRepo := postgres.NewOrgRepo(pool)
 
 	// Services
 	authSvc := service.NewAuthService(pool, userRepo, sessionRepo, tokenMgr, lockout, ml, cfg)
+	orgSvc := service.NewOrgService(pool, orgRepo, ml, cfg.Server.FrontendURL)
 
 	// Handlers
 	authHandler := handler.NewAuthHandler(authSvc)
+	orgHandler := handler.NewOrgHandler(orgSvc)
 
 	// Auth middleware
 	authMw := auth.Middleware(tokenMgr, userRepo)
@@ -101,6 +104,7 @@ func main() {
 	// API v1
 	r.Route("/api/v1", func(r chi.Router) {
 		authHandler.Routes(r, authMw)
+		orgHandler.Routes(r, authMw)
 	})
 
 	addr := fmt.Sprintf(":%d", cfg.Server.Port)
