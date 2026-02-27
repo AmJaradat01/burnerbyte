@@ -69,16 +69,19 @@ func main() {
 	sessionRepo := postgres.NewSessionRepo(pool)
 	orgRepo := postgres.NewOrgRepo(pool)
 	domainRepo := postgres.NewDomainRepo(pool)
+	teamRepo := postgres.NewTeamRepo(pool)
 
 	// Services
 	authSvc := service.NewAuthService(pool, userRepo, sessionRepo, tokenMgr, lockout, ml, cfg)
 	orgSvc := service.NewOrgService(pool, orgRepo, ml, cfg.Server.FrontendURL)
 	domainSvc := service.NewDomainService(domainRepo, orgRepo, cfg)
+	teamSvc := service.NewTeamService(pool, teamRepo, orgRepo, cfg)
 
 	// Handlers
 	authHandler := handler.NewAuthHandler(authSvc)
 	orgHandler := handler.NewOrgHandler(orgSvc)
 	domainHandler := handler.NewDomainHandler(domainSvc)
+	teamHandler := handler.NewTeamHandler(teamSvc)
 
 	// Auth middleware
 	authMw := auth.Middleware(tokenMgr, userRepo)
@@ -109,6 +112,7 @@ func main() {
 		authHandler.Routes(r, authMw)
 		orgHandler.Routes(r, authMw)
 		domainHandler.Routes(r, authMw)
+		teamHandler.Routes(r, authMw)
 	})
 
 	addr := fmt.Sprintf(":%d", cfg.Server.Port)
