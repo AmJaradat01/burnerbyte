@@ -19,9 +19,9 @@ func NewAPIKeyHandler(svc *service.APIKeyService) *APIKeyHandler { return &APIKe
 func (h *APIKeyHandler) Routes(r chi.Router, authMw func(http.Handler) http.Handler) {
 	r.Group(func(r chi.Router) {
 		r.Use(authMw)
-		r.Post("/teams/{teamId}/api-keys", h.Create)
-		r.Get("/teams/{teamId}/api-keys", h.List)
-		r.Delete("/api-keys/{keyId}", h.Revoke)
+		r.Post("/orgs/{orgId}/teams/{teamId}/api-keys", h.Create)
+		r.Get("/orgs/{orgId}/teams/{teamId}/api-keys", h.List)
+		r.Delete("/orgs/{orgId}/teams/{teamId}/api-keys/{keyId}", h.Revoke)
 	})
 }
 

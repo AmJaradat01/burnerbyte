@@ -37,6 +37,7 @@ func (h *OrgHandler) Routes(r chi.Router, authMw func(http.Handler) http.Handler
 
 			r.Get("/settings", h.GetSettings)
 			r.Patch("/settings", h.UpdateSettings)
+			r.Put("/settings", h.UpdateSettings)
 
 			r.Post("/members", h.InviteMember)
 			r.Get("/members", h.ListMembers)

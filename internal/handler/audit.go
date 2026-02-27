@@ -18,7 +18,7 @@ func NewAuditHandler(svc *service.AuditService) *AuditHandler { return &AuditHan
 func (h *AuditHandler) Routes(r chi.Router, authMw func(http.Handler) http.Handler) {
 	r.Group(func(r chi.Router) {
 		r.Use(authMw)
-		r.Get("/orgs/{orgId}/audit-log", h.List)
+		r.Get("/orgs/{orgId}/audit", h.List)
 	})
 }
 
