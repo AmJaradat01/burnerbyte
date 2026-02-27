@@ -75,6 +75,10 @@ func main() {
 	inboxRepo := postgres.NewInboxRepo(pool)
 	emailRepo := postgres.NewEmailRepo(pool)
 	attachmentRepo := postgres.NewAttachmentRepo(pool)
+	webhookRepo := postgres.NewWebhookRepo(pool)
+	apikeyRepo := postgres.NewAPIKeyRepo(pool)
+	auditRepo := postgres.NewAuditRepo(pool)
+	analyticsRepo := postgres.NewAnalyticsRepo(pool)
 
 	// Services
 	authSvc := service.NewAuthService(pool, userRepo, sessionRepo, tokenMgr, lockout, ml, cfg)
@@ -85,7 +89,11 @@ func main() {
 	redisInboxRepo := redisrepo.NewInboxRepo(rdb)
 	inboxSvc := service.NewInboxService(inboxRepo, redisInboxRepo, assignmentRepo, domainRepo, orgRepo, cfg)
 	emailSvc := service.NewEmailService(emailRepo, inboxRepo)
-	_ = attachmentRepo // Used in attachment handler, wired below
+	webhookSvc := service.NewWebhookService(webhookRepo)
+	apikeySvc := service.NewAPIKeyService(apikeyRepo)
+	auditSvc := service.NewAuditService(auditRepo)
+	analyticsSvc := service.NewAnalyticsService(analyticsRepo)
+	_ = attachmentRepo // Used via attachment service when S3 is configured
 
 	// Handlers
 	authHandler := handler.NewAuthHandler(authSvc)
@@ -95,6 +103,11 @@ func main() {
 	assignmentHandler := handler.NewDomainAssignmentHandler(assignmentSvc)
 	inboxHandler := handler.NewInboxHandler(inboxSvc)
 	emailHandler := handler.NewEmailHandler(emailSvc)
+	webhookHandler := handler.NewWebhookHandler(webhookSvc)
+	apikeyHandler := handler.NewAPIKeyHandler(apikeySvc)
+	auditHandler := handler.NewAuditHandler(auditSvc)
+	analyticsHandler := handler.NewAnalyticsHandler(analyticsSvc)
+	adminHandler := handler.NewAdminHandler(analyticsSvc)
 
 	// Auth middleware
 	authMw := auth.Middleware(tokenMgr, userRepo)
@@ -129,6 +142,11 @@ func main() {
 		assignmentHandler.Routes(r, authMw)
 		inboxHandler.Routes(r, authMw)
 		emailHandler.Routes(r, authMw)
+		webhookHandler.Routes(r, authMw)
+		apikeyHandler.Routes(r, authMw)
+		auditHandler.Routes(r, authMw)
+		analyticsHandler.Routes(r, authMw)
+		adminHandler.Routes(r, authMw)
 	})
 
 	addr := fmt.Sprintf(":%d", cfg.Server.Port)
