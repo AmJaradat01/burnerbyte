@@ -15,11 +15,8 @@ type AuditHandler struct{ svc *service.AuditService }
 
 func NewAuditHandler(svc *service.AuditService) *AuditHandler { return &AuditHandler{svc: svc} }
 
-func (h *AuditHandler) Routes(r chi.Router, authMw func(http.Handler) http.Handler) {
-	r.Group(func(r chi.Router) {
-		r.Use(authMw)
+func (h *AuditHandler) Routes(r chi.Router) {
 		r.Get("/orgs/{orgId}/audit", h.List)
-	})
 }
 
 func (h *AuditHandler) List(w http.ResponseWriter, r *http.Request) {

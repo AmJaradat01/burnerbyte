@@ -23,32 +23,21 @@ func NewOrgHandler(svc *service.OrgService) *OrgHandler {
 	return &OrgHandler{svc: svc}
 }
 
-func (h *OrgHandler) Routes(r chi.Router, authMw func(http.Handler) http.Handler) {
-	r.Group(func(r chi.Router) {
-		r.Use(authMw)
-
-		r.Post("/orgs", h.CreateOrg)
-		r.Get("/orgs", h.ListOrgs)
-
-		r.Route("/orgs/{orgId}", func(r chi.Router) {
-			r.Get("/", h.GetOrg)
-			r.Patch("/", h.UpdateOrg)
-			r.Delete("/", h.DeleteOrg)
-
-			r.Get("/settings", h.GetSettings)
-			r.Patch("/settings", h.UpdateSettings)
-			r.Put("/settings", h.UpdateSettings)
-
-			r.Post("/members", h.InviteMember)
-			r.Get("/members", h.ListMembers)
-			r.Patch("/members/{userId}", h.ChangeRole)
-			r.Delete("/members/{userId}", h.RemoveMember)
-
-			r.Post("/invites", h.InviteMember)
-		})
-
-		r.Post("/invites/{token}/accept", h.AcceptInvite)
-	})
+func (h *OrgHandler) Routes(r chi.Router) {
+	r.Post("/orgs", h.CreateOrg)
+	r.Get("/orgs", h.ListOrgs)
+	r.Get("/orgs/{orgId}", h.GetOrg)
+	r.Patch("/orgs/{orgId}", h.UpdateOrg)
+	r.Delete("/orgs/{orgId}", h.DeleteOrg)
+	r.Get("/orgs/{orgId}/settings", h.GetSettings)
+	r.Patch("/orgs/{orgId}/settings", h.UpdateSettings)
+	r.Put("/orgs/{orgId}/settings", h.UpdateSettings)
+	r.Post("/orgs/{orgId}/members", h.InviteMember)
+	r.Get("/orgs/{orgId}/members", h.ListMembers)
+	r.Patch("/orgs/{orgId}/members/{userId}", h.ChangeRole)
+	r.Delete("/orgs/{orgId}/members/{userId}", h.RemoveMember)
+	r.Post("/orgs/{orgId}/invites", h.InviteMember)
+	r.Post("/invites/{token}/accept", h.AcceptInvite)
 }
 
 func (h *OrgHandler) CreateOrg(w http.ResponseWriter, r *http.Request) {

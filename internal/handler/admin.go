@@ -15,12 +15,9 @@ func NewAdminHandler(analyticsSvc *service.AnalyticsService) *AdminHandler {
 	return &AdminHandler{analyticsSvc: analyticsSvc}
 }
 
-func (h *AdminHandler) Routes(r chi.Router, authMw func(http.Handler) http.Handler) {
-	r.Group(func(r chi.Router) {
-		r.Use(authMw)
+func (h *AdminHandler) Routes(r chi.Router) {
 		r.Use(auth.RequireSystemAdmin)
 		r.Get("/admin/stats", h.Stats)
-	})
 }
 
 func (h *AdminHandler) Stats(w http.ResponseWriter, r *http.Request) {

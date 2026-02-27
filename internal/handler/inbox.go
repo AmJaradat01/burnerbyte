@@ -27,9 +27,7 @@ func strPtr(s string) *string {
 	return &s
 }
 
-func (h *InboxHandler) Routes(r chi.Router, authMw func(http.Handler) http.Handler) {
-	r.Group(func(r chi.Router) {
-		r.Use(authMw)
+func (h *InboxHandler) Routes(r chi.Router) {
 		// User-scoped
 		r.Get("/inboxes", h.ListMyInboxes)
 		r.Post("/inboxes", h.CreateInboxFlat)
@@ -38,7 +36,6 @@ func (h *InboxHandler) Routes(r chi.Router, authMw func(http.Handler) http.Handl
 		r.Post("/inboxes/{inboxId}/extend", h.ExtendTTL)
 		// Team-scoped
 		r.Get("/orgs/{orgId}/teams/{teamId}/inboxes", h.ListInboxes)
-	})
 }
 
 func (h *InboxHandler) CreateInboxFlat(w http.ResponseWriter, r *http.Request) {
