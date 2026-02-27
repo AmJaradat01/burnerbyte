@@ -25,6 +25,9 @@ type OrgSettings struct {
 	MaxTeams            *int    `json:"max_teams,omitempty"`
 	MaxInboxesPerDomain *int    `json:"max_inboxes_per_domain,omitempty"`
 	EnforceSSO          *bool   `json:"enforce_sso,omitempty"`
+	// Branding
+	PrimaryColor *string `json:"primary_color,omitempty"`
+	FooterText   *string `json:"footer_text,omitempty"`
 }
 
 type OrgMembership struct {
