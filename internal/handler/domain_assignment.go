@@ -23,7 +23,7 @@ func NewDomainAssignmentHandler(svc *service.DomainAssignmentService) *DomainAss
 func (h *DomainAssignmentHandler) Routes(r chi.Router, authMw func(http.Handler) http.Handler) {
 	r.Group(func(r chi.Router) {
 		r.Use(authMw)
-		r.Route("/teams/{teamId}/domains", func(r chi.Router) {
+		r.Route("/orgs/{orgId}/teams/{teamId}/domains", func(r chi.Router) {
 			r.Post("/", h.AssignDomain)
 			r.Get("/", h.ListAssignments)
 			r.Patch("/{domainId}", h.UpdateAssignment)

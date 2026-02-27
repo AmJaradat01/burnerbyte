@@ -4,30 +4,37 @@
 
 Initial release of BurnerByte — self-hosted temporary email platform.
 
+### Setup Wizard
+- One-time setup wizard with 8 steps (admin, org, SMTP, domain, team, branding, invites, review)
+- Locked after completion — cannot re-run unless database is reset
+- Transactional: all-or-nothing setup with automatic rollback on failure
+- Auto-login after setup completion
+
 ### Backend (Go)
 
 - **Auth**: Registration, login, JWT access/refresh tokens, password reset, email verification, account lockout, SSO/OIDC structure
-- **Organizations**: CRUD, settings (JSONB), slug generation, invite system with email
+- **Organizations**: CRUD, settings (JSONB with branding fields), slug generation, invite system with email
 - **Teams**: CRUD, membership management, slug generation, quota enforcement
 - **Domains**: CRUD, MX/TXT DNS verification, quota enforcement
 - **Domain Assignments**: Assign domains to teams with access levels, settings cascade (assignment → domain → org → system)
 - **RBAC**: 6 roles (owner, admin, member, viewer, billing at org; lead, member, viewer at team), full permission matrix, org-level fallback
-- **Inboxes**: Create with random/alias address, TTL management, Redis cache for SMTP lookups, private to creator
+- **Inboxes**: Create with random/alias address, TTL management, Redis cache for SMTP lookups, private to creator, user-scoped listing
 - **SMTP Server**: Inbound email processing, buffered queue with worker pool, 451 backpressure, Redis→PG fallback routing
 - **Email Storage**: Full-text search (tsvector), pagination, mark read/unread
 - **Attachments**: S3/MinIO storage, presigned download URLs, size validation, cascade delete
 - **Webhooks**: HMAC-SHA256 signed delivery, 3 retries with exponential backoff, delivery logs
 - **API Keys**: `bb_` prefixed, SHA-256 hashed, scoped access
 - **Audit Log**: Filterable by action/resource/actor, paginated
-- **Analytics**: Org/team/system stats, emails-per-day time series
+- **Analytics**: Org/team/system stats, emails-per-day time series (30-day window)
 - **WebSocket**: Real-time email delivery per inbox
 - **Workers**: Expired inbox/email cleanup, Redis↔PG reconciliation
 
 ### Frontend (Next.js)
 
 - **Shell**: App Router, shadcn/ui, Tailwind CSS, Zustand stores, React Query, API client with JWT auto-refresh
-- **Auth Pages**: Login, register, forgot password, email verification
-- **Org Dashboard**: Settings (general + policies), members with role management, invite dialog
+- **Setup Wizard**: 8-step wizard with progress bar, required/optional badges, review summary
+- **Auth Pages**: Login, register, forgot password, email verification, invite acceptance
+- **Org Dashboard**: Settings (general + policies + branding), members with role management, invite dialog
 - **Domain Management**: List, add, verify (MX/TXT), remove
 - **Team Management**: List, create, members, domain assignments
 - **Inbox View**: List with create/extend/delete, inbox detail with email list + reader, WebSocket real-time, search
@@ -37,9 +44,15 @@ Initial release of BurnerByte — self-hosted temporary email platform.
 - **Analytics**: Stats cards, emails-per-day bar chart (Recharts), org + team views
 - **Admin**: System-wide stats (system admin only)
 
+### API Route Alignment
+- All routes use consistent `/orgs/{orgId}/...` prefix for org-scoped resources
+- User-scoped inbox endpoints: `GET /inboxes`, `POST /inboxes`, `POST /inboxes/{id}/extend`
+- Analytics time-series: `GET /orgs/{id}/analytics/emails-per-day`, `GET /orgs/{id}/teams/{tid}/analytics/emails-per-day`
+- Audit: `GET /orgs/{id}/audit`
+
 ### Infrastructure
 
 - PostgreSQL 16, Redis 7, MinIO (Docker Compose)
-- 18 migrations (52 indexes, 7 triggers)
+- 19 migrations (52 indexes, 7 triggers, setup_state singleton)
 - Multi-stage Dockerfiles for API, SMTP, and frontend
 - Makefile with all common tasks

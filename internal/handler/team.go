@@ -29,7 +29,7 @@ func (h *TeamHandler) Routes(r chi.Router, authMw func(http.Handler) http.Handle
 		r.Post("/orgs/{orgId}/teams", h.CreateTeam)
 		r.Get("/orgs/{orgId}/teams", h.ListTeams)
 
-		r.Route("/teams/{teamId}", func(r chi.Router) {
+		r.Route("/orgs/{orgId}/teams/{teamId}", func(r chi.Router) {
 			r.Get("/", h.GetTeam)
 			r.Patch("/", h.UpdateTeam)
 			r.Delete("/", h.DeleteTeam)

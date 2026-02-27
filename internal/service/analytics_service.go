@@ -28,3 +28,11 @@ func (s *AnalyticsService) GetTeamAnalytics(ctx context.Context, teamID uuid.UUI
 func (s *AnalyticsService) GetSystemStats(ctx context.Context) (*domain.SystemStats, error) {
 	return s.repo.GetSystemStats(ctx)
 }
+
+func (s *AnalyticsService) GetOrgEmailsPerDay(ctx context.Context, orgID uuid.UUID) ([]domain.TimeSeriesPoint, error) {
+	return s.repo.GetOrgEmailsPerDay(ctx, orgID)
+}
+
+func (s *AnalyticsService) GetTeamEmailsPerDay(ctx context.Context, teamID uuid.UUID) ([]domain.TimeSeriesPoint, error) {
+	return s.repo.GetTeamEmailsPerDay(ctx, teamID)
+}

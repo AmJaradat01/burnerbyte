@@ -28,14 +28,15 @@ Two separate binaries scale independently:
 
 ## Features
 
-- Multi-org, multi-team, multi-domain hierarchy
+- One-time setup wizard (admin, org, SMTP, domain, team, branding, invites)
+- Single-org architecture with multi-team, multi-domain hierarchy
 - Full RBAC with 6 roles across org and team levels
 - Real-time email delivery via WebSocket
 - Configurable attachment policies with inheritance cascade
-- Webhooks with retry and delivery logs
+- Webhooks with HMAC-SHA256 signing, retry, and delivery logs
 - Scoped API keys
-- Audit logging
-- Analytics dashboard
+- Audit logging with filtering
+- Analytics dashboard with time-series charts
 - SSO via OIDC
 - Private inboxes — only the creator can access
 
@@ -46,6 +47,8 @@ Two separate binaries scale independently:
 - Go 1.22+
 - Node.js 20+ with pnpm
 - Docker & Docker Compose
+- PostgreSQL 16 (or use Docker)
+- Redis 7 (or use Docker)
 
 ### Setup
 
@@ -54,7 +57,7 @@ Two separate binaries scale independently:
 git clone git@gitlab.com:amjaradat01/burnerbyte.git
 cd burnerbyte
 
-# Start infrastructure
+# Start infrastructure (Redis + MinIO; skip if using local PG)
 make docker-up
 
 # Copy env
@@ -66,27 +69,69 @@ make migrate-up
 # Start API server
 make run-api
 
-# Start SMTP server (separate terminal)
-make run-smtp
-
 # Start frontend (separate terminal)
 cd web && pnpm install && pnpm dev
 ```
 
-### Endpoints
+On first launch, navigate to `http://localhost:3000` — the setup wizard will guide you through:
+1. Creating the platform owner account
+2. Setting up your organization
+3. Configuring outbound SMTP
+4. Adding your first domain
+5. (Optional) Creating a team, branding, inviting users
 
-| Endpoint | Description |
+### API Endpoints
+
+| Group | Endpoints |
 |---|---|
-| `http://localhost:8080/healthz` | Liveness probe |
-| `http://localhost:8080/readyz` | Readiness probe |
-| `http://localhost:8080/metrics` | Prometheus metrics |
-| `http://localhost:3000` | Frontend UI |
+| Setup | `GET /setup/status`, `POST /setup/complete` |
+| Auth | `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `GET /auth/me`, `PUT /auth/me/password`, `POST /auth/forgot-password` |
+| Orgs | `POST /orgs`, `GET /orgs`, `GET /orgs/:id`, `PATCH /orgs/:id`, `GET /orgs/:id/settings`, `PUT /orgs/:id/settings` |
+| Members | `POST /orgs/:id/members`, `GET /orgs/:id/members`, `PATCH /orgs/:id/members/:uid`, `DELETE /orgs/:id/members/:uid` |
+| Invites | `POST /orgs/:id/invites`, `POST /invites/:token/accept` |
+| Domains | `POST /orgs/:id/domains`, `GET /orgs/:id/domains`, `DELETE /orgs/:id/domains/:did`, `POST /orgs/:id/domains/:did/verify` |
+| Teams | `POST /orgs/:id/teams`, `GET /orgs/:id/teams`, `PATCH /orgs/:id/teams/:tid`, `DELETE /orgs/:id/teams/:tid` |
+| Team Members | `POST /orgs/:id/teams/:tid/members`, `GET /orgs/:id/teams/:tid/members`, `PATCH .../members/:uid`, `DELETE .../members/:uid` |
+| Domain Assignments | `POST /orgs/:id/teams/:tid/domains`, `GET /orgs/:id/teams/:tid/domains`, `DELETE .../domains/:did` |
+| Inboxes | `POST /inboxes`, `GET /inboxes`, `GET /inboxes/:id`, `POST /inboxes/:id/extend`, `DELETE /inboxes/:id` |
+| Emails | `GET /inboxes/:id/emails`, `GET /emails/:id`, `PATCH /emails/:id`, `DELETE /emails/:id` |
+| Webhooks | `POST /orgs/:id/teams/:tid/webhooks`, `GET .../webhooks`, `PATCH .../webhooks/:wid`, `DELETE .../webhooks/:wid` |
+| API Keys | `POST /orgs/:id/teams/:tid/api-keys`, `GET .../api-keys`, `DELETE .../api-keys/:kid` |
+| Audit | `GET /orgs/:id/audit` |
+| Analytics | `GET /orgs/:id/analytics`, `GET /orgs/:id/analytics/emails-per-day`, `GET /orgs/:id/teams/:tid/analytics`, `GET .../emails-per-day` |
+| Admin | `GET /admin/stats` |
+| Health | `GET /healthz`, `GET /readyz`, `GET /metrics` |
+
+### Frontend Pages
+
+| Route | Description |
+|---|---|
+| `/setup` | One-time setup wizard |
+| `/login` | Sign in |
+| `/register` | Create account |
+| `/forgot-password` | Password reset |
+| `/verify-email` | Email verification |
+| `/invite` | Accept org invitation |
+| `/inboxes` | List & create inboxes |
+| `/inboxes/[id]` | Email reader with WebSocket |
+| `/domains` | Domain management |
+| `/teams` | Team management + domain assignments |
+| `/webhooks` | Webhook configuration |
+| `/api-keys` | API key management |
+| `/audit` | Audit log viewer |
+| `/analytics` | Analytics dashboard |
+| `/settings` | Org settings + members |
+| `/admin` | System admin stats |
 
 ## Tech Stack
 
-- **Backend**: Go, Chi, pgxpool, go-redis, go-guerrilla, MinIO
-- **Frontend**: Next.js 14+, shadcn/ui, Tailwind CSS, Zustand, TanStack Query
+- **Backend**: Go, Chi, pgxpool, go-redis, MinIO
+- **Frontend**: Next.js 15+, shadcn/ui, Tailwind CSS, Zustand, TanStack Query, Recharts
 - **Infrastructure**: PostgreSQL 16, Redis 7, MinIO, Docker
+
+## Database
+
+19 migrations, 52+ indexes, 7 triggers. Tables: users, organizations, org_memberships, teams, team_memberships, domains, domain_assignments, inboxes, emails, attachments, webhooks, webhook_delivery_logs, api_keys, audit_logs, invites, sessions, setup_state.
 
 ## License
 

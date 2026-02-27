@@ -20,42 +20,63 @@ func NewInboxHandler(svc *service.InboxService) *InboxHandler {
 	return &InboxHandler{svc: svc}
 }
 
+func strPtr(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}
+
 func (h *InboxHandler) Routes(r chi.Router, authMw func(http.Handler) http.Handler) {
 	r.Group(func(r chi.Router) {
 		r.Use(authMw)
-		r.Post("/teams/{teamId}/domains/{domainId}/inboxes", h.CreateInbox)
-		r.Get("/teams/{teamId}/inboxes", h.ListInboxes)
+		// User-scoped
+		r.Get("/inboxes", h.ListMyInboxes)
+		r.Post("/inboxes", h.CreateInboxFlat)
 		r.Get("/inboxes/{inboxId}", h.GetInbox)
-		r.Patch("/inboxes/{inboxId}", h.ExtendTTL)
 		r.Delete("/inboxes/{inboxId}", h.DeleteInbox)
+		r.Post("/inboxes/{inboxId}/extend", h.ExtendTTL)
+		// Team-scoped
+		r.Get("/orgs/{orgId}/teams/{teamId}/inboxes", h.ListInboxes)
 	})
 }
 
-func (h *InboxHandler) CreateInbox(w http.ResponseWriter, r *http.Request) {
+func (h *InboxHandler) CreateInboxFlat(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
-	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid team ID")
+	var input struct {
+		DomainAssignmentID string `json:"domain_assignment_id"`
+		Alias              string `json:"alias,omitempty"`
+		TTL                string `json:"ttl,omitempty"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	domainID, err := uuid.Parse(chi.URLParam(r, "domainId"))
+	assignmentID, err := uuid.Parse(input.DomainAssignmentID)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid domain ID")
+		writeError(w, http.StatusBadRequest, "invalid domain_assignment_id")
 		return
 	}
-	var input domain.CreateInboxInput
-	json.NewDecoder(r.Body).Decode(&input)
-
-	inbox, err := h.svc.CreateInbox(r.Context(), teamID, domainID, uc.UserID, input)
+	inbox, err := h.svc.CreateInboxByAssignment(r.Context(), assignmentID, uc.UserID, domain.CreateInboxInput{
+		CustomAlias: strPtr(input.Alias),
+		TTL:         strPtr(input.TTL),
+	})
 	if err != nil {
-		status := http.StatusBadRequest
-		if err.Error() == "address already taken" {
-			status = http.StatusConflict
-		}
-		writeError(w, status, err.Error())
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	writeJSON(w, http.StatusCreated, inbox)
+}
+
+func (h *InboxHandler) ListMyInboxes(w http.ResponseWriter, r *http.Request) {
+	uc := auth.GetUser(r.Context())
+	page, perPage := parsePagination(r)
+	inboxes, total, err := h.svc.ListByUser(r.Context(), uc.UserID, page, perPage)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to list inboxes")
+		return
+	}
+	writeJSON(w, http.StatusOK, paginatedResponse(inboxes, total, page, perPage))
 }
 
 func (h *InboxHandler) ListInboxes(w http.ResponseWriter, r *http.Request) {
@@ -101,13 +122,13 @@ func (h *InboxHandler) ExtendTTL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body struct {
-		Extension string `json:"extension"`
+		Duration string `json:"duration"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Extension == "" {
-		writeError(w, http.StatusBadRequest, "extension is required (e.g. \"30m\")")
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Duration == "" {
+		writeError(w, http.StatusBadRequest, "duration is required (e.g. \"1h\")")
 		return
 	}
-	inbox, err := h.svc.ExtendTTL(r.Context(), id, uc.UserID, body.Extension)
+	inbox, err := h.svc.ExtendTTL(r.Context(), id, uc.UserID, body.Duration)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
