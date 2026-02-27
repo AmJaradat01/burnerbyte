@@ -195,3 +195,15 @@ func (s *InboxService) DeleteInbox(ctx context.Context, id, userID uuid.UUID) er
 	_ = s.redisInboxRepo.Delete(ctx, inbox.FullAddress)
 	return nil
 }
+
+func (s *InboxService) ListByUser(ctx context.Context, userID uuid.UUID, page, perPage int) ([]domain.Inbox, int, error) {
+	return s.inboxRepo.ListByUser(ctx, userID, page, perPage)
+}
+
+func (s *InboxService) CreateInboxByAssignment(ctx context.Context, assignmentID, userID uuid.UUID, input domain.CreateInboxInput) (*domain.Inbox, error) {
+	assignment, err := s.assignmentRepo.GetByID(ctx, assignmentID)
+	if err != nil {
+		return nil, fmt.Errorf("domain assignment not found")
+	}
+	return s.CreateInbox(ctx, assignment.TeamID, assignment.DomainID, userID, input)
+}

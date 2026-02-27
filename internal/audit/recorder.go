@@ -3,6 +3,7 @@ package audit
 import (
 	"context"
 	"log/slog"
+	"net"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -21,8 +22,11 @@ func NewRecorder(svc *service.AuditService) *Recorder {
 }
 
 func (rec *Recorder) Record(ctx context.Context, orgID uuid.UUID, actorID *uuid.UUID, action, resourceType string, resourceID uuid.UUID, metadata any, ip string) {
+	ip = stripPort(ip)
 	var ipPtr *string
-	if ip != "" { ipPtr = &ip }
+	if ip != "" {
+		ipPtr = &ip
+	}
 	entry := &domain.AuditEntry{
 		OrgID: orgID, ActorID: actorID, Action: action,
 		ResourceType: resourceType, ResourceID: resourceID,
@@ -36,6 +40,16 @@ func (rec *Recorder) Record(ctx context.Context, orgID uuid.UUID, actorID *uuid.
 func (rec *Recorder) RecordFromRequest(r *http.Request, orgID uuid.UUID, action, resourceType string, resourceID uuid.UUID, metadata any) {
 	uc := auth.GetUser(r.Context())
 	var actorID *uuid.UUID
-	if uc != nil { actorID = &uc.UserID }
+	if uc != nil {
+		actorID = &uc.UserID
+	}
 	rec.Record(r.Context(), orgID, actorID, action, resourceType, resourceID, metadata, r.RemoteAddr)
+}
+
+func stripPort(addr string) string {
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		return addr
+	}
+	return host
 }

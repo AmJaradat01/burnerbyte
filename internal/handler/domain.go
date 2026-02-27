@@ -21,20 +21,14 @@ func NewDomainHandler(svc *service.DomainService) *DomainHandler {
 	return &DomainHandler{svc: svc}
 }
 
-func (h *DomainHandler) Routes(r chi.Router, authMw func(http.Handler) http.Handler) {
-	r.Group(func(r chi.Router) {
-		r.Use(authMw)
+func (h *DomainHandler) Routes(r chi.Router) {
 
 		r.Post("/orgs/{orgId}/domains", h.CreateDomain)
 		r.Get("/orgs/{orgId}/domains", h.ListDomains)
-
-		r.Route("/domains/{domainId}", func(r chi.Router) {
-			r.Get("/", h.GetDomain)
-			r.Patch("/", h.UpdateDomain)
-			r.Delete("/", h.DeleteDomain)
-			r.Post("/verify", h.VerifyDomain)
-		})
-	})
+		r.Get("/orgs/{orgId}/domains/{domainId}", h.GetDomain)
+		r.Patch("/orgs/{orgId}/domains/{domainId}", h.UpdateDomain)
+		r.Delete("/orgs/{orgId}/domains/{domainId}", h.DeleteDomain)
+		r.Post("/orgs/{orgId}/domains/{domainId}/verify", h.VerifyDomain)
 }
 
 func (h *DomainHandler) CreateDomain(w http.ResponseWriter, r *http.Request) {

@@ -21,14 +21,14 @@ export const useOrgStore = create<OrgState>((set) => ({
 
   fetchOrgs: async () => {
     const res = await api.get<{ data: Organization[] }>("/orgs");
-    set({ orgs: res.data });
+    set({ orgs: res.data ?? [] });
   },
 
   setCurrentOrg: (org) => set({ currentOrg: org, teams: [], currentTeam: null }),
 
   fetchTeams: async (orgId) => {
     const res = await api.get<{ data: Team[] }>(`/orgs/${orgId}/teams`);
-    set({ teams: res.data });
+    set({ teams: res.data ?? [] });
   },
 
   setCurrentTeam: (team) => set({ currentTeam: team }),

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/mail"
 	"time"
 
@@ -17,6 +18,16 @@ import (
 	"gitlab.com/amjaradat01/burnerbyte/internal/mailer"
 	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
 )
+
+// stripPort extracts the host/IP from a "host:port" string.
+// If there is no port, returns the input unchanged.
+func stripPort(addr string) string {
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		return addr
+	}
+	return host
+}
 
 type AuthService struct {
 	pool        *pgxpool.Pool
@@ -110,6 +121,7 @@ func (s *AuthService) Register(ctx context.Context, input domain.CreateUserInput
 }
 
 func (s *AuthService) Login(ctx context.Context, input domain.LoginInput, ip, userAgent string) (*domain.User, *domain.TokenPair, error) {
+	ip = stripPort(ip)
 	user, err := s.userRepo.GetByEmail(ctx, input.Email)
 	if err != nil {
 		if errors.Is(err, postgres.ErrNotFound) {
@@ -156,6 +168,7 @@ func (s *AuthService) Login(ctx context.Context, input domain.LoginInput, ip, us
 }
 
 func (s *AuthService) Refresh(ctx context.Context, refreshToken, ip, userAgent string) (*domain.TokenPair, error) {
+	ip = stripPort(ip)
 	hash := auth.HashToken(refreshToken)
 
 	session, err := s.sessionRepo.GetByTokenHash(ctx, hash)
@@ -334,6 +347,7 @@ func (s *AuthService) VerifyEmail(ctx context.Context, userID uuid.UUID) error {
 }
 
 func (s *AuthService) createSession(ctx context.Context, repo *postgres.SessionRepo, user *domain.User, ip, userAgent string) (*domain.TokenPair, error) {
+	ip = stripPort(ip)
 	accessToken, err := s.tokens.GenerateAccessToken(user.ID, user.Email, user.IsSystemAdmin)
 	if err != nil {
 		return nil, err

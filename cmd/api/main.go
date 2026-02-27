@@ -108,6 +108,7 @@ func main() {
 	auditHandler := handler.NewAuditHandler(auditSvc)
 	analyticsHandler := handler.NewAnalyticsHandler(analyticsSvc)
 	adminHandler := handler.NewAdminHandler(analyticsSvc)
+	setupHandler := handler.NewSetupHandler(pool, userRepo, orgRepo, domainRepo, teamRepo, sessionRepo, tokenMgr, ml, cfg)
 
 	// Auth middleware
 	authMw := auth.Middleware(tokenMgr, userRepo)
@@ -135,18 +136,97 @@ func main() {
 
 	// API v1
 	r.Route("/api/v1", func(r chi.Router) {
-		authHandler.Routes(r, authMw)
-		orgHandler.Routes(r, authMw)
-		domainHandler.Routes(r, authMw)
-		teamHandler.Routes(r, authMw)
-		assignmentHandler.Routes(r, authMw)
-		inboxHandler.Routes(r, authMw)
-		emailHandler.Routes(r, authMw)
-		webhookHandler.Routes(r, authMw)
-		apikeyHandler.Routes(r, authMw)
-		auditHandler.Routes(r, authMw)
-		analyticsHandler.Routes(r, authMw)
-		adminHandler.Routes(r, authMw)
+		// Public routes (no auth)
+		setupHandler.Routes(r)
+		authHandler.PublicRoutes(r)
+
+		// Authenticated routes
+		r.Group(func(r chi.Router) {
+			r.Use(authMw)
+
+			// Auth (authenticated)
+			authHandler.AuthenticatedRoutes(r)
+
+			// Orgs
+			r.Post("/orgs", orgHandler.CreateOrg)
+			r.Get("/orgs", orgHandler.ListOrgs)
+			r.Get("/orgs/{orgId}", orgHandler.GetOrg)
+			r.Patch("/orgs/{orgId}", orgHandler.UpdateOrg)
+			r.Delete("/orgs/{orgId}", orgHandler.DeleteOrg)
+			r.Get("/orgs/{orgId}/settings", orgHandler.GetSettings)
+			r.Patch("/orgs/{orgId}/settings", orgHandler.UpdateSettings)
+			r.Put("/orgs/{orgId}/settings", orgHandler.UpdateSettings)
+			r.Post("/orgs/{orgId}/members", orgHandler.InviteMember)
+			r.Get("/orgs/{orgId}/members", orgHandler.ListMembers)
+			r.Patch("/orgs/{orgId}/members/{userId}", orgHandler.ChangeRole)
+			r.Delete("/orgs/{orgId}/members/{userId}", orgHandler.RemoveMember)
+			r.Post("/orgs/{orgId}/invites", orgHandler.InviteMember)
+			r.Post("/invites/{token}/accept", orgHandler.AcceptInvite)
+
+			// Domains
+			r.Post("/orgs/{orgId}/domains", domainHandler.CreateDomain)
+			r.Get("/orgs/{orgId}/domains", domainHandler.ListDomains)
+			r.Get("/orgs/{orgId}/domains/{domainId}", domainHandler.GetDomain)
+			r.Patch("/orgs/{orgId}/domains/{domainId}", domainHandler.UpdateDomain)
+			r.Delete("/orgs/{orgId}/domains/{domainId}", domainHandler.DeleteDomain)
+			r.Post("/orgs/{orgId}/domains/{domainId}/verify", domainHandler.VerifyDomain)
+
+			// Teams
+			r.Post("/orgs/{orgId}/teams", teamHandler.CreateTeam)
+			r.Get("/orgs/{orgId}/teams", teamHandler.ListTeams)
+			r.Get("/orgs/{orgId}/teams/{teamId}", teamHandler.GetTeam)
+			r.Patch("/orgs/{orgId}/teams/{teamId}", teamHandler.UpdateTeam)
+			r.Delete("/orgs/{orgId}/teams/{teamId}", teamHandler.DeleteTeam)
+			r.Post("/orgs/{orgId}/teams/{teamId}/members", teamHandler.AddMember)
+			r.Get("/orgs/{orgId}/teams/{teamId}/members", teamHandler.ListMembers)
+			r.Patch("/orgs/{orgId}/teams/{teamId}/members/{userId}", teamHandler.ChangeRole)
+			r.Delete("/orgs/{orgId}/teams/{teamId}/members/{userId}", teamHandler.RemoveMember)
+
+			// Domain assignments
+			r.Post("/orgs/{orgId}/teams/{teamId}/domains", assignmentHandler.AssignDomain)
+			r.Get("/orgs/{orgId}/teams/{teamId}/domains", assignmentHandler.ListAssignments)
+			r.Patch("/orgs/{orgId}/teams/{teamId}/domains/{domainId}", assignmentHandler.UpdateAssignment)
+			r.Delete("/orgs/{orgId}/teams/{teamId}/domains/{domainId}", assignmentHandler.Unassign)
+
+			// Team-scoped inboxes
+			r.Get("/orgs/{orgId}/teams/{teamId}/inboxes", inboxHandler.ListInboxes)
+
+			// Webhooks
+			r.Post("/orgs/{orgId}/teams/{teamId}/webhooks", webhookHandler.Create)
+			r.Get("/orgs/{orgId}/teams/{teamId}/webhooks", webhookHandler.List)
+			r.Patch("/orgs/{orgId}/teams/{teamId}/webhooks/{webhookId}", webhookHandler.Update)
+			r.Delete("/orgs/{orgId}/teams/{teamId}/webhooks/{webhookId}", webhookHandler.Delete)
+
+			// API Keys
+			r.Post("/orgs/{orgId}/teams/{teamId}/api-keys", apikeyHandler.Create)
+			r.Get("/orgs/{orgId}/teams/{teamId}/api-keys", apikeyHandler.List)
+			r.Delete("/orgs/{orgId}/teams/{teamId}/api-keys/{keyId}", apikeyHandler.Revoke)
+
+			// Analytics
+			r.Get("/orgs/{orgId}/analytics", analyticsHandler.OrgAnalytics)
+			r.Get("/orgs/{orgId}/analytics/emails-per-day", analyticsHandler.OrgEmailsPerDay)
+			r.Get("/orgs/{orgId}/teams/{teamId}/analytics", analyticsHandler.TeamAnalytics)
+			r.Get("/orgs/{orgId}/teams/{teamId}/analytics/emails-per-day", analyticsHandler.TeamEmailsPerDay)
+
+			// Audit
+			r.Get("/orgs/{orgId}/audit", auditHandler.List)
+
+			// User-scoped inboxes
+			r.Get("/inboxes", inboxHandler.ListMyInboxes)
+			r.Post("/inboxes", inboxHandler.CreateInboxFlat)
+			r.Get("/inboxes/{inboxId}", inboxHandler.GetInbox)
+			r.Delete("/inboxes/{inboxId}", inboxHandler.DeleteInbox)
+			r.Post("/inboxes/{inboxId}/extend", inboxHandler.ExtendTTL)
+
+			// Emails
+			r.Get("/inboxes/{inboxId}/emails", emailHandler.ListEmails)
+			r.Get("/emails/{emailId}", emailHandler.GetEmail)
+			r.Patch("/emails/{emailId}", emailHandler.MarkReadUnread)
+			r.Delete("/emails/{emailId}", emailHandler.DeleteEmail)
+
+			// Admin
+			r.Get("/admin/stats", adminHandler.Stats)
+		})
 	})
 
 	addr := fmt.Sprintf(":%d", cfg.Server.Port)
