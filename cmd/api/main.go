@@ -108,6 +108,7 @@ func main() {
 	auditHandler := handler.NewAuditHandler(auditSvc)
 	analyticsHandler := handler.NewAnalyticsHandler(analyticsSvc)
 	adminHandler := handler.NewAdminHandler(analyticsSvc)
+	setupHandler := handler.NewSetupHandler(pool, userRepo, orgRepo, domainRepo, teamRepo, sessionRepo, tokenMgr, ml, cfg)
 
 	// Auth middleware
 	authMw := auth.Middleware(tokenMgr, userRepo)
@@ -135,6 +136,7 @@ func main() {
 
 	// API v1
 	r.Route("/api/v1", func(r chi.Router) {
+		setupHandler.Routes(r)
 		authHandler.Routes(r, authMw)
 		orgHandler.Routes(r, authMw)
 		domainHandler.Routes(r, authMw)
