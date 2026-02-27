@@ -2,24 +2,41 @@
 
 import { useAuthStore } from "@/stores/auth-store";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Sidebar } from "./sidebar";
+import { api } from "@/lib/api";
 
-const publicPaths = ["/login", "/register", "/forgot-password", "/verify-email", "/invite"];
+const publicPaths = ["/login", "/register", "/forgot-password", "/verify-email", "/invite", "/setup"];
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, loading } = useAuthStore();
   const pathname = usePathname();
   const router = useRouter();
   const isPublic = publicPaths.some((p) => pathname.startsWith(p));
+  const [setupChecked, setSetupChecked] = useState(false);
+  const [setupCompleted, setSetupCompleted] = useState(true);
 
   useEffect(() => {
+    api.get<{ completed: boolean }>("/setup/status")
+      .then((res) => {
+        setSetupCompleted(res.completed);
+        setSetupChecked(true);
+      })
+      .catch(() => setSetupChecked(true));
+  }, []);
+
+  useEffect(() => {
+    if (!setupChecked) return;
+    if (!setupCompleted && pathname !== "/setup") {
+      router.replace("/setup");
+      return;
+    }
     if (loading) return;
     if (!user && !isPublic) router.replace("/login");
-    if (user && isPublic) router.replace("/inboxes");
-  }, [user, loading, isPublic, router]);
+    if (user && isPublic && pathname !== "/setup") router.replace("/inboxes");
+  }, [user, loading, isPublic, router, setupChecked, setupCompleted, pathname]);
 
-  if (loading) {
+  if (!setupChecked || loading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" role="status">
@@ -29,6 +46,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     );
   }
 
+  if (!setupCompleted) return <main className="min-h-screen">{children}</main>;
   if (isPublic) return <main className="min-h-screen">{children}</main>;
 
   return (
