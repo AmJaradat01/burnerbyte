@@ -124,6 +124,11 @@ type DefaultsConfig struct {
 	MaxTeams            int           `mapstructure:"max_teams"`
 	MaxInboxesPerDomain int           `mapstructure:"max_inboxes_per_domain"`
 	EnforceSSO          bool          `mapstructure:"enforce_sso"`
+	PasswordResetTTL    time.Duration `mapstructure:"password_reset_ttl"`
+	InviteExpiryTTL     time.Duration `mapstructure:"invite_expiry_ttl"`
+	PresignedURLTTL     time.Duration `mapstructure:"presigned_url_ttl"`
+	WebhookTimeout      time.Duration `mapstructure:"webhook_timeout"`
+	AnalyticsCacheTTL   time.Duration `mapstructure:"analytics_cache_ttl"`
 }
 
 type EmailVerificationConfig struct {

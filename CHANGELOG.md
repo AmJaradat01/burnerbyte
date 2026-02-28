@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.6.6 (2026-02-28)
+
+### Security
+- **Setup wizard invites never worked** — The setup handler sent invite emails with `?org=...&email=...` URL format but the invite page expects `?token=...`. Additionally, no invite records were created in the database, so even with the correct URL the accept endpoint would fail. Fixed by creating proper invite records in the DB during the setup transaction and using token-based URLs.
+
+### Enhancements
+- **Configurable TTLs** — Five previously hardcoded durations are now configurable via `config.yaml` or environment variables:
+  - `defaults.password_reset_ttl` (default: 1h) — password reset token lifetime
+  - `defaults.invite_expiry_ttl` (default: 48h) — org invite link lifetime
+  - `defaults.presigned_url_ttl` (default: 15m) — attachment download URL lifetime
+  - `defaults.webhook_timeout` (default: 10s) — webhook HTTP delivery timeout
+  - `defaults.analytics_cache_ttl` (default: 2h) — analytics stats Redis cache lifetime
+
 ## v0.6.5 (2026-02-28)
 
 ### Security

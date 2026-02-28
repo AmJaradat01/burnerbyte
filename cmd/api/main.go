@@ -100,10 +100,10 @@ func main() {
 	}
 	var attachmentSvc *service.AttachmentService
 	if s3Client != nil {
-		attachmentSvc = service.NewAttachmentService(attachmentRepo, emailRepo, inboxRepo, s3Client, cfg.MinIO, cfg.Defaults.MaxAttachmentSizeMB)
+		attachmentSvc = service.NewAttachmentService(attachmentRepo, emailRepo, inboxRepo, s3Client, cfg.MinIO, cfg.Defaults.MaxAttachmentSizeMB, cfg.Defaults.PresignedURLTTL)
 	}
 	authSvc := service.NewAuthService(pool, userRepo, sessionRepo, resetRepo, tokenMgr, lockout, ml, cfg)
-	orgSvc := service.NewOrgService(pool, orgRepo, ml, cfg.Server.FrontendURL)
+	orgSvc := service.NewOrgService(pool, orgRepo, ml, cfg.Server.FrontendURL, cfg.Defaults.InviteExpiryTTL)
 	domainSvc := service.NewDomainService(domainRepo, orgRepo, cfg)
 	teamSvc := service.NewTeamService(pool, teamRepo, orgRepo, cfg)
 	assignmentSvc := service.NewDomainAssignmentService(assignmentRepo, domainRepo)
@@ -111,7 +111,7 @@ func main() {
 	inboxSvc := service.NewInboxService(inboxRepo, redisInboxRepo, assignmentRepo, domainRepo, orgRepo, teamRepo, cfg)
 	emailSvc := service.NewEmailService(emailRepo, inboxRepo, attachmentRepo, attachmentSvc)
 	webhookSvc := service.NewWebhookService(webhookRepo)
-	webhookDispatcher := webhook.NewDispatcher(webhookRepo)
+	webhookDispatcher := webhook.NewDispatcher(webhookRepo, cfg.Defaults.WebhookTimeout)
 	apikeySvc := service.NewAPIKeyService(apikeyRepo)
 	auditSvc := service.NewAuditService(auditRepo)
 	analyticsSvc := service.NewAnalyticsService(analyticsRepo)
@@ -297,7 +297,7 @@ func main() {
 	wm.Add("reconciler", cfg.Workers.ReconcilerInterval, worker.ReconcilerJob(inboxRepo, redisInboxRepo))
 	wm.Add("dns_recheck", cfg.Workers.DNSRecheckInterval, worker.DNSRecheckJob(domainRepo, cfg.SMTP.Hostname))
 	wm.Add("webhook_retry", cfg.Workers.WebhookRetryInterval, worker.WebhookRetryJob(webhookRepo, webhookDispatcher))
-	wm.Add("analytics", cfg.Workers.AnalyticsInterval, worker.AnalyticsJob(analyticsRepo, rdb))
+	wm.Add("analytics", cfg.Workers.AnalyticsInterval, worker.AnalyticsJob(analyticsRepo, rdb, cfg.Defaults.AnalyticsCacheTTL))
 	go wm.Start(workerCtx)
 
 	go func() {
