@@ -79,7 +79,14 @@ func (s *DomainService) ListByOrg(ctx context.Context, orgID uuid.UUID, page, pe
 	if perPage < 1 || perPage > 100 {
 		perPage = 20
 	}
-	return s.domainRepo.ListByOrg(ctx, orgID, page, perPage)
+	domains, total, err := s.domainRepo.ListByOrg(ctx, orgID, page, perPage)
+	if err != nil {
+		return nil, 0, err
+	}
+	for i := range domains {
+		domains[i].VerificationRecord = dnspkg.GenerateVerificationRecord(domains[i].ID.String())
+	}
+	return domains, total, nil
 }
 
 func (s *DomainService) UpdateDomain(ctx context.Context, id uuid.UUID, input domain.UpdateDomainInput) (*domain.Domain, error) {
