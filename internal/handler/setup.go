@@ -405,9 +405,10 @@ func (h *SetupHandler) Complete(w http.ResponseWriter, r *http.Request) {
 			for _, inv := range inviteRecords {
 				inviteURL := fmt.Sprintf("%s/invite?token=%s", h.cfg.Server.FrontendURL, inv.Token)
 				if err := h.mailer.Send(inv.Email, "You're invited to "+org.Name, "invite.html", map[string]string{
-					"OrgName":   org.Name,
-					"InviteURL": inviteURL,
-					"Role":      inv.Role,
+					"OrgName":     org.Name,
+					"InviterName": "The platform admin",
+					"AcceptURL":   inviteURL,
+					"ExpiresIn":   mailer.HumanDuration(h.cfg.Defaults.InviteExpiryTTL),
 				}); err != nil {
 					slog.Error("failed to send invite", "error", err, "email", inv.Email)
 				}
