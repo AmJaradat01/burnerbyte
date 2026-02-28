@@ -36,12 +36,14 @@ type InboundAttachment struct {
 
 // Handler processes inbound emails and stores them.
 type Handler struct {
-	inboxRepoPG    *postgres.InboxRepo
-	inboxRepoRedis *redisrepo.InboxRepo
-	emailRepo      *postgres.EmailRepo
-	assignmentRepo *postgres.DomainAssignmentRepo
+	inboxRepoPG       *postgres.InboxRepo
+	inboxRepoRedis    *redisrepo.InboxRepo
+	emailRepo         *postgres.EmailRepo
+	assignmentRepo    *postgres.DomainAssignmentRepo
 	webhookDispatcher WebhookDispatcher
-	hub            RealtimeHub
+	hub               RealtimeHub
+	attachmentStorer  AttachmentStorer
+	settingsChecker   SettingsChecker
 }
 
 // WebhookDispatcher dispatches webhook events.
@@ -51,7 +53,18 @@ type WebhookDispatcher interface {
 
 // RealtimeHub broadcasts messages to WebSocket clients.
 type RealtimeHub interface {
-	Broadcast(inboxID uuid.UUID, msg interface{ })
+	Broadcast(inboxID uuid.UUID, msg interface{})
+}
+
+// AttachmentStorer stores email attachments.
+type AttachmentStorer interface {
+	StoreAttachment(ctx context.Context, emailID uuid.UUID, filename, contentType string, data []byte) (*domain.Attachment, error)
+}
+
+// SettingsChecker resolves settings from the cascade.
+type SettingsChecker interface {
+	ResolveAttachmentsEnabled(ctx context.Context, assignmentID uuid.UUID) (bool, error)
+	ResolveMaxAttachmentSize(ctx context.Context, assignmentID uuid.UUID) int
 }
 
 func NewHandler(
@@ -61,14 +74,18 @@ func NewHandler(
 	assignmentRepo *postgres.DomainAssignmentRepo,
 	webhookDispatcher WebhookDispatcher,
 	hub RealtimeHub,
+	attachmentStorer AttachmentStorer,
+	settingsChecker SettingsChecker,
 ) *Handler {
 	return &Handler{
-		inboxRepoPG:    inboxRepoPG,
-		inboxRepoRedis: inboxRepoRedis,
-		emailRepo:      emailRepo,
-		assignmentRepo: assignmentRepo,
+		inboxRepoPG:       inboxRepoPG,
+		inboxRepoRedis:    inboxRepoRedis,
+		emailRepo:         emailRepo,
+		assignmentRepo:    assignmentRepo,
 		webhookDispatcher: webhookDispatcher,
-		hub:            hub,
+		hub:               hub,
+		attachmentStorer:  attachmentStorer,
+		settingsChecker:   settingsChecker,
 	}
 }
 
@@ -106,6 +123,9 @@ func (h *Handler) Process(ctx context.Context, email *InboundEmail) error {
 		return fmt.Errorf("inbox expired or inactive: %s", toAddr)
 	}
 
+	// Basic spam scoring
+	spamScore := calcSpamScore(email)
+
 	// Store email
 	e := &domain.Email{
 		ID:             uuid.New(),
@@ -118,12 +138,30 @@ func (h *Handler) Process(ctx context.Context, email *InboundEmail) error {
 		BodyHTML:       &email.BodyHTML,
 		HasAttachments: len(email.Attachments) > 0,
 		SizeBytes:      email.SizeBytes,
+		SpamScore:      spamScore,
 		ReceivedAt:     email.ReceivedAt,
 		ExpiresAt:      inbox.ExpiresAt,
 	}
 
 	if err := h.emailRepo.Create(ctx, e); err != nil {
 		return fmt.Errorf("store email: %w", err)
+	}
+
+	// Store attachments if enabled by settings cascade
+	if len(email.Attachments) > 0 && h.attachmentStorer != nil && h.settingsChecker != nil {
+		enabled, _ := h.settingsChecker.ResolveAttachmentsEnabled(ctx, inbox.DomainAssignmentID)
+		if enabled {
+			maxSize := h.settingsChecker.ResolveMaxAttachmentSize(ctx, inbox.DomainAssignmentID)
+			for _, att := range email.Attachments {
+				if len(att.Data) > maxSize {
+					slog.Warn("attachment exceeds max size, skipping", "filename", att.Filename, "size", len(att.Data), "max", maxSize)
+					continue
+				}
+				if _, err := h.attachmentStorer.StoreAttachment(ctx, e.ID, att.Filename, att.ContentType, att.Data); err != nil {
+					slog.Error("failed to store attachment", "filename", att.Filename, "error", err)
+				}
+			}
+		}
 	}
 
 	// Dispatch webhook event
@@ -136,8 +174,48 @@ func (h *Handler) Process(ctx context.Context, email *InboundEmail) error {
 		}
 	}
 
+	// Broadcast to WebSocket
+	if h.hub != nil {
+		h.hub.Broadcast(inbox.ID, e)
+	}
+
 	slog.Info("email stored", "email_id", e.ID, "inbox", toAddr, "from", email.From)
 	return nil
+}
+
+// calcSpamScore returns a basic spam score (0.0 = clean, higher = spammier).
+// Checks: missing headers, SPF result, suspicious patterns.
+func calcSpamScore(email *InboundEmail) float32 {
+	var score float32
+
+	// Missing Message-ID
+	if email.MessageID == "" {
+		score += 1.0
+	}
+	// Missing or empty subject
+	if strings.TrimSpace(email.Subject) == "" {
+		score += 0.5
+	}
+	// SPF fail from headers
+	spf := strings.ToLower(email.Headers["Received-SPF"])
+	if strings.Contains(spf, "fail") {
+		score += 2.0
+	} else if spf == "" {
+		score += 0.5
+	}
+	// Missing Date header
+	if email.Headers["Date"] == "" {
+		score += 0.5
+	}
+	// Missing From header (different from envelope)
+	if email.Headers["From"] == "" {
+		score += 1.0
+	}
+
+	if score > 10.0 {
+		score = 10.0
+	}
+	return score
 }
 
 func nilIfEmpty(s string) *string {
