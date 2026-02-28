@@ -24,6 +24,7 @@ import (
 	"gitlab.com/amjaradat01/burnerbyte/internal/handler"
 	"gitlab.com/amjaradat01/burnerbyte/internal/mailer"
 	mw "gitlab.com/amjaradat01/burnerbyte/internal/middleware"
+	"gitlab.com/amjaradat01/burnerbyte/internal/realtime"
 	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
 	redisrepo "gitlab.com/amjaradat01/burnerbyte/internal/repository/redis"
 	"gitlab.com/amjaradat01/burnerbyte/internal/service"
@@ -102,6 +103,9 @@ func main() {
 	// RBAC
 	handler.InitRBAC(rbac.NewChecker(orgRepo, teamRepo))
 
+	// WebSocket hub
+	hub := realtime.NewHub()
+
 	// Handlers
 	authHandler := handler.NewAuthHandler(authSvc)
 	orgHandler := handler.NewOrgHandler(orgSvc)
@@ -116,6 +120,7 @@ func main() {
 	analyticsHandler := handler.NewAnalyticsHandler(analyticsSvc)
 	adminHandler := handler.NewAdminHandler(analyticsSvc, orgSvc, pool, rdb)
 	setupHandler := handler.NewSetupHandler(pool, userRepo, orgRepo, domainRepo, teamRepo, sessionRepo, tokenMgr, ml, cfg)
+	wsHandler := handler.NewWSHandler(hub)
 
 	// Auth middleware
 	authMw := auth.Middleware(tokenMgr, userRepo)
@@ -240,6 +245,9 @@ func main() {
 			r.Get("/admin/stats", adminHandler.Stats)
 			r.Get("/admin/orgs", adminHandler.ListOrgs)
 			r.Get("/admin/health", adminHandler.Health)
+
+			// WebSocket
+			r.Get("/ws/inboxes/{inboxId}", wsHandler.InboxWS)
 		})
 	})
 
@@ -284,6 +292,7 @@ func main() {
 	<-done
 	slog.Info("shutting down api server")
 	cleanupCancel()
+	hub.CloseAll()
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.Server.ShutdownTimeout)
 	defer cancel()

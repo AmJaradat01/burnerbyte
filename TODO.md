@@ -14,13 +14,13 @@ Mark `[x]` when complete. Work top-down by priority.
 - [x] **Password change JWT invalidation** — Middleware rejects tokens issued before `password_changed_at` (already implemented)
 
 ### API Routes
-- [ ] **Attachment download** — `GET /emails/:emailId/attachments/:attachmentId`; repo and S3 client exist, need handler + presigned URL generation + route
-- [ ] **Admin: list orgs** — `GET /admin/orgs`
-- [ ] **Admin: system health** — `GET /admin/health` (check DB, Redis, SMTP connectivity)
+- [x] **Attachment download** — `GET /emails/:emailId/attachments/:attachmentId`; repo and S3 client exist, need handler + presigned URL generation + route
+- [x] **Admin: list orgs** — `GET /admin/orgs`
+- [x] **Admin: system health** — `GET /admin/health` (check DB, Redis, SMTP connectivity)
 - [ ] **Swagger/OpenAPI** — Add `swaggo/swag` annotations, wire `GET /api/v1/docs` and `GET /api/v1/docs/openapi.json`
 
 ### WebSocket
-- [ ] **Inbox WebSocket endpoint** — `WS /api/v1/ws/inboxes/:inboxId`; Hub exists in `internal/realtime/hub.go` but no HTTP upgrade handler or route is wired
+- [x] **Inbox WebSocket endpoint** — `WS /api/v1/ws/inboxes/:inboxId`; Hub exists in `internal/realtime/hub.go` but no HTTP upgrade handler or route is wired
 - [ ] **Notifications WebSocket** — `WS /api/v1/ws/notifications`; user-level push notifications channel
 
 ### SMTP Server
@@ -29,7 +29,7 @@ Mark `[x]` when complete. Work top-down by priority.
 - [ ] **Add go-guerrilla dependency** — Not in `go.mod`; or implement lightweight SMTP listener with stdlib
 
 ### Background Workers
-- [ ] **Start cleanup worker** — `internal/worker/cleanup.go` exists but is never started in `cmd/api/main.go`; add ticker goroutine
+- [x] **Start cleanup worker** — `internal/worker/cleanup.go` exists but is never started in `cmd/api/main.go`; add ticker goroutine
 - [ ] **Reconciler worker** — Redis ↔ PostgreSQL inbox reconciliation; config fields exist (`ReconcilerInterval`) but no implementation
 
 ---
