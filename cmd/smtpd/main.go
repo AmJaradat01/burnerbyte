@@ -73,12 +73,12 @@ func main() {
 	}
 
 	// Services
-	attachmentSvc := service.NewAttachmentService(attachmentRepo, emailRepo, inboxRepoPG, s3Client, cfg.MinIO, cfg.Defaults.MaxAttachmentSizeMB)
+	attachmentSvc := service.NewAttachmentService(attachmentRepo, emailRepo, inboxRepoPG, s3Client, cfg.MinIO, cfg.Defaults.MaxAttachmentSizeMB, cfg.Defaults.PresignedURLTTL)
 	settingsResolver := service.NewSettingsResolver(assignmentRepo, domainRepo, orgRepo, cfg.Defaults)
 
 	// SMTP components
 	router := smtp.NewRouter(domainRepo, inboxRepoRedis, inboxRepoPG)
-	dispatcher := webhook.NewDispatcher(webhookRepo)
+	dispatcher := webhook.NewDispatcher(webhookRepo, cfg.Defaults.WebhookTimeout)
 	handler := smtp.NewHandler(inboxRepoPG, inboxRepoRedis, emailRepo, assignmentRepo, dispatcher, nil, nil, attachmentSvc, settingsResolver)
 	server := smtp.NewServer(cfg.SMTP, handler)
 	listener := smtp.NewListener(server, router)

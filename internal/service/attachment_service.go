@@ -22,6 +22,7 @@ type AttachmentService struct {
 	s3             *minio.Client
 	bucket         string
 	maxSizeMB      int
+	presignedTTL   time.Duration
 }
 
 func NewAttachmentService(
@@ -31,7 +32,11 @@ func NewAttachmentService(
 	s3 *minio.Client,
 	cfg config.MinIOConfig,
 	maxSizeMB int,
+	presignedTTL time.Duration,
 ) *AttachmentService {
+	if presignedTTL <= 0 {
+		presignedTTL = 15 * time.Minute
+	}
 	return &AttachmentService{
 		attachmentRepo: attachmentRepo,
 		emailRepo:      emailRepo,
@@ -39,6 +44,7 @@ func NewAttachmentService(
 		s3:             s3,
 		bucket:         cfg.Bucket,
 		maxSizeMB:      maxSizeMB,
+		presignedTTL:   presignedTTL,
 	}
 }
 
@@ -93,7 +99,7 @@ func (s *AttachmentService) GetDownloadURL(ctx context.Context, attachmentID, us
 		return "", fmt.Errorf("forbidden: not your attachment")
 	}
 
-	presignedURL, err := s.s3.PresignedGetObject(ctx, s.bucket, a.StorageKey, 15*time.Minute, url.Values{})
+	presignedURL, err := s.s3.PresignedGetObject(ctx, s.bucket, a.StorageKey, s.presignedTTL, url.Values{})
 	if err != nil {
 		return "", fmt.Errorf("generate presigned url: %w", err)
 	}

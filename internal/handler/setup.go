@@ -2,6 +2,8 @@ package handler
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -315,8 +317,41 @@ func (h *SetupHandler) Complete(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Step 7: Invites (optional, sent after commit)
-	inviteEmails := input.Invites
+	// Step 7: Invites (optional, create records in DB before commit)
+	type inviteWithToken struct {
+		Email string
+		Role  string
+		Token string
+	}
+	var inviteRecords []inviteWithToken
+	for _, inv := range input.Invites {
+		if inv.Email == "" {
+			continue
+		}
+		b := make([]byte, 32)
+		rand.Read(b)
+		token := hex.EncodeToString(b)
+		invite := &domain.Invite{
+			ID:        uuid.New(),
+			OrgID:     org.ID,
+			Email:     inv.Email,
+			OrgRole:   inv.Role,
+			Token:     token,
+			InvitedBy: &adminUser.ID,
+			ExpiresAt: time.Now().Add(h.cfg.Defaults.InviteExpiryTTL),
+		}
+		if invite.OrgRole == "" {
+			invite.OrgRole = "member"
+		}
+		if invite.ExpiresAt.Before(time.Now()) {
+			invite.ExpiresAt = time.Now().Add(48 * time.Hour)
+		}
+		if err := orgRepoTx.CreateInvite(r.Context(), invite); err != nil {
+			slog.Error("failed to create invite", "error", err, "email", inv.Email)
+			continue
+		}
+		inviteRecords = append(inviteRecords, inviteWithToken{Email: inv.Email, Role: inv.Role, Token: token})
+	}
 
 	// Mark setup as completed
 	_, err = tx.Exec(r.Context(),
@@ -365,10 +400,10 @@ func (h *SetupHandler) Complete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Send invites asynchronously after commit
-	if len(inviteEmails) > 0 {
+	if len(inviteRecords) > 0 {
 		go func() {
-			for _, inv := range inviteEmails {
-				inviteURL := fmt.Sprintf("%s/invite?org=%s&email=%s", h.cfg.Server.FrontendURL, org.ID, inv.Email)
+			for _, inv := range inviteRecords {
+				inviteURL := fmt.Sprintf("%s/invite?token=%s", h.cfg.Server.FrontendURL, inv.Token)
 				if err := h.mailer.Send(inv.Email, "You're invited to "+org.Name, "invite.html", map[string]string{
 					"OrgName":   org.Name,
 					"InviteURL": inviteURL,
