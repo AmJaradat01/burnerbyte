@@ -61,6 +61,10 @@ func main() {
 	orgRepo := postgres.NewOrgRepo(pool)
 	inboxRepoRedis := redisrepo.NewInboxRepo(rdb)
 
+	// Load runtime configs from DB (overrides config.yaml/env for storage)
+	sysConfigRepo := postgres.NewSystemConfigRepo(pool)
+	cfg.LoadFromDB(ctx, sysConfigRepo)
+
 	// MinIO
 	s3Client, err := storage.NewS3(ctx, cfg.MinIO)
 	if err != nil {
