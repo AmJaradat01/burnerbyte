@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.4.5 (2026-02-28)
+
+### WebSocket & Docker Fixes
+- Fix Hub.Broadcast type mismatch — now satisfies RealtimeHub interface
+- SMTP handler wraps email in Message envelope before WebSocket broadcast
+- Docker Compose: add MinIO env vars and dependency to api and smtpd services
+
 ## v0.4.4 (2026-02-28)
 
 ### Pagination Error Handling
