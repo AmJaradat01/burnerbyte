@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.5.5 (2026-02-28)
+
+### Security & UX Fixes
+- Password reset now revokes all sessions (refresh tokens could bypass password change)
+- Session revocation scoped by user ID (was an IDOR — any user could revoke any session)
+- Notification center shows readable messages instead of raw JSON
+- Domain list now shows TXT verification record when domain is pending verification
+
 ## v0.5.4 (2026-02-28)
 
 ### Critical WebSocket & Data Fixes
