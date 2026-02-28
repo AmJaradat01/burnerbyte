@@ -68,6 +68,16 @@ export default function InboxDetailPage() {
     enabled: !!selectedEmailId,
   });
 
+  // Auto-mark as read when previewing
+  useEffect(() => {
+    if (selectedEmail && !selectedEmail.is_read) {
+      api.patch(`/emails/${selectedEmail.id}`, { is_read: true }).then(() => {
+        qc.invalidateQueries({ queryKey: ["emails", id] });
+        qc.invalidateQueries({ queryKey: ["email", selectedEmailId] });
+      }).catch(() => {});
+    }
+  }, [selectedEmail?.id, selectedEmail?.is_read, qc, id, selectedEmailId]);
+
   const toggleRead = useMutation({
     mutationFn: ({ emailId, is_read }: { emailId: string; is_read: boolean }) =>
       api.patch(`/emails/${emailId}`, { is_read }),
