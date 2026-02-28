@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -59,7 +60,11 @@ func (h *InboxHandler) CreateInboxFlat(w http.ResponseWriter, r *http.Request) {
 		TTL:         strPtr(input.TTL),
 	})
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		status := http.StatusBadRequest
+		if strings.Contains(err.Error(), "already taken") {
+			status = http.StatusConflict
+		}
+		writeError(w, status, err.Error())
 		return
 	}
 	if WebhookDispatch != nil {

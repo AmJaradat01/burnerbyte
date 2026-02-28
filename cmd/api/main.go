@@ -29,6 +29,7 @@ import (
 	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
 	redisrepo "gitlab.com/amjaradat01/burnerbyte/internal/repository/redis"
 	"gitlab.com/amjaradat01/burnerbyte/internal/service"
+	"gitlab.com/amjaradat01/burnerbyte/internal/storage"
 	"gitlab.com/amjaradat01/burnerbyte/internal/webhook"
 	"gitlab.com/amjaradat01/burnerbyte/internal/worker"
 )
@@ -82,13 +83,20 @@ func main() {
 	inboxRepo := postgres.NewInboxRepo(pool)
 	emailRepo := postgres.NewEmailRepo(pool)
 	attachmentRepo := postgres.NewAttachmentRepo(pool)
-	_ = attachmentRepo
 	webhookRepo := postgres.NewWebhookRepo(pool)
 	apikeyRepo := postgres.NewAPIKeyRepo(pool)
 	auditRepo := postgres.NewAuditRepo(pool)
 	analyticsRepo := postgres.NewAnalyticsRepo(pool)
 
 	// Services
+	s3Client, err := storage.NewS3(ctx, cfg.MinIO)
+	if err != nil {
+		slog.Warn("minio unavailable, attachments disabled", "error", err)
+	}
+	var attachmentSvc *service.AttachmentService
+	if s3Client != nil {
+		attachmentSvc = service.NewAttachmentService(attachmentRepo, emailRepo, inboxRepo, s3Client, cfg.MinIO, cfg.Defaults.MaxAttachmentSizeMB)
+	}
 	authSvc := service.NewAuthService(pool, userRepo, sessionRepo, resetRepo, tokenMgr, lockout, ml, cfg)
 	orgSvc := service.NewOrgService(pool, orgRepo, ml, cfg.Server.FrontendURL)
 	domainSvc := service.NewDomainService(domainRepo, orgRepo, cfg)
@@ -96,7 +104,7 @@ func main() {
 	assignmentSvc := service.NewDomainAssignmentService(assignmentRepo, domainRepo)
 	redisInboxRepo := redisrepo.NewInboxRepo(rdb)
 	inboxSvc := service.NewInboxService(inboxRepo, redisInboxRepo, assignmentRepo, domainRepo, orgRepo, cfg)
-	emailSvc := service.NewEmailService(emailRepo, inboxRepo)
+	emailSvc := service.NewEmailService(emailRepo, inboxRepo, attachmentSvc)
 	webhookSvc := service.NewWebhookService(webhookRepo)
 	webhookDispatcher := webhook.NewDispatcher(webhookRepo)
 	apikeySvc := service.NewAPIKeyService(apikeyRepo)
@@ -120,7 +128,7 @@ func main() {
 	teamHandler := handler.NewTeamHandler(teamSvc)
 	assignmentHandler := handler.NewDomainAssignmentHandler(assignmentSvc)
 	inboxHandler := handler.NewInboxHandler(inboxSvc)
-	emailHandler := handler.NewEmailHandler(emailSvc, nil) // attachmentSvc nil until MinIO configured
+	emailHandler := handler.NewEmailHandler(emailSvc, attachmentSvc)
 	webhookHandler := handler.NewWebhookHandler(webhookSvc)
 	apikeyHandler := handler.NewAPIKeyHandler(apikeySvc)
 	auditHandler := handler.NewAuditHandler(auditSvc)
@@ -279,7 +287,7 @@ func main() {
 	// Background workers
 	workerCtx, workerCancel := context.WithCancel(context.Background())
 	wm := worker.NewManager()
-	wm.Add("cleanup", cfg.Workers.CleanupInterval, worker.CleanupJob(inboxRepo, emailRepo))
+	wm.Add("cleanup", cfg.Workers.CleanupInterval, worker.CleanupJob(inboxRepo, emailRepo, attachmentSvc))
 	wm.Add("reconciler", cfg.Workers.ReconcilerInterval, worker.ReconcilerJob(inboxRepo, redisInboxRepo))
 	wm.Add("dns_recheck", cfg.Workers.DNSRecheckInterval, worker.DNSRecheckJob(domainRepo, cfg.SMTP.Hostname))
 	wm.Add("webhook_retry", cfg.Workers.WebhookRetryInterval, worker.WebhookRetryJob(webhookRepo, webhookDispatcher))
