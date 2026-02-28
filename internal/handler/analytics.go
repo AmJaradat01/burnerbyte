@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -41,7 +42,11 @@ func (h *AnalyticsHandler) OrgEmailsPerDay(w http.ResponseWriter, r *http.Reques
 	if checkOrgRole(w, r, orgID, rbac.OrgMember) {
 		return
 	}
-	data, err := h.svc.GetOrgEmailsPerDay(r.Context(), orgID)
+	days := 30
+	if v, err := strconv.Atoi(r.URL.Query().Get("days")); err == nil && v > 0 && v <= 365 {
+		days = v
+	}
+	data, err := h.svc.GetOrgEmailsPerDay(r.Context(), orgID, days)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed")
 		return
@@ -69,7 +74,11 @@ func (h *AnalyticsHandler) TeamEmailsPerDay(w http.ResponseWriter, r *http.Reque
 	if checkTeamRole(w, r, orgID, teamID, rbac.OrgMember, rbac.TeamViewer) {
 		return
 	}
-	data, err := h.svc.GetTeamEmailsPerDay(r.Context(), teamID)
+	days := 30
+	if v, err := strconv.Atoi(r.URL.Query().Get("days")); err == nil && v > 0 && v <= 365 {
+		days = v
+	}
+	data, err := h.svc.GetTeamEmailsPerDay(r.Context(), teamID, days)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed")
 		return

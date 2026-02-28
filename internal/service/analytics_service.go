@@ -29,10 +29,10 @@ func (s *AnalyticsService) GetSystemStats(ctx context.Context) (*domain.SystemSt
 	return s.repo.GetSystemStats(ctx)
 }
 
-func (s *AnalyticsService) GetOrgEmailsPerDay(ctx context.Context, orgID uuid.UUID) ([]domain.TimeSeriesPoint, error) {
-	return s.repo.GetOrgEmailsPerDay(ctx, orgID)
+func (s *AnalyticsService) GetOrgEmailsPerDay(ctx context.Context, orgID uuid.UUID, days ...int) ([]domain.TimeSeriesPoint, error) {
+	return s.repo.GetOrgEmailsPerDay(ctx, orgID, days...)
 }
 
-func (s *AnalyticsService) GetTeamEmailsPerDay(ctx context.Context, teamID uuid.UUID) ([]domain.TimeSeriesPoint, error) {
-	return s.repo.GetTeamEmailsPerDay(ctx, teamID)
+func (s *AnalyticsService) GetTeamEmailsPerDay(ctx context.Context, teamID uuid.UUID, days ...int) ([]domain.TimeSeriesPoint, error) {
+	return s.repo.GetTeamEmailsPerDay(ctx, teamID, days...)
 }

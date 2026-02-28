@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -9,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorState } from "@/components/error-state";
 import { toast } from "sonner";
 import type { Domain, DomainAssignment, Team } from "@/types";
 
@@ -18,11 +20,21 @@ export default function DomainDetailPage() {
   const teams = useOrgStore((s) => s.teams);
   const qc = useQueryClient();
 
-  const { data: domain, isLoading } = useQuery({
+  const { data: domain, isLoading, isError, refetch } = useQuery({
     queryKey: ["domain", org?.id, domainId],
     queryFn: () => api.get<Domain>(`/orgs/${org!.id}/domains/${domainId}`),
     enabled: !!org,
   });
+
+  // Auto-poll DNS every 30s while domain is not fully verified
+  const needsPoll = domain && (!domain.mx_verified || !domain.txt_verified);
+  useEffect(() => {
+    if (!needsPoll) return;
+    const interval = setInterval(() => {
+      qc.invalidateQueries({ queryKey: ["domain", org?.id, domainId] });
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [needsPoll, qc, org?.id, domainId]);
 
   const verify = useMutation({
     mutationFn: () => api.post(`/orgs/${org!.id}/domains/${domainId}/verify`),
@@ -30,7 +42,6 @@ export default function DomainDetailPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  // Find which teams have this domain assigned
   const teamAssignments = useQuery({
     queryKey: ["domain-teams", org?.id, domainId],
     queryFn: async () => {
@@ -48,6 +59,7 @@ export default function DomainDetailPage() {
   });
 
   if (!org) return <p className="text-muted-foreground">Select an organization.</p>;
+  if (isError) return <ErrorState message="Failed to load domain" onRetry={() => refetch()} />;
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -79,9 +91,12 @@ export default function DomainDetailPage() {
                   <code className="text-sm break-all">{domain.verification_record}</code>
                 </div>
               )}
-              <Button size="sm" onClick={() => verify.mutate()} disabled={verify.isPending}>
-                {verify.isPending ? "Verifying…" : "Re-verify DNS"}
-              </Button>
+              <div className="flex items-center gap-3">
+                <Button size="sm" onClick={() => verify.mutate()} disabled={verify.isPending}>
+                  {verify.isPending ? "Verifying…" : "Re-verify DNS"}
+                </Button>
+                {needsPoll && <span className="text-xs text-muted-foreground">Auto-checking every 30s…</span>}
+              </div>
             </CardContent>
           </Card>
 
