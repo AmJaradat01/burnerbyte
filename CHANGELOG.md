@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.3.6 (2026-02-28)
+
+### Remaining BUILDPLAN Features
+- Keyboard shortcuts: `?` shows help overlay, extensible per-page (n/j/k/d/Esc)
+- Notification center: WebSocket push notifications dropdown with unread badge, mark all read, dismiss
+- Global error boundary + route-level error boundary with retry
+- Email detail page: spam score badge (low/medium/high), HTML/Plain Text/Raw Headers tabs, attachment download cards
+- Reset password page (/reset-password?token=...)
+- Wired notification center + shortcut help in app shell
+
 ## v0.3.5 (2026-02-28)
 
 ### BE/FE Sync & UI/UX
