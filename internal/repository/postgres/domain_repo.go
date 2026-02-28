@@ -93,6 +93,24 @@ func (r *DomainRepo) UpdateDNSStatus(ctx context.Context, id uuid.UUID, mx, txt 
 	return err
 }
 
+func (r *DomainRepo) ListAll(ctx context.Context) ([]domain.Domain, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT id, org_id, domain_name, mx_verified, txt_verified, dns_last_checked_at, settings, created_at, updated_at FROM domains`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var domains []domain.Domain
+	for rows.Next() {
+		d, err := r.scanRow(rows)
+		if err != nil {
+			return nil, err
+		}
+		domains = append(domains, *d)
+	}
+	return domains, nil
+}
+
 func (r *DomainRepo) Delete(ctx context.Context, id uuid.UUID) error {
 	_, err := r.db.Exec(ctx, `DELETE FROM domains WHERE id = $1`, id)
 	return err
