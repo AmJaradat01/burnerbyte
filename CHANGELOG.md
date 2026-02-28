@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.3.4 (2026-02-28)
+
+### Frontend Cross-Cutting Concerns
+- Pagination component with prev/next on all list pages (inboxes, domains, webhooks, API keys, audit, members)
+- ErrorState component with retry button on all data-fetching pages
+- ConfirmDialog on all destructive actions (delete inbox, remove domain, delete webhook, revoke key, remove member)
+- Optimistic updates with rollback on delete mutations via TanStack Query cache
+- Search/filter: domain list (by name), member list (by name/email), audit log (by action/resource)
+- Toast notifications on all mutations (already present, now consistent)
+- Skeleton loaders on all list pages (already present, now consistent)
+
 ## v0.3.3 (2026-02-28)
 
 ### Error Handling & Cleanup
