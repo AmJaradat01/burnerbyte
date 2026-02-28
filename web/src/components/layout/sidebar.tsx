@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth-store";
 import { useOrgStore } from "@/stores/org-store";
 import { cn } from "@/lib/utils";
@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: "📊" },
@@ -30,13 +30,23 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const { orgs, currentOrg, fetchOrgs, setCurrentOrg, teams, currentTeam, fetchTeams, setCurrentTeam } = useOrgStore();
+  const orgsFetched = useRef(false);
 
   useEffect(() => {
-    if (user) fetchOrgs();
+    if (user) fetchOrgs().then(() => { orgsFetched.current = true; });
   }, [user, fetchOrgs]);
+
+  // Redirect to onboarding if user has no orgs
+  useEffect(() => {
+    if (!orgsFetched.current || !user) return;
+    if (orgs.length === 0 && pathname !== "/onboarding" && localStorage.getItem("bb_onboarding_done") !== "true") {
+      router.replace("/onboarding");
+    }
+  }, [orgs, user, pathname, router]);
 
   useEffect(() => {
     if (currentOrg) fetchTeams(currentOrg.id);
