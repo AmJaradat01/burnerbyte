@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.5.6 (2026-02-28)
+
+### Security & Configuration Fixes
+- Admin routes missing RequireSystemAdmin — any user could view system stats and all orgs
+- .env.example had wrong env var names (missing BB_ prefix) — SMTP, Mailer, MinIO, SSO, JWT TTL vars were silently ignored by Viper
+
 ## v0.5.5 (2026-02-28)
 
 ### Security & UX Fixes
