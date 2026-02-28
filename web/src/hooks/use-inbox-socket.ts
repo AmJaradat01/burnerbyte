@@ -18,7 +18,7 @@ export function useInboxSocket(inboxId: string | undefined, onEmail: (email: unk
 
     function connect() {
       const token = localStorage.getItem("access_token");
-      const ws = new WebSocket(`${WS_BASE}?inbox=${inboxId}&token=${token}`);
+      const ws = new WebSocket(`${WS_BASE}/inboxes/${inboxId}?token=${token}`);
       wsRef.current = ws;
 
       ws.onopen = () => { retryRef.current = 0; };

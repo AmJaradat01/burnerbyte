@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"reflect"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
@@ -317,6 +318,10 @@ func parsePagination(r *http.Request) (page, perPage int) {
 }
 
 func paginatedResponse(data any, total, page, perPage int) map[string]any {
+	// Ensure nil slices serialize as [] not null
+	if data == nil || reflect.ValueOf(data).IsNil() {
+		data = []any{}
+	}
 	totalPages := total / perPage
 	if total%perPage > 0 {
 		totalPages++
