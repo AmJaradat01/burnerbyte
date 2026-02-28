@@ -31,6 +31,21 @@ func (r *APIKeyRepo) Create(ctx context.Context, k *domain.APIKey) error {
 	return nil
 }
 
+func (r *APIKeyRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.APIKey, error) {
+	var k domain.APIKey
+	var scopes []byte
+	err := r.db.QueryRow(ctx,
+		`SELECT id, team_id, created_by, key_hash, key_prefix, name, scopes, last_used_at, expires_at, created_at
+		 FROM api_keys WHERE id = $1`, id).
+		Scan(&k.ID, &k.TeamID, &k.CreatedBy, &k.KeyHash, &k.KeyPrefix, &k.Name, &scopes, &k.LastUsedAt, &k.ExpiresAt, &k.CreatedAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) { return nil, ErrNotFound }
+		return nil, err
+	}
+	json.Unmarshal(scopes, &k.Scopes)
+	return &k, nil
+}
+
 func (r *APIKeyRepo) GetByHash(ctx context.Context, hash string) (*domain.APIKey, error) {
 	var k domain.APIKey
 	var scopes []byte
