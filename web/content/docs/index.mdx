@@ -1,0 +1,68 @@
+---
+title: BurnerByte Documentation
+description: Self-hosted, open-source temporary email platform with multi-org, multi-team, multi-domain architecture.
+---
+
+## Welcome
+
+BurnerByte is a self-hosted temporary email platform built for teams that need disposable email addresses for testing, development, and QA workflows. It provides a complete solution with real-time email delivery, configurable attachment policies, webhooks, and a full RBAC system.
+
+## Key Features
+
+- **One-time setup wizard** — Admin account, org, SMTP, domain, team, branding, and invites
+- **Multi-team, multi-domain** — Single org with teams scoped to specific domains
+- **Full RBAC** — 6 roles across org and team levels
+- **Real-time delivery** — WebSocket streaming for instant email notifications
+- **Configurable attachments** — Policy inheritance from org → domain → team
+- **Webhooks** — HMAC-SHA256 signed with retry and delivery logs
+- **Scoped API keys** — Programmatic access with granular permissions
+- **Audit logging** — Full activity trail with filtering and CSV export
+- **Analytics** — Time-series charts and aggregate stats
+- **SSO** — OIDC provider integration
+- **Private inboxes** — Only the creator can access
+
+## Architecture at a Glance
+
+```
+┌─────────────┐     ┌──────────────┐     ┌───────────┐
+│  Next.js UI │────▶│   Go API     │────▶│ PostgreSQL│
+│  (port 3000)│     │  (port 8080) │     └───────────┘
+└─────────────┘     │              │────▶┌───────────┐
+                    │  Chi Router  │     │   Redis   │
+┌─────────────┐     │  + Workers   │     └───────────┘
+│ Mail Server │────▶│              │────▶┌───────────┐
+│  (external) │     └──────────────┘     │   MinIO   │
+└─────────────┘                          └───────────┘
+       │
+       ▼
+┌──────────────┐
+│  Go SMTPD    │
+│  (port 2525) │
+└──────────────┘
+```
+
+Two separate Go binaries scale independently:
+- **`cmd/api`** — HTTP API server + background workers
+- **`cmd/smtpd`** — SMTP inbound server
+
+## Quick Links
+
+<Cards>
+  <Card title="Installation" href="/docs/getting-started/installation" />
+  <Card title="Quick Start" href="/docs/getting-started/quick-start" />
+  <Card title="Docker Setup" href="/docs/getting-started/docker" />
+  <Card title="Configuration" href="/docs/getting-started/configuration" />
+  <Card title="API Reference" href="/docs/api" />
+  <Card title="Self-Hosting Guide" href="/docs/self-hosting/production" />
+</Cards>
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Backend | Go 1.22+, Chi router, pgxpool, go-redis, gorilla/websocket, enmime |
+| Frontend | Next.js 16, React 19, shadcn/ui, Tailwind CSS 4, Zustand, TanStack Query, Recharts |
+| Database | PostgreSQL 16 (21 migrations, 52+ indexes, 7 triggers) |
+| Cache | Redis 7 |
+| Storage | MinIO (S3-compatible) |
+| Infrastructure | Docker, Docker Compose |

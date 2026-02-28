@@ -1,0 +1,30 @@
+---
+title: Theming
+description: Dark mode, light mode, and customization.
+---
+
+## Theme Toggle
+
+BurnerByte supports three theme modes: **Light**, **Dark**, and **System** (follows OS preference). Toggle via the sun/moon button in the sidebar footer. Powered by `next-themes`.
+
+## CSS Variables
+
+All colors are defined as CSS custom properties using the OKLCH color space. Override them in your `globals.css`:
+
+```css
+:root {
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+}
+
+.dark {
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+}
+```
+
+## Component Library
+
+UI components are from [shadcn/ui](https://ui.shadcn.com/) built on Radix primitives. They're fully customizable — source code lives in `src/components/ui/`.
+
+Key components: Button, Input, Label, Card, Table, Dialog, Select, Tabs, Badge, Switch, Popover, AlertDialog, Sheet, Skeleton.

@@ -1,0 +1,29 @@
+---
+title: Settings Cascade
+description: How settings inherit from org to domain assignment.
+---
+
+## Inheritance Model
+
+```
+Global Defaults → Org Settings → Domain Assignment Settings → Effective Settings
+```
+
+## Configurable Settings
+
+| Setting | Level | Description |
+|---|---|---|
+| `attachments_enabled` | Org, Assignment | Whether file attachments are accepted |
+| `max_attachment_size_mb` | Org, Assignment | Maximum attachment file size |
+| `default_inbox_ttl` | Org | Default inbox lifetime |
+| `max_inbox_ttl` | Org | Maximum inbox lifetime |
+| `max_domains` | Org | Maximum domains per org |
+| `max_teams` | Org | Maximum teams per org |
+| `max_inboxes_per_domain` | Org | Maximum inboxes per domain |
+| `enforce_sso` | Org | Require SSO for all members |
+
+## Example
+
+If the org has `attachments_enabled: true` and `max_attachment_size_mb: 25`, but a specific domain assignment overrides with `attachments_enabled: false`, then inboxes on that assignment will not accept attachments.
+
+Org-level settings are managed on the **Settings** page. Domain assignment settings are managed on the **Teams** page when editing domain assignments.

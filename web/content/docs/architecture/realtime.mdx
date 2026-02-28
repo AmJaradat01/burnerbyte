@@ -1,0 +1,34 @@
+---
+title: Real-time & WebSocket
+description: How BurnerByte delivers emails and notifications in real-time.
+---
+
+## WebSocket Hubs
+
+BurnerByte uses two separate WebSocket hubs:
+
+### Inbox Hub
+
+Endpoint: `GET /ws/inboxes/{inboxId}?token=<jwt>`
+
+Streams new emails to a specific inbox in real-time. When the SMTP handler stores a new email, it pushes a notification to the inbox hub, which broadcasts to all connected clients.
+
+### Notification Hub
+
+Endpoint: `GET /ws/notifications?token=<jwt>`
+
+Streams all notifications for the authenticated user. Powers the notification bell in the top-right corner of the UI.
+
+## Connection Lifecycle
+
+1. Client connects with JWT token as query parameter
+2. Server validates the token and registers the connection
+3. Ping/pong frames maintain the connection (54s ping interval, 60s read deadline)
+4. Write deadline of 10s prevents slow clients from blocking
+5. On disconnect, the connection is unregistered from the hub
+
+## Frontend Integration
+
+The `useInboxSocket` hook manages the WebSocket connection — connects when the inbox detail page mounts, reconnects automatically on disconnect with backoff, calls `onNewEmail` callback which invalidates TanStack Query cache, and shows a toast notification for each new email.
+
+The `NotificationCenter` component connects to the notification WebSocket and maintains an in-memory list of up to 50 notifications with read/dismiss functionality.

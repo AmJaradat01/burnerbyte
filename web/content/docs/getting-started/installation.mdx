@@ -1,0 +1,73 @@
+---
+title: Installation
+description: Prerequisites and initial setup for BurnerByte.
+---
+
+## Prerequisites
+
+| Requirement | Version |
+|---|---|
+| Go | 1.22+ |
+| Node.js | 20+ with pnpm |
+| Docker & Docker Compose | Latest |
+| PostgreSQL | 16 (or use Docker) |
+| Redis | 7 (or use Docker) |
+
+## Clone the Repository
+
+```bash
+git clone git@gitlab.com:amjaradat01/burnerbyte.git
+cd burnerbyte
+```
+
+## Start Infrastructure
+
+If you don't have PostgreSQL and Redis running locally, use Docker Compose to start them along with MinIO:
+
+```bash
+make docker-up
+```
+
+This starts PostgreSQL 16, Redis 7, and MinIO with default credentials. See [Docker Setup](/docs/getting-started/docker) for customization.
+
+## Environment Configuration
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your values. At minimum, configure:
+
+- `DATABASE_URL` — PostgreSQL connection string
+- `REDIS_URL` — Redis connection string
+- `JWT_SECRET` — A random 64-character string for signing tokens
+
+See [Configuration](/docs/getting-started/configuration) for all available options.
+
+## Run Migrations
+
+```bash
+make migrate-up
+```
+
+This applies all 21 database migrations, creating tables for users, organizations, teams, domains, inboxes, emails, attachments, webhooks, API keys, audit logs, sessions, and more.
+
+## Install Frontend Dependencies
+
+```bash
+cd web && pnpm install
+```
+
+## Build (Optional)
+
+For production builds:
+
+```bash
+# Backend
+make build
+
+# Frontend
+cd web && pnpm build
+```
+
+This produces `bin/api`, `bin/smtpd`, and the Next.js standalone output.

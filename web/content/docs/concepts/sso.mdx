@@ -1,0 +1,36 @@
+---
+title: Single Sign-On (SSO)
+description: OIDC-based SSO integration.
+---
+
+## Configuration
+
+```yaml
+sso:
+  provider: google
+  client_id: your-client-id
+  client_secret: your-client-secret
+  redirect_url: http://localhost:8080/api/v1/auth/sso/google/callback
+```
+
+## Flow
+
+1. User clicks "Sign in with SSO" on the login page
+2. Frontend redirects to `GET /auth/sso/{provider}`
+3. Server generates a state cookie (600s TTL) and redirects to the OIDC provider
+4. User authenticates with the provider
+5. Provider redirects back to `GET /auth/sso/{provider}/callback`
+6. Server validates the state, exchanges the code for tokens, and extracts user info
+7. If the user exists, they're logged in. If not, a new account is created
+8. Server redirects to the frontend with access and refresh tokens as query parameters
+
+## Enforcing SSO
+
+Org admins can enforce SSO for all members via org settings:
+
+```bash
+PUT /orgs/{orgId}/settings
+{"enforce_sso": true}
+```
+
+When enforced, password-based login is disabled for org members.
