@@ -113,7 +113,7 @@ export interface Webhook {
   team_id: string;
   url: string;
   events: string[];
-  is_active: boolean;
+  active: boolean;
   created_at: string;
 }
 
@@ -121,7 +121,7 @@ export interface APIKey {
   id: string;
   team_id: string;
   name: string;
-  prefix: string;
+  key_prefix: string;
   scopes: string[];
   last_used_at?: string;
   created_at: string;
