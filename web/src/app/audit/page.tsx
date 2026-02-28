@@ -10,19 +10,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
+import { TableSkeleton } from "@/components/table-skeleton";
+import { Pagination } from "@/components/pagination";
+import { ErrorState } from "@/components/error-state";
 
 interface AuditEntry {
-  id: string;
-  actor_id: string;
-  actor_email?: string;
-  action: string;
-  resource_type: string;
-  resource_id: string;
-  metadata?: Record<string, unknown>;
-  ip_address?: string;
-  created_at: string;
+  id: string; actor_id: string; actor_email?: string; action: string;
+  resource_type: string; resource_id: string; metadata?: Record<string, unknown>;
+  ip_address?: string; created_at: string;
 }
+interface PaginatedResponse<T> { data: T[]; total: number; page: number; per_page: number; total_pages: number; }
 
 export default function AuditPage() {
   const { currentOrg } = useOrgStore();
@@ -34,9 +31,9 @@ export default function AuditPage() {
   if (action) params.action = action;
   if (resource) params.resource_type = resource;
 
-  const { data } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["audit", currentOrg?.id, action, resource, page],
-    queryFn: () => api.get<{ data: AuditEntry[]; total: number }>(`/orgs/${currentOrg!.id}/audit`, params),
+    queryFn: () => api.get<PaginatedResponse<AuditEntry>>(`/orgs/${currentOrg!.id}/audit`, params),
     enabled: !!currentOrg,
   });
 
@@ -45,7 +42,7 @@ export default function AuditPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Audit Log</h1>
-      <div className="flex gap-4">
+      <div className="flex gap-4 flex-wrap">
         <div className="space-y-1">
           <Label>Action</Label>
           <Input value={action} onChange={(e) => { setAction(e.target.value); setPage(1); }} placeholder="Filter by action…" className="w-48" />
@@ -56,13 +53,15 @@ export default function AuditPage() {
             <SelectTrigger className="w-48"><SelectValue placeholder="All resources" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All</SelectItem>
-              {["user", "org", "team", "domain", "inbox", "email", "webhook", "api_key"].map((r) => (
+              {["user", "org", "team", "domain", "domain_assignment", "inbox", "email", "webhook", "api_key"].map((r) => (
                 <SelectItem key={r} value={r}>{r}</SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
       </div>
+      {isError ? <ErrorState message="Failed to load audit log" onRetry={() => refetch()} /> :
+      isLoading ? <TableSkeleton rows={10} cols={5} /> : (
       <Card>
         <CardContent className="p-0">
           <Table>
@@ -85,14 +84,15 @@ export default function AuditPage() {
                   <TableCell className="text-muted-foreground text-sm">{e.ip_address}</TableCell>
                 </TableRow>
               ))}
+              {(!data?.data || data.data.length === 0) && (
+                <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No audit entries found</TableCell></TableRow>
+              )}
             </TableBody>
           </Table>
+          <Pagination page={page} totalPages={data?.total_pages ?? 1} onPageChange={setPage} />
         </CardContent>
       </Card>
-      <div className="flex gap-2">
-        <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</Button>
-        <Button variant="outline" size="sm" onClick={() => setPage(page + 1)}>Next</Button>
-      </div>
+      )}
     </div>
   );
 }

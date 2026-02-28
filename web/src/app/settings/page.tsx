@@ -16,6 +16,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { ConfirmDialog } from "@/components/confirm-dialog";
+import { Pagination } from "@/components/pagination";
+import { ErrorState } from "@/components/error-state";
 import type { Organization, Membership, OrgSettings } from "@/types";
 
 export default function SettingsPage() {
@@ -109,9 +112,11 @@ function OrgSettingsForm({ org, onSaved }: { org: Organization; onSaved: () => v
 
 function MembersTab({ orgId }: { orgId: string }) {
   const qc = useQueryClient();
-  const { data } = useQuery({
-    queryKey: ["org-members", orgId],
-    queryFn: () => api.get<{ data: Membership[] }>(`/orgs/${orgId}/members`),
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["org-members", orgId, page],
+    queryFn: () => api.get<{ data: Membership[]; total: number; total_pages: number }>(`/orgs/${orgId}/members`, { page: String(page), per_page: "20" }),
   });
 
   const changeRole = useMutation({
@@ -123,9 +128,28 @@ function MembersTab({ orgId }: { orgId: string }) {
 
   const remove = useMutation({
     mutationFn: (userId: string) => api.del(`/orgs/${orgId}/members/${userId}`),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["org-members", orgId] }); toast.success("Member removed"); },
-    onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
+    onMutate: async (userId) => {
+      await qc.cancelQueries({ queryKey: ["org-members"] });
+      const prev = qc.getQueryData(["org-members", orgId, page]);
+      qc.setQueryData(["org-members", orgId, page], (old: any) =>
+        old ? { ...old, data: old.data.filter((m: Membership) => m.user_id !== userId) } : old
+      );
+      return { prev };
+    },
+    onError: (err, _id, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["org-members", orgId, page], ctx.prev);
+      toast.error(err instanceof Error ? err.message : "Failed");
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["org-members"] }),
+    onSuccess: () => toast.success("Member removed"),
   });
+
+  const filtered = data?.data?.filter((m) =>
+    (m.display_name?.toLowerCase() || "").includes(search.toLowerCase()) ||
+    (m.email?.toLowerCase() || "").includes(search.toLowerCase())
+  );
+
+  if (isError) return <ErrorState message="Failed to load members" onRetry={() => refetch()} />;
 
   return (
     <Card>
@@ -133,7 +157,8 @@ function MembersTab({ orgId }: { orgId: string }) {
         <CardTitle>Members</CardTitle>
         <InviteDialog orgId={orgId} />
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
+        <Input placeholder="Search by name or email…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />
         <Table>
           <TableHeader>
             <TableRow>
@@ -144,7 +169,7 @@ function MembersTab({ orgId }: { orgId: string }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data?.data?.map((m) => (
+            {filtered?.map((m) => (
               <TableRow key={m.id}>
                 <TableCell>{m.display_name}</TableCell>
                 <TableCell>{m.email}</TableCell>
@@ -159,12 +184,18 @@ function MembersTab({ orgId }: { orgId: string }) {
                   </Select>
                 </TableCell>
                 <TableCell>
-                  <Button variant="ghost" size="sm" onClick={() => remove.mutate(m.user_id)}>Remove</Button>
+                  <ConfirmDialog
+                    trigger={<Button variant="ghost" size="sm">Remove</Button>}
+                    title="Remove member?"
+                    description="This member will lose access to the organization."
+                    onConfirm={() => remove.mutate(m.user_id)}
+                  />
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
+        <Pagination page={page} totalPages={data?.total_pages ?? 1} onPageChange={setPage} />
       </CardContent>
     </Card>
   );
