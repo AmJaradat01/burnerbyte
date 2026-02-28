@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
 	redisrepo "gitlab.com/amjaradat01/burnerbyte/internal/repository/redis"
@@ -53,6 +54,9 @@ func (r *Router) CanAccept(ctx context.Context, rcptTo string) (string, error) {
 	inbox, err := r.inboxRepoPG.GetByFullAddress(ctx, addr)
 	if err != nil {
 		return "", fmt.Errorf("unknown recipient: %s", addr)
+	}
+	if !inbox.IsActive || time.Now().After(inbox.ExpiresAt) {
+		return "", fmt.Errorf("inbox expired: %s", addr)
 	}
 
 	return inbox.ID.String(), nil
