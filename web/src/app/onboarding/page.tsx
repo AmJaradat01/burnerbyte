@@ -1,0 +1,179 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { api } from "@/lib/api";
+import { useOrgStore } from "@/stores/org-store";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import type { Organization, Team } from "@/types";
+
+const STEPS = ["Organization", "Domain", "Team", "Inbox", "Done"];
+
+export default function OnboardingPage() {
+  const router = useRouter();
+  const { fetchOrgs, setCurrentOrg, fetchTeams, setCurrentTeam } = useOrgStore();
+  const [step, setStep] = useState(0);
+  const [org, setOrg] = useState<Organization | null>(null);
+  const [domainId, setDomainId] = useState<string | null>(null);
+  const [domainName, setDomainName] = useState("");
+  const [verificationRecord, setVerificationRecord] = useState("");
+  const [team, setTeam] = useState<Team | null>(null);
+  const [assignmentId, setAssignmentId] = useState<string | null>(null);
+  const [inboxAddress, setInboxAddress] = useState<string | null>(null);
+
+  // Step 0: Create org
+  const [orgName, setOrgName] = useState("");
+  const createOrg = async () => {
+    try {
+      const res = await api.post<Organization>("/orgs", { name: orgName });
+      setOrg(res);
+      setStep(1);
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Failed"); }
+  };
+
+  // Step 1: Add domain
+  const [domainInput, setDomainInput] = useState("");
+  const addDomain = async () => {
+    try {
+      const res = await api.post<{ id: string; domain_name: string; verification_record?: string }>(`/orgs/${org!.id}/domains`, { domain_name: domainInput });
+      setDomainId(res.id);
+      setDomainName(res.domain_name);
+      setVerificationRecord(res.verification_record || "");
+      setStep(2);
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Failed"); }
+  };
+
+  // Step 2: Create team
+  const [teamName, setTeamName] = useState("");
+  const createTeam = async () => {
+    try {
+      const res = await api.post<Team>(`/orgs/${org!.id}/teams`, { name: teamName });
+      setTeam(res);
+      // Auto-assign domain to team
+      const assignment = await api.post<{ id: string }>(`/orgs/${org!.id}/teams/${res.id}/domains`, { domain_id: domainId });
+      setAssignmentId(assignment.id);
+      setStep(3);
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Failed"); }
+  };
+
+  // Step 3: Create inbox
+  const createInbox = async () => {
+    try {
+      const res = await api.post<{ full_address: string }>("/inboxes", { domain_assignment_id: assignmentId, ttl: "1h" });
+      setInboxAddress(res.full_address);
+      setStep(4);
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Failed"); }
+  };
+
+  // Step 4: Done
+  const finish = async () => {
+    localStorage.setItem("bb_onboarding_done", "true");
+    await fetchOrgs();
+    if (org) setCurrentOrg(org);
+    if (org) {
+      await fetchTeams(org.id);
+      if (team) setCurrentTeam(team);
+    }
+    router.push("/dashboard");
+  };
+
+  const skip = () => {
+    localStorage.setItem("bb_onboarding_done", "true");
+    router.push("/dashboard");
+  };
+
+  return (
+    <div className="flex min-h-screen items-center justify-center p-4">
+      <Card className="w-full max-w-lg">
+        <CardHeader className="text-center">
+          <CardTitle>Welcome to BurnerByte</CardTitle>
+          <CardDescription>Let's get you set up in a few steps</CardDescription>
+          <div className="flex justify-center gap-2 mt-4">
+            {STEPS.map((s, i) => (
+              <Badge key={s} variant={i <= step ? "default" : "outline"} className="text-xs">{s}</Badge>
+            ))}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {step === 0 && (
+            <>
+              <div className="space-y-2">
+                <Label>Organization name</Label>
+                <Input value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="My Company" autoFocus />
+              </div>
+              <div className="flex justify-between">
+                <Button variant="ghost" onClick={skip}>Skip setup</Button>
+                <Button onClick={createOrg} disabled={!orgName}>Create org →</Button>
+              </div>
+            </>
+          )}
+
+          {step === 1 && (
+            <>
+              <div className="space-y-2">
+                <Label>Domain name</Label>
+                <Input value={domainInput} onChange={(e) => setDomainInput(e.target.value)} placeholder="example.com" autoFocus />
+              </div>
+              <div className="flex justify-between">
+                <Button variant="ghost" onClick={() => setStep(2)}>Skip</Button>
+                <Button onClick={addDomain} disabled={!domainInput}>Add domain →</Button>
+              </div>
+            </>
+          )}
+
+          {step === 2 && (
+            <>
+              {verificationRecord && (
+                <div className="rounded bg-muted p-3 space-y-2">
+                  <p className="text-sm font-medium">DNS Records for {domainName}</p>
+                  <p className="text-xs text-muted-foreground">Add this TXT record to verify ownership:</p>
+                  <code className="text-xs break-all block">{verificationRecord}</code>
+                  <Button variant="outline" size="sm" onClick={() => { navigator.clipboard.writeText(verificationRecord); toast.success("Copied"); }}>Copy</Button>
+                </div>
+              )}
+              <div className="space-y-2">
+                <Label>Team name</Label>
+                <Input value={teamName} onChange={(e) => setTeamName(e.target.value)} placeholder="Engineering" autoFocus />
+              </div>
+              <div className="flex justify-between">
+                <Button variant="ghost" onClick={() => setStep(3)}>Skip</Button>
+                <Button onClick={createTeam} disabled={!teamName}>Create team →</Button>
+              </div>
+            </>
+          )}
+
+          {step === 3 && (
+            <>
+              <p className="text-sm text-muted-foreground">Create your first temporary inbox to start receiving emails.</p>
+              <div className="flex justify-between">
+                <Button variant="ghost" onClick={() => setStep(4)}>Skip</Button>
+                <Button onClick={createInbox}>Create inbox →</Button>
+              </div>
+            </>
+          )}
+
+          {step === 4 && (
+            <>
+              <div className="text-center space-y-3">
+                <span className="text-5xl">🎉</span>
+                <p className="text-lg font-semibold">You're all set!</p>
+                {inboxAddress && (
+                  <div className="rounded bg-muted p-3">
+                    <p className="text-sm text-muted-foreground">Your first inbox:</p>
+                    <code className="text-sm font-medium">{inboxAddress}</code>
+                  </div>
+                )}
+              </div>
+              <Button onClick={finish} className="w-full">Go to Dashboard</Button>
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

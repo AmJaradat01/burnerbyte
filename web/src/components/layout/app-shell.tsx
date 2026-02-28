@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { api } from "@/lib/api";
 
-const publicPaths = ["/login", "/register", "/forgot-password", "/reset-password", "/verify-email", "/invite", "/setup"];
+const publicPaths = ["/login", "/register", "/forgot-password", "/reset-password", "/verify-email", "/invite", "/setup", "/onboarding"];
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, loading } = useAuthStore();
