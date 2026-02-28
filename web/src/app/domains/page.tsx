@@ -7,20 +7,28 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { TableSkeleton } from "@/components/table-skeleton";
+import { Pagination } from "@/components/pagination";
+import { ErrorState } from "@/components/error-state";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import type { Domain } from "@/types";
+
+interface PaginatedResponse<T> { data: T[]; total: number; page: number; per_page: number; total_pages: number; }
 
 export default function DomainsPage() {
   const { currentOrg } = useOrgStore();
   const qc = useQueryClient();
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
 
-  const { data } = useQuery({
-    queryKey: ["domains", currentOrg?.id],
-    queryFn: () => api.get<{ data: Domain[] }>(`/orgs/${currentOrg!.id}/domains`),
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["domains", currentOrg?.id, page],
+    queryFn: () => api.get<PaginatedResponse<Domain>>(`/orgs/${currentOrg!.id}/domains`, { page: String(page), per_page: "20" }),
     enabled: !!currentOrg,
   });
 
@@ -32,11 +40,25 @@ export default function DomainsPage() {
 
   const remove = useMutation({
     mutationFn: (id: string) => api.del(`/orgs/${currentOrg!.id}/domains/${id}`),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["domains"] }); toast.success("Domain removed"); },
-    onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ["domains"] });
+      const prev = qc.getQueryData(["domains", currentOrg?.id, page]);
+      qc.setQueryData(["domains", currentOrg?.id, page], (old: any) =>
+        old ? { ...old, data: old.data.filter((d: Domain) => d.id !== id) } : old
+      );
+      return { prev };
+    },
+    onError: (err, _id, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["domains", currentOrg?.id, page], ctx.prev);
+      toast.error(err instanceof Error ? err.message : "Failed");
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["domains"] }),
+    onSuccess: () => toast.success("Domain removed"),
   });
 
   if (!currentOrg) return <p className="text-muted-foreground">Select an organization first.</p>;
+
+  const filtered = data?.data?.filter((d) => d.domain_name.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div className="space-y-6">
@@ -44,6 +66,9 @@ export default function DomainsPage() {
         <h1 className="text-2xl font-bold">Domains</h1>
         <AddDomainDialog orgId={currentOrg.id} />
       </div>
+      <Input placeholder="Search domains…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />
+      {isError ? <ErrorState message="Failed to load domains" onRetry={() => refetch()} /> :
+      isLoading ? <TableSkeleton rows={5} cols={5} /> : (
       <Card>
         <CardContent className="p-0">
           <Table>
@@ -57,7 +82,7 @@ export default function DomainsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data?.data?.map((d) => (
+              {filtered?.map((d) => (
                 <TableRow key={d.id}>
                   <TableCell className="font-medium">{d.domain_name}</TableCell>
                   <TableCell><Badge variant={d.mx_verified ? "default" : "secondary"}>{d.mx_verified ? "Verified" : "Pending"}</Badge></TableCell>
@@ -65,23 +90,29 @@ export default function DomainsPage() {
                   <TableCell className="text-muted-foreground">{new Date(d.created_at).toLocaleDateString()}</TableCell>
                   <TableCell className="text-right space-x-2">
                     <Button variant="outline" size="sm" onClick={() => verify.mutate(d.id)}>Verify</Button>
-                    <Button variant="ghost" size="sm" onClick={() => remove.mutate(d.id)}>Remove</Button>
+                    <ConfirmDialog
+                      trigger={<Button variant="ghost" size="sm">Remove</Button>}
+                      title="Remove domain?"
+                      description="This will remove the domain and all its assignments."
+                      onConfirm={() => remove.mutate(d.id)}
+                    />
                   </TableCell>
                 </TableRow>
               ))}
-              {(!data?.data || data.data.length === 0) && (
+              {(!filtered || filtered.length === 0) && (
                 <TableRow><TableCell colSpan={5} className="text-center py-8">
                   <div className="flex flex-col items-center gap-2">
                     <span className="text-3xl">🌐</span>
-                    <p className="text-muted-foreground">No domains yet</p>
-                    <p className="text-xs text-muted-foreground">Add a domain to start creating inboxes.</p>
+                    <p className="text-muted-foreground">{search ? "No matching domains" : "No domains yet"}</p>
                   </div>
                 </TableCell></TableRow>
               )}
             </TableBody>
           </Table>
+          <Pagination page={page} totalPages={data?.total_pages ?? 1} onPageChange={setPage} />
         </CardContent>
       </Card>
+      )}
     </div>
   );
 }
