@@ -1,0 +1,62 @@
+---
+title: Architecture Overview
+description: How BurnerByte's two-binary architecture works.
+---
+
+## System Design
+
+BurnerByte runs as two independent Go binaries that share the same database, Redis, and MinIO:
+
+- **`cmd/api`** — HTTP API server (Chi router) + 5 background workers
+- **`cmd/smtpd`** — SMTP inbound server with worker pool
+
+Both binaries load the same `config.yaml` and connect to the same PostgreSQL, Redis, and MinIO instances. They can be scaled independently.
+
+## Request Flow
+
+### API Request
+
+```
+Client → CORS → Rate Limiter → Body Size Limit → Auth Middleware → RBAC Check → Handler → Service → Repository → PostgreSQL
+```
+
+Middleware chain: RequestID → RealIP → Logger → Recoverer → MaxBytesReader → CORS → (route-specific: Auth, RateLimit, RBAC).
+
+### Inbound Email
+
+```
+External MTA → SMTPD (port 2525) → Router (domain lookup) → Handler (MIME parse) → PostgreSQL + MinIO
+                                                                                  → WebSocket Hub
+                                                                                  → Webhook Dispatcher
+```
+
+The SMTP server accepts connections, validates the recipient domain against the database, parses MIME content with enmime, stores the email and attachments, then fans out to WebSocket and webhook subscribers.
+
+## Key Components
+
+| Component | Package | Purpose |
+|---|---|---|
+| HTTP Router | `go-chi/chi` | RESTful API routing |
+| Auth | `internal/auth` | JWT tokens, sessions, lockout, SSO |
+| RBAC | `internal/auth/rbac` | Role-based access control |
+| Handlers | `internal/handler` | 17 HTTP handler files |
+| Services | `internal/service` | 13 business logic services |
+| Repositories | `internal/repository` | 15 PostgreSQL + 1 Redis repo |
+| SMTP | `internal/smtp` | Server, router, handler, listener |
+| Workers | `internal/worker` | 5 background jobs |
+| Realtime | `internal/realtime` | WebSocket hubs for inbox + notifications |
+| Webhooks | `internal/webhook` | HMAC-signed dispatch with retry |
+| Mailer | `internal/mailer` | Outbound email (invites, resets) |
+| Storage | `internal/storage` | MinIO S3 client |
+| Audit | `internal/audit` | Activity recording |
+| Config | `internal/config` | Viper-based config + DB overrides |
+
+## Database
+
+19 tables across 21 migration pairs. Key tables: `users`, `organizations`, `org_memberships`, `teams`, `team_memberships`, `domains`, `domain_assignments`, `inboxes`, `emails`, `attachments`, `webhooks`, `webhook_delivery_logs`, `api_keys`, `audit_logs`, `invites`, `sessions`, `setup_state`, `password_reset_tokens`, `system_configs`.
+
+52+ indexes and 7 triggers handle cascading deletes, automatic timestamps, and data integrity.
+
+## Frontend
+
+Next.js 16 with App Router, React 19, shadcn/ui components, Zustand for state, TanStack Query for server state, and Recharts for analytics visualization. 24 pages with consistent UX patterns (loading skeletons, error states, empty states, confirmation dialogs, optimistic updates).

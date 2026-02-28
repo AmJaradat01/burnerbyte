@@ -1,0 +1,53 @@
+---
+title: DNS Setup
+description: Configure DNS records for receiving email.
+---
+
+## Required Records
+
+### MX Record
+
+Points email delivery to your SMTP server:
+
+```
+test.example.com.  IN  MX  10  mail.yourserver.com.
+```
+
+### TXT Verification Record
+
+BurnerByte generates a unique token for each domain:
+
+```
+test.example.com.  IN  TXT  "burnerbyte-verify=<your-token>"
+```
+
+## Optional Records
+
+### SPF
+
+```
+test.example.com.  IN  TXT  "v=spf1 mx -all"
+```
+
+## Verification
+
+After adding DNS records:
+
+1. Wait for DNS propagation (usually 5–30 minutes)
+2. Click **Re-verify DNS** on the domain detail page
+3. Or wait for the background DNS recheck worker (runs every hour)
+
+Both MX and TXT records must be verified before the domain can receive emails.
+
+## Testing
+
+```bash
+# Check MX
+dig MX test.example.com
+
+# Check TXT
+dig TXT test.example.com
+
+# Send a test email
+swaks --to test@test.example.com --server mail.yourserver.com:2525
+```

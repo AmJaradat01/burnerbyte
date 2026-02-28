@@ -1,0 +1,51 @@
+---
+title: Background Workers
+description: The 5 background jobs that keep BurnerByte running.
+---
+
+## Worker Manager
+
+The API server runs a worker manager that schedules 5 periodic jobs. Each job runs at a configurable interval and is gracefully stopped on shutdown.
+
+## Jobs
+
+### Cleanup
+
+**Interval:** `workers.cleanup_interval` (default: 5m)
+
+Removes expired inboxes and their emails/attachments (including S3 objects), expired sessions, and expired password reset tokens.
+
+### DNS Recheck
+
+**Interval:** `workers.dns_recheck_interval` (default: 1h)
+
+Re-verifies MX and TXT DNS records for all domains that aren't fully verified.
+
+### Webhook Retry
+
+**Interval:** `workers.webhook_retry_interval` (default: 1m)
+
+Retries failed webhook deliveries using exponential backoff: 0s, 1s, 5s, 25s. After 4 attempts, the delivery is marked as permanently failed.
+
+### Reconciler
+
+**Interval:** `workers.reconciler_interval` (default: 1m)
+
+Synchronizes Redis inbox routing cache with PostgreSQL. Ensures active inboxes have corresponding Redis entries and expired inboxes are removed.
+
+### Analytics
+
+**Interval:** `workers.analytics_interval` (default: 5m)
+
+Pre-computes analytics aggregates and caches them in Redis with a configurable TTL (`defaults.analytics_cache_ttl`, default: 2h).
+
+## Configuration
+
+```yaml
+workers:
+  dns_recheck_interval: 1h
+  cleanup_interval: 5m
+  webhook_retry_interval: 1m
+  reconciler_interval: 1m
+  analytics_interval: 5m
+```

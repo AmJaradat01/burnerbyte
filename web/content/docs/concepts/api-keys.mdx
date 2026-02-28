@@ -1,0 +1,38 @@
+---
+title: API Keys
+description: Scoped API keys for programmatic access.
+---
+
+## Creating a Key
+
+```bash
+POST /orgs/{orgId}/teams/{teamId}/api-keys
+{
+  "name": "CI Pipeline",
+  "scopes": ["inbox:create", "inbox:read", "email:read"]
+}
+```
+
+The response includes the `raw_key` — **shown only once**.
+
+## Key Format
+
+API keys use the prefix `bb_` followed by a random string. Only the prefix is stored in the database; the full key is hashed with bcrypt.
+
+## Available Scopes
+
+| Scope | Permission |
+|---|---|
+| `inbox:create` | Create new inboxes |
+| `inbox:read` | List and view inboxes |
+| `email:read` | List and view emails |
+| `email:delete` | Delete emails |
+
+## Authentication
+
+```bash
+curl -H "Authorization: Bearer bb_your-key-here" \
+  https://your-instance.com/api/v1/inboxes
+```
+
+The auth middleware detects the `bb_` prefix and validates against the API key table instead of JWT.
