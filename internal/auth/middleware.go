@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -180,9 +181,9 @@ func GetUser(ctx context.Context) *UserContext {
 func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	// Minimal inline JSON for auth errors — no encoding/json import needed for simple maps
 	if m, ok := v.(map[string]string); ok {
-		w.Write([]byte(`{"error":"` + m["error"] + `"}`))
+		b, _ := json.Marshal(m)
+		w.Write(b)
 	}
 }
 
