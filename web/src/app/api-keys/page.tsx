@@ -7,37 +7,46 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { TableSkeleton } from "@/components/table-skeleton";
+import { Pagination } from "@/components/pagination";
+import { ErrorState } from "@/components/error-state";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 
-interface ApiKey {
-  id: string;
-  name: string;
-  prefix: string;
-  scopes: string[];
-  expires_at?: string;
-  last_used_at?: string;
-  created_at: string;
-}
+interface ApiKey { id: string; name: string; prefix: string; scopes: string[]; expires_at?: string; last_used_at?: string; created_at: string; }
+interface PaginatedResponse<T> { data: T[]; total: number; page: number; per_page: number; total_pages: number; }
 
 export default function ApiKeysPage() {
   const { currentOrg, currentTeam } = useOrgStore();
   const qc = useQueryClient();
+  const [page, setPage] = useState(1);
 
-  const { data } = useQuery({
-    queryKey: ["api-keys", currentTeam?.id],
-    queryFn: () => api.get<{ data: ApiKey[] }>(`/orgs/${currentOrg!.id}/teams/${currentTeam!.id}/api-keys`),
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["api-keys", currentTeam?.id, page],
+    queryFn: () => api.get<PaginatedResponse<ApiKey>>(`/orgs/${currentOrg!.id}/teams/${currentTeam!.id}/api-keys`, { page: String(page), per_page: "20" }),
     enabled: !!currentOrg && !!currentTeam,
   });
 
   const revoke = useMutation({
     mutationFn: (id: string) => api.del(`/orgs/${currentOrg!.id}/teams/${currentTeam!.id}/api-keys/${id}`),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["api-keys"] }); toast.success("API key revoked"); },
-    onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ["api-keys"] });
+      const prev = qc.getQueryData(["api-keys", currentTeam?.id, page]);
+      qc.setQueryData(["api-keys", currentTeam?.id, page], (old: any) =>
+        old ? { ...old, data: old.data.filter((k: ApiKey) => k.id !== id) } : old
+      );
+      return { prev };
+    },
+    onError: (err, _id, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["api-keys", currentTeam?.id, page], ctx.prev);
+      toast.error(err instanceof Error ? err.message : "Failed");
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["api-keys"] }),
+    onSuccess: () => toast.success("API key revoked"),
   });
 
   if (!currentTeam) return <p className="text-muted-foreground">Select a team first.</p>;
@@ -48,6 +57,8 @@ export default function ApiKeysPage() {
         <h1 className="text-2xl font-bold">API Keys</h1>
         <CreateApiKeyDialog orgId={currentOrg!.id} teamId={currentTeam.id} />
       </div>
+      {isError ? <ErrorState message="Failed to load API keys" onRetry={() => refetch()} /> :
+      isLoading ? <TableSkeleton rows={5} cols={6} /> : (
       <Card>
         <CardContent className="p-0">
           <Table>
@@ -69,7 +80,14 @@ export default function ApiKeysPage() {
                   <TableCell>{k.scopes?.map((s) => <Badge key={s} variant="outline" className="mr-1">{s}</Badge>)}</TableCell>
                   <TableCell className="text-muted-foreground">{k.expires_at ? new Date(k.expires_at).toLocaleDateString() : "Never"}</TableCell>
                   <TableCell className="text-muted-foreground">{k.last_used_at ? new Date(k.last_used_at).toLocaleString() : "Never"}</TableCell>
-                  <TableCell><Button variant="ghost" size="sm" onClick={() => revoke.mutate(k.id)}>Revoke</Button></TableCell>
+                  <TableCell>
+                    <ConfirmDialog
+                      trigger={<Button variant="ghost" size="sm">Revoke</Button>}
+                      title="Revoke API key?"
+                      description="This key will immediately stop working. This cannot be undone."
+                      onConfirm={() => revoke.mutate(k.id)}
+                    />
+                  </TableCell>
                 </TableRow>
               ))}
               {(!data?.data || data.data.length === 0) && (
@@ -77,14 +95,15 @@ export default function ApiKeysPage() {
                   <div className="flex flex-col items-center gap-2">
                     <span className="text-3xl">🔑</span>
                     <p className="text-muted-foreground">No API keys</p>
-                    <p className="text-xs text-muted-foreground">Create an API key for programmatic access.</p>
                   </div>
                 </TableCell></TableRow>
               )}
             </TableBody>
           </Table>
+          <Pagination page={page} totalPages={data?.total_pages ?? 1} onPageChange={setPage} />
         </CardContent>
       </Card>
+      )}
     </div>
   );
 }
@@ -95,12 +114,8 @@ function CreateApiKeyDialog({ orgId, teamId }: { orgId: string; teamId: string }
   const [rawKey, setRawKey] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const qc = useQueryClient();
-
   const allScopes = ["inbox:read", "inbox:write", "email:read", "webhook:manage"];
-
-  const toggleScope = (scope: string) => {
-    setScopes((prev) => prev.includes(scope) ? prev.filter((s) => s !== scope) : [...prev, scope]);
-  };
+  const toggleScope = (scope: string) => setScopes((prev) => prev.includes(scope) ? prev.filter((s) => s !== scope) : [...prev, scope]);
 
   const create = async () => {
     try {
@@ -112,11 +127,7 @@ function CreateApiKeyDialog({ orgId, teamId }: { orgId: string; teamId: string }
     }
   };
 
-  const close = () => {
-    setOpen(false);
-    setRawKey(null);
-    setName("");
-  };
+  const close = () => { setOpen(false); setRawKey(null); setName(""); };
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) close(); else setOpen(true); }}>
@@ -139,9 +150,7 @@ function CreateApiKeyDialog({ orgId, teamId }: { orgId: string; teamId: string }
               <Label>Scopes</Label>
               <div className="flex flex-wrap gap-2">
                 {allScopes.map((s) => (
-                  <Badge key={s} variant={scopes.includes(s) ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleScope(s)}>
-                    {s}
-                  </Badge>
+                  <Badge key={s} variant={scopes.includes(s) ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleScope(s)}>{s}</Badge>
                 ))}
               </div>
             </div>
