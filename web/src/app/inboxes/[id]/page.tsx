@@ -196,7 +196,7 @@ export default function InboxDetailPage() {
                     srcDoc={selectedEmail.body_html}
                     title="Email content"
                     className="w-full min-h-[400px] border-0"
-                    sandbox="allow-same-origin"
+                    sandbox=""
                   />
                 ) : (
                   <pre className="whitespace-pre-wrap text-sm">{selectedEmail.body_text}</pre>
