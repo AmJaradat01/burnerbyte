@@ -4,15 +4,19 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	"gitlab.com/amjaradat01/burnerbyte/internal/database"
 )
 
 type SystemConfigRepo struct {
-	db *pgxpool.Pool
+	db database.DBTX
 }
 
-func NewSystemConfigRepo(db *pgxpool.Pool) *SystemConfigRepo {
+func NewSystemConfigRepo(db database.DBTX) *SystemConfigRepo {
 	return &SystemConfigRepo{db: db}
+}
+
+func (r *SystemConfigRepo) WithTx(tx database.DBTX) *SystemConfigRepo {
+	return &SystemConfigRepo{db: tx}
 }
 
 func (r *SystemConfigRepo) Get(ctx context.Context, key string, dest any) error {
