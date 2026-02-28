@@ -6,6 +6,7 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useInboxSocket } from "@/hooks/use-inbox-socket";
+import { timeAgo } from "@/lib/time";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -142,7 +143,7 @@ export default function InboxDetailPage() {
                   <p className="text-sm truncate">{e.from_address}</p>
                   <p className="text-sm truncate">{e.subject || "(no subject)"}</p>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs text-muted-foreground">{new Date(e.received_at).toLocaleString()}</span>
+                    <span className="text-xs text-muted-foreground">{timeAgo(e.received_at)}</span>
                     {e.has_attachments && <Badge variant="outline" className="text-xs">📎</Badge>}
                     {!e.is_read && <span className="h-2 w-2 rounded-full bg-primary" />}
                   </div>

@@ -31,9 +31,10 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <Card className="w-full max-w-md">
-        <CardHeader>
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-muted/50 to-background">
+      <Card className="w-full max-w-md shadow-lg">
+        <CardHeader className="text-center">
+          <div className="text-3xl mb-2">🔥</div>
           <CardTitle className="text-2xl">Sign in to BurnerByte</CardTitle>
           <CardDescription>Enter your credentials to continue</CardDescription>
         </CardHeader>

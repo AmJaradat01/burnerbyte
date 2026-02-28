@@ -16,6 +16,7 @@ import { TableSkeleton } from "@/components/table-skeleton";
 import { Pagination } from "@/components/pagination";
 import { ErrorState } from "@/components/error-state";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { EmptyState } from "@/components/empty-state";
 import type { Domain } from "@/types";
 
 interface PaginatedResponse<T> { data: T[]; total: number; page: number; per_page: number; total_pages: number; }
@@ -100,11 +101,8 @@ export default function DomainsPage() {
                 </TableRow>
               ))}
               {(!filtered || filtered.length === 0) && (
-                <TableRow><TableCell colSpan={5} className="text-center py-8">
-                  <div className="flex flex-col items-center gap-2">
-                    <span className="text-3xl">🌐</span>
-                    <p className="text-muted-foreground">{search ? "No matching domains" : "No domains yet"}</p>
-                  </div>
+                <TableRow><TableCell colSpan={5} className="p-0">
+                  <EmptyState icon="🌐" title={search ? "No matching domains" : "No domains yet"} description={search ? "Try a different search term." : "Add your first domain to get started."} />
                 </TableCell></TableRow>
               )}
             </TableBody>
