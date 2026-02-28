@@ -17,6 +17,7 @@ const labels: Record<string, string> = {
   profile: "Profile",
   sessions: "Sessions",
   email: "Email",
+  delete: "Delete Account",
 };
 
 export function Breadcrumbs() {
