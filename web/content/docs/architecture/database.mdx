@@ -1,0 +1,64 @@
+---
+title: Database Schema
+description: PostgreSQL schema overview — tables, indexes, and triggers.
+---
+
+## Overview
+
+BurnerByte uses PostgreSQL 16 with 21 migration pairs managing 19 tables, 52+ indexes, and 7 triggers.
+
+## Core Tables
+
+### Users & Auth
+
+| Table | Purpose |
+|---|---|
+| `users` | User accounts with email, password hash, display name, avatar |
+| `sessions` | Active JWT refresh sessions with IP, user agent, expiry |
+| `password_reset_tokens` | Time-limited password reset tokens |
+
+### Organization Hierarchy
+
+| Table | Purpose |
+|---|---|
+| `organizations` | Orgs with name, slug, settings JSON |
+| `org_memberships` | User ↔ org relationship with role (owner, admin, member) |
+| `teams` | Teams within an org |
+| `team_memberships` | User ↔ team relationship with role |
+| `domains` | Registered domains with MX/TXT verification status |
+| `domain_assignments` | Domain ↔ team mapping with access level and settings |
+
+### Email
+
+| Table | Purpose |
+|---|---|
+| `inboxes` | Temporary inboxes with address, TTL, domain assignment |
+| `emails` | Received emails with from, to, subject, body, headers |
+| `attachments` | Email attachments with S3 path, content type, size |
+
+### Integrations
+
+| Table | Purpose |
+|---|---|
+| `webhooks` | Webhook subscriptions with URL, events, HMAC secret |
+| `webhook_delivery_logs` | Delivery attempts with status, response time, retry count |
+| `api_keys` | Scoped API keys with hashed key, prefix, scopes |
+
+### System
+
+| Table | Purpose |
+|---|---|
+| `audit_logs` | Activity log with actor, action, resource, IP |
+| `invites` | Org invitations with token, email, role, expiry |
+| `setup_state` | One-time setup wizard completion state |
+| `system_configs` | Runtime config overrides (mailer, storage) |
+
+## Migrations
+
+Managed with `golang-migrate`. Run with:
+
+```bash
+make migrate-up    # Apply all pending
+make migrate-down  # Rollback last migration
+make migrate-test  # Test up/down for each migration
+```

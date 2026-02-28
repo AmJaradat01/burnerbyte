@@ -1,0 +1,100 @@
+---
+title: API Reference
+description: BurnerByte REST API overview.
+---
+
+## Base URL
+
+All API endpoints are prefixed with `/api/v1`.
+
+## Authentication
+
+Most endpoints require authentication via one of:
+
+### JWT Bearer Token
+
+```bash
+Authorization: Bearer <access_token>
+```
+
+Obtain tokens via `POST /auth/login` or `POST /auth/register`. Access tokens expire after 15 minutes (configurable). Use `POST /auth/refresh` with the refresh token to get new tokens.
+
+### API Key
+
+```bash
+Authorization: Bearer bb_<your-api-key>
+```
+
+API keys are scoped to a team with specific permissions. See [API Keys](/docs/concepts/api-keys).
+
+## Pagination
+
+List endpoints support pagination:
+
+```bash
+GET /inboxes?page=1&per_page=20
+```
+
+Response:
+
+```json
+{
+  "data": [],
+  "total": 42,
+  "page": 1,
+  "per_page": 20,
+  "total_pages": 3
+}
+```
+
+## Errors
+
+```json
+{"error": "inbox not found"}
+```
+
+| Code | Meaning |
+|---|---|
+| 400 | Bad request (validation error) |
+| 401 | Unauthorized (missing or invalid token) |
+| 403 | Forbidden (insufficient permissions) |
+| 404 | Resource not found |
+| 409 | Conflict (duplicate resource) |
+| 429 | Rate limit exceeded |
+| 500 | Internal server error |
+
+## Rate Limiting
+
+Headers included in every response:
+
+```
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 99
+X-RateLimit-Reset: 1709251200
+```
+
+## Endpoint Groups
+
+| Group | Endpoints |
+|---|---|
+| Setup | `GET /setup/status`, `POST /setup/complete` |
+| Auth | `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `GET /auth/me`, `PATCH /auth/me`, `PUT /auth/me/password`, `DELETE /auth/me`, `POST /auth/forgot-password`, `POST /auth/reset-password`, `GET /auth/verify-email/:token` |
+| Sessions | `GET /auth/sessions`, `DELETE /auth/sessions/:id`, `DELETE /auth/sessions` |
+| SSO | `GET /auth/sso/:provider`, `GET /auth/sso/:provider/callback` |
+| Orgs | `POST /orgs`, `GET /orgs`, `GET /orgs/:id`, `PATCH /orgs/:id`, `DELETE /orgs/:id` |
+| Org Settings | `GET /orgs/:id/settings`, `PATCH /orgs/:id/settings`, `PUT /orgs/:id/settings` |
+| Members | `POST /orgs/:id/members`, `GET /orgs/:id/members`, `PATCH /orgs/:id/members/:uid`, `DELETE /orgs/:id/members/:uid` |
+| Invites | `POST /orgs/:id/invites`, `POST /invites/:token/accept` |
+| Domains | `POST /orgs/:id/domains`, `GET /orgs/:id/domains`, `GET /orgs/:id/domains/:did`, `PATCH /orgs/:id/domains/:did`, `DELETE /orgs/:id/domains/:did`, `POST /orgs/:id/domains/:did/verify` |
+| Teams | `POST /orgs/:id/teams`, `GET /orgs/:id/teams`, `GET /orgs/:id/teams/:tid`, `PATCH /orgs/:id/teams/:tid`, `DELETE /orgs/:id/teams/:tid` |
+| Team Members | `POST .../teams/:tid/members`, `GET .../members`, `PATCH .../members/:uid`, `DELETE .../members/:uid` |
+| Domain Assignments | `POST .../teams/:tid/domains`, `GET .../domains`, `PATCH .../domains/:did`, `DELETE .../domains/:did` |
+| Inboxes | `POST /inboxes`, `GET /inboxes`, `GET /inboxes/:id`, `POST /inboxes/:id/extend`, `DELETE /inboxes/:id` |
+| Emails | `GET /inboxes/:id/emails`, `GET /emails/:id`, `PATCH /emails/:id`, `DELETE /emails/:id`, `GET /emails/:id/attachments/:aid` |
+| Webhooks | `POST .../webhooks`, `GET .../webhooks`, `PATCH .../webhooks/:wid`, `DELETE .../webhooks/:wid`, `GET .../webhooks/:wid/deliveries` |
+| API Keys | `POST .../api-keys`, `GET .../api-keys`, `DELETE .../api-keys/:kid` |
+| Analytics | `GET /orgs/:id/analytics`, `GET .../analytics/emails-per-day`, `GET .../teams/:tid/analytics`, `GET .../teams/:tid/analytics/emails-per-day` |
+| Audit | `GET /orgs/:id/audit` |
+| Admin | `GET /admin/stats`, `GET /admin/orgs`, `GET /admin/health` |
+| WebSocket | `GET /ws/inboxes/:id`, `GET /ws/notifications` |
+| Health | `GET /healthz`, `GET /readyz`, `GET /metrics` |

@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { api } from "@/lib/api";
 
-const publicPaths = ["/login", "/register", "/forgot-password", "/reset-password", "/verify-email", "/invite", "/setup", "/onboarding"];
+const publicPaths = ["/login", "/register", "/forgot-password", "/reset-password", "/verify-email", "/invite", "/setup", "/onboarding", "/docs"];
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, loading } = useAuthStore();
@@ -47,7 +47,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     }
     if (loading) return;
     if (!user && !isPublic && !isLanding) router.replace("/login");
-    if (user && isPublic && pathname !== "/setup") router.replace("/dashboard");
+    if (user && isPublic && pathname !== "/setup" && !pathname.startsWith("/docs")) router.replace("/dashboard");
   }, [user, loading, isPublic, isLanding, router, setupChecked, setupCompleted, pathname]);
 
   // Close mobile sidebar on navigation

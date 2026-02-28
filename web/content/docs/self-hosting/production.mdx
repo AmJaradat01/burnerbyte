@@ -1,0 +1,44 @@
+---
+title: Production Deployment
+description: Hardening BurnerByte for production use.
+---
+
+## Checklist
+
+- Set a strong, random `JWT_SECRET` (64+ characters)
+- Change default database and MinIO passwords
+- Configure `FRONTEND_URL` and `API_BASE_URL` with your actual domain
+- Set `BB_CORS_ALLOWED_ORIGINS` to your frontend domain only
+- Enable TLS on your reverse proxy
+- Configure outbound SMTP (mailer) for invites and password resets
+- Set up DNS records for your email domain (MX + TXT)
+- Review rate limiting settings
+- Enable Prometheus metrics for monitoring
+- Set `LOG_LEVEL=info` and `LOG_FORMAT=json`
+
+## Minimal Production Environment
+
+```bash
+DATABASE_URL=postgres://user:pass@db:5432/burnerbyte?sslmode=require
+REDIS_URL=redis://:password@redis:6379/0
+JWT_SECRET=<random-64-char-string>
+FRONTEND_URL=https://app.example.com
+API_BASE_URL=https://api.example.com
+BB_SMTP_HOSTNAME=mail.example.com
+BB_CORS_ALLOWED_ORIGINS=https://app.example.com
+BB_RATE_LIMIT_ENABLED=true
+BB_SERVER_MAX_BODY_SIZE=5242880
+```
+
+## Scaling
+
+- **API server** — Stateless, can run multiple instances behind a load balancer
+- **SMTP server** — Stateless, can run multiple instances (each needs port 25/2525)
+- **Frontend** — Static Next.js output, can be served from CDN
+- **Workers** — Run on only one API instance to avoid duplicate work
+
+## Backups
+
+- **PostgreSQL** — Use `pg_dump` or continuous archiving (WAL)
+- **MinIO** — Use MinIO's built-in replication or backup the data volume
+- **Redis** — Ephemeral cache, no backup needed (reconciler rebuilds from PostgreSQL)
