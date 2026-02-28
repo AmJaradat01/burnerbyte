@@ -246,7 +246,7 @@ function DomainAssignmentsTab({ orgId, teamId }: { orgId: string; teamId: string
               <TableRow key={a.id}>
                 <TableCell className="font-medium">{a.domain_name || a.domain_id}</TableCell>
                 <TableCell><Badge>{a.access_level}</Badge></TableCell>
-                <TableCell><Button variant="ghost" size="sm" onClick={() => unassign.mutate(a.id)}>Unassign</Button></TableCell>
+                <TableCell><Button variant="ghost" size="sm" onClick={() => unassign.mutate(a.domain_id)}>Unassign</Button></TableCell>
               </TableRow>
             ))}
           </TableBody>

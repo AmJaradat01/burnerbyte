@@ -59,7 +59,7 @@ func (h *APIKeyHandler) Revoke(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id, _ := uuid.Parse(chi.URLParam(r, "keyId"))
-	if err := h.svc.Revoke(r.Context(), id); err != nil {
+	if err := h.svc.Revoke(r.Context(), teamID, id); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed"); return
 	}
 	auditRecord(r, orgID, "apikey.revoked", "api_key", id)

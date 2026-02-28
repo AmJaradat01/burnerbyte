@@ -95,7 +95,7 @@ func (h *DomainHandler) GetDomain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	d, err := h.svc.GetDomain(r.Context(), id)
+	d, err := h.svc.GetDomain(r.Context(), orgID, id)
 	if err != nil {
 		if errors.Is(err, postgres.ErrNotFound) {
 			writeError(w, http.StatusNotFound, "domain not found")
@@ -127,7 +127,7 @@ func (h *DomainHandler) UpdateDomain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	d, err := h.svc.UpdateDomain(r.Context(), id, input)
+	d, err := h.svc.UpdateDomain(r.Context(), orgID, id, input)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
@@ -149,7 +149,7 @@ func (h *DomainHandler) DeleteDomain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.svc.DeleteDomain(r.Context(), id); err != nil {
+	if err := h.svc.DeleteDomain(r.Context(), orgID, id); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to delete domain")
 		return
 	}
@@ -171,7 +171,7 @@ func (h *DomainHandler) VerifyDomain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	d, err := h.svc.TriggerVerify(r.Context(), id)
+	d, err := h.svc.TriggerVerify(r.Context(), orgID, id)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "verification failed")
 		return

@@ -63,10 +63,13 @@ func (s *DomainService) AddDomain(ctx context.Context, orgID uuid.UUID, input do
 	return d, nil
 }
 
-func (s *DomainService) GetDomain(ctx context.Context, id uuid.UUID) (*domain.Domain, error) {
+func (s *DomainService) GetDomain(ctx context.Context, orgID, id uuid.UUID) (*domain.Domain, error) {
 	d, err := s.domainRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
+	}
+	if d.OrgID != orgID {
+		return nil, fmt.Errorf("domain not found")
 	}
 	d.VerificationRecord = dnspkg.GenerateVerificationRecord(d.ID.String())
 	return d, nil
@@ -89,10 +92,13 @@ func (s *DomainService) ListByOrg(ctx context.Context, orgID uuid.UUID, page, pe
 	return domains, total, nil
 }
 
-func (s *DomainService) UpdateDomain(ctx context.Context, id uuid.UUID, input domain.UpdateDomainInput) (*domain.Domain, error) {
+func (s *DomainService) UpdateDomain(ctx context.Context, orgID, id uuid.UUID, input domain.UpdateDomainInput) (*domain.Domain, error) {
 	d, err := s.domainRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
+	}
+	if d.OrgID != orgID {
+		return nil, fmt.Errorf("domain not found")
 	}
 
 	if input.Settings != nil {
@@ -111,14 +117,20 @@ func (s *DomainService) UpdateDomain(ctx context.Context, id uuid.UUID, input do
 	return d, nil
 }
 
-func (s *DomainService) DeleteDomain(ctx context.Context, id uuid.UUID) error {
+func (s *DomainService) DeleteDomain(ctx context.Context, orgID, id uuid.UUID) error {
+	d, err := s.domainRepo.GetByID(ctx, id)
+	if err != nil { return err }
+	if d.OrgID != orgID { return fmt.Errorf("domain not found") }
 	return s.domainRepo.Delete(ctx, id)
 }
 
-func (s *DomainService) TriggerVerify(ctx context.Context, id uuid.UUID) (*domain.Domain, error) {
+func (s *DomainService) TriggerVerify(ctx context.Context, orgID, id uuid.UUID) (*domain.Domain, error) {
 	d, err := s.domainRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
+	}
+	if d.OrgID != orgID {
+		return nil, fmt.Errorf("domain not found")
 	}
 
 	expectedTXT := dnspkg.GenerateVerificationRecord(d.ID.String())

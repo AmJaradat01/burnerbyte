@@ -61,7 +61,10 @@ func (s *APIKeyService) List(ctx context.Context, teamID uuid.UUID, page, perPag
 	return s.repo.ListByTeam(ctx, teamID, page, perPage)
 }
 
-func (s *APIKeyService) Revoke(ctx context.Context, id uuid.UUID) error {
+func (s *APIKeyService) Revoke(ctx context.Context, teamID, id uuid.UUID) error {
+	k, err := s.repo.GetByID(ctx, id)
+	if err != nil { return err }
+	if k.TeamID != teamID { return fmt.Errorf("API key not found") }
 	return s.repo.Delete(ctx, id)
 }
 
