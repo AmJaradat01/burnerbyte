@@ -111,7 +111,7 @@ func (s *AuthService) Register(ctx context.Context, input domain.CreateUserInput
 	// Send verification email (non-blocking)
 	if s.cfg.EmailVerification.Enabled {
 		go func() {
-			verifyURL := fmt.Sprintf("%s/verify-email/%s", s.cfg.Server.FrontendURL, user.ID)
+			verifyURL := fmt.Sprintf("%s/verify-email?token=%s", s.cfg.Server.FrontendURL, user.ID)
 			if err := s.mailer.Send(user.Email, "Verify your email", "verify_email.html", map[string]string{
 				"VerifyURL": verifyURL,
 			}); err != nil {
@@ -345,7 +345,7 @@ func (s *AuthService) ForgotPassword(ctx context.Context, input domain.ForgotPas
 		return nil
 	}
 
-	resetURL := fmt.Sprintf("%s/forgot-password?token=%s", s.cfg.Server.FrontendURL, rawToken)
+	resetURL := fmt.Sprintf("%s/reset-password?token=%s", s.cfg.Server.FrontendURL, rawToken)
 	slog.Info("password reset requested", "user_id", user.ID)
 
 	go func() {

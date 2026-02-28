@@ -287,7 +287,7 @@ func (s *OrgService) InviteMember(ctx context.Context, orgID uuid.UUID, input do
 
 	// Send invite email
 	go func() {
-		acceptURL := fmt.Sprintf("%s/invite/%s", s.baseURL, token)
+		acceptURL := fmt.Sprintf("%s/invite?token=%s", s.baseURL, token)
 		if err := s.mailer.Send(input.Email, "You've been invited", "invite.html", map[string]string{
 			"OrgName":     "", // Would need org name lookup
 			"InviterName": "",
