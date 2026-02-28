@@ -1,0 +1,44 @@
+---
+title: Roles & Permissions
+description: BurnerByte's 6-role RBAC system across org and team levels.
+---
+
+## Role Hierarchy
+
+BurnerByte uses a two-level RBAC system with 3 org-level roles and 3 team-level roles.
+
+### Org Roles
+
+| Role | Description |
+|---|---|
+| `owner` | Full control. Can delete org, manage billing, transfer ownership |
+| `admin` | Can manage members, domains, teams, settings. Cannot delete org |
+| `member` | Can view org resources. Access to teams they belong to |
+
+### Team Roles
+
+| Role | Description |
+|---|---|
+| `team_admin` | Full control of team settings, members, domain assignments |
+| `team_member` | Can create inboxes, view emails, manage own resources |
+| `team_viewer` | Read-only access to team inboxes and emails |
+
+## Permission Matrix
+
+| Action | Owner | Admin | Member | Team Admin | Team Member | Team Viewer |
+|---|---|---|---|---|---|---|
+| Delete org | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Manage org settings | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Invite members | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Manage domains | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Create teams | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| View audit log | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Manage team members | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
+| Manage webhooks | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
+| Create inboxes | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ |
+| View emails | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Delete emails | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ |
+
+## System Admin
+
+The `is_system_admin` flag on the user record grants access to the `/admin` routes (system stats, org listing, health checks). This is set during the initial setup wizard for the platform owner.

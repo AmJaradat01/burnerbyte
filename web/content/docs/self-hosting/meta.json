@@ -1,0 +1,4 @@
+{
+  "title": "Self-Hosting",
+  "pages": ["production", "reverse-proxy", "dns", "monitoring"]
+}

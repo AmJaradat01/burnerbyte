@@ -1,0 +1,49 @@
+---
+title: Frontend Overview
+description: Next.js frontend architecture, pages, and keyboard shortcuts.
+---
+
+## Tech Stack
+
+| Library | Purpose |
+|---|---|
+| Next.js 16 | App Router, RSC, file-based routing |
+| React 19 | UI rendering |
+| shadcn/ui | Component library (Radix + Tailwind) |
+| Tailwind CSS 4 | Utility-first styling |
+| Zustand | Client state (auth, org/team selection) |
+| TanStack Query v5 | Server state, caching, optimistic updates |
+| Recharts | Analytics charts |
+| Sonner | Toast notifications |
+
+## Keyboard Shortcuts
+
+| Key | Action |
+|---|---|
+| `⌘K` / `Ctrl+K` | Open command palette |
+| `?` | Show keyboard shortcuts help |
+| `n` | Create new inbox |
+| `j` | Next email in list |
+| `k` | Previous email in list |
+| `d` | Delete selected email |
+| `Esc` | Close modal / deselect |
+
+## UX Patterns
+
+Every data page consistently uses:
+
+- **Loading skeletons** — `TableSkeleton` or `Skeleton` components
+- **Error states** — `ErrorState` with retry button
+- **Empty states** — `EmptyState` with icon and description
+- **Confirmation dialogs** — `ConfirmDialog` for all destructive actions
+- **Pagination** — `Pagination` component
+- **Toast notifications** — Sonner for success/error feedback
+- **Optimistic updates** — TanStack Query mutation with rollback
+
+## Command Palette
+
+Press `⌘K` to open the command palette for quick navigation to any page. It searches all routes and shows admin routes only for system admins.
+
+## Mobile Support
+
+The sidebar collapses into a slide-out sheet on mobile via Radix Sheet component.

@@ -26,6 +26,7 @@ const navItems = [
   { href: "/audit", label: "Audit Log", icon: "📋" },
   { href: "/analytics", label: "Analytics", icon: "📈" },
   { href: "/settings", label: "Settings", icon: "⚙️" },
+  { href: "/docs", label: "Docs", icon: "📖" },
 ];
 
 export function Sidebar() {

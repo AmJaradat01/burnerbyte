@@ -1,0 +1,165 @@
+---
+title: Configuration
+description: All configuration options — config.yaml, environment variables, and runtime overrides.
+---
+
+## Configuration Sources
+
+BurnerByte loads configuration from three sources (in priority order):
+
+1. **Environment variables** — Highest priority. Prefixed with `BB_` (e.g., `BB_SERVER_PORT`)
+2. **`config.yaml`** — File-based config, searched in `.` and `/etc/burnerbyte/`
+3. **Database overrides** — Runtime config stored in `system_configs` table (mailer + storage only)
+
+Common variables like `DATABASE_URL`, `REDIS_URL`, `JWT_SECRET` are mapped directly without the `BB_` prefix.
+
+## Server
+
+| Key | Env Var | Default | Description |
+|---|---|---|---|
+| `server.port` | `API_PORT` | `8080` | HTTP listen port |
+| `server.base_url` | `API_BASE_URL` | — | Public API URL |
+| `server.frontend_url` | `FRONTEND_URL` | — | Frontend URL (for email links) |
+| `server.read_timeout` | `BB_SERVER_READ_TIMEOUT` | `30s` | HTTP read timeout |
+| `server.write_timeout` | `BB_SERVER_WRITE_TIMEOUT` | `30s` | HTTP write timeout |
+| `server.idle_timeout` | `BB_SERVER_IDLE_TIMEOUT` | `120s` | HTTP idle timeout |
+| `server.shutdown_timeout` | `BB_SERVER_SHUTDOWN_TIMEOUT` | `15s` | Graceful shutdown timeout |
+| `server.max_body_size` | `BB_SERVER_MAX_BODY_SIZE` | `1048576` | Max request body size (bytes) |
+
+## Database
+
+| Key | Env Var | Default | Description |
+|---|---|---|---|
+| `database.url` | `DATABASE_URL` | — | PostgreSQL connection string |
+| `database.max_open_conns` | `BB_DATABASE_MAX_OPEN_CONNS` | `25` | Max open connections |
+| `database.max_idle_conns` | `BB_DATABASE_MAX_IDLE_CONNS` | `5` | Max idle connections |
+| `database.conn_max_lifetime` | `BB_DATABASE_CONN_MAX_LIFETIME` | `5m` | Connection max lifetime |
+
+## Redis
+
+| Key | Env Var | Default | Description |
+|---|---|---|---|
+| `redis.url` | `REDIS_URL` | — | Redis connection string |
+| `redis.max_retries` | `BB_REDIS_MAX_RETRIES` | `3` | Max retry attempts |
+
+## JWT
+
+| Key | Env Var | Default | Description |
+|---|---|---|---|
+| `jwt.secret` | `JWT_SECRET` | — | **Required.** Signing secret |
+| `jwt.access_ttl` | `BB_JWT_ACCESS_TTL` | `15m` | Access token lifetime |
+| `jwt.refresh_ttl` | `BB_JWT_REFRESH_TTL` | `168h` | Refresh token lifetime (7 days) |
+
+## SMTP Inbound
+
+| Key | Env Var | Default | Description |
+|---|---|---|---|
+| `smtp.listen` | `BB_SMTP_LISTEN` | `0.0.0.0:2525` | SMTP listen address |
+| `smtp.hostname` | `BB_SMTP_HOSTNAME` | — | SMTP hostname (for EHLO) |
+| `smtp.max_size` | `BB_SMTP_MAX_SIZE` | `26214400` | Max message size (25 MB) |
+| `smtp.queue_size` | `BB_SMTP_QUEUE_SIZE` | `1000` | Processing queue buffer |
+| `smtp.workers` | `BB_SMTP_WORKERS` | `4` | Worker goroutines |
+
+## Mailer (Outbound)
+
+| Key | Env Var | Description |
+|---|---|---|
+| `mailer.host` | `BB_MAILER_HOST` | SMTP server host |
+| `mailer.port` | `BB_MAILER_PORT` | SMTP server port |
+| `mailer.username` | `BB_MAILER_USERNAME` | Auth username |
+| `mailer.password` | `BB_MAILER_PASSWORD` | Auth password |
+| `mailer.from` | `BB_MAILER_FROM` | Sender address |
+| `mailer.tls` | `BB_MAILER_TLS` | Enable TLS |
+
+<Callout type="info">
+Mailer config can be overridden at runtime via the setup wizard. Values are stored in the `system_configs` database table and loaded on startup.
+</Callout>
+
+## MinIO / S3
+
+| Key | Env Var | Description |
+|---|---|---|
+| `minio.endpoint` | `BB_MINIO_ENDPOINT` | MinIO endpoint |
+| `minio.access_key` | `BB_MINIO_ACCESS_KEY` | Access key |
+| `minio.secret_key` | `BB_MINIO_SECRET_KEY` | Secret key |
+| `minio.bucket` | `BB_MINIO_BUCKET` | Bucket name |
+| `minio.use_ssl` | `BB_MINIO_USE_SSL` | Enable SSL |
+
+## SSO / OIDC
+
+| Key | Env Var | Description |
+|---|---|---|
+| `sso.provider` | `BB_SSO_PROVIDER` | OIDC provider name |
+| `sso.client_id` | `BB_SSO_CLIENT_ID` | OAuth client ID |
+| `sso.client_secret` | `BB_SSO_CLIENT_SECRET` | OAuth client secret |
+| `sso.redirect_url` | `BB_SSO_REDIRECT_URL` | Callback URL |
+
+## Rate Limiting
+
+| Key | Env Var | Default | Description |
+|---|---|---|---|
+| `rate_limit.enabled` | `BB_RATE_LIMIT_ENABLED` | `true` | Enable rate limiting |
+| `rate_limit.authenticated` | `BB_RATE_LIMIT_AUTHENTICATED` | `100` | Requests/min (authenticated) |
+| `rate_limit.unauthenticated` | `BB_RATE_LIMIT_UNAUTHENTICATED` | `20` | Requests/min (unauthenticated) |
+| `rate_limit.login` | `BB_RATE_LIMIT_LOGIN` | `5` | Login attempts/min per IP |
+| `rate_limit.forgot_password` | `BB_RATE_LIMIT_FORGOT_PASSWORD` | `3` | Reset requests/hour per IP |
+
+## Account Lockout
+
+| Key | Env Var | Default | Description |
+|---|---|---|---|
+| `lockout.max_attempts` | `BB_LOCKOUT_MAX_ATTEMPTS` | `5` | Failed attempts before lockout |
+| `lockout.duration` | `BB_LOCKOUT_DURATION` | `15m` | Lockout duration |
+
+## Password Policy
+
+| Key | Env Var | Default | Description |
+|---|---|---|---|
+| `password_policy.min_length` | `BB_PASSWORD_POLICY_MIN_LENGTH` | `8` | Minimum password length |
+| `password_policy.require_uppercase` | `BB_PASSWORD_POLICY_REQUIRE_UPPERCASE` | `true` | Require uppercase letter |
+| `password_policy.require_lowercase` | `BB_PASSWORD_POLICY_REQUIRE_LOWERCASE` | `true` | Require lowercase letter |
+| `password_policy.require_number` | `BB_PASSWORD_POLICY_REQUIRE_NUMBER` | `true` | Require digit |
+| `password_policy.require_special` | `BB_PASSWORD_POLICY_REQUIRE_SPECIAL` | `true` | Require special character |
+
+## Defaults
+
+| Key | Env Var | Default | Description |
+|---|---|---|---|
+| `defaults.attachments_enabled` | `BB_DEFAULTS_ATTACHMENTS_ENABLED` | `true` | Global attachment toggle |
+| `defaults.default_inbox_ttl` | `BB_DEFAULTS_DEFAULT_INBOX_TTL` | `10m` | Default inbox lifetime |
+| `defaults.max_inbox_ttl` | `BB_DEFAULTS_MAX_INBOX_TTL` | `24h` | Maximum inbox lifetime |
+| `defaults.max_attachment_size_mb` | `BB_DEFAULTS_MAX_ATTACHMENT_SIZE_MB` | `25` | Max attachment size |
+| `defaults.max_domains` | `BB_DEFAULTS_MAX_DOMAINS` | `10` | Max domains per org |
+| `defaults.max_teams` | `BB_DEFAULTS_MAX_TEAMS` | `50` | Max teams per org |
+| `defaults.max_inboxes_per_domain` | `BB_DEFAULTS_MAX_INBOXES_PER_DOMAIN` | `100` | Max inboxes per domain |
+| `defaults.password_reset_ttl` | `BB_DEFAULTS_PASSWORD_RESET_TTL` | `1h` | Password reset token lifetime |
+| `defaults.invite_expiry_ttl` | `BB_DEFAULTS_INVITE_EXPIRY_TTL` | `48h` | Invite link lifetime |
+| `defaults.presigned_url_ttl` | `BB_DEFAULTS_PRESIGNED_URL_TTL` | `15m` | Attachment download URL lifetime |
+| `defaults.webhook_timeout` | `BB_DEFAULTS_WEBHOOK_TIMEOUT` | `10s` | Webhook HTTP timeout |
+| `defaults.analytics_cache_ttl` | `BB_DEFAULTS_ANALYTICS_CACHE_TTL` | `2h` | Analytics cache duration |
+
+## Workers
+
+| Key | Env Var | Default | Description |
+|---|---|---|---|
+| `workers.dns_recheck_interval` | `BB_WORKERS_DNS_RECHECK_INTERVAL` | `1h` | DNS verification recheck |
+| `workers.cleanup_interval` | `BB_WORKERS_CLEANUP_INTERVAL` | `5m` | Expired inbox/session cleanup |
+| `workers.webhook_retry_interval` | `BB_WORKERS_WEBHOOK_RETRY_INTERVAL` | `1m` | Failed webhook retry |
+| `workers.reconciler_interval` | `BB_WORKERS_RECONCILER_INTERVAL` | `1m` | Redis ↔ Postgres sync |
+| `workers.analytics_interval` | `BB_WORKERS_ANALYTICS_INTERVAL` | `5m` | Analytics cache refresh |
+
+## CORS
+
+| Key | Env Var | Description |
+|---|---|---|
+| `cors.allowed_origins` | `BB_CORS_ALLOWED_ORIGINS` | Comma-separated origins |
+| `cors.max_age` | `BB_CORS_MAX_AGE` | Preflight cache duration (seconds) |
+
+## Logging & Metrics
+
+| Key | Env Var | Default | Description |
+|---|---|---|---|
+| `logging.level` | `LOG_LEVEL` | `info` | Log level (debug, info, warn, error) |
+| `logging.format` | `LOG_FORMAT` | `json` | Log format (json, text) |
+| `metrics.enabled` | `BB_METRICS_ENABLED` | `true` | Enable Prometheus metrics |
+| `metrics.path` | `BB_METRICS_PATH` | `/metrics` | Metrics endpoint path |
