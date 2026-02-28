@@ -155,6 +155,16 @@ func main() {
 	r.Use(chimw.RealIP)
 	r.Use(requestLogger(logger))
 	r.Use(chimw.Recoverer)
+	maxBody := cfg.Server.MaxBodySize
+	if maxBody <= 0 {
+		maxBody = 1 << 20 // 1 MB default
+	}
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			r.Body = http.MaxBytesReader(w, r.Body, maxBody)
+			next.ServeHTTP(w, r)
+		})
+	})
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   cfg.CORS.AllowedOrigins,
 		AllowedMethods:   cfg.CORS.AllowedMethods,

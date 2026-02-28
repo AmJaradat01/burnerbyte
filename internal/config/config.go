@@ -35,6 +35,7 @@ type ServerConfig struct {
 	WriteTimeout    time.Duration `mapstructure:"write_timeout"`
 	IdleTimeout     time.Duration `mapstructure:"idle_timeout"`
 	ShutdownTimeout time.Duration `mapstructure:"shutdown_timeout"`
+	MaxBodySize     int64         `mapstructure:"max_body_size"`
 }
 
 type DatabaseConfig struct {
