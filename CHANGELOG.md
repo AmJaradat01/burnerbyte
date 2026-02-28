@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.3.1 (2026-02-28)
+
+### Cross-Cutting Enhancements
+- Audit recording on all 22 BUILDPLAN events (org, team, domain, webhook, apikey, inbox CRUD)
+- Webhook dispatch: `email.received` from SMTP handler, `inbox.created` from inbox handler
+- API key dual auth middleware (`bb_` prefix → SHA-256 hash lookup, JWT fallback)
+- `enforce_sso` check on password login (blocks if org enforces SSO)
+- `ValidateAndResolve` on API key service for programmatic auth
+
 ## v0.3.0 (2026-02-28)
 
 ### Auth & Security
