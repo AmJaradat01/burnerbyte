@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.6.12 (2026-03-01)
+
+### UI/UX
+- **Sessions "Revoke All" had no confirmation** — The destructive "Revoke All" button on the sessions page immediately revoked all sessions without asking. Now uses `ConfirmDialog` consistent with the rest of the app.
+- **Team delete used browser `confirm()`** — The "Delete Team" button used the native browser `confirm()` dialog instead of the app's `ConfirmDialog` component. Replaced for visual consistency and a more descriptive warning message.
+
 ## v0.6.11 (2026-03-01)
 
 ### Documentation
