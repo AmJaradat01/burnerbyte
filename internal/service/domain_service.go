@@ -64,7 +64,12 @@ func (s *DomainService) AddDomain(ctx context.Context, orgID uuid.UUID, input do
 }
 
 func (s *DomainService) GetDomain(ctx context.Context, id uuid.UUID) (*domain.Domain, error) {
-	return s.domainRepo.GetByID(ctx, id)
+	d, err := s.domainRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	d.VerificationRecord = dnspkg.GenerateVerificationRecord(d.ID.String())
+	return d, nil
 }
 
 func (s *DomainService) ListByOrg(ctx context.Context, orgID uuid.UUID, page, perPage int) ([]domain.Domain, int, error) {

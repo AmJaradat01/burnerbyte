@@ -18,7 +18,7 @@ import { ErrorState } from "@/components/error-state";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EmptyState } from "@/components/empty-state";
 
-interface ApiKey { id: string; name: string; prefix: string; scopes: string[]; expires_at?: string; last_used_at?: string; created_at: string; }
+interface ApiKey { id: string; name: string; key_prefix: string; scopes: string[]; expires_at?: string; last_used_at?: string; created_at: string; }
 interface PaginatedResponse<T> { data: T[]; total: number; page: number; per_page: number; total_pages: number; }
 
 export default function ApiKeysPage() {
@@ -77,7 +77,7 @@ export default function ApiKeysPage() {
               {data?.data?.map((k) => (
                 <TableRow key={k.id}>
                   <TableCell className="font-medium">{k.name}</TableCell>
-                  <TableCell className="font-mono text-sm">{k.prefix}…</TableCell>
+                  <TableCell className="font-mono text-sm">{k.key_prefix}…</TableCell>
                   <TableCell>{k.scopes?.map((s) => <Badge key={s} variant="outline" className="mr-1">{s}</Badge>)}</TableCell>
                   <TableCell className="text-muted-foreground">{k.expires_at ? new Date(k.expires_at).toLocaleDateString() : "Never"}</TableCell>
                   <TableCell className="text-muted-foreground">{k.last_used_at ? new Date(k.last_used_at).toLocaleString() : "Never"}</TableCell>
