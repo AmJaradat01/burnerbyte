@@ -68,7 +68,7 @@ func (h *InboxHandler) CreateInboxFlat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if WebhookDispatch != nil {
-		WebhookDispatch.Dispatch(r.Context(), uuid.Nil, "inbox.created", map[string]any{
+		WebhookDispatch.Dispatch(r.Context(), inbox.TeamID, "inbox.created", map[string]any{
 			"inbox_id": inbox.ID, "address": inbox.Address, "domain_assignment_id": assignmentID,
 		})
 	}

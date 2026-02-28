@@ -39,6 +39,12 @@ func Middleware(tm *TokenManager, userRepo UserRepo, apikeyRepo APIKeyRepo) func
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			header := r.Header.Get("Authorization")
+			// WebSocket connections can't set headers — allow token via query param
+			if header == "" {
+				if t := r.URL.Query().Get("token"); t != "" {
+					header = "Bearer " + t
+				}
+			}
 			if header == "" {
 				writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "missing authorization header"})
 				return

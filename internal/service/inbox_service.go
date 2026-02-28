@@ -130,6 +130,7 @@ func (s *InboxService) CreateInbox(ctx context.Context, teamID, domainID, userID
 	_ = s.redisInboxRepo.Set(ctx, fullAddress, inbox.ID.String(), ttl)
 
 	inbox.DomainName = dom.DomainName
+	inbox.TeamID = teamID
 	return inbox, nil
 }
 
