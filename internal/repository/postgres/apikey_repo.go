@@ -48,7 +48,9 @@ func (r *APIKeyRepo) GetByHash(ctx context.Context, hash string) (*domain.APIKey
 
 func (r *APIKeyRepo) ListByTeam(ctx context.Context, teamID uuid.UUID, page, perPage int) ([]domain.APIKey, int, error) {
 	var total int
-	r.db.QueryRow(ctx, `SELECT COUNT(*) FROM api_keys WHERE team_id = $1`, teamID).Scan(&total)
+	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM api_keys WHERE team_id = $1`, teamID).Scan(&total); err != nil {
+		return nil, 0, err
+	}
 	offset := (page - 1) * perPage
 	rows, err := r.db.Query(ctx,
 		`SELECT id, team_id, created_by, key_hash, key_prefix, name, scopes, last_used_at, expires_at, created_at
