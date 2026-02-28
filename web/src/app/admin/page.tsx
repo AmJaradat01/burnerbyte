@@ -3,6 +3,8 @@
 import { api } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorState } from "@/components/error-state";
 
 interface SystemStats {
   total_users: number;
@@ -15,11 +17,13 @@ interface SystemStats {
 }
 
 export default function AdminPage() {
-  const { data } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["admin-stats"],
     queryFn: () => api.get<SystemStats>("/admin/stats"),
   });
 
+  if (isError) return <ErrorState message="Failed to load admin stats" onRetry={() => refetch()} />;
+  if (isLoading) return <div className="space-y-6"><h1 className="text-2xl font-bold">System Admin</h1><div className="grid grid-cols-2 md:grid-cols-4 gap-4">{Array.from({ length: 7 }).map((_, i) => <Card key={i}><CardContent className="pt-6"><Skeleton className="h-10 w-20" /></CardContent></Card>)}</div></div>;
   if (!data) return null;
 
   const stats = [

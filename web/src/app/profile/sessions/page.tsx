@@ -7,12 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { ErrorState } from "@/components/error-state";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import type { Session } from "@/types";
 
 export default function SessionsPage() {
   const qc = useQueryClient();
 
-  const { data: sessions, isLoading } = useQuery({
+  const { data: sessions, isLoading, isError, refetch } = useQuery({
     queryKey: ["sessions"],
     queryFn: () => api.get<Session[]>("/auth/sessions"),
   });
@@ -20,12 +22,16 @@ export default function SessionsPage() {
   const revoke = useMutation({
     mutationFn: (id: string) => api.del(`/auth/sessions/${id}`),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["sessions"] }); toast.success("Session revoked"); },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
   });
 
   const revokeAll = useMutation({
     mutationFn: () => api.del("/auth/sessions"),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["sessions"] }); toast.success("All sessions revoked"); },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
   });
+
+  if (isError) return <ErrorState message="Failed to load sessions" onRetry={() => refetch()} />;
 
   return (
     <div className="max-w-3xl space-y-6">
