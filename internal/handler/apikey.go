@@ -31,7 +31,9 @@ func (h *APIKeyHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var input domain.CreateAPIKeyInput
-	json.NewDecoder(r.Body).Decode(&input)
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body"); return
+	}
 	key, err := h.svc.Generate(r.Context(), teamID, uc.UserID, input)
 	if err != nil { writeError(w, http.StatusBadRequest, err.Error()); return }
 	auditRecord(r, orgID, "apikey.created", "api_key", key.ID)

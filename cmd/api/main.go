@@ -104,7 +104,7 @@ func main() {
 	assignmentSvc := service.NewDomainAssignmentService(assignmentRepo, domainRepo)
 	redisInboxRepo := redisrepo.NewInboxRepo(rdb)
 	inboxSvc := service.NewInboxService(inboxRepo, redisInboxRepo, assignmentRepo, domainRepo, orgRepo, cfg)
-	emailSvc := service.NewEmailService(emailRepo, inboxRepo, attachmentSvc)
+	emailSvc := service.NewEmailService(emailRepo, inboxRepo, attachmentRepo, attachmentSvc)
 	webhookSvc := service.NewWebhookService(webhookRepo)
 	webhookDispatcher := webhook.NewDispatcher(webhookRepo)
 	apikeySvc := service.NewAPIKeyService(apikeyRepo)
