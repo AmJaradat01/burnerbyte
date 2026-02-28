@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.5.1 (2026-02-28)
+
+### Token Refresh Race Condition Fix
+- API client now deduplicates concurrent token refresh attempts
+- Prevents session family revocation when multiple 401s fire simultaneously
+
 ## v0.5.0 (2026-02-28)
 
 ### Setup Wizard: Storage & Persistent Runtime Configs
