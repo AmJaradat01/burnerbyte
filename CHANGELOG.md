@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.3.8 (2026-02-28)
+
+### Final Polish
+- Inbox detail: auto-marks email as read when previewed (PATCH call on select)
+- WebSocket: reconnect with exponential backoff (1s → 2s → 5s → 10s)
+- Settings: Danger Zone — delete organization with typed name confirmation
+- Admin page: error state + loading skeleton (from v0.3.7)
+- Sessions page: error state + error toasts (from v0.3.7)
+
 ## v0.3.7 (2026-02-28)
 
 ### Final BUILDPLAN Completion

@@ -45,6 +45,8 @@ function OrgSettingsForm({ org, onSaved }: { org: Organization; onSaved: () => v
   const [name, setName] = useState(org.name);
   const [settings, setSettings] = useState<OrgSettings>(org.settings || {});
   const [saving, setSaving] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   const save = async () => {
     setSaving(true);
@@ -105,6 +107,23 @@ function OrgSettingsForm({ org, onSaved }: { org: Organization; onSaved: () => v
           <Switch checked={settings.enforce_sso ?? false} onCheckedChange={(v) => setSettings({ ...settings, enforce_sso: v })} />
         </div>
         <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Save settings"}</Button>
+        <Separator />
+        <div className="space-y-3">
+          <CardDescription className="text-destructive font-semibold">Danger Zone</CardDescription>
+          <p className="text-sm text-muted-foreground">Deleting the organization will permanently remove all teams, domains, inboxes, and emails. This cannot be undone.</p>
+          <Input placeholder={`Type "${org.name}" to confirm`} value={deleteConfirm} onChange={(e) => setDeleteConfirm(e.target.value)} className="max-w-sm" />
+          <Button variant="destructive" disabled={deleteConfirm !== org.name || deleting} onClick={async () => {
+            setDeleting(true);
+            try {
+              await api.del(`/orgs/${org.id}`);
+              toast.success("Organization deleted");
+              onSaved();
+              window.location.href = "/dashboard";
+            } catch (err) {
+              toast.error(err instanceof Error ? err.message : "Failed");
+            } finally { setDeleting(false); }
+          }}>{deleting ? "Deleting…" : "Delete organization"}</Button>
+        </div>
       </CardContent>
     </Card>
   );
