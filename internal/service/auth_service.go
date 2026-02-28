@@ -33,6 +33,7 @@ type AuthService struct {
 	pool        *pgxpool.Pool
 	userRepo    *postgres.UserRepo
 	sessionRepo *postgres.SessionRepo
+	resetRepo   *postgres.PasswordResetRepo
 	tokens      *auth.TokenManager
 	lockout     *auth.Lockout
 	mailer      *mailer.Mailer
@@ -43,6 +44,7 @@ func NewAuthService(
 	pool *pgxpool.Pool,
 	userRepo *postgres.UserRepo,
 	sessionRepo *postgres.SessionRepo,
+	resetRepo *postgres.PasswordResetRepo,
 	tokens *auth.TokenManager,
 	lockout *auth.Lockout,
 	mailer *mailer.Mailer,
@@ -50,6 +52,7 @@ func NewAuthService(
 ) *AuthService {
 	return &AuthService{
 		pool: pool, userRepo: userRepo, sessionRepo: sessionRepo,
+		resetRepo: resetRepo,
 		tokens: tokens, lockout: lockout, mailer: mailer, cfg: cfg,
 	}
 }
@@ -315,17 +318,24 @@ func (s *AuthService) RevokeAllSessions(ctx context.Context, userID uuid.UUID) e
 func (s *AuthService) ForgotPassword(ctx context.Context, input domain.ForgotPasswordInput) error {
 	user, err := s.userRepo.GetByEmail(ctx, input.Email)
 	if err != nil {
-		// Don't reveal whether email exists
+		return nil // Don't reveal whether email exists
+	}
+
+	// Invalidate any existing tokens
+	_ = s.resetRepo.InvalidateForUser(ctx, user.ID)
+
+	// Generate and store hashed token
+	rawToken := uuid.New().String()
+	tokenHash := postgres.HashToken(rawToken)
+	expiresAt := time.Now().Add(1 * time.Hour)
+
+	if err := s.resetRepo.Create(ctx, user.ID, tokenHash, expiresAt); err != nil {
+		slog.Error("failed to store reset token", "error", err)
 		return nil
 	}
 
-	// Generate a reset token (using user ID + timestamp hash for simplicity)
-	resetToken := uuid.New().String()
-	resetURL := fmt.Sprintf("%s/forgot-password?token=%s", s.cfg.Server.FrontendURL, resetToken)
-
-	// In a production system, store the reset token with expiry in DB.
-	// For now, log it (mailer will handle delivery or stdout fallback).
-	slog.Info("password reset requested", "user_id", user.ID, "token", resetToken)
+	resetURL := fmt.Sprintf("%s/forgot-password?token=%s", s.cfg.Server.FrontendURL, rawToken)
+	slog.Info("password reset requested", "user_id", user.ID)
 
 	go func() {
 		_ = s.mailer.Send(user.Email, "Reset your password", "password_reset.html", map[string]string{
@@ -334,6 +344,37 @@ func (s *AuthService) ForgotPassword(ctx context.Context, input domain.ForgotPas
 	}()
 
 	return nil
+}
+
+func (s *AuthService) ResetPassword(ctx context.Context, input domain.ResetPasswordInput) error {
+	if input.Token == "" || input.NewPassword == "" {
+		return fmt.Errorf("token and new_password are required")
+	}
+
+	if err := auth.ValidatePassword(input.NewPassword, s.cfg.Password); err != nil {
+		return err
+	}
+
+	tokenHash := postgres.HashToken(input.Token)
+	resetToken, err := s.resetRepo.Consume(ctx, tokenHash)
+	if err != nil {
+		return fmt.Errorf("invalid or expired reset token")
+	}
+
+	user, err := s.userRepo.GetByID(ctx, resetToken.UserID)
+	if err != nil {
+		return fmt.Errorf("user not found")
+	}
+
+	hash, err := auth.HashPassword(input.NewPassword)
+	if err != nil {
+		return err
+	}
+
+	now := time.Now()
+	user.PasswordHash = &hash
+	user.PasswordChangedAt = &now
+	return s.userRepo.Update(ctx, user)
 }
 
 func (s *AuthService) VerifyEmail(ctx context.Context, userID uuid.UUID) error {

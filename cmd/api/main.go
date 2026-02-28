@@ -68,6 +68,7 @@ func main() {
 	// Repositories
 	userRepo := postgres.NewUserRepo(pool)
 	sessionRepo := postgres.NewSessionRepo(pool)
+	resetRepo := postgres.NewPasswordResetRepo(pool)
 	orgRepo := postgres.NewOrgRepo(pool)
 	domainRepo := postgres.NewDomainRepo(pool)
 	teamRepo := postgres.NewTeamRepo(pool)
@@ -81,7 +82,7 @@ func main() {
 	analyticsRepo := postgres.NewAnalyticsRepo(pool)
 
 	// Services
-	authSvc := service.NewAuthService(pool, userRepo, sessionRepo, tokenMgr, lockout, ml, cfg)
+	authSvc := service.NewAuthService(pool, userRepo, sessionRepo, resetRepo, tokenMgr, lockout, ml, cfg)
 	orgSvc := service.NewOrgService(pool, orgRepo, ml, cfg.Server.FrontendURL)
 	domainSvc := service.NewDomainService(domainRepo, orgRepo, cfg)
 	teamSvc := service.NewTeamService(pool, teamRepo, orgRepo, cfg)
