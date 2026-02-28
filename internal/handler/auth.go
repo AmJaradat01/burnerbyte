@@ -6,7 +6,6 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -200,8 +199,7 @@ func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// We don't have the session ID in context yet — use zero UUID as placeholder
-	// In production, the session ID would be extracted from the refresh token or stored in context
+	// Revoke all sessions on password change (uuid.Nil = no exclusion)
 	if err := h.svc.ChangePassword(r.Context(), uc.UserID, input, uuid.Nil); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
@@ -326,6 +324,3 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 func writeError(w http.ResponseWriter, status int, msg string) {
 	writeJSON(w, status, map[string]string{"error": msg})
 }
-
-// Placeholder to avoid unused import
-var _ = time.Now

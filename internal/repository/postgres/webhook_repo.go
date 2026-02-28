@@ -126,3 +126,25 @@ func (r *WebhookRepo) LogDelivery(ctx context.Context, log *domain.WebhookDelive
 		log.ResponseBody, log.ResponseTimeMs, log.Success, log.Attempt, log.IdempotencyKey)
 	return err
 }
+
+func (r *WebhookRepo) ListFailedRetryable(ctx context.Context) ([]domain.Webhook, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT id, team_id, created_by, url, secret, events, active, last_status, last_attempt_at, failure_count, created_at, updated_at
+		 FROM webhooks WHERE active = TRUE AND failure_count > 0 AND failure_count < 3`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var webhooks []domain.Webhook
+	for rows.Next() {
+		var w domain.Webhook
+		var events []byte
+		if err := rows.Scan(&w.ID, &w.TeamID, &w.CreatedBy, &w.URL, &w.Secret, &events,
+			&w.Active, &w.LastStatus, &w.LastAttemptAt, &w.FailureCount, &w.CreatedAt, &w.UpdatedAt); err != nil {
+			return nil, err
+		}
+		json.Unmarshal(events, &w.Events)
+		webhooks = append(webhooks, w)
+	}
+	return webhooks, nil
+}
