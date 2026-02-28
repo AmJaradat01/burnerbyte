@@ -34,8 +34,8 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
     volumes:
       - miniodata:/data
     healthcheck:
@@ -50,7 +50,7 @@ services:
       dockerfile: Dockerfile
       target: api
     ports:
-      - "8080:8080"
+      - "${API_PORT:-8080}:8080"
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-burnerbyte}:${POSTGRES_PASSWORD:-burnerbyte}@postgres:5432/${POSTGRES_DB:-burnerbyte}?sslmode=disable
       REDIS_URL: redis://redis:6379
@@ -58,9 +58,9 @@ services:
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       API_BASE_URL: ${API_BASE_URL:-http://localhost:8080}
       BB_MINIO_ENDPOINT: minio:9000
-      BB_MINIO_ACCESS_KEY: minioadmin
-      BB_MINIO_SECRET_KEY: minioadmin
-      BB_MINIO_BUCKET: burnerbyte
+      BB_MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      BB_MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      BB_MINIO_BUCKET: ${MINIO_BUCKET:-burnerbyte}
       BB_MINIO_USE_SSL: "false"
     depends_on:
       postgres:
@@ -77,16 +77,16 @@ services:
       dockerfile: Dockerfile
       target: smtpd
     ports:
-      - "2525:2525"
+      - "${SMTPD_PORT:-2525}:2525"
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-burnerbyte}:${POSTGRES_PASSWORD:-burnerbyte}@postgres:5432/${POSTGRES_DB:-burnerbyte}?sslmode=disable
       REDIS_URL: redis://redis:6379
       BB_SMTP_LISTEN: ":2525"
       BB_SMTP_HOSTNAME: ${SMTP_HOSTNAME:-mail.burnerbyte.local}
       BB_MINIO_ENDPOINT: minio:9000
-      BB_MINIO_ACCESS_KEY: minioadmin
-      BB_MINIO_SECRET_KEY: minioadmin
-      BB_MINIO_BUCKET: burnerbyte
+      BB_MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      BB_MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      BB_MINIO_BUCKET: ${MINIO_BUCKET:-burnerbyte}
       BB_MINIO_USE_SSL: "false"
     depends_on:
       postgres:
@@ -102,7 +102,7 @@ services:
       context: .
       dockerfile: Dockerfile.frontend
     ports:
-      - "3000:3000"
+      - "${FRONTEND_PORT:-3000}:3000"
     environment:
       NEXT_PUBLIC_API_URL: ${API_BASE_URL:-http://localhost:8080}/api/v1
     depends_on:

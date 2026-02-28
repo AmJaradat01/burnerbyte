@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/empty-state";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import type { Team, Membership, Domain } from "@/types";
 
 interface DomainAssignment {
@@ -277,7 +278,6 @@ function TeamSettingsTab({ orgId, team }: { orgId: string; team: Team }) {
   };
 
   const deleteTeam = async () => {
-    if (!confirm("Delete this team? This cannot be undone.")) return;
     try {
       await api.del(`/orgs/${orgId}/teams/${team.id}`);
       qc.invalidateQueries({ queryKey: ["teams"] });
@@ -298,7 +298,12 @@ function TeamSettingsTab({ orgId, team }: { orgId: string; team: Team }) {
         </div>
         <div className="flex gap-3">
           <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
-          <Button variant="destructive" onClick={deleteTeam}>Delete Team</Button>
+          <ConfirmDialog
+            trigger={<Button variant="destructive">Delete Team</Button>}
+            title="Delete this team?"
+            description="All team members, domain assignments, and inboxes will be removed. This cannot be undone."
+            onConfirm={deleteTeam}
+          />
         </div>
       </CardContent>
     </Card>
