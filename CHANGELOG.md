@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.3.3 (2026-02-28)
+
+### Error Handling & Cleanup
+- Structured error responses: all errors return `{ error, code }` with status-mapped codes (validation_error, forbidden, conflict, etc.)
+- Email deletion cleans up associated S3 attachments
+- Cleanup worker deletes S3 objects when expiring emails
+- MinIO client + AttachmentService wired in API server
+- Inbox creation returns 409 on duplicate alias conflict
+- EmailRepo.DeleteExpiredReturningIDs for attachment-aware cleanup
+
 ## v0.3.2 (2026-02-28)
 
 ### Service Enhancements
