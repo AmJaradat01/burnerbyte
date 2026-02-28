@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.5.4 (2026-02-28)
+
+### Critical WebSocket & Data Fixes
+- WebSocket inbox connection was completely broken (wrong URL path + auth couldn't work via headers)
+- Auth middleware now accepts ?token= query param for WebSocket upgrades
+- Inbox webhook dispatch now uses actual team ID (was uuid.Nil — events were silently dropped)
+- Paginated API responses now return [] instead of null for empty lists
+
 ## v0.5.3 (2026-02-28)
 
 ### Frontend/Backend Field Mismatch Fixes
