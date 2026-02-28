@@ -129,5 +129,5 @@ func (h *EmailHandler) DownloadAttachment(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusNotFound, "attachment not found")
 		return
 	}
-	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+	writeJSON(w, http.StatusOK, map[string]string{"url": url})
 }

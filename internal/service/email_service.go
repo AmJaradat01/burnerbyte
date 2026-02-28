@@ -14,6 +14,7 @@ import (
 type EmailService struct {
 	emailRepo      *postgres.EmailRepo
 	inboxRepo      *postgres.InboxRepo
+	attachmentRepo *postgres.AttachmentRepo
 	attachmentSvc  AttachmentCleaner
 }
 
@@ -22,8 +23,8 @@ type AttachmentCleaner interface {
 	DeleteByEmail(ctx context.Context, emailID uuid.UUID) error
 }
 
-func NewEmailService(emailRepo *postgres.EmailRepo, inboxRepo *postgres.InboxRepo, attachmentSvc AttachmentCleaner) *EmailService {
-	return &EmailService{emailRepo: emailRepo, inboxRepo: inboxRepo, attachmentSvc: attachmentSvc}
+func NewEmailService(emailRepo *postgres.EmailRepo, inboxRepo *postgres.InboxRepo, attachmentRepo *postgres.AttachmentRepo, attachmentSvc AttachmentCleaner) *EmailService {
+	return &EmailService{emailRepo: emailRepo, inboxRepo: inboxRepo, attachmentRepo: attachmentRepo, attachmentSvc: attachmentSvc}
 }
 
 func (s *EmailService) GetEmail(ctx context.Context, emailID, userID uuid.UUID) (*domain.Email, error) {
@@ -45,6 +46,12 @@ func (s *EmailService) GetEmail(ctx context.Context, emailID, userID uuid.UUID) 
 	if !email.IsRead {
 		_ = s.emailRepo.MarkRead(ctx, emailID, true)
 		email.IsRead = true
+	}
+
+	// Load attachments
+	if email.HasAttachments && s.attachmentRepo != nil {
+		atts, _ := s.attachmentRepo.ListByEmail(ctx, emailID)
+		email.Attachments = atts
 	}
 
 	return email, nil
