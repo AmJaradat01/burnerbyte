@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.5.9 (2026-02-28)
+
+### Security
+- HTML email iframe used `sandbox="allow-same-origin"` — malicious HTML emails could access the parent page's localStorage and steal JWT tokens via JavaScript. Changed to `sandbox=""` (fully sandboxed opaque origin).
+
+### SMTP
+- Router accepted RCPT TO for expired/inactive inboxes in the PG fallback path. The sending MTA got `250 OK` but the email was silently dropped during processing. Now rejects at RCPT TO time with `550 inbox expired`.
+
 ## v0.5.8 (2026-02-28)
 
 ### Security — Cross-Tenant Resource Access
