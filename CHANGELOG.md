@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.6.0 (2026-02-28)
+
+### Webhook Secret Visibility
+- Webhook HMAC signing secret was never returned to the user — the field had `json:"-"` so it was stripped from all API responses including creation. Users could never configure signature verification on their endpoints. Changed to `json:"secret,omitempty"` and clear the field in List/Update responses so it's only visible on creation.
+- Frontend webhook creation dialog now shows the signing secret once after creation (same UX pattern as API key creation).
+
+### Auth Middleware Hardening
+- `writeJSON` in auth middleware used string concatenation instead of `json.Marshal` — a latent JSON injection risk if error messages ever contained special characters. Fixed to use `encoding/json`.
+
 ## v0.5.9 (2026-02-28)
 
 ### Security
