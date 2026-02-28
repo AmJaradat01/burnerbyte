@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.6.7 (2026-03-01)
+
+### Security
+- **No request body size limit on API endpoints** — All API endpoints accepted arbitrarily large request bodies, allowing a malicious client to exhaust server memory with a single request. Added configurable `server.max_body_size` (default: 1 MB) enforced via `http.MaxBytesReader` middleware.
+
 ## v0.6.6 (2026-02-28)
 
 ### Security
