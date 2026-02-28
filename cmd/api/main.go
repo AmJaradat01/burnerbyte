@@ -28,6 +28,7 @@ import (
 	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
 	redisrepo "gitlab.com/amjaradat01/burnerbyte/internal/repository/redis"
 	"gitlab.com/amjaradat01/burnerbyte/internal/service"
+	"gitlab.com/amjaradat01/burnerbyte/internal/webhook"
 	"gitlab.com/amjaradat01/burnerbyte/internal/worker"
 )
 
@@ -96,6 +97,7 @@ func main() {
 	inboxSvc := service.NewInboxService(inboxRepo, redisInboxRepo, assignmentRepo, domainRepo, orgRepo, cfg)
 	emailSvc := service.NewEmailService(emailRepo, inboxRepo)
 	webhookSvc := service.NewWebhookService(webhookRepo)
+	webhookDispatcher := webhook.NewDispatcher(webhookRepo)
 	apikeySvc := service.NewAPIKeyService(apikeyRepo)
 	auditSvc := service.NewAuditService(auditRepo)
 	analyticsSvc := service.NewAnalyticsService(analyticsRepo)
@@ -276,6 +278,9 @@ func main() {
 	wm := worker.NewManager()
 	wm.Add("cleanup", cfg.Workers.CleanupInterval, worker.CleanupJob(inboxRepo, emailRepo))
 	wm.Add("reconciler", cfg.Workers.ReconcilerInterval, worker.ReconcilerJob(inboxRepo, redisInboxRepo))
+	wm.Add("dns_recheck", cfg.Workers.DNSRecheckInterval, worker.DNSRecheckJob(domainRepo, cfg.SMTP.Hostname))
+	wm.Add("webhook_retry", cfg.Workers.WebhookRetryInterval, worker.WebhookRetryJob(webhookRepo, webhookDispatcher))
+	wm.Add("analytics", cfg.Workers.AnalyticsInterval, worker.AnalyticsJob(analyticsRepo, rdb))
 	go wm.Start(workerCtx)
 
 	go func() {
