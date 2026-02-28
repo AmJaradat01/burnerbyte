@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
+	"gitlab.com/amjaradat01/burnerbyte/internal/auth/rbac"
 	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
 	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
 	"gitlab.com/amjaradat01/burnerbyte/internal/service"
@@ -37,6 +38,9 @@ func (h *DomainHandler) CreateDomain(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid org ID")
 		return
 	}
+	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+		return
+	}
 
 	var input domain.CreateDomainInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
@@ -63,6 +67,9 @@ func (h *DomainHandler) ListDomains(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid org ID")
 		return
 	}
+	if checkOrgRole(w, r, orgID, rbac.OrgMember) {
+		return
+	}
 
 	page, perPage := parsePagination(r)
 	domains, total, err := h.svc.ListByOrg(r.Context(), orgID, page, perPage)
@@ -75,6 +82,12 @@ func (h *DomainHandler) ListDomains(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *DomainHandler) GetDomain(w http.ResponseWriter, r *http.Request) {
+	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
+	if orgID != uuid.Nil {
+		if checkOrgRole(w, r, orgID, rbac.OrgMember) {
+			return
+		}
+	}
 	id, err := uuid.Parse(chi.URLParam(r, "domainId"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid domain ID")
@@ -95,6 +108,12 @@ func (h *DomainHandler) GetDomain(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *DomainHandler) UpdateDomain(w http.ResponseWriter, r *http.Request) {
+	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
+	if orgID != uuid.Nil {
+		if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+			return
+		}
+	}
 	id, err := uuid.Parse(chi.URLParam(r, "domainId"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid domain ID")
@@ -117,6 +136,12 @@ func (h *DomainHandler) UpdateDomain(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *DomainHandler) DeleteDomain(w http.ResponseWriter, r *http.Request) {
+	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
+	if orgID != uuid.Nil {
+		if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+			return
+		}
+	}
 	id, err := uuid.Parse(chi.URLParam(r, "domainId"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid domain ID")
@@ -132,6 +157,12 @@ func (h *DomainHandler) DeleteDomain(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *DomainHandler) VerifyDomain(w http.ResponseWriter, r *http.Request) {
+	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
+	if orgID != uuid.Nil {
+		if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+			return
+		}
+	}
 	id, err := uuid.Parse(chi.URLParam(r, "domainId"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid domain ID")
