@@ -268,9 +268,9 @@ func main() {
 			r.Get("/emails/{emailId}/attachments/{attachmentId}", emailHandler.DownloadAttachment)
 
 			// Admin
-			r.Get("/admin/stats", adminHandler.Stats)
-			r.Get("/admin/orgs", adminHandler.ListOrgs)
-			r.Get("/admin/health", adminHandler.Health)
+			r.With(auth.RequireSystemAdmin).Get("/admin/stats", adminHandler.Stats)
+			r.With(auth.RequireSystemAdmin).Get("/admin/orgs", adminHandler.ListOrgs)
+			r.With(auth.RequireSystemAdmin).Get("/admin/health", adminHandler.Health)
 
 			// WebSocket
 			r.Get("/ws/inboxes/{inboxId}", wsHandler.InboxWS)
