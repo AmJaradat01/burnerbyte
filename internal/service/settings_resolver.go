@@ -46,7 +46,10 @@ func (r *SettingsResolver) ResolveAttachmentsEnabled(ctx context.Context, assign
 
 	// 2. Domain level
 	dom, err := r.domainRepo.GetByID(ctx, assignment.DomainID)
-	if err == nil && dom.Settings.AttachmentsEnabled != nil && *dom.Settings.AttachmentsEnabled != "inherit" {
+	if err != nil {
+		return r.defaults.AttachmentsEnabled, nil
+	}
+	if dom.Settings.AttachmentsEnabled != nil && *dom.Settings.AttachmentsEnabled != "inherit" {
 		return *dom.Settings.AttachmentsEnabled == "enabled", nil
 	}
 
