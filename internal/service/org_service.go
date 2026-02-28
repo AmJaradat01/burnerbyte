@@ -295,6 +295,7 @@ func (s *OrgService) InviteMember(ctx context.Context, orgID uuid.UUID, input do
 			"OrgName":     orgName,
 			"InviterName": "A team member",
 			"AcceptURL":   acceptURL,
+			"ExpiresIn":   mailer.HumanDuration(s.inviteExpiry),
 		}); err != nil {
 			slog.Error("failed to send invite email", "error", err)
 		}
