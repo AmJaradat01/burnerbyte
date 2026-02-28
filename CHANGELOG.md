@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.6.4 (2026-02-28)
+
+### Bug Fixes
+- **Password reset token cleanup broken** — `PasswordResetRepo.DeleteExpired` referenced table `password_resets` but the actual table is `password_reset_tokens`. The cleanup worker silently failed to delete expired tokens, causing them to accumulate indefinitely in the database.
+
 ## v0.6.3 (2026-02-28)
 
 ### Bug Fixes
