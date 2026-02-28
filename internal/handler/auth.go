@@ -12,6 +12,7 @@ import (
 
 	"gitlab.com/amjaradat01/burnerbyte/internal/auth"
 	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
+	"gitlab.com/amjaradat01/burnerbyte/internal/middleware"
 	"gitlab.com/amjaradat01/burnerbyte/internal/service"
 )
 
@@ -23,9 +24,9 @@ func NewAuthHandler(svc *service.AuthService) *AuthHandler {
 	return &AuthHandler{svc: svc}
 }
 
-func (h *AuthHandler) PublicRoutes(r chi.Router) {
+func (h *AuthHandler) PublicRoutes(r chi.Router, rl *middleware.RateLimiter) {
 	r.Post("/auth/register", h.Register)
-	r.Post("/auth/login", h.Login)
+	r.With(rl.LoginLimiter).Post("/auth/login", h.Login)
 	r.Post("/auth/refresh", h.Refresh)
 	r.Post("/auth/forgot-password", h.ForgotPassword)
 	r.Post("/auth/reset-password", h.ResetPassword)
