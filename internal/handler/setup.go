@@ -344,7 +344,7 @@ func (h *SetupHandler) Complete(w http.ResponseWriter, r *http.Request) {
 			invite.OrgRole = "member"
 		}
 		if invite.ExpiresAt.Before(time.Now()) {
-			invite.ExpiresAt = time.Now().Add(48 * time.Hour)
+			invite.ExpiresAt = time.Now().Add(h.cfg.Defaults.InviteExpiryTTL)
 		}
 		if err := orgRepoTx.CreateInvite(r.Context(), invite); err != nil {
 			slog.Error("failed to create invite", "error", err, "email", inv.Email)
