@@ -37,7 +37,9 @@ func (h *WebhookHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var input domain.CreateWebhookInput
-	json.NewDecoder(r.Body).Decode(&input)
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body"); return
+	}
 	wh, err := h.svc.Create(r.Context(), teamID, uc.UserID, input)
 	if err != nil { writeError(w, http.StatusBadRequest, err.Error()); return }
 	auditRecord(r, orgID, "webhook.created", "webhook", wh.ID)
@@ -64,7 +66,9 @@ func (h *WebhookHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	id, _ := uuid.Parse(chi.URLParam(r, "webhookId"))
 	var input domain.UpdateWebhookInput
-	json.NewDecoder(r.Body).Decode(&input)
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body"); return
+	}
 	wh, err := h.svc.Update(r.Context(), id, input)
 	if err != nil { writeError(w, http.StatusBadRequest, err.Error()); return }
 	writeJSON(w, http.StatusOK, wh)

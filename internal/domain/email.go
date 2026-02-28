@@ -22,6 +22,7 @@ type Email struct {
 	IsRead         bool       `json:"is_read"`
 	ReceivedAt     time.Time  `json:"received_at"`
 	ExpiresAt      time.Time  `json:"expires_at"`
+	Attachments    []Attachment `json:"attachments,omitempty"`
 }
 
 type EmailSummary struct {
