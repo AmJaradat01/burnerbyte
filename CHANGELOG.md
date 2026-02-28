@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.3.7 (2026-02-28)
+
+### Final BUILDPLAN Completion
+- Analytics: date range selector (last 7d, 30d, 90d) with `?days=` backend param
+- Audit log: Export to CSV button (client-side export of current page)
+- Webhooks: expandable delivery log rows per webhook (timestamp, status code, response time, success/failure badge)
+- Webhooks: GET `.../webhooks/{id}/deliveries` backend endpoint
+- Domain detail: DNS auto-poll every 30s while domain is not fully verified
+- Admin page: error state + loading skeleton
+- Sessions page: error state + error toasts
+
 ## v0.3.6 (2026-02-28)
 
 ### Remaining BUILDPLAN Features
