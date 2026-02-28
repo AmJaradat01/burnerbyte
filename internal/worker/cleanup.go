@@ -4,17 +4,44 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/google/uuid"
+
 	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
 )
 
-func CleanupJob(inboxRepo *postgres.InboxRepo, emailRepo *postgres.EmailRepo) func(ctx context.Context) error {
+// AttachmentCleaner deletes attachments for an email.
+type AttachmentCleaner interface {
+	DeleteByEmail(ctx context.Context, emailID uuid.UUID) error
+}
+
+func CleanupJob(inboxRepo *postgres.InboxRepo, emailRepo *postgres.EmailRepo, attachmentCleaner AttachmentCleaner) func(ctx context.Context) error {
 	return func(ctx context.Context) error {
+		// Delete expired emails and collect IDs for attachment cleanup
+		emailIDs, err := emailRepo.DeleteExpiredReturningIDs(ctx)
+		if err != nil {
+			// Fallback to simple delete if the new method doesn't exist
+			emails, err2 := emailRepo.DeleteExpired(ctx)
+			if err2 != nil {
+				return err2
+			}
+			if emails > 0 {
+				slog.Info("cleanup: expired emails deleted", "count", emails)
+			}
+		} else if len(emailIDs) > 0 && attachmentCleaner != nil {
+			for _, id := range emailIDs {
+				if err := attachmentCleaner.DeleteByEmail(ctx, id); err != nil {
+					slog.Error("cleanup: failed to delete attachments", "email_id", id, "error", err)
+				}
+			}
+			slog.Info("cleanup: expired emails + attachments deleted", "count", len(emailIDs))
+		}
+
 		inboxes, err := inboxRepo.DeleteExpired(ctx)
-		if err != nil { return err }
-		emails, err := emailRepo.DeleteExpired(ctx)
-		if err != nil { return err }
-		if inboxes > 0 || emails > 0 {
-			slog.Info("cleanup completed", "expired_inboxes", inboxes, "expired_emails", emails)
+		if err != nil {
+			return err
+		}
+		if inboxes > 0 {
+			slog.Info("cleanup: expired inboxes deleted", "count", inboxes)
 		}
 		return nil
 	}

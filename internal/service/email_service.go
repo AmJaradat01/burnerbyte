@@ -12,12 +12,18 @@ import (
 )
 
 type EmailService struct {
-	emailRepo *postgres.EmailRepo
-	inboxRepo *postgres.InboxRepo
+	emailRepo      *postgres.EmailRepo
+	inboxRepo      *postgres.InboxRepo
+	attachmentSvc  AttachmentCleaner
 }
 
-func NewEmailService(emailRepo *postgres.EmailRepo, inboxRepo *postgres.InboxRepo) *EmailService {
-	return &EmailService{emailRepo: emailRepo, inboxRepo: inboxRepo}
+// AttachmentCleaner deletes attachments for an email.
+type AttachmentCleaner interface {
+	DeleteByEmail(ctx context.Context, emailID uuid.UUID) error
+}
+
+func NewEmailService(emailRepo *postgres.EmailRepo, inboxRepo *postgres.InboxRepo, attachmentSvc AttachmentCleaner) *EmailService {
+	return &EmailService{emailRepo: emailRepo, inboxRepo: inboxRepo, attachmentSvc: attachmentSvc}
 }
 
 func (s *EmailService) GetEmail(ctx context.Context, emailID, userID uuid.UUID) (*domain.Email, error) {
@@ -99,6 +105,10 @@ func (s *EmailService) DeleteEmail(ctx context.Context, emailID, userID uuid.UUI
 	}
 	if inbox.CreatedBy != userID {
 		return fmt.Errorf("forbidden: not your email")
+	}
+	// Clean up S3 attachments
+	if s.attachmentSvc != nil {
+		_ = s.attachmentSvc.DeleteByEmail(ctx, emailID)
 	}
 	return s.emailRepo.Delete(ctx, emailID)
 }
