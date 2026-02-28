@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.3.2 (2026-02-28)
+
+### Service Enhancements
+- Settings cascade: ResolveDefaultInboxTTL, ResolveMaxInboxTTL, ResolveMaxAttachmentSize walk assignment → org → system defaults
+- Inbox service uses settings cascade for TTL resolution instead of hardcoded system defaults
+- SMTP handler stores attachments via settings cascade (checks attachments_enabled + max size)
+- SMTP handler calculates basic spam score (missing headers, SPF result, suspicious patterns)
+- SMTP handler broadcasts new emails to WebSocket hub for real-time delivery
+- SMTPD binary wired with MinIO, attachment service, and settings resolver
+
 ## v0.3.1 (2026-02-28)
 
 ### Cross-Cutting Enhancements
