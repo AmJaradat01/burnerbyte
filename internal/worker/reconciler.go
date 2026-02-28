@@ -11,17 +11,16 @@ import (
 
 func ReconcilerJob(inboxRepoPG *postgres.InboxRepo, inboxRepoRedis *redisrepo.InboxRepo) func(ctx context.Context) error {
 	return func(ctx context.Context) error {
-		// Get all active inboxes from PG and ensure Redis keys exist
-		// This is a simplified version — in production, batch with cursor pagination
-		inboxes, _, err := inboxRepoPG.ListByUser(ctx, [16]byte{}, 1, 1000) // empty UUID gets nothing
+		inboxes, err := inboxRepoPG.ListActive(ctx)
 		if err != nil {
-			slog.Debug("reconciler: no inboxes to sync")
-			return nil
+			return err
 		}
 		synced := 0
 		for _, inbox := range inboxes {
 			remaining := time.Until(inbox.ExpiresAt)
-			if remaining <= 0 { continue }
+			if remaining <= 0 {
+				continue
+			}
 			existing, _ := inboxRepoRedis.Get(ctx, inbox.FullAddress)
 			if existing == "" {
 				inboxRepoRedis.Set(ctx, inbox.FullAddress, inbox.ID.String(), remaining)

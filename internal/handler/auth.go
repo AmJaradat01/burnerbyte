@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"errors"
 	"net/http"
 	"strconv"
@@ -11,6 +12,7 @@ import (
 	"github.com/google/uuid"
 
 	"gitlab.com/amjaradat01/burnerbyte/internal/auth"
+	"gitlab.com/amjaradat01/burnerbyte/internal/config"
 	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
 	"gitlab.com/amjaradat01/burnerbyte/internal/middleware"
 	"gitlab.com/amjaradat01/burnerbyte/internal/service"
@@ -18,10 +20,12 @@ import (
 
 type AuthHandler struct {
 	svc *service.AuthService
+	sso *auth.SSOManager
+	cfg *config.Config
 }
 
-func NewAuthHandler(svc *service.AuthService) *AuthHandler {
-	return &AuthHandler{svc: svc}
+func NewAuthHandler(svc *service.AuthService, sso *auth.SSOManager, cfg *config.Config) *AuthHandler {
+	return &AuthHandler{svc: svc, sso: sso, cfg: cfg}
 }
 
 func (h *AuthHandler) PublicRoutes(r chi.Router, rl *middleware.RateLimiter) {
@@ -31,6 +35,8 @@ func (h *AuthHandler) PublicRoutes(r chi.Router, rl *middleware.RateLimiter) {
 	r.With(rl.ForgotPasswordLimiter).Post("/auth/forgot-password", h.ForgotPassword)
 	r.Post("/auth/reset-password", h.ResetPassword)
 	r.Get("/auth/verify-email/{token}", h.VerifyEmail)
+	r.Get("/auth/sso/{provider}", h.SSORedirect)
+	r.Get("/auth/sso/{provider}/callback", h.SSOCallback)
 }
 
 func (h *AuthHandler) AuthenticatedRoutes(r chi.Router) {
@@ -254,6 +260,59 @@ func (h *AuthHandler) RevokeAllSessions(w http.ResponseWriter, r *http.Request) 
 	}
 
 	writeJSON(w, http.StatusOK, map[string]string{"message": "all sessions revoked"})
+}
+
+func (h *AuthHandler) SSORedirect(w http.ResponseWriter, r *http.Request) {
+	if !h.sso.IsConfigured() {
+		writeError(w, http.StatusNotFound, "SSO not configured")
+		return
+	}
+	state, err := h.sso.GenerateState()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to generate state")
+		return
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name: "sso_state", Value: state, Path: "/", MaxAge: 600,
+		HttpOnly: true, SameSite: http.SameSiteLaxMode, Secure: true,
+	})
+	url, err := h.sso.RedirectURL(r.Context(), state)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	http.Redirect(w, r, url, http.StatusFound)
+}
+
+func (h *AuthHandler) SSOCallback(w http.ResponseWriter, r *http.Request) {
+	if !h.sso.IsConfigured() {
+		writeError(w, http.StatusNotFound, "SSO not configured")
+		return
+	}
+	cookie, err := r.Cookie("sso_state")
+	if err != nil || cookie.Value != r.URL.Query().Get("state") {
+		writeError(w, http.StatusBadRequest, "invalid state parameter")
+		return
+	}
+	// Clear state cookie
+	http.SetCookie(w, &http.Cookie{Name: "sso_state", Path: "/", MaxAge: -1})
+
+	email, displayName, provider, subject, err := h.sso.HandleCallback(r.Context(), r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+
+	user, tokens, err := h.svc.SSOLogin(r.Context(), email, displayName, provider, subject, r.RemoteAddr, r.UserAgent())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Redirect to frontend with tokens as query params
+	frontendURL := h.cfg.Server.FrontendURL
+	http.Redirect(w, r, fmt.Sprintf("%s/login?access_token=%s&refresh_token=%s&user_id=%s",
+		frontendURL, tokens.AccessToken, tokens.RefreshToken, user.ID), http.StatusFound)
 }
 
 // Shared JSON helpers
