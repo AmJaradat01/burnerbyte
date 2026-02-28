@@ -11,7 +11,7 @@ type Webhook struct {
 	TeamID        uuid.UUID `json:"team_id"`
 	CreatedBy     uuid.UUID `json:"created_by"`
 	URL           string    `json:"url"`
-	Secret        string    `json:"-"`
+	Secret        string    `json:"secret,omitempty"`
 	Events        []string  `json:"events"`
 	Active        bool      `json:"active"`
 	LastStatus    *int      `json:"last_status,omitempty"`
