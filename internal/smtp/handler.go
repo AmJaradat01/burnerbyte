@@ -186,7 +186,10 @@ func (h *Handler) Process(ctx context.Context, email *InboundEmail) error {
 
 	// Broadcast to WebSocket
 	if h.hub != nil {
-		h.hub.Broadcast(inbox.ID, e)
+		h.hub.Broadcast(inbox.ID, realtime.Message{
+			Type: "email.received",
+			Data: e,
+		})
 	}
 
 	// Push user notification
