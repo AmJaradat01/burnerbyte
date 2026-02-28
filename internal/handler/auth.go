@@ -135,7 +135,11 @@ func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: implement token-based password reset with stored tokens
+	if err := h.svc.ResetPassword(r.Context(), input); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	writeJSON(w, http.StatusOK, map[string]string{"message": "password reset successful"})
 }
 
