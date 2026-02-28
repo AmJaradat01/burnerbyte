@@ -15,7 +15,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { TableSkeleton } from "@/components/table-skeleton";
-import type { Inbox, Domain } from "@/types";
+import { Pagination } from "@/components/pagination";
+import { ErrorState } from "@/components/error-state";
+import { ConfirmDialog } from "@/components/confirm-dialog";
+import type { Inbox } from "@/types";
 
 interface DomainAssignment {
   id: string;
@@ -23,15 +26,24 @@ interface DomainAssignment {
   domain_name?: string;
 }
 
+interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  per_page: number;
+  total_pages: number;
+}
+
 export default function InboxesPage() {
   const { currentOrg, currentTeam } = useOrgStore();
   const qc = useQueryClient();
+  const [page, setPage] = useState(1);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["inboxes", currentOrg?.id, currentTeam?.id],
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["inboxes", currentOrg?.id, currentTeam?.id, page],
     queryFn: () => {
-      if (currentTeam) return api.get<{ data: Inbox[] }>(`/orgs/${currentOrg!.id}/teams/${currentTeam.id}/inboxes`);
-      return api.get<{ data: Inbox[] }>(`/inboxes`);
+      if (currentTeam) return api.get<PaginatedResponse<Inbox>>(`/orgs/${currentOrg!.id}/teams/${currentTeam.id}/inboxes`, { page: String(page), per_page: "20" });
+      return api.get<PaginatedResponse<Inbox>>(`/inboxes`, { page: String(page), per_page: "20" });
     },
     enabled: !!currentOrg,
   });
@@ -44,8 +56,20 @@ export default function InboxesPage() {
 
   const remove = useMutation({
     mutationFn: (id: string) => api.del(`/inboxes/${id}`),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["inboxes"] }); toast.success("Inbox deleted"); },
-    onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ["inboxes"] });
+      const prev = qc.getQueryData(["inboxes", currentOrg?.id, currentTeam?.id, page]);
+      qc.setQueryData(["inboxes", currentOrg?.id, currentTeam?.id, page], (old: any) =>
+        old ? { ...old, data: old.data.filter((i: Inbox) => i.id !== id) } : old
+      );
+      return { prev };
+    },
+    onError: (err, _id, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["inboxes", currentOrg?.id, currentTeam?.id, page], ctx.prev);
+      toast.error(err instanceof Error ? err.message : "Failed");
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["inboxes"] }),
+    onSuccess: () => toast.success("Inbox deleted"),
   });
 
   if (!currentOrg) return <p className="text-muted-foreground">Select an organization first.</p>;
@@ -57,7 +81,8 @@ export default function InboxesPage() {
         {currentTeam && <CreateInboxDialog orgId={currentOrg.id} teamId={currentTeam.id} />}
       </div>
       {!currentTeam && <p className="text-sm text-muted-foreground">Select a team to create inboxes, or view all your inboxes below.</p>}
-      {isLoading ? <TableSkeleton rows={5} cols={4} /> : (
+      {isError ? <ErrorState message="Failed to load inboxes" onRetry={() => refetch()} /> :
+      isLoading ? <TableSkeleton rows={5} cols={4} /> : (
       <Card>
         <CardContent className="p-0">
           <Table>
@@ -85,7 +110,12 @@ export default function InboxesPage() {
                   <TableCell className="text-muted-foreground">{new Date(inbox.expires_at).toLocaleString()}</TableCell>
                   <TableCell className="text-right space-x-2">
                     {inbox.is_active && <Button variant="outline" size="sm" onClick={() => extend.mutate(inbox.id)}>Extend</Button>}
-                    <Button variant="ghost" size="sm" onClick={() => remove.mutate(inbox.id)}>Delete</Button>
+                    <ConfirmDialog
+                      trigger={<Button variant="ghost" size="sm">Delete</Button>}
+                      title="Delete inbox?"
+                      description="This will permanently delete this inbox and all its emails."
+                      onConfirm={() => remove.mutate(inbox.id)}
+                    />
                   </TableCell>
                 </TableRow>
               ))}
@@ -100,6 +130,7 @@ export default function InboxesPage() {
               )}
             </TableBody>
           </Table>
+          <Pagination page={page} totalPages={data?.total_pages ?? 1} onPageChange={setPage} />
         </CardContent>
       </Card>
       )}
