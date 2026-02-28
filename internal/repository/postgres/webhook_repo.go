@@ -52,7 +52,9 @@ func (r *WebhookRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Webhoo
 
 func (r *WebhookRepo) ListByTeam(ctx context.Context, teamID uuid.UUID, page, perPage int) ([]domain.Webhook, int, error) {
 	var total int
-	r.db.QueryRow(ctx, `SELECT COUNT(*) FROM webhooks WHERE team_id = $1`, teamID).Scan(&total)
+	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM webhooks WHERE team_id = $1`, teamID).Scan(&total); err != nil {
+		return nil, 0, err
+	}
 	offset := (page - 1) * perPage
 	rows, err := r.db.Query(ctx,
 		`SELECT id, team_id, created_by, url, secret, events, active, last_status,
@@ -129,7 +131,9 @@ func (r *WebhookRepo) LogDelivery(ctx context.Context, log *domain.WebhookDelive
 
 func (r *WebhookRepo) ListDeliveryLogs(ctx context.Context, webhookID uuid.UUID, page, perPage int) ([]domain.WebhookDeliveryLog, int, error) {
 	var total int
-	r.db.QueryRow(ctx, `SELECT COUNT(*) FROM webhook_delivery_logs WHERE webhook_id = $1`, webhookID).Scan(&total)
+	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM webhook_delivery_logs WHERE webhook_id = $1`, webhookID).Scan(&total); err != nil {
+		return nil, 0, err
+	}
 	offset := (page - 1) * perPage
 	rows, err := r.db.Query(ctx,
 		`SELECT id, webhook_id, event, response_status, response_time_ms, success, attempt, created_at
