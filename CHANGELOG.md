@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.5.3 (2026-02-28)
+
+### Frontend/Backend Field Mismatch Fixes
+- API keys page: key prefix showed as 'undefined' (frontend used 'prefix', backend sends 'key_prefix')
+- Webhook TypeScript type: corrected 'is_active' to 'active' matching backend JSON
+- Domain detail page: TXT verification record was never shown (backend didn't include verification_record in response)
+
 ## v0.5.2 (2026-02-28)
 
 ### Broken Email Link Fixes
