@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.4.3 (2026-02-28)
+
+### Notification Hub Wiring
+- SMTP handler now pushes `email.received` notifications to the user-level NotifHub
+- Notification center WebSocket clients receive live push notifications when emails arrive
+- Previously the NotifHub existed but was never called — now fully wired end-to-end
+
 ## v0.4.2 (2026-02-28)
 
 ### Cleanup & SSO
