@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 
 	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
+	"gitlab.com/amjaradat01/burnerbyte/internal/realtime"
 	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
 	redisrepo "gitlab.com/amjaradat01/burnerbyte/internal/repository/redis"
 )
@@ -42,6 +43,7 @@ type Handler struct {
 	assignmentRepo    *postgres.DomainAssignmentRepo
 	webhookDispatcher WebhookDispatcher
 	hub               RealtimeHub
+	notifHub          NotifHub
 	attachmentStorer  AttachmentStorer
 	settingsChecker   SettingsChecker
 }
@@ -67,6 +69,11 @@ type SettingsChecker interface {
 	ResolveMaxAttachmentSize(ctx context.Context, assignmentID uuid.UUID) int
 }
 
+// NotifHub pushes user-level notifications.
+type NotifHub interface {
+	Notify(userID uuid.UUID, msg realtime.Message)
+}
+
 func NewHandler(
 	inboxRepoPG *postgres.InboxRepo,
 	inboxRepoRedis *redisrepo.InboxRepo,
@@ -74,6 +81,7 @@ func NewHandler(
 	assignmentRepo *postgres.DomainAssignmentRepo,
 	webhookDispatcher WebhookDispatcher,
 	hub RealtimeHub,
+	notifHub NotifHub,
 	attachmentStorer AttachmentStorer,
 	settingsChecker SettingsChecker,
 ) *Handler {
@@ -84,6 +92,7 @@ func NewHandler(
 		assignmentRepo:    assignmentRepo,
 		webhookDispatcher: webhookDispatcher,
 		hub:               hub,
+		notifHub:          notifHub,
 		attachmentStorer:  attachmentStorer,
 		settingsChecker:   settingsChecker,
 	}
@@ -178,6 +187,17 @@ func (h *Handler) Process(ctx context.Context, email *InboundEmail) error {
 	// Broadcast to WebSocket
 	if h.hub != nil {
 		h.hub.Broadcast(inbox.ID, e)
+	}
+
+	// Push user notification
+	if h.notifHub != nil {
+		h.notifHub.Notify(inbox.CreatedBy, realtime.Message{
+			Type: "email.received",
+			Data: map[string]any{
+				"inbox_id": inbox.ID, "email_id": e.ID,
+				"from": email.From, "subject": email.Subject,
+			},
+		})
 	}
 
 	slog.Info("email stored", "email_id", e.ID, "inbox", toAddr, "from", email.From)
