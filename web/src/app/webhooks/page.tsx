@@ -166,42 +166,51 @@ function CreateWebhookDialog({ orgId, teamId }: { orgId: string; teamId: string 
   const [url, setUrl] = useState("");
   const [events, setEvents] = useState<string[]>(["email.received"]);
   const [open, setOpen] = useState(false);
+  const [secret, setSecret] = useState<string | null>(null);
   const qc = useQueryClient();
   const allEvents = ["email.received", "inbox.created", "inbox.expired"];
   const toggleEvent = (event: string) => setEvents((prev) => prev.includes(event) ? prev.filter((e) => e !== event) : [...prev, event]);
 
   const create = async () => {
     try {
-      await api.post(`/orgs/${orgId}/teams/${teamId}/webhooks`, { url, events });
+      const res = await api.post<{ secret: string }>(`/orgs/${orgId}/teams/${teamId}/webhooks`, { url, events });
       qc.invalidateQueries({ queryKey: ["webhooks"] });
-      toast.success("Webhook created");
-      setOpen(false);
-      setUrl("");
+      setSecret(res.secret);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed");
     }
   };
 
+  const close = () => { setOpen(false); setSecret(null); setUrl(""); };
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(v) => { if (!v) close(); else setOpen(true); }}>
       <DialogTrigger asChild><Button>Add webhook</Button></DialogTrigger>
       <DialogContent>
-        <DialogHeader><DialogTitle>Create webhook</DialogTitle></DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>URL</Label>
-            <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://example.com/webhook" />
+        <DialogHeader><DialogTitle>{secret ? "Webhook Created" : "Create webhook"}</DialogTitle></DialogHeader>
+        {secret ? (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">Copy this signing secret now. You won't be able to see it again.</p>
+            <code className="block rounded bg-muted p-3 text-sm break-all">{secret}</code>
+            <Button onClick={close} className="w-full">Done</Button>
           </div>
-          <div className="space-y-2">
-            <Label>Events</Label>
-            <div className="flex flex-wrap gap-2">
-              {allEvents.map((e) => (
-                <Badge key={e} variant={events.includes(e) ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleEvent(e)}>{e}</Badge>
-              ))}
+        ) : (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>URL</Label>
+              <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://example.com/webhook" />
             </div>
+            <div className="space-y-2">
+              <Label>Events</Label>
+              <div className="flex flex-wrap gap-2">
+                {allEvents.map((e) => (
+                  <Badge key={e} variant={events.includes(e) ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleEvent(e)}>{e}</Badge>
+                ))}
+              </div>
+            </div>
+            <Button onClick={create} className="w-full" disabled={!url}>Create</Button>
           </div>
-          <Button onClick={create} className="w-full" disabled={!url}>Create</Button>
-        </div>
+        )}
       </DialogContent>
     </Dialog>
   );

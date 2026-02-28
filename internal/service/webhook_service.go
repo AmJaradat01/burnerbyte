@@ -52,7 +52,10 @@ func (s *WebhookService) Create(ctx context.Context, teamID, userID uuid.UUID, i
 func (s *WebhookService) List(ctx context.Context, teamID uuid.UUID, page, perPage int) ([]domain.Webhook, int, error) {
 	if page < 1 { page = 1 }
 	if perPage < 1 || perPage > 100 { perPage = 20 }
-	return s.webhookRepo.ListByTeam(ctx, teamID, page, perPage)
+	webhooks, total, err := s.webhookRepo.ListByTeam(ctx, teamID, page, perPage)
+	if err != nil { return nil, 0, err }
+	for i := range webhooks { webhooks[i].Secret = "" }
+	return webhooks, total, nil
 }
 
 func (s *WebhookService) Update(ctx context.Context, teamID, id uuid.UUID, input domain.UpdateWebhookInput) (*domain.Webhook, error) {
@@ -63,6 +66,7 @@ func (s *WebhookService) Update(ctx context.Context, teamID, id uuid.UUID, input
 	if input.Events != nil { w.Events = input.Events }
 	if input.Active != nil { w.Active = *input.Active }
 	if err := s.webhookRepo.Update(ctx, w); err != nil { return nil, err }
+	w.Secret = ""
 	return w, nil
 }
 
