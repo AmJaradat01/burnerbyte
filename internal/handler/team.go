@@ -88,7 +88,7 @@ func (h *TeamHandler) GetTeam(w http.ResponseWriter, r *http.Request) {
 	if checkTeamRole(w, r, orgID, id, rbac.OrgMember, rbac.TeamViewer) {
 		return
 	}
-	team, err := h.svc.GetTeam(r.Context(), id)
+	team, err := h.svc.GetTeam(r.Context(), orgID, id)
 	if err != nil {
 		if errors.Is(err, postgres.ErrNotFound) {
 			writeError(w, http.StatusNotFound, "team not found")
@@ -115,7 +115,7 @@ func (h *TeamHandler) UpdateTeam(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	team, err := h.svc.UpdateTeam(r.Context(), id, input)
+	team, err := h.svc.UpdateTeam(r.Context(), orgID, id, input)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
@@ -134,7 +134,7 @@ func (h *TeamHandler) DeleteTeam(w http.ResponseWriter, r *http.Request) {
 	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
 		return
 	}
-	if err := h.svc.DeleteTeam(r.Context(), id); err != nil {
+	if err := h.svc.DeleteTeam(r.Context(), orgID, id); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to delete team")
 		return
 	}

@@ -92,8 +92,11 @@ func (s *TeamService) CreateTeam(ctx context.Context, orgID uuid.UUID, input dom
 	return team, tx.Commit(ctx)
 }
 
-func (s *TeamService) GetTeam(ctx context.Context, id uuid.UUID) (*domain.Team, error) {
-	return s.teamRepo.GetByID(ctx, id)
+func (s *TeamService) GetTeam(ctx context.Context, orgID, id uuid.UUID) (*domain.Team, error) {
+	t, err := s.teamRepo.GetByID(ctx, id)
+	if err != nil { return nil, err }
+	if t.OrgID != orgID { return nil, fmt.Errorf("team not found") }
+	return t, nil
 }
 
 func (s *TeamService) ListByOrg(ctx context.Context, orgID uuid.UUID, page, perPage int) ([]domain.Team, int, error) {
@@ -102,10 +105,13 @@ func (s *TeamService) ListByOrg(ctx context.Context, orgID uuid.UUID, page, perP
 	return s.teamRepo.ListByOrg(ctx, orgID, page, perPage)
 }
 
-func (s *TeamService) UpdateTeam(ctx context.Context, id uuid.UUID, input domain.UpdateTeamInput) (*domain.Team, error) {
+func (s *TeamService) UpdateTeam(ctx context.Context, orgID, id uuid.UUID, input domain.UpdateTeamInput) (*domain.Team, error) {
 	team, err := s.teamRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
+	}
+	if team.OrgID != orgID {
+		return nil, fmt.Errorf("team not found")
 	}
 	if input.Name != nil {
 		team.Name = *input.Name
@@ -125,7 +131,10 @@ func (s *TeamService) UpdateTeam(ctx context.Context, id uuid.UUID, input domain
 	return team, nil
 }
 
-func (s *TeamService) DeleteTeam(ctx context.Context, id uuid.UUID) error {
+func (s *TeamService) DeleteTeam(ctx context.Context, orgID, id uuid.UUID) error {
+	t, err := s.teamRepo.GetByID(ctx, id)
+	if err != nil { return err }
+	if t.OrgID != orgID { return fmt.Errorf("team not found") }
 	return s.teamRepo.Delete(ctx, id)
 }
 
