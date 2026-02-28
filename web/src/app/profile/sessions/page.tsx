@@ -37,9 +37,12 @@ export default function SessionsPage() {
     <div className="max-w-3xl space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Active Sessions</h1>
-        <Button variant="destructive" size="sm" onClick={() => revokeAll.mutate()}>
-          Revoke All
-        </Button>
+        <ConfirmDialog
+          trigger={<Button variant="destructive" size="sm">Revoke All</Button>}
+          title="Revoke all sessions?"
+          description="You will be signed out of all devices including this one."
+          onConfirm={() => revokeAll.mutate()}
+        />
       </div>
 
       <Card>

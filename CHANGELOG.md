@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.6.12 (2026-03-01)
+
+### UI/UX
+- **Sessions "Revoke All" had no confirmation** — The destructive "Revoke All" button on the sessions page immediately revoked all sessions without asking. Now uses `ConfirmDialog` consistent with the rest of the app.
+- **Team delete used browser `confirm()`** — The "Delete Team" button used the native browser `confirm()` dialog instead of the app's `ConfirmDialog` component. Replaced for visual consistency and a more descriptive warning message.
+
+### Configurability
+- **Docker Compose MinIO credentials hardcoded in api/smtpd services** — `BB_MINIO_ACCESS_KEY`, `BB_MINIO_SECRET_KEY`, and `BB_MINIO_BUCKET` in the `api` and `smtpd` services now reference `${MINIO_ROOT_USER}`, `${MINIO_ROOT_PASSWORD}`, and `${MINIO_BUCKET}` env vars instead of hardcoded `minioadmin`/`burnerbyte`.
+- **Docker Compose ports hardcoded** — MinIO (9000/9001), API (8080), SMTPD (2525), and frontend (3000) ports are now configurable via `MINIO_PORT`, `MINIO_CONSOLE_PORT`, `API_PORT`, `SMTPD_PORT`, and `FRONTEND_PORT` env vars.
+- **`.env.example` updated** — Added Docker Compose override section documenting all configurable port and credential env vars.
+
+### Maintenance
+- **OpenAPI spec version** updated from `0.6.8` to `0.6.12`.
+
 ## v0.6.11 (2026-03-01)
 
 ### Documentation
