@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.6.5 (2026-02-28)
+
+### Security
+- **XSS via HTML email iframe on email detail page** — `email/[emailId]/page.tsx` used `sandbox="allow-same-origin"` on the HTML email iframe, allowing malicious email HTML to access the parent page's cookies and session storage. The inbox detail page was already fixed in v0.5.9 but the standalone email detail page was missed. Changed to `sandbox=""`.
+
+### Bug Fixes
+- **Onboarding domain assignment missing access_level** — The onboarding wizard sent `{ domain_id }` without the required `access_level` field when assigning a domain to the initial team. The backend rejected the request with "invalid access_level: ". Fixed by including `access_level: "full"`.
+
 ## v0.6.4 (2026-02-28)
 
 ### Bug Fixes
