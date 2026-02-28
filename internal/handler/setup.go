@@ -236,7 +236,8 @@ func (h *SetupHandler) Complete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Step 3: Save SMTP config to DB and reconfigure mailer
+	// Step 3: Save SMTP config to DB (within transaction)
+	sysConfigRepoTx := h.sysConfigRepo.WithTx(tx)
 	smtpConfig := config.MailerConfig{
 		Host:     input.SMTP.Host,
 		Port:     input.SMTP.Port,
@@ -244,27 +245,17 @@ func (h *SetupHandler) Complete(w http.ResponseWriter, r *http.Request) {
 		Password: input.SMTP.Password,
 		From:     input.SMTP.FromAddr,
 	}
-	if err := h.sysConfigRepo.Set(r.Context(), "mailer", smtpConfig); err != nil {
+	if err := sysConfigRepoTx.Set(r.Context(), "mailer", smtpConfig); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to save SMTP config")
 		return
 	}
-	h.cfg.Mailer = smtpConfig
-	h.mailer.Reconfigure(smtpConfig)
 
-	// Step 4: Save storage config to DB and update in-memory config
+	// Step 4: Save storage config to DB (within transaction)
 	if input.Storage != nil && input.Storage.Endpoint != "" {
-		storageConfig := config.MinIOConfig{
-			Endpoint:  input.Storage.Endpoint,
-			AccessKey: input.Storage.AccessKey,
-			SecretKey: input.Storage.SecretKey,
-			Bucket:    input.Storage.Bucket,
-			UseSSL:    input.Storage.UseSSL,
-		}
-		if err := h.sysConfigRepo.Set(r.Context(), "storage", input.Storage); err != nil {
+		if err := sysConfigRepoTx.Set(r.Context(), "storage", input.Storage); err != nil {
 			writeError(w, http.StatusInternalServerError, "failed to save storage config")
 			return
 		}
-		h.cfg.MinIO = storageConfig
 	}
 
 	// Step 5: Add domain
@@ -358,6 +349,19 @@ func (h *SetupHandler) Complete(w http.ResponseWriter, r *http.Request) {
 	if err := tx.Commit(r.Context()); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to commit setup")
 		return
+	}
+
+	// Apply in-memory config changes after successful commit
+	h.cfg.Mailer = smtpConfig
+	h.mailer.Reconfigure(smtpConfig)
+	if input.Storage != nil && input.Storage.Endpoint != "" {
+		h.cfg.MinIO = config.MinIOConfig{
+			Endpoint:  input.Storage.Endpoint,
+			AccessKey: input.Storage.AccessKey,
+			SecretKey: input.Storage.SecretKey,
+			Bucket:    input.Storage.Bucket,
+			UseSSL:    input.Storage.UseSSL,
+		}
 	}
 
 	// Send invites asynchronously after commit
