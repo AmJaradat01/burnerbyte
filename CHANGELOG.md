@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.6.8 (2026-03-01)
+
+### Bug Fixes
+- **Setup invite emails had broken Accept button** — Template uses `{{.AcceptURL}}` but setup handler passed `InviteURL`. The invite email's "Accept Invite" button linked to an empty URL. Also missing `InviterName`, rendering as "has invited you..." with no name.
+- **Email templates showed hardcoded expiry times** — Invite template said "48 hours" and password reset said "1 hour" regardless of configured TTLs. Both now use dynamic `{{.ExpiresIn}}` with human-readable formatting (e.g., "2 days", "1 hour", "15 minutes").
+
 ## v0.6.7 (2026-03-01)
 
 ### Security
