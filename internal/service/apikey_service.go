@@ -64,3 +64,20 @@ func (s *APIKeyService) List(ctx context.Context, teamID uuid.UUID, page, perPag
 func (s *APIKeyService) Revoke(ctx context.Context, id uuid.UUID) error {
 	return s.repo.Delete(ctx, id)
 }
+
+func (s *APIKeyService) ValidateAndResolve(ctx context.Context, rawKey string) (*domain.APIKey, error) {
+	hash := sha256.Sum256([]byte(rawKey))
+	keyHash := hex.EncodeToString(hash[:])
+
+	key, err := s.repo.GetByHash(ctx, keyHash)
+	if err != nil {
+		return nil, fmt.Errorf("invalid API key")
+	}
+
+	if key.ExpiresAt != nil && time.Now().After(*key.ExpiresAt) {
+		return nil, fmt.Errorf("API key expired")
+	}
+
+	_ = s.repo.UpdateLastUsed(ctx, key.ID)
+	return key, nil
+}
