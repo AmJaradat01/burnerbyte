@@ -3,7 +3,7 @@
   "info": {
     "title": "BurnerByte API",
     "description": "Self-hosted temporary email platform API",
-    "version": "0.2.0",
+    "version": "0.6.8",
     "license": { "name": "Apache 2.0", "url": "https://www.apache.org/licenses/LICENSE-2.0" }
   },
   "servers": [{ "url": "/api/v1", "description": "API v1" }],

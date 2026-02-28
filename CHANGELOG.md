@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.6.9 (2026-03-01)
+
+### Bug Fixes
+- **Setup handler invite fallback used hardcoded 48h** — When `InviteExpiryTTL` config was zero, the setup handler fell back to a hardcoded `48 * time.Hour` instead of using the configured value.
+
+### Enhancements
+- **Docker Compose: Redis port and MinIO credentials now configurable** — Redis port uses `${REDIS_PORT:-6379}`, MinIO credentials use `${MINIO_ROOT_USER}` / `${MINIO_ROOT_PASSWORD}` env var overrides.
+- **Complete `.env.example`** — Added all missing config sections: rate limiting, lockout, password policy, defaults (TTLs), workers, CORS, metrics, email verification, server timeouts, max body size.
+- **Frontend `.env.example`** — Added `web/.env.example` documenting `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_WS_URL`.
+- **OpenAPI spec version updated** — Was stuck at `0.2.0`, now matches release `0.6.8`.
+
 ## v0.6.8 (2026-03-01)
 
 ### Bug Fixes
