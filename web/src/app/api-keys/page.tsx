@@ -112,7 +112,7 @@ function CreateApiKeyDialog({ orgId, teamId }: { orgId: string; teamId: string }
   const [rawKey, setRawKey] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const qc = useQueryClient();
-  const allScopes = ["inbox:read", "inbox:write", "email:read", "webhook:manage"];
+  const allScopes = ["inbox:create", "inbox:read", "email:read", "email:delete"];
   const toggleScope = (scope: string) => setScopes((prev) => prev.includes(scope) ? prev.filter((s) => s !== scope) : [...prev, scope]);
 
   const create = async () => {
