@@ -39,17 +39,36 @@ type Handler struct {
 	inboxRepoPG    *postgres.InboxRepo
 	inboxRepoRedis *redisrepo.InboxRepo
 	emailRepo      *postgres.EmailRepo
+	assignmentRepo *postgres.DomainAssignmentRepo
+	webhookDispatcher WebhookDispatcher
+	hub            RealtimeHub
+}
+
+// WebhookDispatcher dispatches webhook events.
+type WebhookDispatcher interface {
+	Dispatch(ctx context.Context, teamID uuid.UUID, event string, data any)
+}
+
+// RealtimeHub broadcasts messages to WebSocket clients.
+type RealtimeHub interface {
+	Broadcast(inboxID uuid.UUID, msg interface{ })
 }
 
 func NewHandler(
 	inboxRepoPG *postgres.InboxRepo,
 	inboxRepoRedis *redisrepo.InboxRepo,
 	emailRepo *postgres.EmailRepo,
+	assignmentRepo *postgres.DomainAssignmentRepo,
+	webhookDispatcher WebhookDispatcher,
+	hub RealtimeHub,
 ) *Handler {
 	return &Handler{
 		inboxRepoPG:    inboxRepoPG,
 		inboxRepoRedis: inboxRepoRedis,
 		emailRepo:      emailRepo,
+		assignmentRepo: assignmentRepo,
+		webhookDispatcher: webhookDispatcher,
+		hub:            hub,
 	}
 }
 
@@ -105,6 +124,16 @@ func (h *Handler) Process(ctx context.Context, email *InboundEmail) error {
 
 	if err := h.emailRepo.Create(ctx, e); err != nil {
 		return fmt.Errorf("store email: %w", err)
+	}
+
+	// Dispatch webhook event
+	if h.webhookDispatcher != nil && h.assignmentRepo != nil {
+		assignment, err := h.assignmentRepo.GetByID(ctx, inbox.DomainAssignmentID)
+		if err == nil {
+			h.webhookDispatcher.Dispatch(ctx, assignment.TeamID, "email.received", map[string]any{
+				"email_id": e.ID, "inbox_id": inbox.ID, "from": email.From, "subject": email.Subject,
+			})
+		}
 	}
 
 	slog.Info("email stored", "email_id", e.ID, "inbox", toAddr, "from", email.From)

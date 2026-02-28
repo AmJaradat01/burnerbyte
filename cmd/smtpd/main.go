@@ -12,6 +12,7 @@ import (
 	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
 	redisrepo "gitlab.com/amjaradat01/burnerbyte/internal/repository/redis"
 	"gitlab.com/amjaradat01/burnerbyte/internal/smtp"
+	"gitlab.com/amjaradat01/burnerbyte/internal/webhook"
 )
 
 func main() {
@@ -52,11 +53,14 @@ func main() {
 	inboxRepoPG := postgres.NewInboxRepo(pool)
 	emailRepo := postgres.NewEmailRepo(pool)
 	domainRepo := postgres.NewDomainRepo(pool)
+	assignmentRepo := postgres.NewDomainAssignmentRepo(pool)
+	webhookRepo := postgres.NewWebhookRepo(pool)
 	inboxRepoRedis := redisrepo.NewInboxRepo(rdb)
 
 	// SMTP components
 	router := smtp.NewRouter(domainRepo, inboxRepoRedis, inboxRepoPG)
-	handler := smtp.NewHandler(inboxRepoPG, inboxRepoRedis, emailRepo)
+	dispatcher := webhook.NewDispatcher(webhookRepo)
+	handler := smtp.NewHandler(inboxRepoPG, inboxRepoRedis, emailRepo, assignmentRepo, dispatcher, nil)
 	server := smtp.NewServer(cfg.SMTP, handler)
 	listener := smtp.NewListener(server, router)
 

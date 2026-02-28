@@ -55,6 +55,7 @@ func (h *OrgHandler) CreateOrg(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	auditRecord(r, org.ID, "org.created", "org", org.ID)
 	writeJSON(w, http.StatusCreated, org)
 }
 
@@ -116,6 +117,7 @@ func (h *OrgHandler) UpdateOrg(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	auditRecord(r, orgID, "org.updated", "org", orgID)
 	writeJSON(w, http.StatusOK, org)
 }
 
@@ -134,6 +136,7 @@ func (h *OrgHandler) DeleteOrg(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	auditRecord(r, orgID, "org.deleted", "org", orgID)
 	writeJSON(w, http.StatusOK, map[string]string{"message": "org deleted"})
 }
 
@@ -178,6 +181,7 @@ func (h *OrgHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	auditRecord(r, orgID, "org.settings.updated", "org", orgID)
 	writeJSON(w, http.StatusOK, org.Settings)
 }
 
@@ -204,6 +208,7 @@ func (h *OrgHandler) InviteMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	auditRecord(r, orgID, "member.invited", "org", orgID)
 	writeJSON(w, http.StatusCreated, invite)
 }
 
@@ -253,6 +258,7 @@ func (h *OrgHandler) ChangeRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	auditRecord(r, orgID, "member.role_changed", "org", userID)
 	writeJSON(w, http.StatusOK, map[string]string{"message": "role updated"})
 }
 
@@ -276,6 +282,7 @@ func (h *OrgHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	auditRecord(r, orgID, "member.removed", "org", userID)
 	writeJSON(w, http.StatusOK, map[string]string{"message": "member removed"})
 }
 
