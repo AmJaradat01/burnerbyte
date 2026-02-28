@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/empty-state";
 import type { Team, Membership, Domain } from "@/types";
 
 interface DomainAssignment {
@@ -66,12 +67,8 @@ export default function TeamsPage() {
                   </TableRow>
                 ))}
                 {(!teamsData?.data || teamsData.data.length === 0) && (
-                  <TableRow><TableCell colSpan={4} className="text-center py-8">
-                    <div className="flex flex-col items-center gap-2">
-                      <span className="text-3xl">👥</span>
-                      <p className="text-muted-foreground">No teams yet</p>
-                      <p className="text-xs text-muted-foreground">Create a team to organize your domains and inboxes.</p>
-                    </div>
+                  <TableRow><TableCell colSpan={4} className="p-0">
+                    <EmptyState icon="👥" title="No teams yet" description="Create a team to organize your domains and inboxes." />
                   </TableCell></TableRow>
                 )}
               </TableBody>

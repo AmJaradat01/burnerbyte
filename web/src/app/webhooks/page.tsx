@@ -17,6 +17,7 @@ import { TableSkeleton } from "@/components/table-skeleton";
 import { Pagination } from "@/components/pagination";
 import { ErrorState } from "@/components/error-state";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { EmptyState } from "@/components/empty-state";
 
 interface Webhook { id: string; team_id: string; url: string; events: string[]; active: boolean; failure_count: number; last_status?: number; created_at: string; }
 interface DeliveryLog { id: string; webhook_id: string; event: string; response_status?: number; response_time_ms?: number; success: boolean; attempt: number; created_at: string; }
@@ -105,11 +106,8 @@ export default function WebhooksPage() {
                 </>
               ))}
               {(!data?.data || data.data.length === 0) && (
-                <TableRow><TableCell colSpan={4} className="text-center py-8">
-                  <div className="flex flex-col items-center gap-2">
-                    <span className="text-3xl">🔗</span>
-                    <p className="text-muted-foreground">No webhooks</p>
-                  </div>
+                <TableRow><TableCell colSpan={4} className="p-0">
+                  <EmptyState icon="🔗" title="No webhooks" description="Add a webhook to receive event notifications." />
                 </TableCell></TableRow>
               )}
             </TableBody>

@@ -15,6 +15,7 @@ import { TableSkeleton } from "@/components/table-skeleton";
 import { Pagination } from "@/components/pagination";
 import { ErrorState } from "@/components/error-state";
 import { toast } from "sonner";
+import { timeAgo } from "@/lib/time";
 
 interface AuditEntry {
   id: string; actor_id: string; actor_email?: string; action: string;
@@ -101,7 +102,7 @@ export default function AuditPage() {
             <TableBody>
               {data?.data?.map((e) => (
                 <TableRow key={e.id}>
-                  <TableCell className="text-muted-foreground text-sm">{new Date(e.created_at).toLocaleString()}</TableCell>
+                  <TableCell className="text-muted-foreground text-sm" title={new Date(e.created_at).toLocaleString()}>{timeAgo(e.created_at)}</TableCell>
                   <TableCell className="text-sm">{e.actor_email || e.actor_id.slice(0, 8)}</TableCell>
                   <TableCell><Badge variant="outline">{e.action}</Badge></TableCell>
                   <TableCell className="text-sm">{e.resource_type}/{e.resource_id.slice(0, 8)}</TableCell>
