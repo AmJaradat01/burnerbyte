@@ -17,15 +17,15 @@ import {
 import { useEffect } from "react";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/inboxes", label: "Inboxes" },
-  { href: "/domains", label: "Domains" },
-  { href: "/teams", label: "Teams" },
-  { href: "/webhooks", label: "Webhooks" },
-  { href: "/api-keys", label: "API Keys" },
-  { href: "/audit", label: "Audit Log" },
-  { href: "/analytics", label: "Analytics" },
-  { href: "/settings", label: "Settings" },
+  { href: "/dashboard", label: "Dashboard", icon: "📊" },
+  { href: "/inboxes", label: "Inboxes", icon: "📬" },
+  { href: "/domains", label: "Domains", icon: "🌐" },
+  { href: "/teams", label: "Teams", icon: "👥" },
+  { href: "/webhooks", label: "Webhooks", icon: "🔗" },
+  { href: "/api-keys", label: "API Keys", icon: "🔑" },
+  { href: "/audit", label: "Audit Log", icon: "📋" },
+  { href: "/analytics", label: "Analytics", icon: "📈" },
+  { href: "/settings", label: "Settings", icon: "⚙️" },
 ];
 
 export function Sidebar() {
@@ -98,12 +98,13 @@ export function Sidebar() {
             key={item.href}
             href={item.href}
             className={cn(
-              "block rounded-md px-3 py-2 text-sm font-medium transition-colors",
+              "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
               pathname.startsWith(item.href)
                 ? "bg-primary text-primary-foreground"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
             )}
           >
+            <span>{item.icon}</span>
             {item.label}
           </Link>
         ))}

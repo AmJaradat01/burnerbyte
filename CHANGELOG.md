@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.3.5 (2026-02-28)
+
+### BE/FE Sync & UI/UX
+- Inbox detail: copy address button, live countdown timer, attachment download chips, email delete with confirm
+- Inbox detail: pagination on email list, error states, responsive stacked/split layout, unread dot indicator
+- Sidebar: icons on all navigation items
+- Dashboard: error state with retry
+- Analytics: error state with retry, loading skeletons
+
 ## v0.3.4 (2026-02-28)
 
 ### Frontend Cross-Cutting Concerns

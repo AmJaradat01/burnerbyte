@@ -6,6 +6,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { ErrorState } from "@/components/error-state";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface OrgStats {
   total_members: number;
@@ -49,7 +51,7 @@ export default function AnalyticsPage() {
 }
 
 function OrgAnalytics({ orgId }: { orgId: string }) {
-  const { data: stats } = useQuery({
+  const { data: stats, isLoading, isError, refetch } = useQuery({
     queryKey: ["analytics-org", orgId],
     queryFn: () => api.get<OrgStats>(`/orgs/${orgId}/analytics`),
   });
@@ -58,6 +60,9 @@ function OrgAnalytics({ orgId }: { orgId: string }) {
     queryKey: ["analytics-org-ts", orgId],
     queryFn: () => api.get<{ data: TimeSeriesPoint[] }>(`/orgs/${orgId}/analytics/emails-per-day`),
   });
+
+  if (isError) return <ErrorState message="Failed to load analytics" onRetry={() => refetch()} />;
+  if (isLoading) return <div className="grid grid-cols-2 md:grid-cols-3 gap-4">{Array.from({ length: 6 }).map((_, i) => <Card key={i}><CardContent className="pt-6"><Skeleton className="h-10 w-20" /></CardContent></Card>)}</div>;
 
   return (
     <div className="space-y-6">
