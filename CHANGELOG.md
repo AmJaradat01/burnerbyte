@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.2.0 (2026-02-28)
+
+### Bug Fixes
+- **Router**: Replaced nested `r.Route()` sub-routers with flat route registration to fix 404s on all endpoints with 2+ path parameters (e.g. `/orgs/{orgId}/teams/{teamId}/...`). Chi's trie-based router creates isolated sub-routers that conflict when routes at different nesting depths share path param prefixes.
+- All 30 API endpoints now return correct responses (previously 17 returned 404)
+
+### Changes
+- `cmd/api/main.go` — flat route registration, auth middleware via `r.Group`
+- All handler files — removed `authMw` parameter, simplified `Routes()` methods
+- Auth handler split into `PublicRoutes()` and `AuthenticatedRoutes()`
+
 ## v0.1.0 (2026-02-28)
 
 Initial release of BurnerByte — self-hosted temporary email platform.
