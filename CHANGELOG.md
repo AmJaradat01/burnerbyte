@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.6.10 (2026-03-01)
+
+### Cleanup
+- **Removed dead `internal/rbac/` package** — 3 files (enforcer.go, permissions.go, roles.go) that were never imported. The active RBAC implementation lives in `internal/auth/rbac/`.
+
 ## v0.6.9 (2026-03-01)
 
 ### Bug Fixes
