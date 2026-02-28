@@ -1,0 +1,94 @@
+---
+title: Docker Setup
+description: Running BurnerByte with Docker Compose.
+---
+
+## Full Stack with Docker Compose
+
+The included `docker-compose.yml` runs the entire stack:
+
+```bash
+docker compose up -d
+```
+
+This starts 5 services:
+
+| Service | Port | Description |
+|---|---|---|
+| `postgres` | 5432 | PostgreSQL 16 database |
+| `redis` | 6379 | Redis 7 cache |
+| `minio` | 9000 / 9001 | S3-compatible object storage |
+| `api` | 8080 | Go API server + workers |
+| `smtpd` | 2525 | SMTP inbound server |
+| `frontend` | 3000 | Next.js UI |
+
+## Customizing Ports and Credentials
+
+All ports and credentials are configurable via environment variables. Create a `.env` file:
+
+```bash title=".env"
+# Database
+POSTGRES_USER=burnerbyte
+POSTGRES_PASSWORD=a-strong-password
+POSTGRES_DB=burnerbyte
+POSTGRES_PORT=5432
+
+# Redis
+REDIS_PORT=6379
+
+# MinIO
+MINIO_ROOT_USER=minioadmin
+MINIO_ROOT_PASSWORD=a-strong-password
+MINIO_BUCKET=burnerbyte
+MINIO_PORT=9000
+MINIO_CONSOLE_PORT=9001
+
+# Service ports
+API_PORT=8080
+SMTPD_PORT=2525
+FRONTEND_PORT=3000
+
+# Application
+JWT_SECRET=change-me-to-a-random-64-char-string
+FRONTEND_URL=http://localhost:3000
+API_BASE_URL=http://localhost:8080
+SMTP_HOSTNAME=mail.example.com
+```
+
+## Infrastructure Only
+
+To run just the infrastructure (database, cache, storage) while developing locally:
+
+```bash
+make docker-up   # starts postgres, redis, minio
+make docker-down # stops them
+```
+
+Then run the API and frontend locally with `make run-api` and `cd web && pnpm dev`.
+
+## Health Checks
+
+All Docker services include health checks. The API and SMTP servers wait for healthy database, Redis, and MinIO before starting.
+
+Verify everything is running:
+
+```bash
+# API health
+curl http://localhost:8080/healthz
+
+# Readiness (checks DB + Redis)
+curl http://localhost:8080/readyz
+
+# MinIO console
+open http://localhost:9001
+```
+
+## Volumes
+
+Data is persisted in Docker volumes:
+
+- `pgdata` — PostgreSQL data
+- `redisdata` — Redis data
+- `miniodata` — MinIO object storage
+
+To reset everything: `docker compose down -v`

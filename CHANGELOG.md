@@ -1,5 +1,26 @@
 # Changelog
 
+## v0.7.0 (2026-03-01)
+
+### Features
+- **Full documentation site with Fumadocs** — 26 MDX pages covering getting started, architecture, concepts, self-hosting, API reference, and frontend. Accessible at `/docs` with full-text search, dark/light theme, and sidebar navigation.
+
+### Documentation Pages
+- **Getting Started** — Installation, Quick Start, Docker Setup, Configuration Reference (all env vars and config.yaml options)
+- **Architecture** — System Overview, SMTP Pipeline, Real-time WebSocket, Database Schema, Background Workers
+- **Concepts** — RBAC (6 roles + permission matrix), Domains, Inboxes, Emails, Webhooks, API Keys, SSO, Settings Cascade
+- **Self-Hosting** — Production Deployment, Reverse Proxy (Nginx/Caddy), DNS Setup, Monitoring
+- **API Reference** — Authentication, pagination, errors, all 50+ endpoints listed
+- **Frontend** — Tech stack, keyboard shortcuts, UX patterns, theming
+
+### Changes
+- Added `fumadocs-core`, `fumadocs-ui`, `fumadocs-mdx`, `shiki`, `@types/mdx` dependencies
+- Next.js config migrated from `next.config.ts` to `next.config.mjs` (required by fumadocs-mdx)
+- Added Fumadocs CSS imports to `globals.css`
+- Added `/docs` to public paths in app shell (accessible without auth)
+- Added Docs link to sidebar navigation
+- Updated README documentation section
+
 ## v0.6.12 (2026-03-01)
 
 ### UI/UX

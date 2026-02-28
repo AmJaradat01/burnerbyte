@@ -1,0 +1,31 @@
+---
+title: Emails
+description: Email parsing, storage, attachments, and the reading experience.
+---
+
+## Email Storage
+
+Emails are stored in PostgreSQL with fields for `from_address`, `to_address`, `subject`, `body_text`, `body_html`, `raw_headers`, `size_bytes`, `spam_score`, `is_read`, and `has_attachments`.
+
+## HTML Rendering
+
+HTML email bodies are rendered in a sandboxed `<iframe>` with `sandbox=""` (no permissions), preventing JavaScript execution, form submissions, and navigation.
+
+## Attachments
+
+Attachments are stored in MinIO (S3-compatible) and served via presigned URLs:
+
+1. MIME parser extracts attachments from inbound email
+2. Settings resolver checks if attachments are allowed (org → domain assignment cascade)
+3. Files uploaded to MinIO at `{inbox_id}/{email_id}/{attachment_id}/{filename}`
+4. Download generates a time-limited presigned URL (configurable via `defaults.presigned_url_ttl`)
+
+## API Operations
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/inboxes/{id}/emails` | List emails (paginated) |
+| `GET` | `/emails/{id}` | Get email detail |
+| `PATCH` | `/emails/{id}` | Mark read/unread |
+| `DELETE` | `/emails/{id}` | Delete email + attachments |
+| `GET` | `/emails/{id}/attachments/{aid}` | Get presigned download URL |
