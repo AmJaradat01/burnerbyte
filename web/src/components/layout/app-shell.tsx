@@ -4,6 +4,10 @@ import { useAuthStore } from "@/stores/auth-store";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { Sidebar } from "./sidebar";
+import { Breadcrumbs } from "@/components/breadcrumbs";
+import { CommandPalette } from "@/components/command-palette";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { api } from "@/lib/api";
 
 const publicPaths = ["/login", "/register", "/forgot-password", "/verify-email", "/invite", "/setup"];
@@ -13,8 +17,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const isPublic = publicPaths.some((p) => pathname.startsWith(p));
+  const isLanding = pathname === "/";
   const [setupChecked, setSetupChecked] = useState(false);
   const [setupCompleted, setSetupCompleted] = useState(true);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     api.get<{ completed: boolean }>("/setup/status")
@@ -32,9 +38,12 @@ export function AppShell({ children }: { children: ReactNode }) {
       return;
     }
     if (loading) return;
-    if (!user && !isPublic) router.replace("/login");
-    if (user && isPublic && pathname !== "/setup") router.replace("/inboxes");
-  }, [user, loading, isPublic, router, setupChecked, setupCompleted, pathname]);
+    if (!user && !isPublic && !isLanding) router.replace("/login");
+    if (user && isPublic && pathname !== "/setup") router.replace("/dashboard");
+  }, [user, loading, isPublic, isLanding, router, setupChecked, setupCompleted, pathname]);
+
+  // Close mobile sidebar on navigation
+  useEffect(() => { setMobileOpen(false); }, [pathname]);
 
   if (!setupChecked || loading) {
     return (
@@ -47,12 +56,33 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   if (!setupCompleted) return <main className="min-h-screen">{children}</main>;
-  if (isPublic) return <main className="min-h-screen">{children}</main>;
+  if (isPublic || isLanding) return <main className="min-h-screen">{children}</main>;
 
   return (
     <div className="flex h-screen">
-      <Sidebar />
-      <main className="flex-1 overflow-auto p-6">{children}</main>
+      {/* Desktop sidebar */}
+      <div className="hidden md:block">
+        <Sidebar />
+      </div>
+
+      {/* Mobile sidebar */}
+      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+        <SheetTrigger asChild>
+          <Button variant="ghost" size="sm" className="fixed top-3 left-3 z-50 md:hidden" aria-label="Open menu">
+            ☰
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="left" className="w-64 p-0">
+          <SheetTitle className="sr-only">Navigation</SheetTitle>
+          <Sidebar />
+        </SheetContent>
+      </Sheet>
+
+      <main className="flex-1 overflow-auto p-4 pt-14 md:p-6 md:pt-6">
+        <Breadcrumbs />
+        {children}
+      </main>
+      <CommandPalette />
     </div>
   );
 }

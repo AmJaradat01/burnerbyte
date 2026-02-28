@@ -1,5 +1,52 @@
 # Changelog
 
+## v0.3.0 (2026-02-28)
+
+### Auth & Security
+- **RBAC enforcement** — Org-role and team-role checks on every handler per BUILDPLAN permission matrix; system admins bypass all checks
+- **Rate limiting** — Fixed-window per-IP rate limiter with `X-RateLimit-Limit/Remaining/Reset` headers; separate limiters for authenticated (100/min), unauthenticated (20/min), login (5/min), forgot-password (3/hour); IPv6 support; graceful shutdown
+- **SSO/OIDC** — Full `coreos/go-oidc/v3` integration with lazy provider discovery, state cookie CSRF protection, auto-verify SSO users, account linking by email
+
+### API
+- **Attachment download** — `GET /emails/:emailId/attachments/:attachmentId` with presigned S3 URL redirect
+- **Admin routes** — `GET /admin/orgs` (list all orgs), `GET /admin/health` (DB + Redis ping)
+- **Swagger/OpenAPI** — OpenAPI 3.0.3 spec at `/api/v1/docs/openapi.json`, Swagger UI at `/api/v1/docs`
+
+### WebSocket
+- **Inbox WebSocket** — `WS /ws/inboxes/:inboxId` with ping/pong keepalive, inbox ownership verification, CORS origin validation, proper goroutine coordination
+- **Notifications WebSocket** — `WS /ws/notifications` user-level push channel with dedicated NotifHub
+
+### SMTP
+- **TCP listener** — Full RFC 5321 SMTP protocol with ESMTP extensions (SIZE, 8BITMIME, PIPELINING, ENHANCEDSTATUSCODES), dot-stuffing, enmime MIME parsing, per-command timeouts, graceful shutdown
+- **SMTPD binary** — Fully wired `cmd/smtpd/main.go` with DB pool, Redis, repos, Router, Handler, Server, Listener
+
+### Workers
+- **Cleanup worker** — Wired via worker.Manager with configurable interval
+- **Reconciler worker** — Redis ↔ PostgreSQL inbox sync using `InboxRepo.ListActive()`
+
+### Frontend — New Pages
+- `/dashboard` — Org overview with stats cards and emails-per-day chart
+- `/profile` — Edit display name, avatar, change password
+- `/profile/sessions` — List and revoke active sessions
+- `/profile/delete` — Account deletion with password confirmation
+- `/domains/:domainId` — DNS verification status, assigned teams, re-verify
+- `/email/:emailId` — Full email view with attachment download links
+- `/` — Landing page with features grid
+
+### Frontend — UX Enhancements
+- Dark/light mode with system preference default (next-themes)
+- Command palette (Cmd+K) for quick page navigation
+- Breadcrumbs on nested pages
+- Skeleton loaders on data-fetching pages
+- Empty states with icons and CTAs on all list pages
+- Responsive mobile layout with Sheet sidebar
+- Team settings tab (rename/delete) and team analytics tab
+
+### Infrastructure
+- `Dockerfile.smtpd` — Standalone SMTPD Docker image
+- `docker-compose.yml` — Full stack: API, SMTPD, frontend, PostgreSQL, Redis, MinIO
+- `.gitlab-ci.yml` — Lint → build → test → deploy pipeline with Docker image promotion on tags
+
 ## v0.2.0 (2026-02-28)
 
 ### Bug Fixes

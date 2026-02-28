@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 
 	"gitlab.com/amjaradat01/burnerbyte/internal/auth"
+	"gitlab.com/amjaradat01/burnerbyte/internal/auth/rbac"
 	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
 	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
 	"gitlab.com/amjaradat01/burnerbyte/internal/service"
@@ -76,6 +77,9 @@ func (h *OrgHandler) GetOrg(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid org ID")
 		return
 	}
+	if checkOrgRole(w, r, orgID, rbac.OrgMember) {
+		return
+	}
 
 	org, err := h.svc.GetOrg(r.Context(), orgID)
 	if err != nil {
@@ -94,6 +98,9 @@ func (h *OrgHandler) UpdateOrg(w http.ResponseWriter, r *http.Request) {
 	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid org ID")
+		return
+	}
+	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
 		return
 	}
 
@@ -118,6 +125,9 @@ func (h *OrgHandler) DeleteOrg(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid org ID")
 		return
 	}
+	if checkOrgRole(w, r, orgID, rbac.OrgOwner) {
+		return
+	}
 
 	if err := h.svc.DeleteOrg(r.Context(), orgID); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to delete org")
@@ -131,6 +141,9 @@ func (h *OrgHandler) GetSettings(w http.ResponseWriter, r *http.Request) {
 	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid org ID")
+		return
+	}
+	if checkOrgRole(w, r, orgID, rbac.OrgMember) {
 		return
 	}
 
@@ -147,6 +160,9 @@ func (h *OrgHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid org ID")
+		return
+	}
+	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
 		return
 	}
 
@@ -172,6 +188,9 @@ func (h *OrgHandler) InviteMember(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid org ID")
 		return
 	}
+	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+		return
+	}
 
 	var input domain.InviteMemberInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
@@ -194,6 +213,9 @@ func (h *OrgHandler) ListMembers(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid org ID")
 		return
 	}
+	if checkOrgRole(w, r, orgID, rbac.OrgMember) {
+		return
+	}
 
 	page, perPage := parsePagination(r)
 	members, total, err := h.svc.ListMembers(r.Context(), orgID, page, perPage)
@@ -209,6 +231,9 @@ func (h *OrgHandler) ChangeRole(w http.ResponseWriter, r *http.Request) {
 	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid org ID")
+		return
+	}
+	if checkOrgRole(w, r, orgID, rbac.OrgOwner) {
 		return
 	}
 	userID, err := uuid.Parse(chi.URLParam(r, "userId"))
@@ -235,6 +260,9 @@ func (h *OrgHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid org ID")
+		return
+	}
+	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
 		return
 	}
 	userID, err := uuid.Parse(chi.URLParam(r, "userId"))

@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"gitlab.com/amjaradat01/burnerbyte/internal/auth"
+	"gitlab.com/amjaradat01/burnerbyte/internal/auth/rbac"
 	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
 	"gitlab.com/amjaradat01/burnerbyte/internal/service"
 )
@@ -29,9 +30,13 @@ func (h *DomainAssignmentHandler) Routes(r chi.Router) {
 
 func (h *DomainAssignmentHandler) AssignDomain(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
+	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
 	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid team ID")
+		return
+	}
+	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
 		return
 	}
 	var input domain.CreateAssignmentInput
@@ -52,9 +57,13 @@ func (h *DomainAssignmentHandler) AssignDomain(w http.ResponseWriter, r *http.Re
 }
 
 func (h *DomainAssignmentHandler) ListAssignments(w http.ResponseWriter, r *http.Request) {
+	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
 	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid team ID")
+		return
+	}
+	if checkTeamRole(w, r, orgID, teamID, rbac.OrgMember, rbac.TeamViewer) {
 		return
 	}
 	page, perPage := parsePagination(r)
@@ -67,9 +76,13 @@ func (h *DomainAssignmentHandler) ListAssignments(w http.ResponseWriter, r *http
 }
 
 func (h *DomainAssignmentHandler) UpdateAssignment(w http.ResponseWriter, r *http.Request) {
+	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
 	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid team ID")
+		return
+	}
+	if checkTeamRole(w, r, orgID, teamID, rbac.OrgAdmin, rbac.TeamLead) {
 		return
 	}
 	domainID, err := uuid.Parse(chi.URLParam(r, "domainId"))
@@ -91,9 +104,13 @@ func (h *DomainAssignmentHandler) UpdateAssignment(w http.ResponseWriter, r *htt
 }
 
 func (h *DomainAssignmentHandler) Unassign(w http.ResponseWriter, r *http.Request) {
+	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
 	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid team ID")
+		return
+	}
+	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
 		return
 	}
 	domainID, err := uuid.Parse(chi.URLParam(r, "domainId"))

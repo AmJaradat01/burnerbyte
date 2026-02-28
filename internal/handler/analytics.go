@@ -6,6 +6,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
+	"gitlab.com/amjaradat01/burnerbyte/internal/auth/rbac"
 	"gitlab.com/amjaradat01/burnerbyte/internal/service"
 )
 
@@ -24,6 +25,9 @@ func (h *AnalyticsHandler) Routes(r chi.Router) {
 
 func (h *AnalyticsHandler) OrgAnalytics(w http.ResponseWriter, r *http.Request) {
 	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
+	if checkOrgRole(w, r, orgID, rbac.OrgMember) {
+		return
+	}
 	stats, err := h.svc.GetOrgAnalytics(r.Context(), orgID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed")
@@ -34,6 +38,9 @@ func (h *AnalyticsHandler) OrgAnalytics(w http.ResponseWriter, r *http.Request) 
 
 func (h *AnalyticsHandler) OrgEmailsPerDay(w http.ResponseWriter, r *http.Request) {
 	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
+	if checkOrgRole(w, r, orgID, rbac.OrgMember) {
+		return
+	}
 	data, err := h.svc.GetOrgEmailsPerDay(r.Context(), orgID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed")
@@ -43,7 +50,11 @@ func (h *AnalyticsHandler) OrgEmailsPerDay(w http.ResponseWriter, r *http.Reques
 }
 
 func (h *AnalyticsHandler) TeamAnalytics(w http.ResponseWriter, r *http.Request) {
+	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
 	teamID, _ := uuid.Parse(chi.URLParam(r, "teamId"))
+	if checkTeamRole(w, r, orgID, teamID, rbac.OrgMember, rbac.TeamViewer) {
+		return
+	}
 	stats, err := h.svc.GetTeamAnalytics(r.Context(), teamID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed")
@@ -53,7 +64,11 @@ func (h *AnalyticsHandler) TeamAnalytics(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *AnalyticsHandler) TeamEmailsPerDay(w http.ResponseWriter, r *http.Request) {
+	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
 	teamID, _ := uuid.Parse(chi.URLParam(r, "teamId"))
+	if checkTeamRole(w, r, orgID, teamID, rbac.OrgMember, rbac.TeamViewer) {
+		return
+	}
 	data, err := h.svc.GetTeamEmailsPerDay(r.Context(), teamID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed")

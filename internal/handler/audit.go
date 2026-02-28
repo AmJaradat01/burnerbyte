@@ -7,6 +7,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
+	"gitlab.com/amjaradat01/burnerbyte/internal/auth/rbac"
 	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
 	"gitlab.com/amjaradat01/burnerbyte/internal/service"
 )
@@ -21,6 +22,9 @@ func (h *AuditHandler) Routes(r chi.Router) {
 
 func (h *AuditHandler) List(w http.ResponseWriter, r *http.Request) {
 	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
+	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+		return
+	}
 	page, perPage := parsePagination(r)
 
 	filter := domain.AuditFilter{}
