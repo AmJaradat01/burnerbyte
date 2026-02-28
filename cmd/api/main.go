@@ -27,6 +27,7 @@ import (
 	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
 	redisrepo "gitlab.com/amjaradat01/burnerbyte/internal/repository/redis"
 	"gitlab.com/amjaradat01/burnerbyte/internal/service"
+	"gitlab.com/amjaradat01/burnerbyte/internal/worker"
 )
 
 func main() {
@@ -78,6 +79,7 @@ func main() {
 	inboxRepo := postgres.NewInboxRepo(pool)
 	emailRepo := postgres.NewEmailRepo(pool)
 	attachmentRepo := postgres.NewAttachmentRepo(pool)
+	_ = attachmentRepo
 	webhookRepo := postgres.NewWebhookRepo(pool)
 	apikeyRepo := postgres.NewAPIKeyRepo(pool)
 	auditRepo := postgres.NewAuditRepo(pool)
@@ -96,7 +98,6 @@ func main() {
 	apikeySvc := service.NewAPIKeyService(apikeyRepo)
 	auditSvc := service.NewAuditService(auditRepo)
 	analyticsSvc := service.NewAnalyticsService(analyticsRepo)
-	_ = attachmentRepo // Used via attachment service when S3 is configured
 
 	// RBAC
 	handler.InitRBAC(rbac.NewChecker(orgRepo, teamRepo))
@@ -108,12 +109,12 @@ func main() {
 	teamHandler := handler.NewTeamHandler(teamSvc)
 	assignmentHandler := handler.NewDomainAssignmentHandler(assignmentSvc)
 	inboxHandler := handler.NewInboxHandler(inboxSvc)
-	emailHandler := handler.NewEmailHandler(emailSvc)
+	emailHandler := handler.NewEmailHandler(emailSvc, nil) // attachmentSvc nil until MinIO configured
 	webhookHandler := handler.NewWebhookHandler(webhookSvc)
 	apikeyHandler := handler.NewAPIKeyHandler(apikeySvc)
 	auditHandler := handler.NewAuditHandler(auditSvc)
 	analyticsHandler := handler.NewAnalyticsHandler(analyticsSvc)
-	adminHandler := handler.NewAdminHandler(analyticsSvc)
+	adminHandler := handler.NewAdminHandler(analyticsSvc, orgSvc, pool, rdb)
 	setupHandler := handler.NewSetupHandler(pool, userRepo, orgRepo, domainRepo, teamRepo, sessionRepo, tokenMgr, ml, cfg)
 
 	// Auth middleware
@@ -233,9 +234,12 @@ func main() {
 			r.Get("/emails/{emailId}", emailHandler.GetEmail)
 			r.Patch("/emails/{emailId}", emailHandler.MarkReadUnread)
 			r.Delete("/emails/{emailId}", emailHandler.DeleteEmail)
+			r.Get("/emails/{emailId}/attachments/{attachmentId}", emailHandler.DownloadAttachment)
 
 			// Admin
 			r.Get("/admin/stats", adminHandler.Stats)
+			r.Get("/admin/orgs", adminHandler.ListOrgs)
+			r.Get("/admin/health", adminHandler.Health)
 		})
 	})
 
@@ -251,6 +255,24 @@ func main() {
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, syscall.SIGINT, syscall.SIGTERM)
 
+	// Background cleanup worker
+	cleanupCtx, cleanupCancel := context.WithCancel(context.Background())
+	cleanupFn := worker.CleanupJob(inboxRepo, emailRepo)
+	go func() {
+		ticker := time.NewTicker(cfg.Workers.CleanupInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				if err := cleanupFn(cleanupCtx); err != nil {
+					slog.Error("cleanup worker error", "error", err)
+				}
+			case <-cleanupCtx.Done():
+				return
+			}
+		}
+	}()
+
 	go func() {
 		slog.Info("api server starting", "addr", addr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -261,6 +283,7 @@ func main() {
 
 	<-done
 	slog.Info("shutting down api server")
+	cleanupCancel()
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.Server.ShutdownTimeout)
 	defer cancel()

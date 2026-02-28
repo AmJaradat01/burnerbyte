@@ -9,9 +9,9 @@ Mark `[x]` when complete. Work top-down by priority.
 
 ### Auth & Security
 - [x] **RBAC enforcement** — Add org-role and team-role checks to every handler (currently any authenticated user can access any org/team endpoint; only `RequireSystemAdmin` exists)
-- [ ] **Rate limiting middleware** — Config struct exists but no middleware implementation; add per-IP rate limiter on auth endpoints and global limiter
+- [x] **Rate limiting middleware** — Config struct exists but no middleware implementation; add per-IP rate limiter on auth endpoints and global limiter
 - [ ] **SSO/OIDC** — `GET /auth/sso/:provider`, `GET /auth/sso/:provider/callback`; integrate `coreos/go-oidc/v3`; auto-verify SSO users; enforce_sso org setting
-- [ ] **Password change JWT invalidation** — Middleware should reject tokens issued before `password_changed_at`
+- [x] **Password change JWT invalidation** — Middleware rejects tokens issued before `password_changed_at` (already implemented)
 
 ### API Routes
 - [ ] **Attachment download** — `GET /emails/:emailId/attachments/:attachmentId`; repo and S3 client exist, need handler + presigned URL generation + route
