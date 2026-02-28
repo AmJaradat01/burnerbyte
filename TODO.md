@@ -24,9 +24,9 @@ Mark `[x]` when complete. Work top-down by priority.
 - [ ] **Notifications WebSocket** — `WS /api/v1/ws/notifications`; user-level push notifications channel
 
 ### SMTP Server
-- [ ] **Wire SMTPD binary** — `cmd/smtpd/main.go` is a stub; connect it to `internal/smtp/Server.Start()` with DB pool, Redis, config
-- [ ] **TCP listener** — Add actual TCP accept loop (go-guerrilla or stdlib `net.Listen`); currently `internal/smtp/server.go` has worker pool but no listener
-- [ ] **Add go-guerrilla dependency** — Not in `go.mod`; or implement lightweight SMTP listener with stdlib
+- [x] **Wire SMTPD binary** — `cmd/smtpd/main.go` is a stub; connect it to `internal/smtp/Server.Start()` with DB pool, Redis, config
+- [x] **TCP listener** — Add actual TCP accept loop (go-guerrilla or stdlib `net.Listen`); currently `internal/smtp/server.go` has worker pool but no listener
+- [x] **SMTP listener with enmime** — Not in `go.mod`; or implement lightweight SMTP listener with stdlib
 
 ### Background Workers
 - [x] **Start cleanup worker** — `internal/worker/cleanup.go` exists but is never started in `cmd/api/main.go`; add ticker goroutine
