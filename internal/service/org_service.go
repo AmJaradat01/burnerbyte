@@ -251,11 +251,6 @@ func (s *OrgService) InviteMember(ctx context.Context, orgID uuid.UUID, input do
 		return nil, fmt.Errorf("invalid org_role: %s", input.OrgRole)
 	}
 
-	// Check if already a member
-	if _, err := s.orgRepo.GetMembership(ctx, uuid.Nil, orgID); err == nil {
-		// This is a simplified check — in practice we'd look up by email
-	}
-
 	b := make([]byte, 32)
 	rand.Read(b)
 	token := hex.EncodeToString(b)
@@ -287,10 +282,14 @@ func (s *OrgService) InviteMember(ctx context.Context, orgID uuid.UUID, input do
 
 	// Send invite email
 	go func() {
+		orgName := ""
+		if org, err := s.orgRepo.GetByID(ctx, orgID); err == nil {
+			orgName = org.Name
+		}
 		acceptURL := fmt.Sprintf("%s/invite?token=%s", s.baseURL, token)
 		if err := s.mailer.Send(input.Email, "You've been invited", "invite.html", map[string]string{
-			"OrgName":     "", // Would need org name lookup
-			"InviterName": "",
+			"OrgName":     orgName,
+			"InviterName": "A team member",
 			"AcceptURL":   acceptURL,
 		}); err != nil {
 			slog.Error("failed to send invite email", "error", err)
