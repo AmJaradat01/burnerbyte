@@ -85,21 +85,25 @@ On first launch, navigate to `http://localhost:3000` — the setup wizard will g
 | Group | Endpoints |
 |---|---|
 | Setup | `GET /setup/status`, `POST /setup/complete` |
-| Auth | `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `GET /auth/me`, `PUT /auth/me/password`, `POST /auth/forgot-password` |
-| Orgs | `POST /orgs`, `GET /orgs`, `GET /orgs/:id`, `PATCH /orgs/:id`, `GET /orgs/:id/settings`, `PUT /orgs/:id/settings` |
+| Auth | `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `GET /auth/me`, `PATCH /auth/me`, `PUT /auth/me/password`, `DELETE /auth/me`, `POST /auth/forgot-password`, `POST /auth/reset-password`, `GET /auth/verify-email/:token` |
+| Sessions | `GET /auth/sessions`, `DELETE /auth/sessions/:id`, `DELETE /auth/sessions` |
+| SSO | `GET /auth/sso/:provider`, `GET /auth/sso/:provider/callback` |
+| Orgs | `POST /orgs`, `GET /orgs`, `GET /orgs/:id`, `PATCH /orgs/:id`, `DELETE /orgs/:id`, `GET /orgs/:id/settings`, `PATCH /orgs/:id/settings`, `PUT /orgs/:id/settings` |
 | Members | `POST /orgs/:id/members`, `GET /orgs/:id/members`, `PATCH /orgs/:id/members/:uid`, `DELETE /orgs/:id/members/:uid` |
 | Invites | `POST /orgs/:id/invites`, `POST /invites/:token/accept` |
-| Domains | `POST /orgs/:id/domains`, `GET /orgs/:id/domains`, `DELETE /orgs/:id/domains/:did`, `POST /orgs/:id/domains/:did/verify` |
-| Teams | `POST /orgs/:id/teams`, `GET /orgs/:id/teams`, `PATCH /orgs/:id/teams/:tid`, `DELETE /orgs/:id/teams/:tid` |
+| Domains | `POST /orgs/:id/domains`, `GET /orgs/:id/domains`, `GET /orgs/:id/domains/:did`, `PATCH /orgs/:id/domains/:did`, `DELETE /orgs/:id/domains/:did`, `POST /orgs/:id/domains/:did/verify` |
+| Teams | `POST /orgs/:id/teams`, `GET /orgs/:id/teams`, `GET /orgs/:id/teams/:tid`, `PATCH /orgs/:id/teams/:tid`, `DELETE /orgs/:id/teams/:tid` |
 | Team Members | `POST /orgs/:id/teams/:tid/members`, `GET /orgs/:id/teams/:tid/members`, `PATCH .../members/:uid`, `DELETE .../members/:uid` |
-| Domain Assignments | `POST /orgs/:id/teams/:tid/domains`, `GET /orgs/:id/teams/:tid/domains`, `DELETE .../domains/:did` |
-| Inboxes | `POST /inboxes`, `GET /inboxes`, `GET /inboxes/:id`, `POST /inboxes/:id/extend`, `DELETE /inboxes/:id` |
-| Emails | `GET /inboxes/:id/emails`, `GET /emails/:id`, `PATCH /emails/:id`, `DELETE /emails/:id` |
-| Webhooks | `POST /orgs/:id/teams/:tid/webhooks`, `GET .../webhooks`, `PATCH .../webhooks/:wid`, `DELETE .../webhooks/:wid` |
+| Domain Assignments | `POST /orgs/:id/teams/:tid/domains`, `GET /orgs/:id/teams/:tid/domains`, `PATCH .../domains/:did`, `DELETE .../domains/:did` |
+| Inboxes | `POST /inboxes`, `GET /inboxes`, `GET /inboxes/:id`, `POST /inboxes/:id/extend`, `DELETE /inboxes/:id`, `GET /orgs/:id/teams/:tid/inboxes` |
+| Emails | `GET /inboxes/:id/emails`, `GET /emails/:id`, `PATCH /emails/:id`, `DELETE /emails/:id`, `GET /emails/:id/attachments/:aid` |
+| Webhooks | `POST /orgs/:id/teams/:tid/webhooks`, `GET .../webhooks`, `PATCH .../webhooks/:wid`, `DELETE .../webhooks/:wid`, `GET .../webhooks/:wid/deliveries` |
 | API Keys | `POST /orgs/:id/teams/:tid/api-keys`, `GET .../api-keys`, `DELETE .../api-keys/:kid` |
 | Audit | `GET /orgs/:id/audit` |
 | Analytics | `GET /orgs/:id/analytics`, `GET /orgs/:id/analytics/emails-per-day`, `GET /orgs/:id/teams/:tid/analytics`, `GET .../emails-per-day` |
-| Admin | `GET /admin/stats` |
+| Admin | `GET /admin/stats`, `GET /admin/orgs`, `GET /admin/health` |
+| WebSocket | `GET /ws/inboxes/:id`, `GET /ws/notifications` |
+| Docs | `GET /docs`, `GET /docs/openapi.json` |
 | Health | `GET /healthz`, `GET /readyz`, `GET /metrics` |
 
 ### Frontend Pages
@@ -109,18 +113,26 @@ On first launch, navigate to `http://localhost:3000` — the setup wizard will g
 | `/setup` | One-time setup wizard |
 | `/login` | Sign in |
 | `/register` | Create account |
-| `/forgot-password` | Password reset |
+| `/forgot-password` | Password reset request |
+| `/reset-password` | Set new password via token |
 | `/verify-email` | Email verification |
 | `/invite` | Accept org invitation |
+| `/onboarding` | Post-registration guided setup |
+| `/dashboard` | Org overview with analytics |
 | `/inboxes` | List & create inboxes |
 | `/inboxes/[id]` | Email reader with WebSocket |
+| `/email/[emailId]` | Email detail view |
 | `/domains` | Domain management |
+| `/domains/[domainId]` | Domain detail & DNS verification |
 | `/teams` | Team management + domain assignments |
 | `/webhooks` | Webhook configuration |
 | `/api-keys` | API key management |
 | `/audit` | Audit log viewer |
 | `/analytics` | Analytics dashboard |
 | `/settings` | Org settings + members |
+| `/profile` | User profile & password change |
+| `/profile/sessions` | Session management |
+| `/profile/delete` | Account deletion |
 | `/admin` | System admin stats |
 
 ## Tech Stack
@@ -131,7 +143,7 @@ On first launch, navigate to `http://localhost:3000` — the setup wizard will g
 
 ## Database
 
-19 migrations, 52+ indexes, 7 triggers. Tables: users, organizations, org_memberships, teams, team_memberships, domains, domain_assignments, inboxes, emails, attachments, webhooks, webhook_delivery_logs, api_keys, audit_logs, invites, sessions, setup_state.
+21 migrations, 52+ indexes, 7 triggers. Tables: users, organizations, org_memberships, teams, team_memberships, domains, domain_assignments, inboxes, emails, attachments, webhooks, webhook_delivery_logs, api_keys, audit_logs, invites, sessions, setup_state, password_reset_tokens, system_configs.
 
 ## License
 
