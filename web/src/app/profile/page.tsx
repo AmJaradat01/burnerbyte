@@ -52,12 +52,18 @@ export default function ProfilePage() {
       <h1 className="text-2xl font-bold">Profile</h1>
 
       <Card>
-        <CardHeader><CardTitle>Account Details</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" value={user?.email ?? ""} disabled />
+        <CardHeader>
+          <div className="flex items-center gap-4">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-primary/10 text-2xl font-bold text-primary overflow-hidden">
+              {avatarUrl ? <img src={avatarUrl} alt="" className="h-full w-full object-cover" /> : user?.display_name?.charAt(0).toUpperCase() || "?"}
+            </div>
+            <div>
+              <CardTitle>Account Details</CardTitle>
+              <p className="text-sm text-muted-foreground">{user?.email}</p>
+            </div>
           </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
           <div>
             <Label htmlFor="displayName">Display Name</Label>
             <Input id="displayName" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />

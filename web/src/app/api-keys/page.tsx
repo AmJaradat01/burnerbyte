@@ -16,6 +16,7 @@ import { TableSkeleton } from "@/components/table-skeleton";
 import { Pagination } from "@/components/pagination";
 import { ErrorState } from "@/components/error-state";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { EmptyState } from "@/components/empty-state";
 
 interface ApiKey { id: string; name: string; prefix: string; scopes: string[]; expires_at?: string; last_used_at?: string; created_at: string; }
 interface PaginatedResponse<T> { data: T[]; total: number; page: number; per_page: number; total_pages: number; }
@@ -91,11 +92,8 @@ export default function ApiKeysPage() {
                 </TableRow>
               ))}
               {(!data?.data || data.data.length === 0) && (
-                <TableRow><TableCell colSpan={6} className="text-center py-8">
-                  <div className="flex flex-col items-center gap-2">
-                    <span className="text-3xl">🔑</span>
-                    <p className="text-muted-foreground">No API keys</p>
-                  </div>
+                <TableRow><TableCell colSpan={6} className="p-0">
+                  <EmptyState icon="🔑" title="No API keys" description="Create an API key for programmatic access." />
                 </TableCell></TableRow>
               )}
             </TableBody>
