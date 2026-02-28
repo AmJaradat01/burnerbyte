@@ -354,7 +354,8 @@ func (s *AuthService) ForgotPassword(ctx context.Context, input domain.ForgotPas
 
 	go func() {
 		_ = s.mailer.Send(user.Email, "Reset your password", "password_reset.html", map[string]string{
-			"ResetURL": resetURL,
+			"ResetURL":  resetURL,
+			"ExpiresIn": mailer.HumanDuration(ttl),
 		})
 	}()
 

@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"log/slog"
 	"net/smtp"
+	"time"
 
 	"gitlab.com/amjaradat01/burnerbyte/internal/config"
 )
@@ -101,6 +102,26 @@ func truncate(s string, n int) string {
 		return s
 	}
 	return s[:n] + "..."
+}
+
+func HumanDuration(d time.Duration) string {
+	if h := int(d.Hours()); h >= 24 && h%24 == 0 {
+		days := h / 24
+		if days == 1 {
+			return "1 day"
+		}
+		return fmt.Sprintf("%d days", days)
+	} else if h > 0 {
+		if h == 1 {
+			return "1 hour"
+		}
+		return fmt.Sprintf("%d hours", h)
+	}
+	m := int(d.Minutes())
+	if m == 1 {
+		return "1 minute"
+	}
+	return fmt.Sprintf("%d minutes", m)
 }
 
 func (m *Mailer) Reconfigure(cfg config.MailerConfig) {
