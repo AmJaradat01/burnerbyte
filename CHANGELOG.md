@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.3.9 (2026-02-28)
+
+### Onboarding Wizard
+- 5-step post-login onboarding for users with no orgs: create org → add domain (with DNS verification instructions + copy button) → create team (auto-assigns domain) → create first inbox → done
+- Skippable at any step with progress indicator
+- Completion state stored in localStorage
+- Auto-redirect from sidebar when user has zero orgs
+
 ## v0.3.8 (2026-02-28)
 
 ### Final Polish
