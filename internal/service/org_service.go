@@ -351,3 +351,7 @@ func (s *OrgService) AcceptInvite(ctx context.Context, token string, userID uuid
 func (s *OrgService) GetMembership(ctx context.Context, userID, orgID uuid.UUID) (*domain.OrgMembership, error) {
 	return s.orgRepo.GetMembership(ctx, userID, orgID)
 }
+
+func (s *OrgService) ListAll(ctx context.Context, page, perPage int) ([]domain.Organization, int, error) {
+	return s.orgRepo.ListAll(ctx, page, perPage)
+}

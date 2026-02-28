@@ -377,6 +377,48 @@ func (s *AuthService) ResetPassword(ctx context.Context, input domain.ResetPassw
 	return s.userRepo.Update(ctx, user)
 }
 
+func (s *AuthService) SSOLogin(ctx context.Context, email, displayName, provider, subject, ip, userAgent string) (*domain.User, *domain.TokenPair, error) {
+	ip = stripPort(ip)
+
+	// Try to find existing SSO user
+	user, err := s.userRepo.GetBySSO(ctx, provider, subject)
+	if err != nil {
+		// Not found — try by email or create new
+		user, err = s.userRepo.GetByEmail(ctx, email)
+		if err != nil {
+			// Create new user
+			now := time.Now()
+			user = &domain.User{
+				ID:                uuid.New(),
+				Email:             email,
+				DisplayName:       displayName,
+				SSOProvider:       &provider,
+				SSOSubject:        &subject,
+				IsSystemAdmin:     false,
+				EmailVerified:     true, // SSO users are auto-verified
+				PasswordChangedAt: &now,
+			}
+			if err := s.userRepo.Create(ctx, user); err != nil {
+				return nil, nil, fmt.Errorf("create SSO user: %w", err)
+			}
+		} else {
+			// Link SSO to existing email account
+			user.SSOProvider = &provider
+			user.SSOSubject = &subject
+			user.EmailVerified = true
+			if err := s.userRepo.Update(ctx, user); err != nil {
+				return nil, nil, fmt.Errorf("link SSO: %w", err)
+			}
+		}
+	}
+
+	tokenPair, err := s.createSession(ctx, s.sessionRepo, user, ip, userAgent)
+	if err != nil {
+		return nil, nil, err
+	}
+	return user, tokenPair, nil
+}
+
 func (s *AuthService) VerifyEmail(ctx context.Context, userID uuid.UUID) error {
 	user, err := s.userRepo.GetByID(ctx, userID)
 	if err != nil {

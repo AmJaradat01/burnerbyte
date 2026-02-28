@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"gitlab.com/amjaradat01/burnerbyte/internal/auth"
+	"gitlab.com/amjaradat01/burnerbyte/internal/auth/rbac"
 	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
 	"gitlab.com/amjaradat01/burnerbyte/internal/service"
 )
@@ -29,7 +30,11 @@ func (h *WebhookHandler) Routes(r chi.Router) {
 
 func (h *WebhookHandler) Create(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
+	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
 	teamID, _ := uuid.Parse(chi.URLParam(r, "teamId"))
+	if checkTeamRole(w, r, orgID, teamID, rbac.OrgAdmin, rbac.TeamLead) {
+		return
+	}
 	var input domain.CreateWebhookInput
 	json.NewDecoder(r.Body).Decode(&input)
 	wh, err := h.svc.Create(r.Context(), teamID, uc.UserID, input)
@@ -38,7 +43,11 @@ func (h *WebhookHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *WebhookHandler) List(w http.ResponseWriter, r *http.Request) {
+	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
 	teamID, _ := uuid.Parse(chi.URLParam(r, "teamId"))
+	if checkTeamRole(w, r, orgID, teamID, rbac.OrgMember, rbac.TeamMember) {
+		return
+	}
 	page, perPage := parsePagination(r)
 	webhooks, total, err := h.svc.List(r.Context(), teamID, page, perPage)
 	if err != nil { writeError(w, http.StatusInternalServerError, "failed"); return }
@@ -46,6 +55,11 @@ func (h *WebhookHandler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *WebhookHandler) Update(w http.ResponseWriter, r *http.Request) {
+	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
+	teamID, _ := uuid.Parse(chi.URLParam(r, "teamId"))
+	if checkTeamRole(w, r, orgID, teamID, rbac.OrgAdmin, rbac.TeamLead) {
+		return
+	}
 	id, _ := uuid.Parse(chi.URLParam(r, "webhookId"))
 	var input domain.UpdateWebhookInput
 	json.NewDecoder(r.Body).Decode(&input)
@@ -55,6 +69,11 @@ func (h *WebhookHandler) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *WebhookHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
+	teamID, _ := uuid.Parse(chi.URLParam(r, "teamId"))
+	if checkTeamRole(w, r, orgID, teamID, rbac.OrgAdmin, rbac.TeamLead) {
+		return
+	}
 	id, _ := uuid.Parse(chi.URLParam(r, "webhookId"))
 	if err := h.svc.Delete(r.Context(), id); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed"); return

@@ -6,6 +6,7 @@ import { useAuthStore } from "@/stores/auth-store";
 import { useOrgStore } from "@/stores/org-store";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
 import {
   Select,
   SelectContent,
@@ -16,6 +17,7 @@ import {
 import { useEffect } from "react";
 
 const navItems = [
+  { href: "/dashboard", label: "Dashboard" },
   { href: "/inboxes", label: "Inboxes" },
   { href: "/domains", label: "Domains" },
   { href: "/teams", label: "Teams" },
@@ -46,7 +48,7 @@ export function Sidebar() {
 
   return (
     <aside className="flex h-screen w-64 flex-col border-r bg-background p-4">
-      <Link href="/" className="mb-6 text-xl font-bold tracking-tight">
+      <Link href="/dashboard" className="mb-6 text-xl font-bold tracking-tight">
         🔥 BurnerByte
       </Link>
 
@@ -120,10 +122,15 @@ export function Sidebar() {
         )}
       </nav>
 
-      <div className="border-t pt-4">
-        <p className="truncate text-sm font-medium">{user?.display_name}</p>
-        <p className="truncate text-xs text-muted-foreground">{user?.email}</p>
-        <Button variant="ghost" size="sm" className="mt-2 w-full" onClick={logout}>
+      <div className="border-t pt-4 space-y-2">
+        <div className="flex items-center justify-between">
+          <Link href="/profile" className="truncate hover:underline">
+            <p className="truncate text-sm font-medium">{user?.display_name}</p>
+            <p className="truncate text-xs text-muted-foreground">{user?.email}</p>
+          </Link>
+          <ThemeToggle />
+        </div>
+        <Button variant="ghost" size="sm" className="w-full" onClick={logout}>
           Sign out
         </Button>
       </div>

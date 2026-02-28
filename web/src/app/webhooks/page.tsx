@@ -76,7 +76,13 @@ export default function WebhooksPage() {
                 </TableRow>
               ))}
               {(!data?.data || data.data.length === 0) && (
-                <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">No webhooks</TableCell></TableRow>
+                <TableRow><TableCell colSpan={4} className="text-center py-8">
+                  <div className="flex flex-col items-center gap-2">
+                    <span className="text-3xl">🔗</span>
+                    <p className="text-muted-foreground">No webhooks</p>
+                    <p className="text-xs text-muted-foreground">Create a webhook to receive email delivery notifications.</p>
+                  </div>
+                </TableCell></TableRow>
               )}
             </TableBody>
           </Table>

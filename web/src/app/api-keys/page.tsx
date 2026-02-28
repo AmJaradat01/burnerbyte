@@ -73,7 +73,13 @@ export default function ApiKeysPage() {
                 </TableRow>
               ))}
               {(!data?.data || data.data.length === 0) && (
-                <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No API keys</TableCell></TableRow>
+                <TableRow><TableCell colSpan={6} className="text-center py-8">
+                  <div className="flex flex-col items-center gap-2">
+                    <span className="text-3xl">🔑</span>
+                    <p className="text-muted-foreground">No API keys</p>
+                    <p className="text-xs text-muted-foreground">Create an API key for programmatic access.</p>
+                  </div>
+                </TableCell></TableRow>
               )}
             </TableBody>
           </Table>

@@ -18,13 +18,17 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"gitlab.com/amjaradat01/burnerbyte/internal/auth"
+	"gitlab.com/amjaradat01/burnerbyte/internal/auth/rbac"
 	"gitlab.com/amjaradat01/burnerbyte/internal/config"
 	"gitlab.com/amjaradat01/burnerbyte/internal/database"
 	"gitlab.com/amjaradat01/burnerbyte/internal/handler"
 	"gitlab.com/amjaradat01/burnerbyte/internal/mailer"
+	mw "gitlab.com/amjaradat01/burnerbyte/internal/middleware"
+	"gitlab.com/amjaradat01/burnerbyte/internal/realtime"
 	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
 	redisrepo "gitlab.com/amjaradat01/burnerbyte/internal/repository/redis"
 	"gitlab.com/amjaradat01/burnerbyte/internal/service"
+	"gitlab.com/amjaradat01/burnerbyte/internal/worker"
 )
 
 func main() {
@@ -76,6 +80,7 @@ func main() {
 	inboxRepo := postgres.NewInboxRepo(pool)
 	emailRepo := postgres.NewEmailRepo(pool)
 	attachmentRepo := postgres.NewAttachmentRepo(pool)
+	_ = attachmentRepo
 	webhookRepo := postgres.NewWebhookRepo(pool)
 	apikeyRepo := postgres.NewAPIKeyRepo(pool)
 	auditRepo := postgres.NewAuditRepo(pool)
@@ -94,25 +99,37 @@ func main() {
 	apikeySvc := service.NewAPIKeyService(apikeyRepo)
 	auditSvc := service.NewAuditService(auditRepo)
 	analyticsSvc := service.NewAnalyticsService(analyticsRepo)
-	_ = attachmentRepo // Used via attachment service when S3 is configured
+
+	// RBAC
+	handler.InitRBAC(rbac.NewChecker(orgRepo, teamRepo))
+
+	// WebSocket hubs
+	hub := realtime.NewHub()
+	notifHub := realtime.NewNotifHub()
 
 	// Handlers
-	authHandler := handler.NewAuthHandler(authSvc)
+	ssoMgr := auth.NewSSOManager(cfg.SSO)
+	authHandler := handler.NewAuthHandler(authSvc, ssoMgr, cfg)
 	orgHandler := handler.NewOrgHandler(orgSvc)
 	domainHandler := handler.NewDomainHandler(domainSvc)
 	teamHandler := handler.NewTeamHandler(teamSvc)
 	assignmentHandler := handler.NewDomainAssignmentHandler(assignmentSvc)
 	inboxHandler := handler.NewInboxHandler(inboxSvc)
-	emailHandler := handler.NewEmailHandler(emailSvc)
+	emailHandler := handler.NewEmailHandler(emailSvc, nil) // attachmentSvc nil until MinIO configured
 	webhookHandler := handler.NewWebhookHandler(webhookSvc)
 	apikeyHandler := handler.NewAPIKeyHandler(apikeySvc)
 	auditHandler := handler.NewAuditHandler(auditSvc)
 	analyticsHandler := handler.NewAnalyticsHandler(analyticsSvc)
-	adminHandler := handler.NewAdminHandler(analyticsSvc)
+	adminHandler := handler.NewAdminHandler(analyticsSvc, orgSvc, pool, rdb)
 	setupHandler := handler.NewSetupHandler(pool, userRepo, orgRepo, domainRepo, teamRepo, sessionRepo, tokenMgr, ml, cfg)
+	wsHandler := handler.NewWSHandler(hub, inboxRepo, cfg.CORS.AllowedOrigins)
+	notifWSHandler := handler.NewNotifWSHandler(notifHub, cfg.CORS.AllowedOrigins)
 
 	// Auth middleware
 	authMw := auth.Middleware(tokenMgr, userRepo)
+
+	// Rate limiter
+	rateLimiter := mw.NewRateLimiter(cfg.RateLimit)
 
 	// Router
 	r := chi.NewRouter()
@@ -139,11 +156,16 @@ func main() {
 	r.Route("/api/v1", func(r chi.Router) {
 		// Public routes (no auth)
 		setupHandler.Routes(r)
-		authHandler.PublicRoutes(r)
+		authHandler.PublicRoutes(r, rateLimiter)
+
+		// Docs (public)
+		r.Get("/docs", handler.SwaggerUI)
+		r.Get("/docs/openapi.json", handler.OpenAPISpec)
 
 		// Authenticated routes
 		r.Group(func(r chi.Router) {
 			r.Use(authMw)
+			r.Use(rateLimiter.Middleware)
 
 			// Auth (authenticated)
 			authHandler.AuthenticatedRoutes(r)
@@ -224,9 +246,16 @@ func main() {
 			r.Get("/emails/{emailId}", emailHandler.GetEmail)
 			r.Patch("/emails/{emailId}", emailHandler.MarkReadUnread)
 			r.Delete("/emails/{emailId}", emailHandler.DeleteEmail)
+			r.Get("/emails/{emailId}/attachments/{attachmentId}", emailHandler.DownloadAttachment)
 
 			// Admin
 			r.Get("/admin/stats", adminHandler.Stats)
+			r.Get("/admin/orgs", adminHandler.ListOrgs)
+			r.Get("/admin/health", adminHandler.Health)
+
+			// WebSocket
+			r.Get("/ws/inboxes/{inboxId}", wsHandler.InboxWS)
+			r.Get("/ws/notifications", notifWSHandler.NotificationsWS)
 		})
 	})
 
@@ -242,6 +271,13 @@ func main() {
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, syscall.SIGINT, syscall.SIGTERM)
 
+	// Background workers
+	workerCtx, workerCancel := context.WithCancel(context.Background())
+	wm := worker.NewManager()
+	wm.Add("cleanup", cfg.Workers.CleanupInterval, worker.CleanupJob(inboxRepo, emailRepo))
+	wm.Add("reconciler", cfg.Workers.ReconcilerInterval, worker.ReconcilerJob(inboxRepo, redisInboxRepo))
+	go wm.Start(workerCtx)
+
 	go func() {
 		slog.Info("api server starting", "addr", addr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -252,6 +288,10 @@ func main() {
 
 	<-done
 	slog.Info("shutting down api server")
+	workerCancel()
+	hub.CloseAll()
+	notifHub.CloseAll()
+	rateLimiter.Stop()
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.Server.ShutdownTimeout)
 	defer cancel()

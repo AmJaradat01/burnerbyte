@@ -66,7 +66,13 @@ export default function TeamsPage() {
                   </TableRow>
                 ))}
                 {(!teamsData?.data || teamsData.data.length === 0) && (
-                  <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">No teams yet</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={4} className="text-center py-8">
+                    <div className="flex flex-col items-center gap-2">
+                      <span className="text-3xl">👥</span>
+                      <p className="text-muted-foreground">No teams yet</p>
+                      <p className="text-xs text-muted-foreground">Create a team to organize your domains and inboxes.</p>
+                    </div>
+                  </TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
@@ -80,9 +86,13 @@ export default function TeamsPage() {
             <TabsList>
               <TabsTrigger value="members">Members</TabsTrigger>
               <TabsTrigger value="domains">Domain Assignments</TabsTrigger>
+              <TabsTrigger value="settings">Settings</TabsTrigger>
+              <TabsTrigger value="analytics">Analytics</TabsTrigger>
             </TabsList>
             <TabsContent value="members"><TeamMembersTab orgId={currentOrg.id} teamId={currentTeam.id} /></TabsContent>
             <TabsContent value="domains"><DomainAssignmentsTab orgId={currentOrg.id} teamId={currentTeam.id} /></TabsContent>
+            <TabsContent value="settings"><TeamSettingsTab orgId={currentOrg.id} team={currentTeam} /></TabsContent>
+            <TabsContent value="analytics"><TeamAnalyticsTab orgId={currentOrg.id} teamId={currentTeam.id} /></TabsContent>
           </Tabs>
         </div>
       )}
@@ -246,5 +256,99 @@ function DomainAssignmentsTab({ orgId, teamId }: { orgId: string; teamId: string
         </Table>
       </CardContent>
     </Card>
+  );
+}
+
+function TeamSettingsTab({ orgId, team }: { orgId: string; team: Team }) {
+  const [name, setName] = useState(team.name);
+  const [saving, setSaving] = useState(false);
+  const qc = useQueryClient();
+  const fetchTeams = useOrgStore((s) => s.fetchTeams);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await api.patch(`/orgs/${orgId}/teams/${team.id}`, { name });
+      qc.invalidateQueries({ queryKey: ["teams"] });
+      fetchTeams(orgId);
+      toast.success("Team updated");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deleteTeam = async () => {
+    if (!confirm("Delete this team? This cannot be undone.")) return;
+    try {
+      await api.del(`/orgs/${orgId}/teams/${team.id}`);
+      qc.invalidateQueries({ queryKey: ["teams"] });
+      fetchTeams(orgId);
+      toast.success("Team deleted");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader><CardTitle>Team Settings</CardTitle></CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label>Team Name</Label>
+          <Input value={name} onChange={(e) => setName(e.target.value)} />
+        </div>
+        <div className="flex gap-3">
+          <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
+          <Button variant="destructive" onClick={deleteTeam}>Delete Team</Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function TeamAnalyticsTab({ orgId, teamId }: { orgId: string; teamId: string }) {
+  const { data: stats } = useQuery({
+    queryKey: ["team-analytics", teamId],
+    queryFn: () => api.get<{ total_inboxes: number; active_inboxes: number; total_emails: number }>(`/orgs/${orgId}/teams/${teamId}/analytics`),
+  });
+
+  const { data: chart } = useQuery({
+    queryKey: ["team-emails-per-day", teamId],
+    queryFn: () => api.get<{ data: { date: string; count: number }[] }>(`/orgs/${orgId}/teams/${teamId}/analytics/emails-per-day`),
+  });
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-4 sm:grid-cols-3">
+        {[
+          { label: "Total Inboxes", value: stats?.total_inboxes },
+          { label: "Active Inboxes", value: stats?.active_inboxes },
+          { label: "Total Emails", value: stats?.total_emails },
+        ].map((s) => (
+          <Card key={s.label}>
+            <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">{s.label}</CardTitle></CardHeader>
+            <CardContent><p className="text-2xl font-bold">{s.value ?? 0}</p></CardContent>
+          </Card>
+        ))}
+      </div>
+      {chart?.data && chart.data.length > 0 && (
+        <Card>
+          <CardHeader><CardTitle>Emails per Day</CardTitle></CardHeader>
+          <CardContent>
+            <div className="space-y-1">
+              {chart.data.map((d) => (
+                <div key={d.date} className="flex items-center gap-3 text-sm">
+                  <span className="w-24 text-muted-foreground">{d.date}</span>
+                  <div className="h-4 bg-primary rounded" style={{ width: `${Math.max(d.count * 4, 4)}px` }} />
+                  <span>{d.count}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }
