@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.6.11 (2026-03-01)
+
+### Documentation
+- **README API endpoints table incomplete** — Was missing 18 routes: `PATCH /auth/me`, `DELETE /auth/me`, `POST /auth/reset-password`, `GET /auth/verify-email/:token`, sessions endpoints, SSO endpoints, `GET /orgs/:id/domains/:did`, `PATCH /orgs/:id/domains/:did`, `PATCH /orgs/:id/settings`, `GET /orgs/:id/teams/:tid`, `PATCH .../domains/:did`, `GET /emails/:id/attachments/:aid`, `GET .../webhooks/:wid/deliveries`, `GET /orgs/:id/teams/:tid/inboxes`, admin/orgs, admin/health, WebSocket, and Docs routes.
+- **README frontend pages table incomplete** — Was missing 8 pages: `/reset-password`, `/onboarding`, `/dashboard`, `/email/[emailId]`, `/domains/[domainId]`, `/profile`, `/profile/sessions`, `/profile/delete`.
+- **README migration count stale** — Updated from 19 to 21, added `password_reset_tokens` and `system_configs` tables.
+
 ## v0.6.10 (2026-03-01)
 
 ### Cleanup
