@@ -1,0 +1,210 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "BurnerByte API",
+    "description": "Self-hosted temporary email platform API",
+    "version": "0.2.0",
+    "license": { "name": "Apache 2.0", "url": "https://www.apache.org/licenses/LICENSE-2.0" }
+  },
+  "servers": [{ "url": "/api/v1", "description": "API v1" }],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": { "type": "http", "scheme": "bearer", "bearerFormat": "JWT" }
+    },
+    "schemas": {
+      "Error": { "type": "object", "properties": { "error": { "type": "string" } } },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "email": { "type": "string" },
+          "display_name": { "type": "string" },
+          "avatar_url": { "type": "string" },
+          "is_system_admin": { "type": "boolean" },
+          "email_verified": { "type": "boolean" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "TokenPair": {
+        "type": "object",
+        "properties": {
+          "access_token": { "type": "string" },
+          "refresh_token": { "type": "string" },
+          "expires_in": { "type": "integer" }
+        }
+      },
+      "Organization": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "slug": { "type": "string" },
+          "settings": { "type": "object" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Team": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "org_id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "slug": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Domain": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "org_id": { "type": "string", "format": "uuid" },
+          "domain_name": { "type": "string" },
+          "mx_verified": { "type": "boolean" },
+          "txt_verified": { "type": "boolean" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Inbox": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "full_address": { "type": "string" },
+          "is_active": { "type": "boolean" },
+          "expires_at": { "type": "string", "format": "date-time" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Email": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "from_address": { "type": "string" },
+          "to_address": { "type": "string" },
+          "subject": { "type": "string" },
+          "body_text": { "type": "string" },
+          "body_html": { "type": "string" },
+          "has_attachments": { "type": "boolean" },
+          "is_read": { "type": "boolean" },
+          "received_at": { "type": "string", "format": "date-time" }
+        }
+      }
+    }
+  },
+  "security": [{ "bearerAuth": [] }],
+  "paths": {
+    "/setup/status": {
+      "get": { "tags": ["Setup"], "summary": "Get setup status", "security": [], "responses": { "200": { "description": "Setup status" } } }
+    },
+    "/setup/complete": {
+      "post": { "tags": ["Setup"], "summary": "Complete setup wizard", "security": [], "responses": { "200": { "description": "Setup completed" } } }
+    },
+    "/auth/register": {
+      "post": {
+        "tags": ["Auth"], "summary": "Register new user", "security": [],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["email","password","display_name"], "properties": { "email": {"type":"string"}, "password": {"type":"string"}, "display_name": {"type":"string"} } } } } },
+        "responses": { "201": { "description": "User created" }, "409": { "description": "Email exists" } }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": ["Auth"], "summary": "Login", "security": [],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["email","password"], "properties": { "email": {"type":"string"}, "password": {"type":"string"} } } } } },
+        "responses": { "200": { "description": "Login successful" }, "401": { "description": "Invalid credentials" }, "423": { "description": "Account locked" } }
+      }
+    },
+    "/auth/refresh": {
+      "post": { "tags": ["Auth"], "summary": "Refresh tokens", "security": [], "responses": { "200": { "description": "Tokens refreshed" } } }
+    },
+    "/auth/me": {
+      "get": { "tags": ["Auth"], "summary": "Get current user", "responses": { "200": { "description": "Current user", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/User" } } } } } },
+      "patch": { "tags": ["Auth"], "summary": "Update profile", "responses": { "200": { "description": "Profile updated" } } },
+      "delete": { "tags": ["Auth"], "summary": "Delete account", "responses": { "200": { "description": "Account deleted" } } }
+    },
+    "/auth/me/password": {
+      "put": { "tags": ["Auth"], "summary": "Change password", "responses": { "200": { "description": "Password changed" } } }
+    },
+    "/auth/sessions": {
+      "get": { "tags": ["Auth"], "summary": "List sessions", "responses": { "200": { "description": "Sessions list" } } },
+      "delete": { "tags": ["Auth"], "summary": "Revoke all sessions", "responses": { "200": { "description": "All sessions revoked" } } }
+    },
+    "/auth/forgot-password": {
+      "post": { "tags": ["Auth"], "summary": "Request password reset", "security": [], "responses": { "200": { "description": "Reset email sent if account exists" } } }
+    },
+    "/auth/sso/{provider}": {
+      "get": { "tags": ["Auth"], "summary": "SSO redirect", "security": [], "parameters": [{"name":"provider","in":"path","required":true,"schema":{"type":"string"}}], "responses": { "302": { "description": "Redirect to OIDC provider" } } }
+    },
+    "/auth/sso/{provider}/callback": {
+      "get": { "tags": ["Auth"], "summary": "SSO callback", "security": [], "parameters": [{"name":"provider","in":"path","required":true,"schema":{"type":"string"}}], "responses": { "302": { "description": "Redirect to frontend with tokens" } } }
+    },
+    "/orgs": {
+      "post": { "tags": ["Organizations"], "summary": "Create organization", "responses": { "201": { "description": "Org created" } } },
+      "get": { "tags": ["Organizations"], "summary": "List user organizations", "responses": { "200": { "description": "Org list" } } }
+    },
+    "/orgs/{orgId}": {
+      "get": { "tags": ["Organizations"], "summary": "Get organization", "parameters": [{"name":"orgId","in":"path","required":true,"schema":{"type":"string","format":"uuid"}}], "responses": { "200": { "description": "Organization details" } } },
+      "patch": { "tags": ["Organizations"], "summary": "Update organization", "parameters": [{"name":"orgId","in":"path","required":true,"schema":{"type":"string","format":"uuid"}}], "responses": { "200": { "description": "Org updated" } } },
+      "delete": { "tags": ["Organizations"], "summary": "Delete organization", "parameters": [{"name":"orgId","in":"path","required":true,"schema":{"type":"string","format":"uuid"}}], "responses": { "200": { "description": "Org deleted" } } }
+    },
+    "/orgs/{orgId}/settings": {
+      "get": { "tags": ["Organizations"], "summary": "Get org settings", "parameters": [{"name":"orgId","in":"path","required":true,"schema":{"type":"string","format":"uuid"}}], "responses": { "200": { "description": "Settings" } } },
+      "put": { "tags": ["Organizations"], "summary": "Update org settings", "parameters": [{"name":"orgId","in":"path","required":true,"schema":{"type":"string","format":"uuid"}}], "responses": { "200": { "description": "Settings updated" } } }
+    },
+    "/orgs/{orgId}/members": {
+      "post": { "tags": ["Members"], "summary": "Invite member", "parameters": [{"name":"orgId","in":"path","required":true,"schema":{"type":"string","format":"uuid"}}], "responses": { "201": { "description": "Invite sent" } } },
+      "get": { "tags": ["Members"], "summary": "List members", "parameters": [{"name":"orgId","in":"path","required":true,"schema":{"type":"string","format":"uuid"}}], "responses": { "200": { "description": "Members list" } } }
+    },
+    "/orgs/{orgId}/domains": {
+      "post": { "tags": ["Domains"], "summary": "Add domain", "parameters": [{"name":"orgId","in":"path","required":true,"schema":{"type":"string","format":"uuid"}}], "responses": { "201": { "description": "Domain added" } } },
+      "get": { "tags": ["Domains"], "summary": "List domains", "parameters": [{"name":"orgId","in":"path","required":true,"schema":{"type":"string","format":"uuid"}}], "responses": { "200": { "description": "Domain list" } } }
+    },
+    "/orgs/{orgId}/teams": {
+      "post": { "tags": ["Teams"], "summary": "Create team", "parameters": [{"name":"orgId","in":"path","required":true,"schema":{"type":"string","format":"uuid"}}], "responses": { "201": { "description": "Team created" } } },
+      "get": { "tags": ["Teams"], "summary": "List teams", "parameters": [{"name":"orgId","in":"path","required":true,"schema":{"type":"string","format":"uuid"}}], "responses": { "200": { "description": "Team list" } } }
+    },
+    "/orgs/{orgId}/teams/{teamId}/webhooks": {
+      "post": { "tags": ["Webhooks"], "summary": "Create webhook", "responses": { "201": { "description": "Webhook created" } } },
+      "get": { "tags": ["Webhooks"], "summary": "List webhooks", "responses": { "200": { "description": "Webhook list" } } }
+    },
+    "/orgs/{orgId}/teams/{teamId}/api-keys": {
+      "post": { "tags": ["API Keys"], "summary": "Create API key", "responses": { "201": { "description": "Key created" } } },
+      "get": { "tags": ["API Keys"], "summary": "List API keys", "responses": { "200": { "description": "Key list" } } }
+    },
+    "/orgs/{orgId}/audit": {
+      "get": { "tags": ["Audit"], "summary": "List audit logs", "parameters": [{"name":"orgId","in":"path","required":true,"schema":{"type":"string","format":"uuid"}}], "responses": { "200": { "description": "Audit log entries" } } }
+    },
+    "/orgs/{orgId}/analytics": {
+      "get": { "tags": ["Analytics"], "summary": "Get org analytics", "responses": { "200": { "description": "Analytics data" } } }
+    },
+    "/inboxes": {
+      "post": { "tags": ["Inboxes"], "summary": "Create inbox", "responses": { "201": { "description": "Inbox created" } } },
+      "get": { "tags": ["Inboxes"], "summary": "List my inboxes", "responses": { "200": { "description": "Inbox list" } } }
+    },
+    "/inboxes/{inboxId}": {
+      "get": { "tags": ["Inboxes"], "summary": "Get inbox", "parameters": [{"name":"inboxId","in":"path","required":true,"schema":{"type":"string","format":"uuid"}}], "responses": { "200": { "description": "Inbox details" } } },
+      "delete": { "tags": ["Inboxes"], "summary": "Delete inbox", "parameters": [{"name":"inboxId","in":"path","required":true,"schema":{"type":"string","format":"uuid"}}], "responses": { "200": { "description": "Inbox deleted" } } }
+    },
+    "/inboxes/{inboxId}/emails": {
+      "get": { "tags": ["Emails"], "summary": "List emails in inbox", "parameters": [{"name":"inboxId","in":"path","required":true,"schema":{"type":"string","format":"uuid"}}], "responses": { "200": { "description": "Email list" } } }
+    },
+    "/emails/{emailId}": {
+      "get": { "tags": ["Emails"], "summary": "Get email", "parameters": [{"name":"emailId","in":"path","required":true,"schema":{"type":"string","format":"uuid"}}], "responses": { "200": { "description": "Email details" } } },
+      "patch": { "tags": ["Emails"], "summary": "Mark read/unread", "parameters": [{"name":"emailId","in":"path","required":true,"schema":{"type":"string","format":"uuid"}}], "responses": { "200": { "description": "Email updated" } } },
+      "delete": { "tags": ["Emails"], "summary": "Delete email", "parameters": [{"name":"emailId","in":"path","required":true,"schema":{"type":"string","format":"uuid"}}], "responses": { "200": { "description": "Email deleted" } } }
+    },
+    "/emails/{emailId}/attachments/{attachmentId}": {
+      "get": { "tags": ["Emails"], "summary": "Download attachment", "responses": { "302": { "description": "Redirect to presigned URL" } } }
+    },
+    "/ws/inboxes/{inboxId}": {
+      "get": { "tags": ["WebSocket"], "summary": "Real-time inbox updates", "responses": { "101": { "description": "WebSocket upgrade" } } }
+    },
+    "/admin/stats": {
+      "get": { "tags": ["Admin"], "summary": "System statistics", "responses": { "200": { "description": "System stats" } } }
+    },
+    "/admin/orgs": {
+      "get": { "tags": ["Admin"], "summary": "List all organizations", "responses": { "200": { "description": "All orgs" } } }
+    },
+    "/admin/health": {
+      "get": { "tags": ["Admin"], "summary": "System health check", "responses": { "200": { "description": "Health status" } } }
+    }
+  }
+}

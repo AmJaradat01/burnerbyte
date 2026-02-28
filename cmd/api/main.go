@@ -103,11 +103,13 @@ func main() {
 	// RBAC
 	handler.InitRBAC(rbac.NewChecker(orgRepo, teamRepo))
 
-	// WebSocket hub
+	// WebSocket hubs
 	hub := realtime.NewHub()
+	notifHub := realtime.NewNotifHub()
 
 	// Handlers
-	authHandler := handler.NewAuthHandler(authSvc)
+	ssoMgr := auth.NewSSOManager(cfg.SSO)
+	authHandler := handler.NewAuthHandler(authSvc, ssoMgr, cfg)
 	orgHandler := handler.NewOrgHandler(orgSvc)
 	domainHandler := handler.NewDomainHandler(domainSvc)
 	teamHandler := handler.NewTeamHandler(teamSvc)
@@ -121,6 +123,7 @@ func main() {
 	adminHandler := handler.NewAdminHandler(analyticsSvc, orgSvc, pool, rdb)
 	setupHandler := handler.NewSetupHandler(pool, userRepo, orgRepo, domainRepo, teamRepo, sessionRepo, tokenMgr, ml, cfg)
 	wsHandler := handler.NewWSHandler(hub, inboxRepo, cfg.CORS.AllowedOrigins)
+	notifWSHandler := handler.NewNotifWSHandler(notifHub, cfg.CORS.AllowedOrigins)
 
 	// Auth middleware
 	authMw := auth.Middleware(tokenMgr, userRepo)
@@ -154,6 +157,10 @@ func main() {
 		// Public routes (no auth)
 		setupHandler.Routes(r)
 		authHandler.PublicRoutes(r, rateLimiter)
+
+		// Docs (public)
+		r.Get("/docs", handler.SwaggerUI)
+		r.Get("/docs/openapi.json", handler.OpenAPISpec)
 
 		// Authenticated routes
 		r.Group(func(r chi.Router) {
@@ -248,6 +255,7 @@ func main() {
 
 			// WebSocket
 			r.Get("/ws/inboxes/{inboxId}", wsHandler.InboxWS)
+			r.Get("/ws/notifications", notifWSHandler.NotificationsWS)
 		})
 	})
 
@@ -263,23 +271,12 @@ func main() {
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, syscall.SIGINT, syscall.SIGTERM)
 
-	// Background cleanup worker
-	cleanupCtx, cleanupCancel := context.WithCancel(context.Background())
-	cleanupFn := worker.CleanupJob(inboxRepo, emailRepo)
-	go func() {
-		ticker := time.NewTicker(cfg.Workers.CleanupInterval)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ticker.C:
-				if err := cleanupFn(cleanupCtx); err != nil {
-					slog.Error("cleanup worker error", "error", err)
-				}
-			case <-cleanupCtx.Done():
-				return
-			}
-		}
-	}()
+	// Background workers
+	workerCtx, workerCancel := context.WithCancel(context.Background())
+	wm := worker.NewManager()
+	wm.Add("cleanup", cfg.Workers.CleanupInterval, worker.CleanupJob(inboxRepo, emailRepo))
+	wm.Add("reconciler", cfg.Workers.ReconcilerInterval, worker.ReconcilerJob(inboxRepo, redisInboxRepo))
+	go wm.Start(workerCtx)
 
 	go func() {
 		slog.Info("api server starting", "addr", addr)
@@ -291,8 +288,9 @@ func main() {
 
 	<-done
 	slog.Info("shutting down api server")
-	cleanupCancel()
+	workerCancel()
 	hub.CloseAll()
+	notifHub.CloseAll()
 	rateLimiter.Stop()
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.Server.ShutdownTimeout)

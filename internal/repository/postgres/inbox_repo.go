@@ -171,3 +171,25 @@ func (r *InboxRepo) DeleteExpired(ctx context.Context) (int64, error) {
 	}
 	return tag.RowsAffected(), nil
 }
+
+func (r *InboxRepo) ListActive(ctx context.Context) ([]domain.Inbox, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT i.id, i.domain_assignment_id, i.domain_id, i.created_by, i.address, i.full_address,
+		        i.is_active, i.expires_at, i.created_at, d.domain_name
+		 FROM inboxes i JOIN domains d ON i.domain_id = d.id
+		 WHERE i.is_active = TRUE AND i.expires_at > NOW()`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var inboxes []domain.Inbox
+	for rows.Next() {
+		var i domain.Inbox
+		if err := rows.Scan(&i.ID, &i.DomainAssignmentID, &i.DomainID, &i.CreatedBy, &i.Address, &i.FullAddress,
+			&i.IsActive, &i.ExpiresAt, &i.CreatedAt, &i.DomainName); err != nil {
+			return nil, err
+		}
+		inboxes = append(inboxes, i)
+	}
+	return inboxes, nil
+}
