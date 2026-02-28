@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.5.8 (2026-02-28)
+
+### Security — Cross-Tenant Resource Access
+- Domain Get/Update/Delete/Verify did not verify the domain belonged to the org in the URL — an admin of Org A could operate on Org B's domains by guessing the UUID. Service methods now verify `orgID` ownership.
+- Team Get/Update/Delete had the same cross-org issue. Fixed with `orgID` verification.
+- Webhook Update/Delete and API Key Revoke did not verify the resource belonged to the team in the URL — a team lead of Team A could manipulate Team B's webhooks/keys. Service methods now verify `teamID` ownership.
+- Webhook ListDeliveryLogs had the same cross-team issue. Fixed.
+- Added `APIKeyRepo.GetByID` for ownership check in Revoke.
+
+### Bug Fixes
+- Frontend domain unassign completely broken — passed assignment ID (`a.id`) but backend expects domain ID. Changed to `a.domain_id`.
+- Frontend API key creation offered scopes `inbox:write` and `webhook:manage` which the backend rejects. Fixed to match backend: `inbox:create`, `inbox:read`, `email:read`, `email:delete`.
+
 ## v0.5.7 (2026-02-28)
 
 ### Build & Email Fixes
