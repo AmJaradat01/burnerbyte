@@ -4,6 +4,8 @@ interface RequestOptions extends RequestInit {
   params?: Record<string, string>;
 }
 
+let refreshPromise: Promise<boolean> | null = null;
+
 async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
   const { params, ...init } = opts;
   let url = `${API_BASE}${path}`;
@@ -40,21 +42,32 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
 }
 
 async function tryRefresh(): Promise<boolean> {
-  const refreshToken = localStorage.getItem("refresh_token");
-  if (!refreshToken) return false;
+  // Deduplicate concurrent refresh attempts — only one in-flight at a time
+  if (refreshPromise) return refreshPromise;
+
+  refreshPromise = (async () => {
+    const refreshToken = localStorage.getItem("refresh_token");
+    if (!refreshToken) return false;
+    try {
+      const res = await fetch(`${API_BASE}/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+      if (!res.ok) return false;
+      const data = await res.json();
+      localStorage.setItem("access_token", data.access_token);
+      localStorage.setItem("refresh_token", data.refresh_token);
+      return true;
+    } catch {
+      return false;
+    }
+  })();
+
   try {
-    const res = await fetch(`${API_BASE}/auth/refresh`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refresh_token: refreshToken }),
-    });
-    if (!res.ok) return false;
-    const data = await res.json();
-    localStorage.setItem("access_token", data.access_token);
-    localStorage.setItem("refresh_token", data.refresh_token);
-    return true;
-  } catch {
-    return false;
+    return await refreshPromise;
+  } finally {
+    refreshPromise = null;
   }
 }
 
