@@ -21,15 +21,16 @@ import (
 )
 
 type SetupHandler struct {
-	pool        *pgxpool.Pool
-	userRepo    *postgres.UserRepo
-	orgRepo     *postgres.OrgRepo
-	domainRepo  *postgres.DomainRepo
-	teamRepo    *postgres.TeamRepo
-	sessionRepo *postgres.SessionRepo
-	tokens      *auth.TokenManager
-	mailer      *mailer.Mailer
-	cfg         *config.Config
+	pool            *pgxpool.Pool
+	userRepo        *postgres.UserRepo
+	orgRepo         *postgres.OrgRepo
+	domainRepo      *postgres.DomainRepo
+	teamRepo        *postgres.TeamRepo
+	sessionRepo     *postgres.SessionRepo
+	sysConfigRepo   *postgres.SystemConfigRepo
+	tokens          *auth.TokenManager
+	mailer          *mailer.Mailer
+	cfg             *config.Config
 }
 
 func NewSetupHandler(
@@ -39,6 +40,7 @@ func NewSetupHandler(
 	domainRepo *postgres.DomainRepo,
 	teamRepo *postgres.TeamRepo,
 	sessionRepo *postgres.SessionRepo,
+	sysConfigRepo *postgres.SystemConfigRepo,
 	tokens *auth.TokenManager,
 	mailer *mailer.Mailer,
 	cfg *config.Config,
@@ -46,8 +48,8 @@ func NewSetupHandler(
 	return &SetupHandler{
 		pool: pool, userRepo: userRepo, orgRepo: orgRepo,
 		domainRepo: domainRepo, teamRepo: teamRepo,
-		sessionRepo: sessionRepo, tokens: tokens,
-		mailer: mailer, cfg: cfg,
+		sessionRepo: sessionRepo, sysConfigRepo: sysConfigRepo,
+		tokens: tokens, mailer: mailer, cfg: cfg,
 	}
 }
 
@@ -83,12 +85,23 @@ type SetupInput struct {
 		FromName string `json:"from_name"`
 	} `json:"smtp"`
 
-	// Step 4: Domain (required)
+	// Step 4: Storage (required)
+	Storage *struct {
+		Provider  string `json:"provider"` // "minio" or "s3"
+		Endpoint  string `json:"endpoint"`
+		AccessKey string `json:"access_key"`
+		SecretKey string `json:"secret_key"`
+		Bucket    string `json:"bucket"`
+		Region    string `json:"region,omitempty"`
+		UseSSL    bool   `json:"use_ssl"`
+	} `json:"storage,omitempty"`
+
+	// Step 5: Domain (required)
 	Domain struct {
 		DomainName string `json:"domain_name"`
 	} `json:"domain"`
 
-	// Step 5: Team (optional)
+	// Step 6: Team (optional)
 	Team *struct {
 		Name string `json:"name"`
 	} `json:"team,omitempty"`
@@ -223,16 +236,38 @@ func (h *SetupHandler) Complete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Step 3: Save SMTP config to config.yaml at runtime
-	h.cfg.Mailer.Host = input.SMTP.Host
-	h.cfg.Mailer.Port = input.SMTP.Port
-	h.cfg.Mailer.Username = input.SMTP.Username
-	h.cfg.Mailer.Password = input.SMTP.Password
-	h.cfg.Mailer.From = input.SMTP.FromAddr
-	// Reconfigure mailer with new SMTP settings
-	h.mailer.Reconfigure(h.cfg.Mailer)
+	// Step 3: Save SMTP config to DB and reconfigure mailer
+	smtpConfig := config.MailerConfig{
+		Host:     input.SMTP.Host,
+		Port:     input.SMTP.Port,
+		Username: input.SMTP.Username,
+		Password: input.SMTP.Password,
+		From:     input.SMTP.FromAddr,
+	}
+	if err := h.sysConfigRepo.Set(r.Context(), "mailer", smtpConfig); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to save SMTP config")
+		return
+	}
+	h.cfg.Mailer = smtpConfig
+	h.mailer.Reconfigure(smtpConfig)
 
-	// Step 4: Add domain
+	// Step 4: Save storage config to DB and update in-memory config
+	if input.Storage != nil && input.Storage.Endpoint != "" {
+		storageConfig := config.MinIOConfig{
+			Endpoint:  input.Storage.Endpoint,
+			AccessKey: input.Storage.AccessKey,
+			SecretKey: input.Storage.SecretKey,
+			Bucket:    input.Storage.Bucket,
+			UseSSL:    input.Storage.UseSSL,
+		}
+		if err := h.sysConfigRepo.Set(r.Context(), "storage", input.Storage); err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to save storage config")
+			return
+		}
+		h.cfg.MinIO = storageConfig
+	}
+
+	// Step 5: Add domain
 	domainEntry := &domain.Domain{
 		ID:         uuid.New(),
 		OrgID:      org.ID,
@@ -243,7 +278,7 @@ func (h *SetupHandler) Complete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Step 5: Create team (optional)
+	// Step 6: Create team (optional)
 	var teamEntry *domain.Team
 	if input.Team != nil && input.Team.Name != "" {
 		teamRepoTx := h.teamRepo.WithTx(tx)
