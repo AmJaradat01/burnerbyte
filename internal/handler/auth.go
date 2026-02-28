@@ -28,7 +28,7 @@ func (h *AuthHandler) PublicRoutes(r chi.Router, rl *middleware.RateLimiter) {
 	r.Post("/auth/register", h.Register)
 	r.With(rl.LoginLimiter).Post("/auth/login", h.Login)
 	r.Post("/auth/refresh", h.Refresh)
-	r.Post("/auth/forgot-password", h.ForgotPassword)
+	r.With(rl.ForgotPasswordLimiter).Post("/auth/forgot-password", h.ForgotPassword)
 	r.Post("/auth/reset-password", h.ResetPassword)
 	r.Get("/auth/verify-email/{token}", h.VerifyEmail)
 }
