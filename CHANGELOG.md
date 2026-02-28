@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.4.1 (2026-02-28)
+
+### Backend Correctness Fixes
+- SMTP: raw email headers now stored in DB and returned via API (Raw Headers tab works)
+- Email detail API: attachments list populated from DB (was always empty)
+- Attachment download: returns JSON `{url}` instead of HTTP redirect (frontend compatible)
+- Webhook Create/Update: JSON decode errors now return 400 instead of silently ignoring
+- API Key Create: JSON decode error now returns 400
+- Email domain struct: added `attachments` field for inline attachment data
+
 ## v0.4.0 (2026-02-28)
 
 ### UI/UX Enhancements
