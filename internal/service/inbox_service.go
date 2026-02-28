@@ -22,6 +22,7 @@ type InboxService struct {
 	assignmentRepo *postgres.DomainAssignmentRepo
 	domainRepo     *postgres.DomainRepo
 	orgRepo        *postgres.OrgRepo
+	teamRepo       *postgres.TeamRepo
 	cfg            *config.Config
 }
 
@@ -31,12 +32,13 @@ func NewInboxService(
 	assignmentRepo *postgres.DomainAssignmentRepo,
 	domainRepo *postgres.DomainRepo,
 	orgRepo *postgres.OrgRepo,
+	teamRepo *postgres.TeamRepo,
 	cfg *config.Config,
 ) *InboxService {
 	return &InboxService{
 		inboxRepo: inboxRepo, redisInboxRepo: redisInboxRepo,
 		assignmentRepo: assignmentRepo, domainRepo: domainRepo,
-		orgRepo: orgRepo, cfg: cfg,
+		orgRepo: orgRepo, teamRepo: teamRepo, cfg: cfg,
 	}
 }
 
@@ -209,6 +211,9 @@ func (s *InboxService) ListByUser(ctx context.Context, userID uuid.UUID, page, p
 func (s *InboxService) CreateInboxByAssignment(ctx context.Context, assignmentID, userID uuid.UUID, input domain.CreateInboxInput) (*domain.Inbox, error) {
 	assignment, err := s.assignmentRepo.GetByID(ctx, assignmentID)
 	if err != nil {
+		return nil, fmt.Errorf("domain assignment not found")
+	}
+	if _, err := s.teamRepo.GetMembership(ctx, userID, assignment.TeamID); err != nil {
 		return nil, fmt.Errorf("domain assignment not found")
 	}
 	return s.CreateInbox(ctx, assignment.TeamID, assignment.DomainID, userID, input)
