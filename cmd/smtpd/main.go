@@ -11,7 +11,9 @@ import (
 	"gitlab.com/amjaradat01/burnerbyte/internal/database"
 	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
 	redisrepo "gitlab.com/amjaradat01/burnerbyte/internal/repository/redis"
+	"gitlab.com/amjaradat01/burnerbyte/internal/service"
 	"gitlab.com/amjaradat01/burnerbyte/internal/smtp"
+	"gitlab.com/amjaradat01/burnerbyte/internal/storage"
 	"gitlab.com/amjaradat01/burnerbyte/internal/webhook"
 )
 
@@ -55,12 +57,25 @@ func main() {
 	domainRepo := postgres.NewDomainRepo(pool)
 	assignmentRepo := postgres.NewDomainAssignmentRepo(pool)
 	webhookRepo := postgres.NewWebhookRepo(pool)
+	attachmentRepo := postgres.NewAttachmentRepo(pool)
+	orgRepo := postgres.NewOrgRepo(pool)
 	inboxRepoRedis := redisrepo.NewInboxRepo(rdb)
+
+	// MinIO
+	s3Client, err := storage.NewS3(ctx, cfg.MinIO)
+	if err != nil {
+		slog.Error("failed to connect to minio", "error", err)
+		os.Exit(1)
+	}
+
+	// Services
+	attachmentSvc := service.NewAttachmentService(attachmentRepo, emailRepo, inboxRepoPG, s3Client, cfg.MinIO, cfg.Defaults.MaxAttachmentSizeMB)
+	settingsResolver := service.NewSettingsResolver(assignmentRepo, domainRepo, orgRepo, cfg.Defaults)
 
 	// SMTP components
 	router := smtp.NewRouter(domainRepo, inboxRepoRedis, inboxRepoPG)
 	dispatcher := webhook.NewDispatcher(webhookRepo)
-	handler := smtp.NewHandler(inboxRepoPG, inboxRepoRedis, emailRepo, assignmentRepo, dispatcher, nil)
+	handler := smtp.NewHandler(inboxRepoPG, inboxRepoRedis, emailRepo, assignmentRepo, dispatcher, nil, attachmentSvc, settingsResolver)
 	server := smtp.NewServer(cfg.SMTP, handler)
 	listener := smtp.NewListener(server, router)
 
