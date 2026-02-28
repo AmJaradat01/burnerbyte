@@ -24,10 +24,13 @@ type Dispatcher struct {
 	client      *http.Client
 }
 
-func NewDispatcher(webhookRepo *postgres.WebhookRepo) *Dispatcher {
+func NewDispatcher(webhookRepo *postgres.WebhookRepo, timeout time.Duration) *Dispatcher {
+	if timeout <= 0 {
+		timeout = 10 * time.Second
+	}
 	return &Dispatcher{
 		webhookRepo: webhookRepo,
-		client:      &http.Client{Timeout: 10 * time.Second},
+		client:      &http.Client{Timeout: timeout},
 	}
 }
 
