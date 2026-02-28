@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.5.2 (2026-02-28)
+
+### Broken Email Link Fixes
+- Password reset email now links to /reset-password (was /forgot-password — wrong page)
+- Email verification link now uses ?token= query param (was path param — caused 404)
+- Invite acceptance link now uses ?token= query param (was path param — caused 404)
+- Register endpoint now rate-limited (was unprotected)
+
 ## v0.5.1 (2026-02-28)
 
 ### Token Refresh Race Condition Fix
