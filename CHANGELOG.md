@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.4.2 (2026-02-28)
+
+### Cleanup & SSO
+- Cleanup worker: now purges expired sessions and password reset tokens (previously only emails/inboxes)
+- Password reset repo: `DeleteExpired` method for token cleanup
+- Login page: handles SSO callback — picks up `access_token` and `refresh_token` from URL query params after OIDC redirect
+
 ## v0.4.1 (2026-02-28)
 
 ### Backend Correctness Fixes

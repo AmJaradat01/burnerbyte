@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuthStore } from "@/stores/auth-store";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,20 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const login = useAuthStore((s) => s.login);
+  const fetchMe = useAuthStore((s) => s.fetchMe);
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Handle SSO callback tokens from URL
+  useEffect(() => {
+    const accessToken = searchParams.get("access_token");
+    const refreshToken = searchParams.get("refresh_token");
+    if (accessToken && refreshToken) {
+      localStorage.setItem("access_token", accessToken);
+      localStorage.setItem("refresh_token", refreshToken);
+      fetchMe().then(() => router.replace("/dashboard"));
+    }
+  }, [searchParams, fetchMe, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
