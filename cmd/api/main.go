@@ -120,7 +120,7 @@ func main() {
 	analyticsHandler := handler.NewAnalyticsHandler(analyticsSvc)
 	adminHandler := handler.NewAdminHandler(analyticsSvc, orgSvc, pool, rdb)
 	setupHandler := handler.NewSetupHandler(pool, userRepo, orgRepo, domainRepo, teamRepo, sessionRepo, tokenMgr, ml, cfg)
-	wsHandler := handler.NewWSHandler(hub)
+	wsHandler := handler.NewWSHandler(hub, inboxRepo, cfg.CORS.AllowedOrigins)
 
 	// Auth middleware
 	authMw := auth.Middleware(tokenMgr, userRepo)
@@ -141,7 +141,6 @@ func main() {
 		AllowCredentials: true,
 		MaxAge:           cfg.CORS.MaxAge,
 	}))
-	r.Use(rateLimiter.Middleware)
 
 	// Health & metrics
 	r.Get("/healthz", healthz)
@@ -159,6 +158,7 @@ func main() {
 		// Authenticated routes
 		r.Group(func(r chi.Router) {
 			r.Use(authMw)
+			r.Use(rateLimiter.Middleware)
 
 			// Auth (authenticated)
 			authHandler.AuthenticatedRoutes(r)
@@ -293,6 +293,7 @@ func main() {
 	slog.Info("shutting down api server")
 	cleanupCancel()
 	hub.CloseAll()
+	rateLimiter.Stop()
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.Server.ShutdownTimeout)
 	defer cancel()
