@@ -18,6 +18,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"gitlab.com/amjaradat01/burnerbyte/internal/auth"
+	"gitlab.com/amjaradat01/burnerbyte/internal/auth/rbac"
 	"gitlab.com/amjaradat01/burnerbyte/internal/config"
 	"gitlab.com/amjaradat01/burnerbyte/internal/database"
 	"gitlab.com/amjaradat01/burnerbyte/internal/handler"
@@ -95,6 +96,9 @@ func main() {
 	auditSvc := service.NewAuditService(auditRepo)
 	analyticsSvc := service.NewAnalyticsService(analyticsRepo)
 	_ = attachmentRepo // Used via attachment service when S3 is configured
+
+	// RBAC
+	handler.InitRBAC(rbac.NewChecker(orgRepo, teamRepo))
 
 	// Handlers
 	authHandler := handler.NewAuthHandler(authSvc)

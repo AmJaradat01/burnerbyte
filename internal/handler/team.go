@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 
 	"gitlab.com/amjaradat01/burnerbyte/internal/auth"
+	"gitlab.com/amjaradat01/burnerbyte/internal/auth/rbac"
 	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
 	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
 	"gitlab.com/amjaradat01/burnerbyte/internal/service"
@@ -42,6 +43,9 @@ func (h *TeamHandler) CreateTeam(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid org ID")
 		return
 	}
+	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+		return
+	}
 	var input domain.CreateTeamInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -61,6 +65,9 @@ func (h *TeamHandler) ListTeams(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid org ID")
 		return
 	}
+	if checkOrgRole(w, r, orgID, rbac.OrgMember) {
+		return
+	}
 	page, perPage := parsePagination(r)
 	teams, total, err := h.svc.ListByOrg(r.Context(), orgID, page, perPage)
 	if err != nil {
@@ -71,9 +78,13 @@ func (h *TeamHandler) ListTeams(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TeamHandler) GetTeam(w http.ResponseWriter, r *http.Request) {
+	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
 	id, err := uuid.Parse(chi.URLParam(r, "teamId"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid team ID")
+		return
+	}
+	if checkTeamRole(w, r, orgID, id, rbac.OrgMember, rbac.TeamViewer) {
 		return
 	}
 	team, err := h.svc.GetTeam(r.Context(), id)
@@ -89,9 +100,13 @@ func (h *TeamHandler) GetTeam(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TeamHandler) UpdateTeam(w http.ResponseWriter, r *http.Request) {
+	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
 	id, err := uuid.Parse(chi.URLParam(r, "teamId"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid team ID")
+		return
+	}
+	if checkTeamRole(w, r, orgID, id, rbac.OrgAdmin, rbac.TeamLead) {
 		return
 	}
 	var input domain.UpdateTeamInput
@@ -108,9 +123,13 @@ func (h *TeamHandler) UpdateTeam(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TeamHandler) DeleteTeam(w http.ResponseWriter, r *http.Request) {
+	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
 	id, err := uuid.Parse(chi.URLParam(r, "teamId"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid team ID")
+		return
+	}
+	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
 		return
 	}
 	if err := h.svc.DeleteTeam(r.Context(), id); err != nil {
@@ -121,9 +140,13 @@ func (h *TeamHandler) DeleteTeam(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TeamHandler) AddMember(w http.ResponseWriter, r *http.Request) {
+	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
 	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid team ID")
+		return
+	}
+	if checkTeamRole(w, r, orgID, teamID, rbac.OrgAdmin, rbac.TeamLead) {
 		return
 	}
 	var input domain.AddTeamMemberInput
@@ -143,9 +166,13 @@ func (h *TeamHandler) AddMember(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TeamHandler) ListMembers(w http.ResponseWriter, r *http.Request) {
+	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
 	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid team ID")
+		return
+	}
+	if checkTeamRole(w, r, orgID, teamID, rbac.OrgMember, rbac.TeamViewer) {
 		return
 	}
 	page, perPage := parsePagination(r)
@@ -158,9 +185,13 @@ func (h *TeamHandler) ListMembers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TeamHandler) ChangeRole(w http.ResponseWriter, r *http.Request) {
+	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
 	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid team ID")
+		return
+	}
+	if checkTeamRole(w, r, orgID, teamID, rbac.OrgAdmin, rbac.TeamLead) {
 		return
 	}
 	userID, err := uuid.Parse(chi.URLParam(r, "userId"))
@@ -181,9 +212,13 @@ func (h *TeamHandler) ChangeRole(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TeamHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
+	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
 	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid team ID")
+		return
+	}
+	if checkTeamRole(w, r, orgID, teamID, rbac.OrgAdmin, rbac.TeamLead) {
 		return
 	}
 	userID, err := uuid.Parse(chi.URLParam(r, "userId"))
