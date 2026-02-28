@@ -18,6 +18,7 @@ const routes = [
   { label: "Settings", path: "/settings" },
   { label: "Profile", path: "/profile" },
   { label: "Profile Sessions", path: "/profile/sessions" },
+  { label: "Documentation", path: "/docs" },
 ];
 
 const adminRoutes = [{ label: "Admin", path: "/admin" }];
