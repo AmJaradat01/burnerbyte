@@ -5,13 +5,14 @@ import { api } from "@/lib/api";
 import { useOrgStore } from "@/stores/org-store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorState } from "@/components/error-state";
 import type { AnalyticsStats, EmailsPerDay } from "@/types";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 export default function DashboardPage() {
   const org = useOrgStore((s) => s.currentOrg);
 
-  const { data: stats, isLoading } = useQuery({
+  const { data: stats, isLoading, isError, refetch } = useQuery({
     queryKey: ["org-analytics", org?.id],
     queryFn: () => api.get<AnalyticsStats>(`/orgs/${org!.id}/analytics`),
     enabled: !!org,
@@ -24,6 +25,7 @@ export default function DashboardPage() {
   });
 
   if (!org) return <p className="text-muted-foreground">Select an organization to view the dashboard.</p>;
+  if (isError) return <ErrorState message="Failed to load dashboard" onRetry={() => refetch()} />;
 
   const statCards = [
     { label: "Total Inboxes", value: stats?.total_inboxes },
