@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.6.3 (2026-02-28)
+
+### Bug Fixes
+- **Setup transaction not atomic** — SMTP and storage configs were saved outside the setup transaction (SystemConfigRepo used pgxpool.Pool directly, not the transaction). If the transaction failed after saving configs, the DB had orphaned config entries and the in-memory mailer was already reconfigured. Fixed by adding `WithTx` to SystemConfigRepo and deferring in-memory updates until after commit.
+- **Nil pointer panic in settings resolver** — `ResolveAttachmentsEnabled` accessed `dom.OrgID` without checking if the domain lookup failed. If the domain was deleted between inbox creation and settings resolution, the SMTP handler would panic. Now returns the system default when domain lookup fails.
+
 ## v0.6.2 (2026-02-28)
 
 ### Bug Fixes
