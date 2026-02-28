@@ -82,6 +82,14 @@ func (r *SessionRepo) RevokeAll(ctx context.Context, userID uuid.UUID) error {
 	return nil
 }
 
+func (r *SessionRepo) RevokeForUser(ctx context.Context, userID, sessionID uuid.UUID) error {
+	_, err := r.db.Exec(ctx, `UPDATE sessions SET revoked = TRUE WHERE id = $1 AND user_id = $2`, sessionID, userID)
+	if err != nil {
+		return fmt.Errorf("revoke session for user: %w", err)
+	}
+	return nil
+}
+
 func (r *SessionRepo) RevokeAllExcept(ctx context.Context, userID uuid.UUID, exceptID uuid.UUID) error {
 	_, err := r.db.Exec(ctx,
 		`UPDATE sessions SET revoked = TRUE WHERE user_id = $1 AND revoked = FALSE AND id != $2`,
