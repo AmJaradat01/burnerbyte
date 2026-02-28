@@ -67,7 +67,9 @@ func (r *AuditRepo) List(ctx context.Context, orgID uuid.UUID, filter domain.Aud
 	}
 
 	var total int
-	r.db.QueryRow(ctx, countQuery, args...).Scan(&total)
+	if err := r.db.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
 
 	offset := (page - 1) * perPage
 	query += fmt.Sprintf(` ORDER BY created_at DESC LIMIT $%d OFFSET $%d`, idx, idx+1)
