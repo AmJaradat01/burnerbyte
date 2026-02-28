@@ -319,7 +319,7 @@ func (s *AuthService) ListSessions(ctx context.Context, userID uuid.UUID) ([]dom
 }
 
 func (s *AuthService) RevokeSession(ctx context.Context, userID, sessionID uuid.UUID) error {
-	return s.sessionRepo.Revoke(ctx, sessionID)
+	return s.sessionRepo.RevokeForUser(ctx, userID, sessionID)
 }
 
 func (s *AuthService) RevokeAllSessions(ctx context.Context, userID uuid.UUID) error {
@@ -385,7 +385,11 @@ func (s *AuthService) ResetPassword(ctx context.Context, input domain.ResetPassw
 	now := time.Now()
 	user.PasswordHash = &hash
 	user.PasswordChangedAt = &now
-	return s.userRepo.Update(ctx, user)
+	if err := s.userRepo.Update(ctx, user); err != nil {
+		return err
+	}
+	// Revoke all sessions so stolen refresh tokens can't mint new access tokens
+	return s.sessionRepo.RevokeAll(ctx, user.ID)
 }
 
 func (s *AuthService) SSOLogin(ctx context.Context, email, displayName, provider, subject, ip, userAgent string) (*domain.User, *domain.TokenPair, error) {
