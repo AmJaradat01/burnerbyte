@@ -18,6 +18,7 @@ import { TableSkeleton } from "@/components/table-skeleton";
 import { Pagination } from "@/components/pagination";
 import { ErrorState } from "@/components/error-state";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { EmptyState } from "@/components/empty-state";
 import type { Inbox } from "@/types";
 
 interface DomainAssignment {
@@ -120,12 +121,8 @@ export default function InboxesPage() {
                 </TableRow>
               ))}
               {(!data?.data || data.data.length === 0) && (
-                <TableRow><TableCell colSpan={4} className="text-center py-8">
-                  <div className="flex flex-col items-center gap-2">
-                    <span className="text-3xl">📭</span>
-                    <p className="text-muted-foreground">No inboxes yet</p>
-                    <p className="text-xs text-muted-foreground">Create your first temporary inbox to start receiving emails.</p>
-                  </div>
+                <TableRow><TableCell colSpan={4} className="p-0">
+                  <EmptyState icon="📭" title="No inboxes yet" description="Create your first temporary inbox to start receiving emails." />
                 </TableCell></TableRow>
               )}
             </TableBody>

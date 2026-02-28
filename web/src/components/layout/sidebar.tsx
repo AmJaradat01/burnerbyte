@@ -103,45 +103,56 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 space-y-1">
-        {navItems.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={cn(
-              "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-              pathname.startsWith(item.href)
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-            )}
-          >
-            <span>{item.icon}</span>
-            {item.label}
-          </Link>
-        ))}
+        {navItems.map((item) => {
+          const active = pathname.startsWith(item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "relative flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                active
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
+            >
+              {active && <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-0.5 rounded-full bg-primary" />}
+              <span className="text-base">{item.icon}</span>
+              {item.label}
+            </Link>
+          );
+        })}
         {user?.is_system_admin && (
           <Link
             href="/admin"
             className={cn(
-              "block rounded-md px-3 py-2 text-sm font-medium transition-colors",
+              "relative flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
               pathname.startsWith("/admin")
-                ? "bg-primary text-primary-foreground"
+                ? "bg-primary/10 text-primary"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
             )}
           >
+            {pathname.startsWith("/admin") && <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-0.5 rounded-full bg-primary" />}
+            <span className="text-base">🛡️</span>
             Admin
           </Link>
         )}
       </nav>
 
       <div className="border-t pt-4 space-y-2">
-        <div className="flex items-center justify-between">
-          <Link href="/profile" className="truncate hover:underline">
-            <p className="truncate text-sm font-medium">{user?.display_name}</p>
-            <p className="truncate text-xs text-muted-foreground">{user?.email}</p>
+        <div className="flex items-center gap-3">
+          <Link href="/profile" className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+              {user?.display_name?.charAt(0).toUpperCase() || "?"}
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium">{user?.display_name}</p>
+              <p className="truncate text-xs text-muted-foreground">{user?.email}</p>
+            </div>
           </Link>
           <ThemeToggle />
         </div>
-        <Button variant="ghost" size="sm" className="w-full" onClick={logout}>
+        <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground" onClick={logout}>
           Sign out
         </Button>
       </div>
