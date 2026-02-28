@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.4.4 (2026-02-28)
+
+### Pagination Error Handling
+- Check errors on COUNT queries in webhook, apikey, and audit repos
+- Prevents silent zero-total responses when database connection fails
+
 ## v0.4.3 (2026-02-28)
 
 ### Notification Hub Wiring
