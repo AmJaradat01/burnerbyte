@@ -17,6 +17,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
 
+	"gitlab.com/amjaradat01/burnerbyte/internal/audit"
 	"gitlab.com/amjaradat01/burnerbyte/internal/auth"
 	"gitlab.com/amjaradat01/burnerbyte/internal/auth/rbac"
 	"gitlab.com/amjaradat01/burnerbyte/internal/config"
@@ -102,8 +103,10 @@ func main() {
 	auditSvc := service.NewAuditService(auditRepo)
 	analyticsSvc := service.NewAnalyticsService(analyticsRepo)
 
-	// RBAC
+	// RBAC & Audit
 	handler.InitRBAC(rbac.NewChecker(orgRepo, teamRepo))
+	handler.InitAudit(audit.NewRecorder(auditSvc))
+	handler.InitWebhookDispatch(webhookDispatcher)
 
 	// WebSocket hubs
 	hub := realtime.NewHub()
@@ -128,7 +131,7 @@ func main() {
 	notifWSHandler := handler.NewNotifWSHandler(notifHub, cfg.CORS.AllowedOrigins)
 
 	// Auth middleware
-	authMw := auth.Middleware(tokenMgr, userRepo)
+	authMw := auth.Middleware(tokenMgr, userRepo, apikeyRepo)
 
 	// Rate limiter
 	rateLimiter := mw.NewRateLimiter(cfg.RateLimit)
