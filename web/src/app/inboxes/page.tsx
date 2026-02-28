@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { TableSkeleton } from "@/components/table-skeleton";
 import type { Inbox, Domain } from "@/types";
 
 interface DomainAssignment {
@@ -26,7 +27,7 @@ export default function InboxesPage() {
   const { currentOrg, currentTeam } = useOrgStore();
   const qc = useQueryClient();
 
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["inboxes", currentOrg?.id, currentTeam?.id],
     queryFn: () => {
       if (currentTeam) return api.get<{ data: Inbox[] }>(`/orgs/${currentOrg!.id}/teams/${currentTeam.id}/inboxes`);
@@ -56,6 +57,7 @@ export default function InboxesPage() {
         {currentTeam && <CreateInboxDialog orgId={currentOrg.id} teamId={currentTeam.id} />}
       </div>
       {!currentTeam && <p className="text-sm text-muted-foreground">Select a team to create inboxes, or view all your inboxes below.</p>}
+      {isLoading ? <TableSkeleton rows={5} cols={4} /> : (
       <Card>
         <CardContent className="p-0">
           <Table>
@@ -88,12 +90,19 @@ export default function InboxesPage() {
                 </TableRow>
               ))}
               {(!data?.data || data.data.length === 0) && (
-                <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">No inboxes yet</TableCell></TableRow>
+                <TableRow><TableCell colSpan={4} className="text-center py-8">
+                  <div className="flex flex-col items-center gap-2">
+                    <span className="text-3xl">📭</span>
+                    <p className="text-muted-foreground">No inboxes yet</p>
+                    <p className="text-xs text-muted-foreground">Create your first temporary inbox to start receiving emails.</p>
+                  </div>
+                </TableCell></TableRow>
               )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
+      )}
     </div>
   );
 }

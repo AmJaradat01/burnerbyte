@@ -1,0 +1,62 @@
+"use client";
+
+import { useState } from "react";
+import { api } from "@/lib/api";
+import { useAuthStore } from "@/stores/auth-store";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+
+export default function DeleteAccountPage() {
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const logout = useAuthStore((s) => s.logout);
+
+  const handleDelete = async () => {
+    if (confirm !== "DELETE") {
+      toast.error("Type DELETE to confirm");
+      return;
+    }
+    setDeleting(true);
+    try {
+      await api.del("/auth/me", { password });
+      toast.success("Account deleted");
+      logout();
+    } catch (e: unknown) {
+      toast.error((e as Error).message);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <div className="max-w-md space-y-6">
+      <h1 className="text-2xl font-bold text-destructive">Delete Account</h1>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>This action is irreversible</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            All your data, inboxes, and emails will be permanently deleted.
+          </p>
+          <div>
+            <Label htmlFor="password">Password</Label>
+            <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          </div>
+          <div>
+            <Label htmlFor="confirm">Type DELETE to confirm</Label>
+            <Input id="confirm" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="DELETE" />
+          </div>
+          <Button variant="destructive" onClick={handleDelete} disabled={deleting || confirm !== "DELETE"}>
+            {deleting ? "Deleting…" : "Delete My Account"}
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
