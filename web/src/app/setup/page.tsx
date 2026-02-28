@@ -16,6 +16,7 @@ const STEPS = [
   { key: "admin", label: "Admin Account", required: true },
   { key: "org", label: "Organization", required: true },
   { key: "smtp", label: "SMTP / Email", required: true },
+  { key: "storage", label: "Object Storage", required: false },
   { key: "domain", label: "Domain", required: true },
   { key: "team", label: "Team", required: false },
   { key: "branding", label: "Branding", required: false },
@@ -27,6 +28,7 @@ interface SetupData {
   admin: { email: string; password: string; display_name: string };
   org: { name: string; slug: string; logo_url: string };
   smtp: { host: string; port: number; username: string; password: string; from_address: string; from_name: string };
+  storage: { provider: string; endpoint: string; access_key: string; secret_key: string; bucket: string; region: string; use_ssl: boolean } | null;
   domain: { domain_name: string };
   team: { name: string } | null;
   branding: { primary_color: string; footer_text: string; logo_url: string } | null;
@@ -37,6 +39,7 @@ const initialData: SetupData = {
   admin: { email: "", password: "", display_name: "" },
   org: { name: "", slug: "", logo_url: "" },
   smtp: { host: "", port: 587, username: "", password: "", from_address: "", from_name: "" },
+  storage: null,
   domain: { domain_name: "" },
   team: null,
   branding: null,
@@ -96,6 +99,7 @@ export default function SetupPage() {
         domain: data.domain,
       };
       if (data.team?.name) payload.team = data.team;
+      if (data.storage && data.storage.endpoint) payload.storage = data.storage;
       if (data.branding && (data.branding.primary_color || data.branding.footer_text || data.branding.logo_url)) {
         payload.branding = {
           primary_color: data.branding.primary_color || undefined,
@@ -151,6 +155,7 @@ export default function SetupPage() {
               {currentStep.key === "admin" && "Create the platform owner account with full system admin privileges."}
               {currentStep.key === "org" && "Set up your organization. BurnerByte runs as a single-org platform."}
               {currentStep.key === "smtp" && "Configure outbound email for invitations, password resets, and verification."}
+              {currentStep.key === "storage" && "Configure S3-compatible object storage for email attachments (MinIO, AWS S3, etc)."}
               {currentStep.key === "domain" && "Add the domain that will receive temporary emails."}
               {currentStep.key === "team" && "Optionally create an initial team and assign the domain to it."}
               {currentStep.key === "branding" && "Customize the look and feel of your BurnerByte instance."}
@@ -229,6 +234,58 @@ export default function SetupPage() {
                 </div>
               </>
             )}
+
+            {currentStep.key === "storage" && (() => {
+              const s = data.storage ?? { provider: "minio", endpoint: "", access_key: "", secret_key: "", bucket: "burnerbyte", region: "", use_ssl: false };
+              const update = (patch: Partial<typeof s>) => setData({ ...data, storage: { ...s, ...patch } });
+              return (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="storage-provider">Provider</Label>
+                    <select
+                      id="storage-provider"
+                      value={s.provider}
+                      onChange={(e) => update({ provider: e.target.value })}
+                      className="w-full rounded-md border px-3 py-2 text-sm"
+                    >
+                      <option value="minio">MinIO</option>
+                      <option value="s3">AWS S3</option>
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="storage-endpoint">Endpoint</Label>
+                      <Input id="storage-endpoint" value={s.endpoint} onChange={(e) => update({ endpoint: e.target.value })} placeholder={s.provider === "s3" ? "s3.amazonaws.com" : "localhost:9000"} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="storage-bucket">Bucket</Label>
+                      <Input id="storage-bucket" value={s.bucket} onChange={(e) => update({ bucket: e.target.value })} placeholder="burnerbyte" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="storage-key">Access key</Label>
+                      <Input id="storage-key" value={s.access_key} onChange={(e) => update({ access_key: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="storage-secret">Secret key</Label>
+                      <Input id="storage-secret" type="password" value={s.secret_key} onChange={(e) => update({ secret_key: e.target.value })} />
+                    </div>
+                  </div>
+                  {s.provider === "s3" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="storage-region">Region</Label>
+                      <Input id="storage-region" value={s.region} onChange={(e) => update({ region: e.target.value })} placeholder="us-east-1" />
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <input type="checkbox" id="storage-ssl" checked={s.use_ssl} onChange={(e) => update({ use_ssl: e.target.checked })} className="rounded" />
+                    <Label htmlFor="storage-ssl">Use SSL/TLS</Label>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Skip to use environment variables or config file instead. You can also configure this later.</p>
+                </>
+              );
+            })()}
 
             {currentStep.key === "domain" && (
               <div className="space-y-2">
@@ -338,6 +395,7 @@ export default function SetupPage() {
                 <div><span className="font-medium">SMTP:</span> {data.smtp.host}:{data.smtp.port} (from: {data.smtp.from_address})</div>
                 <Separator />
                 <div><span className="font-medium">Domain:</span> {data.domain.domain_name}</div>
+                {data.storage?.endpoint && <><Separator /><div><span className="font-medium">Storage:</span> {data.storage.provider.toUpperCase()} — {data.storage.endpoint} ({data.storage.bucket})</div></>}
                 {data.team?.name && <><Separator /><div><span className="font-medium">Team:</span> {data.team.name}</div></>}
                 {data.branding?.primary_color && <><Separator /><div><span className="font-medium">Brand color:</span> {data.branding.primary_color}</div></>}
                 {data.invites.length > 0 && <><Separator /><div><span className="font-medium">Invites:</span> {data.invites.filter(i => i.email).map(i => i.email).join(", ")}</div></>}
