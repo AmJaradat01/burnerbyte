@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.6.1 (2026-02-28)
+
+### Security
+- **Inbox creation authorization bypass** — `CreateInboxByAssignment` did not verify the calling user is a member of the team that owns the domain assignment. Any authenticated user who knew an assignment ID could create inboxes on any team's domain. Now verifies team membership before proceeding.
+
+### Bug Fixes
+- **Invite acceptance transaction not committed** — When a user who is already an org member accepts an invite (idempotent path), `MarkInviteAccepted` ran on the transaction but the function returned without committing. The deferred `Rollback` undid the update, so the invite was never marked as accepted.
+
 ## v0.6.0 (2026-02-28)
 
 ### Webhook Secret Visibility
