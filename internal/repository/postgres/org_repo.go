@@ -240,3 +240,32 @@ func (r *OrgRepo) MarkInviteAccepted(ctx context.Context, id uuid.UUID) error {
 	_, err := r.db.Exec(ctx, `UPDATE invites SET accepted_at = NOW() WHERE id = $1`, id)
 	return err
 }
+
+func (r *OrgRepo) ListAll(ctx context.Context, page, perPage int) ([]domain.Organization, int, error) {
+	var total int
+	err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM organizations`).Scan(&total)
+	if err != nil {
+		return nil, 0, fmt.Errorf("count orgs: %w", err)
+	}
+	offset := (page - 1) * perPage
+	rows, err := r.db.Query(ctx,
+		`SELECT id, name, slug, logo_url, settings, created_at, updated_at
+		 FROM organizations ORDER BY name LIMIT $1 OFFSET $2`, perPage, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("list orgs: %w", err)
+	}
+	defer rows.Close()
+	var orgs []domain.Organization
+	for rows.Next() {
+		var o domain.Organization
+		var settings []byte
+		if err := rows.Scan(&o.ID, &o.Name, &o.Slug, &o.LogoURL, &settings, &o.CreatedAt, &o.UpdatedAt); err != nil {
+			return nil, 0, err
+		}
+		if len(settings) > 0 {
+			json.Unmarshal(settings, &o.Settings)
+		}
+		orgs = append(orgs, o)
+	}
+	return orgs, total, nil
+}

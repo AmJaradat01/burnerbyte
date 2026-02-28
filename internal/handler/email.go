@@ -12,11 +12,12 @@ import (
 )
 
 type EmailHandler struct {
-	svc *service.EmailService
+	svc           *service.EmailService
+	attachmentSvc *service.AttachmentService
 }
 
-func NewEmailHandler(svc *service.EmailService) *EmailHandler {
-	return &EmailHandler{svc: svc}
+func NewEmailHandler(svc *service.EmailService, attachmentSvc *service.AttachmentService) *EmailHandler {
+	return &EmailHandler{svc: svc, attachmentSvc: attachmentSvc}
 }
 
 func (h *EmailHandler) Routes(r chi.Router) {
@@ -106,4 +107,27 @@ func (h *EmailHandler) DeleteEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"message": "email deleted"})
+}
+
+func (h *EmailHandler) DownloadAttachment(w http.ResponseWriter, r *http.Request) {
+	uc := auth.GetUser(r.Context())
+	if h.attachmentSvc == nil {
+		writeError(w, http.StatusNotImplemented, "attachments not configured")
+		return
+	}
+	attachmentID, err := uuid.Parse(chi.URLParam(r, "attachmentId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid attachment ID")
+		return
+	}
+	url, err := h.attachmentSvc.GetDownloadURL(r.Context(), attachmentID, uc.UserID)
+	if err != nil {
+		if err.Error() == "forbidden: not your attachment" {
+			writeError(w, http.StatusForbidden, err.Error())
+			return
+		}
+		writeError(w, http.StatusNotFound, "attachment not found")
+		return
+	}
+	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
