@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.5.0 (2026-02-28)
+
+### Setup Wizard: Storage & Persistent Runtime Configs
+- New `system_configs` table stores runtime configuration as JSONB key-value pairs
+- Setup wizard now includes Object Storage step: choose MinIO or AWS S3 with endpoint, credentials, bucket, region, and SSL
+- SMTP mailer config from setup wizard is now persisted to DB (survives restarts)
+- Both API and SMTPD binaries load mailer + storage configs from DB on startup, overriding config.yaml/env defaults
+- Migration 021: `system_configs` table
+
 ## v0.4.5 (2026-02-28)
 
 ### WebSocket & Docker Fixes
