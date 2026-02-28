@@ -49,7 +49,7 @@ func (h *Hub) Unregister(client *Client) {
 	close(client.Send)
 }
 
-func (h *Hub) Broadcast(inboxID uuid.UUID, msg Message) {
+func (h *Hub) Broadcast(inboxID uuid.UUID, msg interface{}) {
 	data, err := json.Marshal(msg)
 	if err != nil { return }
 

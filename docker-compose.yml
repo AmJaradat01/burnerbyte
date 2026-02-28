@@ -57,10 +57,17 @@ services:
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       API_BASE_URL: ${API_BASE_URL:-http://localhost:8080}
+      BB_MINIO_ENDPOINT: minio:9000
+      BB_MINIO_ACCESS_KEY: minioadmin
+      BB_MINIO_SECRET_KEY: minioadmin
+      BB_MINIO_BUCKET: burnerbyte
+      BB_MINIO_USE_SSL: "false"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      minio:
         condition: service_healthy
     restart: unless-stopped
 
@@ -76,10 +83,17 @@ services:
       REDIS_URL: redis://redis:6379
       BB_SMTP_LISTEN: ":2525"
       BB_SMTP_HOSTNAME: ${SMTP_HOSTNAME:-mail.burnerbyte.local}
+      BB_MINIO_ENDPOINT: minio:9000
+      BB_MINIO_ACCESS_KEY: minioadmin
+      BB_MINIO_SECRET_KEY: minioadmin
+      BB_MINIO_BUCKET: burnerbyte
+      BB_MINIO_USE_SSL: "false"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      minio:
         condition: service_healthy
     restart: unless-stopped
 
