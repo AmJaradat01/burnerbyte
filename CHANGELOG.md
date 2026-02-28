@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.6.2 (2026-02-28)
+
+### Bug Fixes
+- **Invite dialog sent wrong field name** — Settings page invite dialog sent `{role}` but the backend expects `{org_role}`. All invites from the settings page failed with "invalid org_role". Fixed to send `org_role`.
+- **Non-existent roles in frontend dropdowns** — Settings page role change and invite dialogs offered "viewer" and "billing" roles that don't exist in the backend RBAC system (only owner/admin/member). Selecting them caused a 400 error. Setup wizard also offered "viewer". Removed all non-existent role options.
+
 ## v0.6.1 (2026-02-28)
 
 ### Security
