@@ -127,6 +127,26 @@ func (r *WebhookRepo) LogDelivery(ctx context.Context, log *domain.WebhookDelive
 	return err
 }
 
+func (r *WebhookRepo) ListDeliveryLogs(ctx context.Context, webhookID uuid.UUID, page, perPage int) ([]domain.WebhookDeliveryLog, int, error) {
+	var total int
+	r.db.QueryRow(ctx, `SELECT COUNT(*) FROM webhook_delivery_logs WHERE webhook_id = $1`, webhookID).Scan(&total)
+	offset := (page - 1) * perPage
+	rows, err := r.db.Query(ctx,
+		`SELECT id, webhook_id, event, response_status, response_time_ms, success, attempt, created_at
+		 FROM webhook_delivery_logs WHERE webhook_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`, webhookID, perPage, offset)
+	if err != nil { return nil, 0, err }
+	defer rows.Close()
+	var logs []domain.WebhookDeliveryLog
+	for rows.Next() {
+		var l domain.WebhookDeliveryLog
+		if err := rows.Scan(&l.ID, &l.WebhookID, &l.Event, &l.ResponseStatus, &l.ResponseTimeMs, &l.Success, &l.Attempt, &l.CreatedAt); err != nil {
+			return nil, 0, err
+		}
+		logs = append(logs, l)
+	}
+	return logs, total, nil
+}
+
 func (r *WebhookRepo) ListFailedRetryable(ctx context.Context) ([]domain.Webhook, error) {
 	rows, err := r.db.Query(ctx,
 		`SELECT id, team_id, created_by, url, secret, events, active, last_status, last_attempt_at, failure_count, created_at, updated_at

@@ -81,14 +81,16 @@ func (r *AnalyticsRepo) GetSystemStats(ctx context.Context) (*domain.SystemStats
 	return stats, nil
 }
 
-func (r *AnalyticsRepo) GetOrgEmailsPerDay(ctx context.Context, orgID uuid.UUID) ([]domain.TimeSeriesPoint, error) {
+func (r *AnalyticsRepo) GetOrgEmailsPerDay(ctx context.Context, orgID uuid.UUID, days ...int) ([]domain.TimeSeriesPoint, error) {
+	d := 30
+	if len(days) > 0 && days[0] > 0 { d = days[0] }
 	rows, err := r.db.Query(ctx,
 		`SELECT DATE(e.received_at) as d, COUNT(*) FROM emails e
 		 JOIN inboxes i ON e.inbox_id = i.id
 		 JOIN domain_assignments da ON i.domain_assignment_id = da.id
 		 JOIN domains dm ON da.domain_id = dm.id
-		 WHERE dm.org_id = $1 AND e.received_at > NOW() - INTERVAL '30 days'
-		 GROUP BY d ORDER BY d`, orgID)
+		 WHERE dm.org_id = $1 AND e.received_at > NOW() - make_interval(days => $2)
+		 GROUP BY d ORDER BY d`, orgID, d)
 	if err != nil {
 		return nil, err
 	}
@@ -102,13 +104,15 @@ func (r *AnalyticsRepo) GetOrgEmailsPerDay(ctx context.Context, orgID uuid.UUID)
 	return points, nil
 }
 
-func (r *AnalyticsRepo) GetTeamEmailsPerDay(ctx context.Context, teamID uuid.UUID) ([]domain.TimeSeriesPoint, error) {
+func (r *AnalyticsRepo) GetTeamEmailsPerDay(ctx context.Context, teamID uuid.UUID, days ...int) ([]domain.TimeSeriesPoint, error) {
+	d := 30
+	if len(days) > 0 && days[0] > 0 { d = days[0] }
 	rows, err := r.db.Query(ctx,
 		`SELECT DATE(e.received_at) as d, COUNT(*) FROM emails e
 		 JOIN inboxes i ON e.inbox_id = i.id
 		 JOIN domain_assignments da ON i.domain_assignment_id = da.id
-		 WHERE da.team_id = $1 AND e.received_at > NOW() - INTERVAL '30 days'
-		 GROUP BY d ORDER BY d`, teamID)
+		 WHERE da.team_id = $1 AND e.received_at > NOW() - make_interval(days => $2)
+		 GROUP BY d ORDER BY d`, teamID, d)
 	if err != nil {
 		return nil, err
 	}

@@ -68,3 +68,9 @@ func (s *WebhookService) Update(ctx context.Context, id uuid.UUID, input domain.
 func (s *WebhookService) Delete(ctx context.Context, id uuid.UUID) error {
 	return s.webhookRepo.Delete(ctx, id)
 }
+
+func (s *WebhookService) ListDeliveryLogs(ctx context.Context, webhookID uuid.UUID, page, perPage int) ([]domain.WebhookDeliveryLog, int, error) {
+	if page < 1 { page = 1 }
+	if perPage < 1 || perPage > 100 { perPage = 20 }
+	return s.webhookRepo.ListDeliveryLogs(ctx, webhookID, page, perPage)
+}

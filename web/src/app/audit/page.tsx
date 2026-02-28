@@ -4,6 +4,7 @@ import { useState } from "react";
 import { api } from "@/lib/api";
 import { useOrgStore } from "@/stores/org-store";
 import { useQuery } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { TableSkeleton } from "@/components/table-skeleton";
 import { Pagination } from "@/components/pagination";
 import { ErrorState } from "@/components/error-state";
+import { toast } from "sonner";
 
 interface AuditEntry {
   id: string; actor_id: string; actor_email?: string; action: string;
@@ -20,6 +22,23 @@ interface AuditEntry {
   ip_address?: string; created_at: string;
 }
 interface PaginatedResponse<T> { data: T[]; total: number; page: number; per_page: number; total_pages: number; }
+
+function exportCSV(entries: AuditEntry[]) {
+  const header = "Time,Actor,Action,Resource Type,Resource ID,IP Address";
+  const rows = entries.map((e) =>
+    [new Date(e.created_at).toISOString(), e.actor_email || e.actor_id, e.action, e.resource_type, e.resource_id, e.ip_address || ""]
+      .map((v) => `"${(v ?? "").replace(/"/g, '""')}"`)
+      .join(",")
+  );
+  const blob = new Blob([header + "\n" + rows.join("\n")], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `audit-log-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast.success("CSV exported");
+}
 
 export default function AuditPage() {
   const { currentOrg } = useOrgStore();
@@ -41,7 +60,12 @@ export default function AuditPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Audit Log</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Audit Log</h1>
+        <Button variant="outline" size="sm" onClick={() => data?.data && exportCSV(data.data)} disabled={!data?.data?.length}>
+          Export CSV
+        </Button>
+      </div>
       <div className="flex gap-4 flex-wrap">
         <div className="space-y-1">
           <Label>Action</Label>

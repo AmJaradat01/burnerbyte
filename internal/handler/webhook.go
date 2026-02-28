@@ -26,6 +26,7 @@ func (h *WebhookHandler) Routes(r chi.Router) {
 		r.Get("/orgs/{orgId}/teams/{teamId}/webhooks", h.List)
 		r.Patch("/orgs/{orgId}/teams/{teamId}/webhooks/{webhookId}", h.Update)
 		r.Delete("/orgs/{orgId}/teams/{teamId}/webhooks/{webhookId}", h.Delete)
+		r.Get("/orgs/{orgId}/teams/{teamId}/webhooks/{webhookId}/deliveries", h.ListDeliveryLogs)
 }
 
 func (h *WebhookHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -81,4 +82,17 @@ func (h *WebhookHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 	auditRecord(r, orgID, "webhook.deleted", "webhook", id)
 	writeJSON(w, http.StatusOK, map[string]string{"message": "webhook deleted"})
+}
+
+func (h *WebhookHandler) ListDeliveryLogs(w http.ResponseWriter, r *http.Request) {
+	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
+	teamID, _ := uuid.Parse(chi.URLParam(r, "teamId"))
+	if checkTeamRole(w, r, orgID, teamID, rbac.OrgMember, rbac.TeamMember) {
+		return
+	}
+	webhookID, _ := uuid.Parse(chi.URLParam(r, "webhookId"))
+	page, perPage := parsePagination(r)
+	logs, total, err := h.svc.ListDeliveryLogs(r.Context(), webhookID, page, perPage)
+	if err != nil { writeError(w, http.StatusInternalServerError, "failed"); return }
+	writeJSON(w, http.StatusOK, paginatedResponse(logs, total, page, perPage))
 }

@@ -232,6 +232,7 @@ func main() {
 			r.Get("/orgs/{orgId}/teams/{teamId}/webhooks", webhookHandler.List)
 			r.Patch("/orgs/{orgId}/teams/{teamId}/webhooks/{webhookId}", webhookHandler.Update)
 			r.Delete("/orgs/{orgId}/teams/{teamId}/webhooks/{webhookId}", webhookHandler.Delete)
+			r.Get("/orgs/{orgId}/teams/{teamId}/webhooks/{webhookId}/deliveries", webhookHandler.ListDeliveryLogs)
 
 			// API Keys
 			r.Post("/orgs/{orgId}/teams/{teamId}/api-keys", apikeyHandler.Create)
