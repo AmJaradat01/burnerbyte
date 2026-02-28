@@ -39,6 +39,7 @@ func (h *WebhookHandler) Create(w http.ResponseWriter, r *http.Request) {
 	json.NewDecoder(r.Body).Decode(&input)
 	wh, err := h.svc.Create(r.Context(), teamID, uc.UserID, input)
 	if err != nil { writeError(w, http.StatusBadRequest, err.Error()); return }
+	auditRecord(r, orgID, "webhook.created", "webhook", wh.ID)
 	writeJSON(w, http.StatusCreated, wh)
 }
 
@@ -78,5 +79,6 @@ func (h *WebhookHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	if err := h.svc.Delete(r.Context(), id); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed"); return
 	}
+	auditRecord(r, orgID, "webhook.deleted", "webhook", id)
 	writeJSON(w, http.StatusOK, map[string]string{"message": "webhook deleted"})
 }

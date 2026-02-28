@@ -56,6 +56,7 @@ func (h *TeamHandler) CreateTeam(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	auditRecord(r, orgID, "team.created", "team", team.ID)
 	writeJSON(w, http.StatusCreated, team)
 }
 
@@ -119,6 +120,7 @@ func (h *TeamHandler) UpdateTeam(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	auditRecord(r, orgID, "team.updated", "team", id)
 	writeJSON(w, http.StatusOK, team)
 }
 
@@ -136,6 +138,7 @@ func (h *TeamHandler) DeleteTeam(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to delete team")
 		return
 	}
+	auditRecord(r, orgID, "team.deleted", "team", id)
 	writeJSON(w, http.StatusOK, map[string]string{"message": "team deleted"})
 }
 
