@@ -92,15 +92,18 @@ func (s *InboxService) CreateInbox(ctx context.Context, teamID, domainID, userID
 
 	fullAddress := address + "@" + dom.DomainName
 
-	// Resolve TTL
-	ttl := s.cfg.Defaults.DefaultInboxTTL
+	// Resolve TTL via settings cascade
+	resolver := NewSettingsResolver(s.assignmentRepo, s.domainRepo, s.orgRepo, s.cfg.Defaults)
+	defaultTTL := resolver.ResolveDefaultInboxTTL(ctx, assignment.ID)
+	maxTTL := resolver.ResolveMaxInboxTTL(ctx, assignment.ID)
+	ttl := defaultTTL
 	if input.TTL != nil {
 		parsed, err := time.ParseDuration(*input.TTL)
 		if err != nil {
 			return nil, fmt.Errorf("invalid TTL format")
 		}
-		if parsed > s.cfg.Defaults.MaxInboxTTL {
-			return nil, fmt.Errorf("TTL exceeds maximum (%s)", s.cfg.Defaults.MaxInboxTTL)
+		if parsed > maxTTL {
+			return nil, fmt.Errorf("TTL exceeds maximum (%s)", maxTTL)
 		}
 		ttl = parsed
 	}
@@ -162,7 +165,9 @@ func (s *InboxService) ExtendTTL(ctx context.Context, id, userID uuid.UUID, exte
 	}
 
 	newExpiry := inbox.ExpiresAt.Add(ext)
-	maxExpiry := inbox.CreatedAt.Add(s.cfg.Defaults.MaxInboxTTL)
+	resolver := NewSettingsResolver(s.assignmentRepo, s.domainRepo, s.orgRepo, s.cfg.Defaults)
+	maxTTL := resolver.ResolveMaxInboxTTL(ctx, inbox.DomainAssignmentID)
+	maxExpiry := inbox.CreatedAt.Add(maxTTL)
 	if newExpiry.After(maxExpiry) {
 		return nil, fmt.Errorf("extension would exceed max TTL")
 	}
