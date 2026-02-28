@@ -6,11 +6,14 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Sidebar } from "./sidebar";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { CommandPalette } from "@/components/command-palette";
+import { NotificationCenter } from "@/components/notification-center";
+import { ShortcutHelp } from "@/components/shortcut-help";
+import { useKeyboardShortcuts, useShortcutHelp } from "@/hooks/use-keyboard-shortcuts";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { api } from "@/lib/api";
 
-const publicPaths = ["/login", "/register", "/forgot-password", "/verify-email", "/invite", "/setup"];
+const publicPaths = ["/login", "/register", "/forgot-password", "/reset-password", "/verify-email", "/invite", "/setup"];
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, loading } = useAuthStore();
@@ -21,6 +24,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [setupChecked, setSetupChecked] = useState(false);
   const [setupCompleted, setSetupCompleted] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const shortcutHelp = useShortcutHelp();
+
+  useKeyboardShortcuts({
+    "?": shortcutHelp.toggle,
+  });
 
   useEffect(() => {
     api.get<{ completed: boolean }>("/setup/status")
@@ -79,10 +87,14 @@ export function AppShell({ children }: { children: ReactNode }) {
       </Sheet>
 
       <main className="flex-1 overflow-auto p-4 pt-14 md:p-6 md:pt-6">
-        <Breadcrumbs />
+        <div className="flex items-center justify-between mb-4">
+          <Breadcrumbs />
+          <NotificationCenter />
+        </div>
         {children}
       </main>
       <CommandPalette />
+      <ShortcutHelp open={shortcutHelp.open} onOpenChange={shortcutHelp.setOpen} />
     </div>
   );
 }
