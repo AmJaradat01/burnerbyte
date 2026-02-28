@@ -61,7 +61,7 @@ func (r *PasswordResetRepo) InvalidateForUser(ctx context.Context, userID uuid.U
 }
 
 func (r *PasswordResetRepo) DeleteExpired(ctx context.Context) (int64, error) {
-	tag, err := r.db.Exec(ctx, `DELETE FROM password_resets WHERE expires_at < NOW()`)
+	tag, err := r.db.Exec(ctx, `DELETE FROM password_reset_tokens WHERE expires_at < NOW()`)
 	if err != nil {
 		return 0, err
 	}
