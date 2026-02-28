@@ -334,8 +334,11 @@ func (s *OrgService) AcceptInvite(ctx context.Context, token string, userID uuid
 
 	if err := orgRepoTx.CreateMembership(ctx, membership); err != nil {
 		if errors.Is(err, postgres.ErrConflict) {
-			// Already a member — idempotent
-			return orgRepoTx.MarkInviteAccepted(ctx, invite.ID)
+			// Already a member — just mark invite accepted
+			if err := orgRepoTx.MarkInviteAccepted(ctx, invite.ID); err != nil {
+				return err
+			}
+			return tx.Commit(ctx)
 		}
 		return err
 	}
