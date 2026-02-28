@@ -69,7 +69,7 @@ func (h *WebhookHandler) Update(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body"); return
 	}
-	wh, err := h.svc.Update(r.Context(), id, input)
+	wh, err := h.svc.Update(r.Context(), teamID, id, input)
 	if err != nil { writeError(w, http.StatusBadRequest, err.Error()); return }
 	writeJSON(w, http.StatusOK, wh)
 }
@@ -81,7 +81,7 @@ func (h *WebhookHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id, _ := uuid.Parse(chi.URLParam(r, "webhookId"))
-	if err := h.svc.Delete(r.Context(), id); err != nil {
+	if err := h.svc.Delete(r.Context(), teamID, id); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed"); return
 	}
 	auditRecord(r, orgID, "webhook.deleted", "webhook", id)
@@ -96,7 +96,7 @@ func (h *WebhookHandler) ListDeliveryLogs(w http.ResponseWriter, r *http.Request
 	}
 	webhookID, _ := uuid.Parse(chi.URLParam(r, "webhookId"))
 	page, perPage := parsePagination(r)
-	logs, total, err := h.svc.ListDeliveryLogs(r.Context(), webhookID, page, perPage)
+	logs, total, err := h.svc.ListDeliveryLogs(r.Context(), teamID, webhookID, page, perPage)
 	if err != nil { writeError(w, http.StatusInternalServerError, "failed"); return }
 	writeJSON(w, http.StatusOK, paginatedResponse(logs, total, page, perPage))
 }

@@ -55,9 +55,10 @@ func (s *WebhookService) List(ctx context.Context, teamID uuid.UUID, page, perPa
 	return s.webhookRepo.ListByTeam(ctx, teamID, page, perPage)
 }
 
-func (s *WebhookService) Update(ctx context.Context, id uuid.UUID, input domain.UpdateWebhookInput) (*domain.Webhook, error) {
+func (s *WebhookService) Update(ctx context.Context, teamID, id uuid.UUID, input domain.UpdateWebhookInput) (*domain.Webhook, error) {
 	w, err := s.webhookRepo.GetByID(ctx, id)
 	if err != nil { return nil, err }
+	if w.TeamID != teamID { return nil, fmt.Errorf("webhook not found") }
 	if input.URL != nil { w.URL = *input.URL }
 	if input.Events != nil { w.Events = input.Events }
 	if input.Active != nil { w.Active = *input.Active }
@@ -65,11 +66,17 @@ func (s *WebhookService) Update(ctx context.Context, id uuid.UUID, input domain.
 	return w, nil
 }
 
-func (s *WebhookService) Delete(ctx context.Context, id uuid.UUID) error {
+func (s *WebhookService) Delete(ctx context.Context, teamID, id uuid.UUID) error {
+	w, err := s.webhookRepo.GetByID(ctx, id)
+	if err != nil { return err }
+	if w.TeamID != teamID { return fmt.Errorf("webhook not found") }
 	return s.webhookRepo.Delete(ctx, id)
 }
 
-func (s *WebhookService) ListDeliveryLogs(ctx context.Context, webhookID uuid.UUID, page, perPage int) ([]domain.WebhookDeliveryLog, int, error) {
+func (s *WebhookService) ListDeliveryLogs(ctx context.Context, teamID, webhookID uuid.UUID, page, perPage int) ([]domain.WebhookDeliveryLog, int, error) {
+	w, err := s.webhookRepo.GetByID(ctx, webhookID)
+	if err != nil { return nil, 0, err }
+	if w.TeamID != teamID { return nil, 0, fmt.Errorf("webhook not found") }
 	if page < 1 { page = 1 }
 	if perPage < 1 || perPage > 100 { perPage = 20 }
 	return s.webhookRepo.ListDeliveryLogs(ctx, webhookID, page, perPage)
