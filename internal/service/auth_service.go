@@ -338,7 +338,11 @@ func (s *AuthService) ForgotPassword(ctx context.Context, input domain.ForgotPas
 	// Generate and store hashed token
 	rawToken := uuid.New().String()
 	tokenHash := postgres.HashToken(rawToken)
-	expiresAt := time.Now().Add(1 * time.Hour)
+	ttl := s.cfg.Defaults.PasswordResetTTL
+	if ttl <= 0 {
+		ttl = time.Hour
+	}
+	expiresAt := time.Now().Add(ttl)
 
 	if err := s.resetRepo.Create(ctx, user.ID, tokenHash, expiresAt); err != nil {
 		slog.Error("failed to store reset token", "error", err)

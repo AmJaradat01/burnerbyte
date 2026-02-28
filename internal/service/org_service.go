@@ -20,14 +20,18 @@ import (
 )
 
 type OrgService struct {
-	pool    *pgxpool.Pool
-	orgRepo *postgres.OrgRepo
-	mailer  *mailer.Mailer
-	baseURL string
+	pool          *pgxpool.Pool
+	orgRepo       *postgres.OrgRepo
+	mailer        *mailer.Mailer
+	baseURL       string
+	inviteExpiry  time.Duration
 }
 
-func NewOrgService(pool *pgxpool.Pool, orgRepo *postgres.OrgRepo, mailer *mailer.Mailer, baseURL string) *OrgService {
-	return &OrgService{pool: pool, orgRepo: orgRepo, mailer: mailer, baseURL: baseURL}
+func NewOrgService(pool *pgxpool.Pool, orgRepo *postgres.OrgRepo, mailer *mailer.Mailer, baseURL string, inviteExpiry time.Duration) *OrgService {
+	if inviteExpiry <= 0 {
+		inviteExpiry = 48 * time.Hour
+	}
+	return &OrgService{pool: pool, orgRepo: orgRepo, mailer: mailer, baseURL: baseURL, inviteExpiry: inviteExpiry}
 }
 
 var slugRe = regexp.MustCompile(`[^a-z0-9]+`)
@@ -273,7 +277,7 @@ func (s *OrgService) InviteMember(ctx context.Context, orgID uuid.UUID, input do
 		TeamRole:  input.TeamRole,
 		Token:     token,
 		InvitedBy: &inviterID,
-		ExpiresAt: time.Now().Add(48 * time.Hour),
+		ExpiresAt: time.Now().Add(s.inviteExpiry),
 	}
 
 	if err := s.orgRepo.CreateInvite(ctx, invite); err != nil {
