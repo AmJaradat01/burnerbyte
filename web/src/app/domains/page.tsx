@@ -87,7 +87,11 @@ export default function DomainsPage() {
                 <TableRow key={d.id}>
                   <TableCell className="font-medium">{d.domain_name}</TableCell>
                   <TableCell><Badge variant={d.mx_verified ? "default" : "secondary"}>{d.mx_verified ? "Verified" : "Pending"}</Badge></TableCell>
-                  <TableCell><Badge variant={d.txt_verified ? "default" : "secondary"}>{d.txt_verified ? "Verified" : "Pending"}</Badge></TableCell>
+                  <TableCell><Badge variant={d.txt_verified ? "default" : "secondary"}>{d.txt_verified ? "Verified" : "Pending"}</Badge>
+                    {!d.txt_verified && d.verification_record && (
+                      <p className="mt-1 text-xs text-muted-foreground font-mono break-all">TXT: {d.verification_record}</p>
+                    )}
+                  </TableCell>
                   <TableCell className="text-muted-foreground">{new Date(d.created_at).toLocaleDateString()}</TableCell>
                   <TableCell className="text-right space-x-2">
                     <Button variant="outline" size="sm" onClick={() => verify.mutate(d.id)}>Verify</Button>

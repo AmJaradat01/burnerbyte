@@ -31,10 +31,13 @@ export function NotificationCenter() {
     ws.onmessage = (e) => {
       try {
         const data = JSON.parse(e.data);
+        let message = data.data?.subject
+          ? `New email from ${data.data.from}: ${data.data.subject}`
+          : data.type || "New notification";
         const notif: Notification = {
           id: crypto.randomUUID(),
           type: data.type || "info",
-          message: data.message || JSON.stringify(data),
+          message,
           timestamp: new Date().toISOString(),
           read: false,
         };
