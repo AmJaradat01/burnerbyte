@@ -55,7 +55,7 @@ export default function OnboardingPage() {
       const res = await api.post<Team>(`/orgs/${org!.id}/teams`, { name: teamName });
       setTeam(res);
       // Auto-assign domain to team
-      const assignment = await api.post<{ id: string }>(`/orgs/${org!.id}/teams/${res.id}/domains`, { domain_id: domainId });
+      const assignment = await api.post<{ id: string }>(`/orgs/${org!.id}/teams/${res.id}/domains`, { domain_id: domainId, access_level: "full" });
       setAssignmentId(assignment.id);
       setStep(3);
     } catch (err) { toast.error(err instanceof Error ? err.message : "Failed"); }
