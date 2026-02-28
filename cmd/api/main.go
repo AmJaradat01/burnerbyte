@@ -87,6 +87,11 @@ func main() {
 	apikeyRepo := postgres.NewAPIKeyRepo(pool)
 	auditRepo := postgres.NewAuditRepo(pool)
 	analyticsRepo := postgres.NewAnalyticsRepo(pool)
+	sysConfigRepo := postgres.NewSystemConfigRepo(pool)
+
+	// Load runtime configs from DB (overrides config.yaml/env for mailer + storage)
+	cfg.LoadFromDB(ctx, sysConfigRepo)
+	ml.Reconfigure(cfg.Mailer)
 
 	// Services
 	s3Client, err := storage.NewS3(ctx, cfg.MinIO)
@@ -134,7 +139,7 @@ func main() {
 	auditHandler := handler.NewAuditHandler(auditSvc)
 	analyticsHandler := handler.NewAnalyticsHandler(analyticsSvc)
 	adminHandler := handler.NewAdminHandler(analyticsSvc, orgSvc, pool, rdb)
-	setupHandler := handler.NewSetupHandler(pool, userRepo, orgRepo, domainRepo, teamRepo, sessionRepo, tokenMgr, ml, cfg)
+	setupHandler := handler.NewSetupHandler(pool, userRepo, orgRepo, domainRepo, teamRepo, sessionRepo, sysConfigRepo, tokenMgr, ml, cfg)
 	wsHandler := handler.NewWSHandler(hub, inboxRepo, cfg.CORS.AllowedOrigins)
 	notifWSHandler := handler.NewNotifWSHandler(notifHub, cfg.CORS.AllowedOrigins)
 
