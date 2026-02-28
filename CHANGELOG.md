@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.4.0 (2026-02-28)
+
+### UI/UX Enhancements
+- Landing page: gradient hero, animated open-source badge, feature cards with hover effects, bottom CTA, sticky header
+- Login/Register: centered branding logo, gradient background
+- Sidebar: active nav indicator bar (left accent), user avatar initial circle, admin shield icon
+- Dashboard: time-of-day greeting (Good morning/afternoon/evening), org subtitle
+- Profile: avatar preview circle with initial fallback, streamlined layout
+- Relative timestamps: `timeAgo` utility applied to inbox email list and audit log (with full date tooltip on hover)
+- Empty states: replaced all inline empty states with reusable `EmptyState` component across inboxes, domains, teams, webhooks, API keys
+
 ## v0.3.9 (2026-02-28)
 
 ### Onboarding Wizard
