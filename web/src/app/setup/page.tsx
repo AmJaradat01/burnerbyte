@@ -372,7 +372,6 @@ export default function SetupPage() {
                     >
                       <option value="admin">Admin</option>
                       <option value="member">Member</option>
-                      <option value="viewer">Viewer</option>
                     </select>
                     <Button variant="ghost" size="sm" onClick={() => {
                       setData({ ...data, invites: data.invites.filter((_, j) => j !== i) });

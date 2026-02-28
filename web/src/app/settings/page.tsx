@@ -196,7 +196,7 @@ function MembersTab({ orgId }: { orgId: string }) {
                   <Select value={m.role} onValueChange={(role) => changeRole.mutate({ userId: m.user_id, role })}>
                     <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {["owner", "admin", "member", "viewer", "billing"].map((r) => (
+                      {["owner", "admin", "member"].map((r) => (
                         <SelectItem key={r} value={r}>{r}</SelectItem>
                       ))}
                     </SelectContent>
@@ -227,7 +227,7 @@ function InviteDialog({ orgId }: { orgId: string }) {
 
   const invite = async () => {
     try {
-      await api.post(`/orgs/${orgId}/invites`, { email, role });
+      await api.post(`/orgs/${orgId}/invites`, { email, org_role: role });
       toast.success("Invite sent");
       setOpen(false);
       setEmail("");
@@ -251,7 +251,7 @@ function InviteDialog({ orgId }: { orgId: string }) {
             <Select value={role} onValueChange={setRole}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {["admin", "member", "viewer", "billing"].map((r) => (
+                {["admin", "member"].map((r) => (
                   <SelectItem key={r} value={r}>{r}</SelectItem>
                 ))}
               </SelectContent>
