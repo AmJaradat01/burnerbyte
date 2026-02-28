@@ -8,7 +8,7 @@ Mark `[x]` when complete. Work top-down by priority.
 ## Backend
 
 ### Auth & Security
-- [ ] **RBAC enforcement** — Add org-role and team-role checks to every handler (currently any authenticated user can access any org/team endpoint; only `RequireSystemAdmin` exists)
+- [x] **RBAC enforcement** — Add org-role and team-role checks to every handler (currently any authenticated user can access any org/team endpoint; only `RequireSystemAdmin` exists)
 - [ ] **Rate limiting middleware** — Config struct exists but no middleware implementation; add per-IP rate limiter on auth endpoints and global limiter
 - [ ] **SSO/OIDC** — `GET /auth/sso/:provider`, `GET /auth/sso/:provider/callback`; integrate `coreos/go-oidc/v3`; auto-verify SSO users; enforce_sso org setting
 - [ ] **Password change JWT invalidation** — Middleware should reject tokens issued before `password_changed_at`

@@ -23,6 +23,7 @@ import (
 	"gitlab.com/amjaradat01/burnerbyte/internal/database"
 	"gitlab.com/amjaradat01/burnerbyte/internal/handler"
 	"gitlab.com/amjaradat01/burnerbyte/internal/mailer"
+	mw "gitlab.com/amjaradat01/burnerbyte/internal/middleware"
 	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
 	redisrepo "gitlab.com/amjaradat01/burnerbyte/internal/repository/redis"
 	"gitlab.com/amjaradat01/burnerbyte/internal/service"
@@ -118,6 +119,9 @@ func main() {
 	// Auth middleware
 	authMw := auth.Middleware(tokenMgr, userRepo)
 
+	// Rate limiter
+	rateLimiter := mw.NewRateLimiter(cfg.RateLimit)
+
 	// Router
 	r := chi.NewRouter()
 	r.Use(chimw.RequestID)
@@ -131,6 +135,7 @@ func main() {
 		AllowCredentials: true,
 		MaxAge:           cfg.CORS.MaxAge,
 	}))
+	r.Use(rateLimiter.Middleware)
 
 	// Health & metrics
 	r.Get("/healthz", healthz)
@@ -143,7 +148,7 @@ func main() {
 	r.Route("/api/v1", func(r chi.Router) {
 		// Public routes (no auth)
 		setupHandler.Routes(r)
-		authHandler.PublicRoutes(r)
+		authHandler.PublicRoutes(r, rateLimiter)
 
 		// Authenticated routes
 		r.Group(func(r chi.Router) {
