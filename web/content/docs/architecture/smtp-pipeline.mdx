@@ -1,0 +1,49 @@
+---
+title: SMTP Pipeline
+description: How inbound emails are received, parsed, and stored.
+---
+
+## Overview
+
+The SMTP server (`cmd/smtpd`) is a custom implementation that handles inbound email delivery. It listens for SMTP connections, validates recipients against known domains and inboxes, parses MIME content, and stores emails with their attachments.
+
+## Connection Flow
+
+1. **TCP Accept** — Listener accepts incoming SMTP connection
+2. **EHLO/HELO** — Server identifies itself with configured hostname
+3. **MAIL FROM** — Sender address recorded
+4. **RCPT TO** — Recipient validated against domain router
+5. **DATA** — Email content received and queued
+6. **Processing** — Worker pool handles MIME parsing and storage
+
+## Domain Router
+
+The router checks each recipient address against:
+
+1. **Domain lookup** — Is the domain registered and verified in the database?
+2. **Redis inbox lookup** — Is there an active inbox for this address?
+3. **PostgreSQL fallback** — If not in Redis, check the database directly
+
+If no matching inbox is found, the email is rejected with a 550 error.
+
+## MIME Parsing
+
+Emails are parsed using the `enmime` library which handles multipart messages (text/plain + text/html), nested MIME parts, inline and attached files, character encoding detection and conversion, and malformed email recovery.
+
+## Attachment Handling
+
+Attachments are processed through the settings resolver which checks the inheritance cascade:
+
+1. Are attachments enabled at the org level?
+2. Are attachments enabled for this domain assignment?
+3. Does the file size exceed the configured maximum?
+
+If allowed, attachments are uploaded to MinIO with a path of `{inbox_id}/{email_id}/{attachment_id}/{filename}` and metadata is stored in PostgreSQL.
+
+## Fan-out
+
+After storage, the handler triggers:
+
+- **WebSocket** — Pushes a notification to the inbox's WebSocket hub for real-time UI updates
+- **Notification Hub** — Pushes to the user's notification WebSocket for the bell icon
+- **Webhooks** — Dispatches `email.received` events to all matching webhook subscriptions

@@ -1,0 +1,46 @@
+---
+title: Monitoring
+description: Prometheus metrics, health endpoints, and logging.
+---
+
+## Health Endpoints
+
+| Endpoint | Description |
+|---|---|
+| `GET /healthz` | Liveness — always returns 200 if the process is running |
+| `GET /readyz` | Readiness — verifies PostgreSQL and Redis connectivity |
+
+## Prometheus Metrics
+
+Enable in config:
+
+```yaml
+metrics:
+  enabled: true
+  path: /metrics
+```
+
+Scrape config:
+
+```yaml
+scrape_configs:
+  - job_name: burnerbyte
+    static_configs:
+      - targets: ['localhost:8080']
+    metrics_path: /metrics
+```
+
+## Logging
+
+BurnerByte uses Go's `slog` structured logger. Every HTTP request is logged with method, path, status, duration, request ID, and remote address.
+
+```bash
+LOG_LEVEL=info    # debug, info, warn, error
+LOG_FORMAT=json   # json or text
+```
+
+JSON format is recommended for production (parseable by Loki, ELK, Datadog).
+
+## Admin Dashboard
+
+System admins can view aggregate stats at `/admin`: total users, orgs, teams, domains, active/total inboxes, and total emails. Also available via `GET /admin/stats`.

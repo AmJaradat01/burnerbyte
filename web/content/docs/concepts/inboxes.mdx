@@ -1,0 +1,40 @@
+---
+title: Inboxes
+description: Temporary inbox lifecycle, TTL management, and Redis routing.
+---
+
+## Creating an Inbox
+
+```bash
+POST /inboxes
+{
+  "domain_assignment_id": "...",
+  "alias": "my-test",
+  "ttl": "1h"
+}
+```
+
+- **alias** — Optional. If omitted, a random alias is generated
+- **ttl** — Duration string (e.g., `10m`, `1h`, `24h`). Capped by `defaults.max_inbox_ttl`
+
+## TTL Lifecycle
+
+1. **Created** — Inbox is active, `expires_at` is set to `now + ttl`
+2. **Active** — Receives emails via SMTP, visible in the UI
+3. **Extended** — `POST /inboxes/{id}/extend` adds more time (still capped by max TTL)
+4. **Expired** — After `expires_at`, the inbox stops receiving emails
+5. **Cleaned up** — The cleanup worker deletes expired inboxes, their emails, and S3 attachments
+
+## Redis Routing
+
+For fast SMTP routing, active inboxes are cached in Redis:
+
+- Key: `inbox:{full_address}` → Value: `{inbox_id}`
+- TTL matches the inbox expiry
+- The reconciler worker keeps Redis in sync with PostgreSQL
+
+When an email arrives, the SMTP router checks Redis first (O(1) lookup), falling back to PostgreSQL if not found.
+
+## Private Inboxes
+
+All inboxes are private by default — only the user who created the inbox can view it and its emails. This is enforced at the repository level by filtering on `created_by`.

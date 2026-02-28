@@ -145,6 +145,17 @@ On first launch, navigate to `http://localhost:3000` — the setup wizard will g
 
 21 migrations, 52+ indexes, 7 triggers. Tables: users, organizations, org_memberships, teams, team_memberships, domains, domain_assignments, inboxes, emails, attachments, webhooks, webhook_delivery_logs, api_keys, audit_logs, invites, sessions, setup_state, password_reset_tokens, system_configs.
 
+## Documentation
+
+Full documentation is available at `/docs` when running the frontend. Built with [Fumadocs](https://fumadocs.vercel.app/), it covers:
+
+- **Getting Started** — Installation, quick start, Docker, configuration reference
+- **Architecture** — Two-binary design, SMTP pipeline, WebSocket, database schema, workers
+- **Concepts** — RBAC, domains, inboxes, emails, webhooks, API keys, SSO, settings cascade
+- **Self-Hosting** — Production hardening, reverse proxy (Nginx/Caddy), DNS setup, monitoring
+- **API Reference** — Authentication, pagination, errors, all 50+ endpoints
+- **Frontend** — Tech stack, keyboard shortcuts, UX patterns, theming
+
 ## License
 
 Apache 2.0 — see [LICENSE](LICENSE)
