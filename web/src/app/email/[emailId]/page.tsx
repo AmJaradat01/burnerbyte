@@ -88,7 +88,7 @@ export default function EmailDetailPage() {
             </TabsList>
             {email.body_html && (
               <TabsContent value="html">
-                <iframe srcDoc={email.body_html} title="Email content" className="w-full min-h-[400px] border-0" sandbox="allow-same-origin" />
+                <iframe srcDoc={email.body_html} title="Email content" className="w-full min-h-[400px] border-0" sandbox="" />
               </TabsContent>
             )}
             <TabsContent value="text">
