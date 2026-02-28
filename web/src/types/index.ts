@@ -49,6 +49,16 @@ export interface Domain {
   domain_name: string;
   mx_verified: boolean;
   txt_verified: boolean;
+  verification_record?: string;
+  created_at: string;
+}
+
+export interface DomainAssignment {
+  id: string;
+  team_id: string;
+  domain_id: string;
+  domain_name?: string;
+  settings: Record<string, unknown>;
   created_at: string;
 }
 
@@ -87,6 +97,56 @@ export interface Email {
   size_bytes: number;
   is_read: boolean;
   received_at: string;
+  attachments?: Attachment[];
+}
+
+export interface Attachment {
+  id: string;
+  email_id: string;
+  filename: string;
+  content_type: string;
+  size_bytes: number;
+}
+
+export interface Webhook {
+  id: string;
+  team_id: string;
+  url: string;
+  events: string[];
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface APIKey {
+  id: string;
+  team_id: string;
+  name: string;
+  prefix: string;
+  scopes: string[];
+  last_used_at?: string;
+  created_at: string;
+}
+
+export interface AuditEntry {
+  id: string;
+  actor_id: string;
+  actor_email?: string;
+  action: string;
+  resource_type: string;
+  resource_id: string;
+  metadata?: Record<string, unknown>;
+  ip_address?: string;
+  created_at: string;
+}
+
+export interface Session {
+  id: string;
+  user_id: string;
+  ip_address?: string;
+  user_agent?: string;
+  last_used_at: string;
+  expires_at: string;
+  created_at: string;
 }
 
 export interface PaginatedResponse<T> {
@@ -104,4 +164,26 @@ export interface Membership {
   email?: string;
   display_name?: string;
   created_at: string;
+}
+
+export interface AnalyticsStats {
+  total_inboxes: number;
+  active_inboxes: number;
+  total_emails: number;
+  total_domains: number;
+  total_teams?: number;
+  total_members?: number;
+}
+
+export interface EmailsPerDay {
+  date: string;
+  count: number;
+}
+
+export interface SystemStats {
+  total_users: number;
+  total_orgs: number;
+  total_emails: number;
+  total_inboxes: number;
+  total_domains: number;
 }

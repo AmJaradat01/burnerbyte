@@ -70,7 +70,13 @@ export default function DomainsPage() {
                 </TableRow>
               ))}
               {(!data?.data || data.data.length === 0) && (
-                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">No domains yet</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center py-8">
+                  <div className="flex flex-col items-center gap-2">
+                    <span className="text-3xl">🌐</span>
+                    <p className="text-muted-foreground">No domains yet</p>
+                    <p className="text-xs text-muted-foreground">Add a domain to start creating inboxes.</p>
+                  </div>
+                </TableCell></TableRow>
               )}
             </TableBody>
           </Table>
