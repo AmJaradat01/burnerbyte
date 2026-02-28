@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.5.7 (2026-02-28)
+
+### Build & Email Fixes
+- Frontend Docker build broken — Next.js config missing `output: "standalone"` so `.next/standalone` never existed
+- Invite emails showed blank org name and inviter name in the template
+- Removed dead-code membership check that used uuid.Nil (always passed)
+
 ## v0.5.6 (2026-02-28)
 
 ### Security & Configuration Fixes
