@@ -63,7 +63,7 @@ build:frontend:
     - corepack enable
     - cd web && pnpm install --frozen-lockfile
   script:
-    - cd web && pnpm build
+    - pnpm build
   cache:
     key: pnpm
     paths:
