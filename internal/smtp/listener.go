@@ -51,7 +51,7 @@ func (l *Listener) ListenAndServe(ctx context.Context, addr string) error {
 	// Close the listener when context is cancelled to unblock Accept().
 	go func() {
 		<-ctx.Done()
-		l.ln.Close()
+		l.ln.Close() //nolint:errcheck
 	}()
 
 	for {
@@ -103,7 +103,7 @@ func (l *Listener) handleConn(ctx context.Context, conn net.Conn) {
 
 	for {
 		// Per-command timeout.
-		conn.SetReadDeadline(time.Now().Add(5 * time.Minute))
+		conn.SetReadDeadline(time.Now().Add(5 * time.Minute)) //nolint:errcheck
 
 		line, err := sess.reader.ReadString('\n')
 		if err != nil {
@@ -217,7 +217,7 @@ func (s *smtpSession) readData() ([]byte, error) {
 	var buf bytes.Buffer
 	for {
 		// Extend deadline for each line during DATA transfer.
-		s.conn.SetReadDeadline(time.Now().Add(3 * time.Minute))
+		s.conn.SetReadDeadline(time.Now().Add(3 * time.Minute)) //nolint:errcheck
 
 		line, err := s.reader.ReadString('\n')
 		if err != nil {

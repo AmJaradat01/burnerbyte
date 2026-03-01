@@ -56,7 +56,7 @@ func (r *DomainAssignmentRepo) GetByID(ctx context.Context, id uuid.UUID) (*doma
 		}
 		return nil, err
 	}
-	json.Unmarshal(settings, &a.Settings)
+	_ = json.Unmarshal(settings, &a.Settings)
 	return &a, nil
 }
 
@@ -76,7 +76,7 @@ func (r *DomainAssignmentRepo) GetByTeamAndDomain(ctx context.Context, teamID, d
 		}
 		return nil, err
 	}
-	json.Unmarshal(settings, &a.Settings)
+	_ = json.Unmarshal(settings, &a.Settings)
 	return &a, nil
 }
 
@@ -106,7 +106,7 @@ func (r *DomainAssignmentRepo) ListByTeam(ctx context.Context, teamID uuid.UUID,
 			&a.CreatedAt, &a.UpdatedAt, &a.DomainName); err != nil {
 			return nil, 0, err
 		}
-		json.Unmarshal(settings, &a.Settings)
+		_ = json.Unmarshal(settings, &a.Settings)
 		assignments = append(assignments, a)
 	}
 	return assignments, total, nil

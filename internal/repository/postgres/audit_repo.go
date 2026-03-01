@@ -86,7 +86,7 @@ func (r *AuditRepo) List(ctx context.Context, orgID uuid.UUID, filter domain.Aud
 		if err := rows.Scan(&e.ID, &e.OrgID, &e.ActorID, &e.Action, &e.ResourceType, &e.ResourceID, &metadata, &e.IPAddress, &e.CreatedAt); err != nil {
 			return nil, 0, err
 		}
-		json.Unmarshal(metadata, &e.Metadata)
+		_ = json.Unmarshal(metadata, &e.Metadata)
 		entries = append(entries, e)
 	}
 	return entries, total, nil
