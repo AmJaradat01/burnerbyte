@@ -11,7 +11,7 @@ export function useInboxSocket(inboxId: string | undefined, onEmail: (email: unk
   const retryRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const user = useAuthStore((s) => s.user);
-  const stableOnEmail = useCallback(onEmail, [onEmail]); // eslint-disable-line react-hooks/exhaustive-deps
+  const stableOnEmail = useCallback((...args: Parameters<typeof onEmail>) => onEmail(...args), [onEmail]);
 
   useEffect(() => {
     if (!inboxId || !user) return;

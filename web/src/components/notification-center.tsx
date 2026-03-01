@@ -31,7 +31,7 @@ export function NotificationCenter() {
     ws.onmessage = (e) => {
       try {
         const data = JSON.parse(e.data);
-        let message = data.data?.subject
+        const message = data.data?.subject
           ? `New email from ${data.data.from}: ${data.data.subject}`
           : data.type || "New notification";
         const notif: Notification = {

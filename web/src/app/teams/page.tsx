@@ -28,8 +28,7 @@ interface DomainAssignment {
 }
 
 export default function TeamsPage() {
-  const { currentOrg, currentTeam, setCurrentTeam, fetchTeams } = useOrgStore();
-  const qc = useQueryClient();
+  const { currentOrg, currentTeam, setCurrentTeam } = useOrgStore();
 
   const { data: teamsData } = useQuery({
     queryKey: ["teams", currentOrg?.id],

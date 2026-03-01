@@ -55,7 +55,8 @@ export default function ProfilePage() {
         <CardHeader>
           <div className="flex items-center gap-4">
             <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-primary/10 text-2xl font-bold text-primary overflow-hidden">
-              {avatarUrl ? <img src={avatarUrl} alt="" className="h-full w-full object-cover" /> : user?.display_name?.charAt(0).toUpperCase() || "?"}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {avatarUrl ? <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" /> : user?.display_name?.charAt(0).toUpperCase() || "?"}
             </div>
             <div>
               <CardTitle>Account Details</CardTitle>
