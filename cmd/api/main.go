@@ -59,7 +59,7 @@ func main() {
 		slog.Error("failed to connect to redis", "error", err)
 		os.Exit(1)
 	}
-	defer rdb.Close()
+	defer rdb.Close() //nolint:errcheck
 
 	// Mailer
 	ml, err := mailer.New(cfg.Mailer)

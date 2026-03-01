@@ -134,7 +134,7 @@ func (r *DomainRepo) scanOne(ctx context.Context, query string, args ...any) (*d
 		}
 		return nil, err
 	}
-	json.Unmarshal(settings, &d.Settings)
+	_ = json.Unmarshal(settings, &d.Settings)
 	return &d, nil
 }
 
@@ -146,6 +146,6 @@ func (r *DomainRepo) scanRow(rows pgx.Rows) (*domain.Domain, error) {
 	if err != nil {
 		return nil, err
 	}
-	json.Unmarshal(settings, &d.Settings)
+	_ = json.Unmarshal(settings, &d.Settings)
 	return &d, nil
 }

@@ -111,7 +111,7 @@ func Middleware(tm *TokenManager, userRepo UserRepo, apikeyRepo APIKeyRepo) func
 			}
 
 			if user.PasswordChangedAt != nil && claims.IssuedAt != nil {
-				if claims.IssuedAt.Time.Before(*user.PasswordChangedAt) {
+				if claims.IssuedAt.Before(*user.PasswordChangedAt) {
 					writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "token invalidated by password change"})
 					return
 				}
