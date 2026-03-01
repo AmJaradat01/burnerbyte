@@ -40,7 +40,7 @@ lint:frontend:
 
 build:go:
   stage: build
-  image: golang:1.25-alpine
+  image: golang:1.25-alpine3.23
   before_script:
     - apk add --no-cache git
   script:
@@ -93,7 +93,7 @@ build:docker:
 
 test:go:
   stage: test
-  image: golang:1.25-alpine
+  image: golang:1.25-alpine3.23
   services:
     - postgres:16-alpine
     - redis:7-alpine
