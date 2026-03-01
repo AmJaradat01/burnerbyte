@@ -49,7 +49,7 @@ func main() {
 		slog.Error("failed to connect to redis", "error", err)
 		os.Exit(1)
 	}
-	defer rdb.Close()
+	defer rdb.Close() //nolint:errcheck
 
 	// Repositories
 	inboxRepoPG := postgres.NewInboxRepo(pool)
@@ -84,7 +84,7 @@ func main() {
 	listener := smtp.NewListener(server, router)
 
 	// Start the processing worker pool.
-	go server.Start(ctx)
+	go server.Start(ctx) //nolint:errcheck
 
 	// Start the TCP listener.
 	go func() {
