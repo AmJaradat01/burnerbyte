@@ -49,7 +49,7 @@ export default function InboxDetailPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
 
-  const { data: inbox, isLoading: inboxLoading, isError: inboxError, refetch: refetchInbox } = useQuery({
+  const { data: inbox, isError: inboxError, refetch: refetchInbox } = useQuery({
     queryKey: ["inbox", id],
     queryFn: () => api.get<Inbox>(`/inboxes/${id}`),
   });
@@ -77,6 +77,7 @@ export default function InboxDetailPage() {
         qc.invalidateQueries({ queryKey: ["email", selectedEmailId] });
       }).catch(() => {});
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedEmail?.id, selectedEmail?.is_read, qc, id, selectedEmailId]);
 
   const toggleRead = useMutation({
