@@ -51,7 +51,7 @@ func (r *TeamRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Team, err
 		}
 		return nil, err
 	}
-	json.Unmarshal(settings, &t.Settings)
+	_ = json.Unmarshal(settings, &t.Settings)
 	return &t, nil
 }
 
@@ -78,7 +78,7 @@ func (r *TeamRepo) ListByOrg(ctx context.Context, orgID uuid.UUID, page, perPage
 		if err := rows.Scan(&t.ID, &t.OrgID, &t.Name, &t.Slug, &settings, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			return nil, 0, err
 		}
-		json.Unmarshal(settings, &t.Settings)
+		_ = json.Unmarshal(settings, &t.Settings)
 		teams = append(teams, t)
 	}
 	return teams, total, nil

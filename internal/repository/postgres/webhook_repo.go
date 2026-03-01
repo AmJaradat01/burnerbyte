@@ -46,7 +46,7 @@ func (r *WebhookRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Webhoo
 		if errors.Is(err, pgx.ErrNoRows) { return nil, ErrNotFound }
 		return nil, err
 	}
-	json.Unmarshal(events, &w.Events)
+	_ = json.Unmarshal(events, &w.Events)
 	return &w, nil
 }
 
@@ -70,7 +70,7 @@ func (r *WebhookRepo) ListByTeam(ctx context.Context, teamID uuid.UUID, page, pe
 			&w.LastStatus, &w.LastAttemptAt, &w.FailureCount, &w.CreatedAt, &w.UpdatedAt); err != nil {
 			return nil, 0, err
 		}
-		json.Unmarshal(events, &w.Events)
+		_ = json.Unmarshal(events, &w.Events)
 		webhooks = append(webhooks, w)
 	}
 	return webhooks, total, nil
@@ -92,7 +92,7 @@ func (r *WebhookRepo) ListActiveByTeamAndEvent(ctx context.Context, teamID uuid.
 			&w.LastStatus, &w.LastAttemptAt, &w.FailureCount, &w.CreatedAt, &w.UpdatedAt); err != nil {
 			return nil, err
 		}
-		json.Unmarshal(events, &w.Events)
+		_ = json.Unmarshal(events, &w.Events)
 		webhooks = append(webhooks, w)
 	}
 	return webhooks, nil
@@ -167,7 +167,7 @@ func (r *WebhookRepo) ListFailedRetryable(ctx context.Context) ([]domain.Webhook
 			&w.Active, &w.LastStatus, &w.LastAttemptAt, &w.FailureCount, &w.CreatedAt, &w.UpdatedAt); err != nil {
 			return nil, err
 		}
-		json.Unmarshal(events, &w.Events)
+		_ = json.Unmarshal(events, &w.Events)
 		webhooks = append(webhooks, w)
 	}
 	return webhooks, nil
