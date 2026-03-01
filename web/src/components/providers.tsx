@@ -14,7 +14,7 @@ export function Providers({ children }: { children: ReactNode }) {
   const fetchMe = useAuthStore((s) => s.fetchMe);
 
   useEffect(() => {
-    setMounted(true);
+    setMounted(true); // eslint-disable-line react-hooks/set-state-in-effect -- mount detection
     fetchMe();
   }, [fetchMe]);
 

@@ -51,6 +51,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [user, loading, isPublic, isLanding, router, setupChecked, setupCompleted, pathname]);
 
   // Close mobile sidebar on navigation
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setMobileOpen(false); }, [pathname]);
 
   if (!setupChecked || loading) {

@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
-import { useAuthStore } from "@/stores/auth-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -291,7 +290,7 @@ export default function SetupPage() {
               <div className="space-y-2">
                 <Label htmlFor="domain-name">Domain name</Label>
                 <Input id="domain-name" value={data.domain.domain_name} onChange={(e) => setData({ ...data, domain: { ...data.domain, domain_name: e.target.value } })} placeholder="mail.example.com" />
-                <p className="text-xs text-muted-foreground">This domain will receive inbound emails. You'll need to configure MX records after setup.</p>
+                <p className="text-xs text-muted-foreground">This domain will receive inbound emails. You&apos;ll need to configure MX records after setup.</p>
               </div>
             )}
 
