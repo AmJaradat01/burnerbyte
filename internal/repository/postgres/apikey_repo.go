@@ -42,7 +42,7 @@ func (r *APIKeyRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.APIKey,
 		if errors.Is(err, pgx.ErrNoRows) { return nil, ErrNotFound }
 		return nil, err
 	}
-	json.Unmarshal(scopes, &k.Scopes)
+	_ = json.Unmarshal(scopes, &k.Scopes)
 	return &k, nil
 }
 
@@ -57,7 +57,7 @@ func (r *APIKeyRepo) GetByHash(ctx context.Context, hash string) (*domain.APIKey
 		if errors.Is(err, pgx.ErrNoRows) { return nil, ErrNotFound }
 		return nil, err
 	}
-	json.Unmarshal(scopes, &k.Scopes)
+	_ = json.Unmarshal(scopes, &k.Scopes)
 	return &k, nil
 }
 
@@ -79,7 +79,7 @@ func (r *APIKeyRepo) ListByTeam(ctx context.Context, teamID uuid.UUID, page, per
 		if err := rows.Scan(&k.ID, &k.TeamID, &k.CreatedBy, &k.KeyHash, &k.KeyPrefix, &k.Name, &scopes, &k.LastUsedAt, &k.ExpiresAt, &k.CreatedAt); err != nil {
 			return nil, 0, err
 		}
-		json.Unmarshal(scopes, &k.Scopes)
+		_ = json.Unmarshal(scopes, &k.Scopes)
 		keys = append(keys, k)
 	}
 	return keys, total, nil
