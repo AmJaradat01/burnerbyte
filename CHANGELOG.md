@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.7.7 (2026-03-01)
+
+### CI/CD
+- Added automatic GitLab Release creation on tag push via `release-cli`
+- Backfilled CHANGELOG entries for v0.7.1 through v0.7.6
+
 ## v0.7.6 (2026-03-01)
 
 ### Documentation
