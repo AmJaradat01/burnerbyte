@@ -158,3 +158,15 @@ deploy:tag:
     - docker push $CI_REGISTRY_IMAGE/frontend:latest
   rules:
     - if: $CI_COMMIT_TAG
+
+release:
+  stage: deploy
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  script:
+    - echo "Creating release for $CI_COMMIT_TAG"
+  release:
+    tag_name: $CI_COMMIT_TAG
+    name: "$CI_COMMIT_TAG"
+    description: "See [CHANGELOG.md](https://gitlab.com/amjaradat01/burnerbyte/-/blob/$CI_COMMIT_TAG/CHANGELOG.md) for details."
+  rules:
+    - if: $CI_COMMIT_TAG
