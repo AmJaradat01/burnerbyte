@@ -23,7 +23,7 @@ func ReconcilerJob(inboxRepoPG *postgres.InboxRepo, inboxRepoRedis *redisrepo.In
 			}
 			existing, _ := inboxRepoRedis.Get(ctx, inbox.FullAddress)
 			if existing == "" {
-				inboxRepoRedis.Set(ctx, inbox.FullAddress, inbox.ID.String(), remaining)
+				inboxRepoRedis.Set(ctx, inbox.FullAddress, inbox.ID.String(), remaining) //nolint:errcheck
 				synced++
 			}
 		}

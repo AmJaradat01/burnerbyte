@@ -53,7 +53,7 @@ func (r *OrgRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Organizati
 		}
 		return nil, fmt.Errorf("get org: %w", err)
 	}
-	json.Unmarshal(settings, &o.Settings)
+	_ = json.Unmarshal(settings, &o.Settings)
 	return &o, nil
 }
 
@@ -69,7 +69,7 @@ func (r *OrgRepo) GetBySlug(ctx context.Context, slug string) (*domain.Organizat
 		}
 		return nil, fmt.Errorf("get org by slug: %w", err)
 	}
-	json.Unmarshal(settings, &o.Settings)
+	_ = json.Unmarshal(settings, &o.Settings)
 	return &o, nil
 }
 
@@ -120,7 +120,7 @@ func (r *OrgRepo) ListByUser(ctx context.Context, userID uuid.UUID, page, perPag
 		if err := rows.Scan(&o.ID, &o.Name, &o.Slug, &o.LogoURL, &settings, &o.CreatedAt, &o.UpdatedAt); err != nil {
 			return nil, 0, err
 		}
-		json.Unmarshal(settings, &o.Settings)
+		_ = json.Unmarshal(settings, &o.Settings)
 		orgs = append(orgs, o)
 	}
 	return orgs, total, nil
@@ -263,7 +263,7 @@ func (r *OrgRepo) ListAll(ctx context.Context, page, perPage int) ([]domain.Orga
 			return nil, 0, err
 		}
 		if len(settings) > 0 {
-			json.Unmarshal(settings, &o.Settings)
+			_ = json.Unmarshal(settings, &o.Settings)
 		}
 		orgs = append(orgs, o)
 	}
