@@ -1,5 +1,50 @@
 # Changelog
 
+## v0.7.6 (2026-03-01)
+
+### Documentation
+- Updated README with badges (pipeline, release, license, Go, Next.js, Docker)
+- Fixed Go version from 1.22+ to 1.25+
+- Added `/docs` to frontend pages table
+- Added Docs and CI/CD to tech stack section
+- Added docs site and command palette to features list
+
+## v0.7.5 (2026-03-01)
+
+### CI/CD
+- Fixed `test:migrations` job — override entrypoint for `migrate/migrate` image (scratch-based, no shell), use absolute path `/migrate`, bump to v4.17.1
+- Fixed `test:go` job — set `CGO_ENABLED=1` and install `gcc musl-dev` for race detector on Alpine, `when: always` on artifacts for empty test suite
+
+## v0.7.4 (2026-03-01)
+
+### CI/CD
+- Fixed `build:frontend` job — removed redundant `cd web` in script (already in `web/` from `before_script`)
+
+## v0.7.3 (2026-03-01)
+
+### CI/CD
+- Fixed Docker image tags — `golang:1.25-alpine` shorthand doesn't exist (Go 1.26 is current), changed to `golang:1.25-alpine3.23` in CI and Dockerfile
+
+## v0.7.2 (2026-03-01)
+
+### CI/CD
+- Added `.golangci.yml` with errcheck exclusions for idiomatic Go patterns (defer Close/Rollback, HTTP writes, viper BindEnv, crypto/rand.Read, S3 cleanup, webhook logging)
+- Fixed 51 errcheck issues across 14 Go files
+- Fixed staticcheck QF1008 — removed redundant `.Time` from embedded `jwt.NumericDate` field
+
+## v0.7.1 (2026-03-01)
+
+### CI/CD
+- Updated `golangci-lint` from v1.62 to v2.10 (Go 1.25+ support)
+- Updated Go CI images from 1.22 to 1.25 (match `go.mod`)
+- Updated Dockerfile Go builder from 1.22 to 1.25
+
+### Bug Fixes
+- Fixed 21 ESLint errors and 12 warnings across 17 frontend files
+- Added `.source/` to ESLint ignores (fumadocs generated files)
+- Added docs route to command palette
+- Added missing `delete` label to breadcrumbs
+
 ## v0.7.0 (2026-03-01)
 
 ### Features
