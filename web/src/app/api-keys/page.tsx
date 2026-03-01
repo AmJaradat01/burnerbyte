@@ -37,8 +37,8 @@ export default function ApiKeysPage() {
     onMutate: async (id) => {
       await qc.cancelQueries({ queryKey: ["api-keys"] });
       const prev = qc.getQueryData(["api-keys", currentTeam?.id, page]);
-      qc.setQueryData(["api-keys", currentTeam?.id, page], (old: any) =>
-        old ? { ...old, data: old.data.filter((k: ApiKey) => k.id !== id) } : old
+      qc.setQueryData(["api-keys", currentTeam?.id, page], (old: { data: ApiKey[]; total: number; total_pages: number } | undefined) =>
+        old ? { ...old, data: old.data.filter((k) => k.id !== id) } : old
       );
       return { prev };
     },
@@ -134,7 +134,7 @@ function CreateApiKeyDialog({ orgId, teamId }: { orgId: string; teamId: string }
         <DialogHeader><DialogTitle>{rawKey ? "API Key Created" : "Create API Key"}</DialogTitle></DialogHeader>
         {rawKey ? (
           <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">Copy this key now. You won't be able to see it again.</p>
+            <p className="text-sm text-muted-foreground">Copy this key now. You won&apos;t be able to see it again.</p>
             <code className="block rounded bg-muted p-3 text-sm break-all">{rawKey}</code>
             <Button onClick={close} className="w-full">Done</Button>
           </div>

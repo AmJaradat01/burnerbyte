@@ -13,7 +13,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -133,7 +132,7 @@ function MembersTab({ orgId }: { orgId: string }) {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const { data, isLoading, isError, refetch } = useQuery({
+  const { data, isError, refetch } = useQuery({
     queryKey: ["org-members", orgId, page],
     queryFn: () => api.get<{ data: Membership[]; total: number; total_pages: number }>(`/orgs/${orgId}/members`, { page: String(page), per_page: "20" }),
   });
@@ -150,8 +149,8 @@ function MembersTab({ orgId }: { orgId: string }) {
     onMutate: async (userId) => {
       await qc.cancelQueries({ queryKey: ["org-members"] });
       const prev = qc.getQueryData(["org-members", orgId, page]);
-      qc.setQueryData(["org-members", orgId, page], (old: any) =>
-        old ? { ...old, data: old.data.filter((m: Membership) => m.user_id !== userId) } : old
+      qc.setQueryData(["org-members", orgId, page], (old: { data: Membership[]; total: number; total_pages: number } | undefined) =>
+        old ? { ...old, data: old.data.filter((m) => m.user_id !== userId) } : old
       );
       return { prev };
     },

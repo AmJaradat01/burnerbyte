@@ -46,8 +46,8 @@ export default function WebhooksPage() {
     onMutate: async (id) => {
       await qc.cancelQueries({ queryKey: ["webhooks"] });
       const prev = qc.getQueryData(["webhooks", currentTeam?.id, page]);
-      qc.setQueryData(["webhooks", currentTeam?.id, page], (old: any) =>
-        old ? { ...old, data: old.data.filter((w: Webhook) => w.id !== id) } : old
+      qc.setQueryData(["webhooks", currentTeam?.id, page], (old: { data: Webhook[]; total: number; total_pages: number } | undefined) =>
+        old ? { ...old, data: old.data.filter((w) => w.id !== id) } : old
       );
       return { prev };
     },
@@ -190,7 +190,7 @@ function CreateWebhookDialog({ orgId, teamId }: { orgId: string; teamId: string 
         <DialogHeader><DialogTitle>{secret ? "Webhook Created" : "Create webhook"}</DialogTitle></DialogHeader>
         {secret ? (
           <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">Copy this signing secret now. You won't be able to see it again.</p>
+            <p className="text-sm text-muted-foreground">Copy this signing secret now. You won&apos;t be able to see it again.</p>
             <code className="block rounded bg-muted p-3 text-sm break-all">{secret}</code>
             <Button onClick={close} className="w-full">Done</Button>
           </div>

@@ -92,7 +92,7 @@ export default function OnboardingPage() {
       <Card className="w-full max-w-lg">
         <CardHeader className="text-center">
           <CardTitle>Welcome to BurnerByte</CardTitle>
-          <CardDescription>Let's get you set up in a few steps</CardDescription>
+          <CardDescription>Let&apos;s get you set up in a few steps</CardDescription>
           <div className="flex justify-center gap-2 mt-4">
             {STEPS.map((s, i) => (
               <Badge key={s} variant={i <= step ? "default" : "outline"} className="text-xs">{s}</Badge>
@@ -161,7 +161,7 @@ export default function OnboardingPage() {
             <>
               <div className="text-center space-y-3">
                 <span className="text-5xl">🎉</span>
-                <p className="text-lg font-semibold">You're all set!</p>
+                <p className="text-lg font-semibold">You&apos;re all set!</p>
                 {inboxAddress && (
                   <div className="rounded bg-muted p-3">
                     <p className="text-sm text-muted-foreground">Your first inbox:</p>
