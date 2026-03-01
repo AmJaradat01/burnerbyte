@@ -1,6 +1,13 @@
 # BurnerByte
 
-Self-hosted, open-source temporary email platform with multi-org, multi-team, multi-domain architecture.
+[![Pipeline](https://gitlab.com/amjaradat01/burnerbyte/badges/main/pipeline.svg)](https://gitlab.com/amjaradat01/burnerbyte/-/pipelines)
+[![Release](https://gitlab.com/amjaradat01/burnerbyte/-/badges/release.svg)](https://gitlab.com/amjaradat01/burnerbyte/-/releases)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![Go](https://img.shields.io/badge/Go-1.25-00ADD8?logo=go&logoColor=white)](https://go.dev/)
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js&logoColor=white)](https://nextjs.org/)
+[![Docker](https://img.shields.io/badge/self--hosted-docker-2496ED?logo=docker&logoColor=white)](docker-compose.yml)
+
+Self-hosted, open-source temporary email platform with multi-team, multi-domain architecture.
 
 ## Architecture
 
@@ -39,12 +46,14 @@ Two separate binaries scale independently:
 - Analytics dashboard with time-series charts
 - SSO via OIDC
 - Private inboxes — only the creator can access
+- Built-in documentation site at `/docs`
+- Command palette with keyboard shortcuts
 
 ## Quick Start
 
 ### Prerequisites
 
-- Go 1.22+
+- Go 1.25+
 - Node.js 20+ with pnpm
 - Docker & Docker Compose
 - PostgreSQL 16 (or use Docker)
@@ -134,12 +143,15 @@ On first launch, navigate to `http://localhost:3000` — the setup wizard will g
 | `/profile/sessions` | Session management |
 | `/profile/delete` | Account deletion |
 | `/admin` | System admin stats |
+| `/docs` | Documentation site (Fumadocs) |
 
 ## Tech Stack
 
-- **Backend**: Go, Chi, pgxpool, go-redis, MinIO
-- **Frontend**: Next.js 15+, shadcn/ui, Tailwind CSS, Zustand, TanStack Query, Recharts
+- **Backend**: Go 1.25, Chi, pgxpool, go-redis, MinIO
+- **Frontend**: Next.js 15, shadcn/ui, Tailwind CSS, Zustand, TanStack Query, Recharts
+- **Docs**: Fumadocs (MDX, full-text search)
 - **Infrastructure**: PostgreSQL 16, Redis 7, MinIO, Docker
+- **CI/CD**: GitLab CI (lint, build, test, Docker registry)
 
 ## Database
 
