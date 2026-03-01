@@ -9,10 +9,10 @@ import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/comp
 export default function VerifyEmailPage() {
   const params = useSearchParams();
   const token = params.get("token");
-  const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
+  const [status, setStatus] = useState<"loading" | "success" | "error">(() => token ? "loading" : "error");
 
   useEffect(() => {
-    if (!token) { setStatus("error"); return; }
+    if (!token) return;
     api.get(`/auth/verify-email/${token}`)
       .then(() => setStatus("success"))
       .catch(() => setStatus("error"));
