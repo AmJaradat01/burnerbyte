@@ -44,8 +44,8 @@ export default function DomainsPage() {
     onMutate: async (id) => {
       await qc.cancelQueries({ queryKey: ["domains"] });
       const prev = qc.getQueryData(["domains", currentOrg?.id, page]);
-      qc.setQueryData(["domains", currentOrg?.id, page], (old: any) =>
-        old ? { ...old, data: old.data.filter((d: Domain) => d.id !== id) } : old
+      qc.setQueryData(["domains", currentOrg?.id, page], (old: { data: Domain[]; total: number; total_pages: number } | undefined) =>
+        old ? { ...old, data: old.data.filter((d) => d.id !== id) } : old
       );
       return { prev };
     },

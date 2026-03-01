@@ -60,8 +60,8 @@ export default function InboxesPage() {
     onMutate: async (id) => {
       await qc.cancelQueries({ queryKey: ["inboxes"] });
       const prev = qc.getQueryData(["inboxes", currentOrg?.id, currentTeam?.id, page]);
-      qc.setQueryData(["inboxes", currentOrg?.id, currentTeam?.id, page], (old: any) =>
-        old ? { ...old, data: old.data.filter((i: Inbox) => i.id !== id) } : old
+      qc.setQueryData(["inboxes", currentOrg?.id, currentTeam?.id, page], (old: { data: Inbox[]; total: number; total_pages: number } | undefined) =>
+        old ? { ...old, data: old.data.filter((i) => i.id !== id) } : old
       );
       return { prev };
     },
