@@ -19,20 +19,20 @@ BurnerByte uses a two-level RBAC system with 3 org-level roles and 3 team-level 
 
 | Role | Description |
 |---|---|
-| `team_admin` | Full control of team settings, members, domain assignments |
-| `team_member` | Can create inboxes, view emails, manage own resources |
-| `team_viewer` | Read-only access to team inboxes and emails |
+| `lead` | Full control of team settings, members, domain assignments |
+| `member` | Can create inboxes, view emails, manage own resources |
+| `viewer` | Read-only access to team inboxes and emails |
 
 ## Permission Matrix
 
-| Action | Owner | Admin | Member | Team Admin | Team Member | Team Viewer |
+| Action | Owner | Admin | Member | Team Lead | Team Member | Team Viewer |
 |---|---|---|---|---|---|---|
 | Delete org | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Manage org settings | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Invite members | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Manage domains | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Create teams | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
-| View audit log | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| View audit log | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Manage team members | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
 | Manage webhooks | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
 | Create inboxes | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ |

@@ -25,7 +25,7 @@ Re-verifies MX and TXT DNS records for all domains that aren't fully verified.
 
 **Interval:** `workers.webhook_retry_interval` (default: 1m)
 
-Retries failed webhook deliveries using exponential backoff: 0s, 1s, 5s, 25s. After 4 attempts, the delivery is marked as permanently failed.
+Retries failed webhook deliveries using exponential backoff: 0s, 1s, 5s. After 3 attempts, the delivery is marked as permanently failed.
 
 ### Reconciler
 

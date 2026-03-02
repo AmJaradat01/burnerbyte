@@ -17,7 +17,7 @@ The response includes the `raw_key` — **shown only once**.
 
 ## Key Format
 
-API keys use the prefix `bb_` followed by a random string. Only the prefix is stored in the database; the full key is hashed with bcrypt.
+API keys use the prefix `bb_` followed by a random string. Only the prefix is stored in the database; the full key is hashed with SHA-256.
 
 ## Available Scopes
 

@@ -2,10 +2,11 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -272,7 +273,8 @@ func (h *AuthHandler) SSORedirect(w http.ResponseWriter, r *http.Request) {
 	}
 	http.SetCookie(w, &http.Cookie{
 		Name: "sso_state", Value: state, Path: "/", MaxAge: 600,
-		HttpOnly: true, SameSite: http.SameSiteLaxMode, Secure: true,
+		HttpOnly: true, SameSite: http.SameSiteLaxMode,
+		Secure: strings.HasPrefix(h.cfg.Server.FrontendURL, "https"),
 	})
 	url, err := h.sso.RedirectURL(r.Context(), state)
 	if err != nil {
