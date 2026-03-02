@@ -129,7 +129,9 @@ type DefaultsConfig struct {
 	InviteExpiryTTL     time.Duration `mapstructure:"invite_expiry_ttl"`
 	PresignedURLTTL     time.Duration `mapstructure:"presigned_url_ttl"`
 	WebhookTimeout      time.Duration `mapstructure:"webhook_timeout"`
+	WebhookMaxRetries   int           `mapstructure:"webhook_max_retries"`
 	AnalyticsCacheTTL   time.Duration `mapstructure:"analytics_cache_ttl"`
+	AnalyticsDefaultDays int          `mapstructure:"analytics_default_days"`
 }
 
 type EmailVerificationConfig struct {

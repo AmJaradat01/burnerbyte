@@ -3,208 +3,2066 @@
   "info": {
     "title": "BurnerByte API",
     "description": "Self-hosted temporary email platform API",
-    "version": "0.6.12",
-    "license": { "name": "Apache 2.0", "url": "https://www.apache.org/licenses/LICENSE-2.0" }
+    "version": "0.7.8",
+    "license": {
+      "name": "Apache 2.0",
+      "url": "https://www.apache.org/licenses/LICENSE-2.0"
+    }
   },
-  "servers": [{ "url": "/api/v1", "description": "API v1" }],
+  "servers": [
+    {
+      "url": "/api/v1",
+      "description": "API v1"
+    }
+  ],
   "components": {
     "securitySchemes": {
-      "bearerAuth": { "type": "http", "scheme": "bearer", "bearerFormat": "JWT" }
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
     },
     "schemas": {
-      "Error": { "type": "object", "properties": { "error": { "type": "string" } } },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        }
+      },
       "User": {
         "type": "object",
         "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "email": { "type": "string" },
-          "display_name": { "type": "string" },
-          "avatar_url": { "type": "string" },
-          "is_system_admin": { "type": "boolean" },
-          "email_verified": { "type": "boolean" },
-          "created_at": { "type": "string", "format": "date-time" }
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "avatar_url": {
+            "type": "string"
+          },
+          "is_system_admin": {
+            "type": "boolean"
+          },
+          "email_verified": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
         }
       },
       "TokenPair": {
         "type": "object",
         "properties": {
-          "access_token": { "type": "string" },
-          "refresh_token": { "type": "string" },
-          "expires_in": { "type": "integer" }
+          "access_token": {
+            "type": "string"
+          },
+          "refresh_token": {
+            "type": "string"
+          },
+          "expires_in": {
+            "type": "integer"
+          }
         }
       },
       "Organization": {
         "type": "object",
         "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "name": { "type": "string" },
-          "slug": { "type": "string" },
-          "settings": { "type": "object" },
-          "created_at": { "type": "string", "format": "date-time" }
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "settings": {
+            "type": "object"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
         }
       },
       "Team": {
         "type": "object",
         "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "org_id": { "type": "string", "format": "uuid" },
-          "name": { "type": "string" },
-          "slug": { "type": "string" },
-          "created_at": { "type": "string", "format": "date-time" }
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "org_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
         }
       },
       "Domain": {
         "type": "object",
         "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "org_id": { "type": "string", "format": "uuid" },
-          "domain_name": { "type": "string" },
-          "mx_verified": { "type": "boolean" },
-          "txt_verified": { "type": "boolean" },
-          "created_at": { "type": "string", "format": "date-time" }
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "org_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "domain_name": {
+            "type": "string"
+          },
+          "mx_verified": {
+            "type": "boolean"
+          },
+          "txt_verified": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
         }
       },
       "Inbox": {
         "type": "object",
         "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "full_address": { "type": "string" },
-          "is_active": { "type": "boolean" },
-          "expires_at": { "type": "string", "format": "date-time" },
-          "created_at": { "type": "string", "format": "date-time" }
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "full_address": {
+            "type": "string"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
         }
       },
       "Email": {
         "type": "object",
         "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "from_address": { "type": "string" },
-          "to_address": { "type": "string" },
-          "subject": { "type": "string" },
-          "body_text": { "type": "string" },
-          "body_html": { "type": "string" },
-          "has_attachments": { "type": "boolean" },
-          "is_read": { "type": "boolean" },
-          "received_at": { "type": "string", "format": "date-time" }
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "from_address": {
+            "type": "string"
+          },
+          "to_address": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "body_text": {
+            "type": "string"
+          },
+          "body_html": {
+            "type": "string"
+          },
+          "has_attachments": {
+            "type": "boolean"
+          },
+          "is_read": {
+            "type": "boolean"
+          },
+          "received_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Webhook": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "team_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "url": {
+            "type": "string"
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "APIKey": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "team_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "prefix": {
+            "type": "string"
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "last_used_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "DomainAssignment": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "team_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "domain_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "access_level": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Membership": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "role": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Session": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ip_address": {
+            "type": "string"
+          },
+          "user_agent": {
+            "type": "string"
+          },
+          "last_used_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AuditEntry": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "actor_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "action": {
+            "type": "string"
+          },
+          "resource_type": {
+            "type": "string"
+          },
+          "resource_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ip_address": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Invite": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PaginatedResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {}
+          },
+          "total": {
+            "type": "integer"
+          },
+          "page": {
+            "type": "integer"
+          },
+          "per_page": {
+            "type": "integer"
+          },
+          "total_pages": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "parameters": {
+      "orgId": {
+        "name": "orgId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "teamId": {
+        "name": "teamId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "domainId": {
+        "name": "domainId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "userId": {
+        "name": "userId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "inboxId": {
+        "name": "inboxId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "emailId": {
+        "name": "emailId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "webhookId": {
+        "name": "webhookId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "keyId": {
+        "name": "keyId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "attachmentId": {
+        "name": "attachmentId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "page": {
+        "name": "page",
+        "in": "query",
+        "schema": {
+          "type": "integer",
+          "default": 1
+        }
+      },
+      "perPage": {
+        "name": "per_page",
+        "in": "query",
+        "schema": {
+          "type": "integer",
+          "default": 20
         }
       }
     }
   },
-  "security": [{ "bearerAuth": [] }],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
   "paths": {
     "/setup/status": {
-      "get": { "tags": ["Setup"], "summary": "Get setup status", "security": [], "responses": { "200": { "description": "Setup status" } } }
+      "get": {
+        "tags": [
+          "Setup"
+        ],
+        "summary": "Get setup status",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Setup status"
+          }
+        }
+      }
     },
     "/setup/complete": {
-      "post": { "tags": ["Setup"], "summary": "Complete setup wizard", "security": [], "responses": { "200": { "description": "Setup completed" } } }
+      "post": {
+        "tags": [
+          "Setup"
+        ],
+        "summary": "Complete setup wizard",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Setup completed"
+          }
+        }
+      }
     },
     "/auth/register": {
       "post": {
-        "tags": ["Auth"], "summary": "Register new user", "security": [],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["email","password","display_name"], "properties": { "email": {"type":"string"}, "password": {"type":"string"}, "display_name": {"type":"string"} } } } } },
-        "responses": { "201": { "description": "User created" }, "409": { "description": "Email exists" } }
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Register new user",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "password",
+                  "display_name"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  },
+                  "display_name": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User created"
+          },
+          "409": {
+            "description": "Email exists"
+          }
+        }
       }
     },
     "/auth/login": {
       "post": {
-        "tags": ["Auth"], "summary": "Login", "security": [],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["email","password"], "properties": { "email": {"type":"string"}, "password": {"type":"string"} } } } } },
-        "responses": { "200": { "description": "Login successful" }, "401": { "description": "Invalid credentials" }, "423": { "description": "Account locked" } }
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Login",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "password"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful"
+          },
+          "401": {
+            "description": "Invalid credentials"
+          },
+          "423": {
+            "description": "Account locked"
+          }
+        }
       }
     },
     "/auth/refresh": {
-      "post": { "tags": ["Auth"], "summary": "Refresh tokens", "security": [], "responses": { "200": { "description": "Tokens refreshed" } } }
-    },
-    "/auth/me": {
-      "get": { "tags": ["Auth"], "summary": "Get current user", "responses": { "200": { "description": "Current user", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/User" } } } } } },
-      "patch": { "tags": ["Auth"], "summary": "Update profile", "responses": { "200": { "description": "Profile updated" } } },
-      "delete": { "tags": ["Auth"], "summary": "Delete account", "responses": { "200": { "description": "Account deleted" } } }
-    },
-    "/auth/me/password": {
-      "put": { "tags": ["Auth"], "summary": "Change password", "responses": { "200": { "description": "Password changed" } } }
-    },
-    "/auth/sessions": {
-      "get": { "tags": ["Auth"], "summary": "List sessions", "responses": { "200": { "description": "Sessions list" } } },
-      "delete": { "tags": ["Auth"], "summary": "Revoke all sessions", "responses": { "200": { "description": "All sessions revoked" } } }
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Refresh tokens",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Tokens refreshed"
+          }
+        }
+      }
     },
     "/auth/forgot-password": {
-      "post": { "tags": ["Auth"], "summary": "Request password reset", "security": [], "responses": { "200": { "description": "Reset email sent if account exists" } } }
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Request password reset",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Reset email sent if account exists"
+          }
+        }
+      }
+    },
+    "/auth/reset-password": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Reset password with token",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Password reset successful"
+          }
+        }
+      }
+    },
+    "/auth/verify-email/{token}": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Verify email address",
+        "security": [],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Email verified"
+          }
+        }
+      }
     },
     "/auth/sso/{provider}": {
-      "get": { "tags": ["Auth"], "summary": "SSO redirect", "security": [], "parameters": [{"name":"provider","in":"path","required":true,"schema":{"type":"string"}}], "responses": { "302": { "description": "Redirect to OIDC provider" } } }
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "SSO redirect",
+        "security": [],
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirect to OIDC provider"
+          }
+        }
+      }
     },
     "/auth/sso/{provider}/callback": {
-      "get": { "tags": ["Auth"], "summary": "SSO callback", "security": [], "parameters": [{"name":"provider","in":"path","required":true,"schema":{"type":"string"}}], "responses": { "302": { "description": "Redirect to frontend with tokens" } } }
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "SSO callback",
+        "security": [],
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirect to frontend with tokens"
+          }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Get current user",
+        "responses": {
+          "200": {
+            "description": "Current user"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Update profile",
+        "responses": {
+          "200": {
+            "description": "Profile updated"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Delete account",
+        "responses": {
+          "200": {
+            "description": "Account deleted"
+          }
+        }
+      }
+    },
+    "/auth/me/password": {
+      "put": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Change password",
+        "responses": {
+          "200": {
+            "description": "Password changed"
+          }
+        }
+      }
+    },
+    "/auth/sessions": {
+      "get": {
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "List sessions",
+        "responses": {
+          "200": {
+            "description": "Sessions list"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "Revoke all sessions",
+        "responses": {
+          "200": {
+            "description": "All sessions revoked"
+          }
+        }
+      }
+    },
+    "/auth/sessions/{sessionId}": {
+      "delete": {
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "Revoke a session",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session revoked"
+          }
+        }
+      }
     },
     "/orgs": {
-      "post": { "tags": ["Organizations"], "summary": "Create organization", "responses": { "201": { "description": "Org created" } } },
-      "get": { "tags": ["Organizations"], "summary": "List user organizations", "responses": { "200": { "description": "Org list" } } }
+      "post": {
+        "tags": [
+          "Organizations"
+        ],
+        "summary": "Create organization",
+        "responses": {
+          "201": {
+            "description": "Org created"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Organizations"
+        ],
+        "summary": "List user organizations",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/perPage"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Org list"
+          }
+        }
+      }
     },
     "/orgs/{orgId}": {
-      "get": { "tags": ["Organizations"], "summary": "Get organization", "parameters": [{"name":"orgId","in":"path","required":true,"schema":{"type":"string","format":"uuid"}}], "responses": { "200": { "description": "Organization details" } } },
-      "patch": { "tags": ["Organizations"], "summary": "Update organization", "parameters": [{"name":"orgId","in":"path","required":true,"schema":{"type":"string","format":"uuid"}}], "responses": { "200": { "description": "Org updated" } } },
-      "delete": { "tags": ["Organizations"], "summary": "Delete organization", "parameters": [{"name":"orgId","in":"path","required":true,"schema":{"type":"string","format":"uuid"}}], "responses": { "200": { "description": "Org deleted" } } }
+      "get": {
+        "tags": [
+          "Organizations"
+        ],
+        "summary": "Get organization",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Organization details"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Organizations"
+        ],
+        "summary": "Update organization",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Org updated"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Organizations"
+        ],
+        "summary": "Delete organization",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Org deleted"
+          }
+        }
+      }
     },
     "/orgs/{orgId}/settings": {
-      "get": { "tags": ["Organizations"], "summary": "Get org settings", "parameters": [{"name":"orgId","in":"path","required":true,"schema":{"type":"string","format":"uuid"}}], "responses": { "200": { "description": "Settings" } } },
-      "put": { "tags": ["Organizations"], "summary": "Update org settings", "parameters": [{"name":"orgId","in":"path","required":true,"schema":{"type":"string","format":"uuid"}}], "responses": { "200": { "description": "Settings updated" } } }
+      "get": {
+        "tags": [
+          "Organizations"
+        ],
+        "summary": "Get org settings",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Settings"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Organizations"
+        ],
+        "summary": "Partial update org settings",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Settings updated"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Organizations"
+        ],
+        "summary": "Replace org settings",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Settings updated"
+          }
+        }
+      }
     },
     "/orgs/{orgId}/members": {
-      "post": { "tags": ["Members"], "summary": "Invite member", "parameters": [{"name":"orgId","in":"path","required":true,"schema":{"type":"string","format":"uuid"}}], "responses": { "201": { "description": "Invite sent" } } },
-      "get": { "tags": ["Members"], "summary": "List members", "parameters": [{"name":"orgId","in":"path","required":true,"schema":{"type":"string","format":"uuid"}}], "responses": { "200": { "description": "Members list" } } }
+      "post": {
+        "tags": [
+          "Members"
+        ],
+        "summary": "Invite member",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Invite sent"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Members"
+        ],
+        "summary": "List members",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/perPage"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Members list"
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/members/{userId}": {
+      "patch": {
+        "tags": [
+          "Members"
+        ],
+        "summary": "Change member role",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/userId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Role updated"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Members"
+        ],
+        "summary": "Remove member",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/userId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Member removed"
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/invites": {
+      "post": {
+        "tags": [
+          "Invites"
+        ],
+        "summary": "Invite member to org",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Invite sent"
+          }
+        }
+      }
+    },
+    "/invites/{token}/accept": {
+      "post": {
+        "tags": [
+          "Invites"
+        ],
+        "summary": "Accept invite",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invite accepted"
+          }
+        }
+      }
     },
     "/orgs/{orgId}/domains": {
-      "post": { "tags": ["Domains"], "summary": "Add domain", "parameters": [{"name":"orgId","in":"path","required":true,"schema":{"type":"string","format":"uuid"}}], "responses": { "201": { "description": "Domain added" } } },
-      "get": { "tags": ["Domains"], "summary": "List domains", "parameters": [{"name":"orgId","in":"path","required":true,"schema":{"type":"string","format":"uuid"}}], "responses": { "200": { "description": "Domain list" } } }
+      "post": {
+        "tags": [
+          "Domains"
+        ],
+        "summary": "Add domain",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Domain added"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Domains"
+        ],
+        "summary": "List domains",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/perPage"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Domain list"
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/domains/{domainId}": {
+      "get": {
+        "tags": [
+          "Domains"
+        ],
+        "summary": "Get domain",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/domainId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Domain details"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Domains"
+        ],
+        "summary": "Update domain",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/domainId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Domain updated"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Domains"
+        ],
+        "summary": "Delete domain",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/domainId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Domain deleted"
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/domains/{domainId}/verify": {
+      "post": {
+        "tags": [
+          "Domains"
+        ],
+        "summary": "Trigger DNS verification",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/domainId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Verification triggered"
+          }
+        }
+      }
     },
     "/orgs/{orgId}/teams": {
-      "post": { "tags": ["Teams"], "summary": "Create team", "parameters": [{"name":"orgId","in":"path","required":true,"schema":{"type":"string","format":"uuid"}}], "responses": { "201": { "description": "Team created" } } },
-      "get": { "tags": ["Teams"], "summary": "List teams", "parameters": [{"name":"orgId","in":"path","required":true,"schema":{"type":"string","format":"uuid"}}], "responses": { "200": { "description": "Team list" } } }
+      "post": {
+        "tags": [
+          "Teams"
+        ],
+        "summary": "Create team",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Team created"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Teams"
+        ],
+        "summary": "List teams",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/perPage"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Team list"
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/teams/{teamId}": {
+      "get": {
+        "tags": [
+          "Teams"
+        ],
+        "summary": "Get team",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Team details"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Teams"
+        ],
+        "summary": "Update team",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Team updated"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Teams"
+        ],
+        "summary": "Delete team",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Team deleted"
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/teams/{teamId}/members": {
+      "post": {
+        "tags": [
+          "Team Members"
+        ],
+        "summary": "Add team member",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Member added"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Team Members"
+        ],
+        "summary": "List team members",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          },
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/perPage"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Members list"
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/teams/{teamId}/members/{userId}": {
+      "patch": {
+        "tags": [
+          "Team Members"
+        ],
+        "summary": "Change team member role",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          },
+          {
+            "$ref": "#/components/parameters/userId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Role updated"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Team Members"
+        ],
+        "summary": "Remove team member",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          },
+          {
+            "$ref": "#/components/parameters/userId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Member removed"
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/teams/{teamId}/domains": {
+      "post": {
+        "tags": [
+          "Domain Assignments"
+        ],
+        "summary": "Assign domain to team",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Domain assigned"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Domain Assignments"
+        ],
+        "summary": "List domain assignments",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          },
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/perPage"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Assignment list"
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/teams/{teamId}/domains/{domainId}": {
+      "patch": {
+        "tags": [
+          "Domain Assignments"
+        ],
+        "summary": "Update domain assignment",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          },
+          {
+            "$ref": "#/components/parameters/domainId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Assignment updated"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Domain Assignments"
+        ],
+        "summary": "Unassign domain from team",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          },
+          {
+            "$ref": "#/components/parameters/domainId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Domain unassigned"
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/teams/{teamId}/inboxes": {
+      "get": {
+        "tags": [
+          "Inboxes"
+        ],
+        "summary": "List team inboxes",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          },
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/perPage"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Inbox list"
+          }
+        }
+      }
     },
     "/orgs/{orgId}/teams/{teamId}/webhooks": {
-      "post": { "tags": ["Webhooks"], "summary": "Create webhook", "responses": { "201": { "description": "Webhook created" } } },
-      "get": { "tags": ["Webhooks"], "summary": "List webhooks", "responses": { "200": { "description": "Webhook list" } } }
+      "post": {
+        "tags": [
+          "Webhooks"
+        ],
+        "summary": "Create webhook",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Webhook created"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Webhooks"
+        ],
+        "summary": "List webhooks",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          },
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/perPage"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Webhook list"
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/teams/{teamId}/webhooks/{webhookId}": {
+      "patch": {
+        "tags": [
+          "Webhooks"
+        ],
+        "summary": "Update webhook",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          },
+          {
+            "$ref": "#/components/parameters/webhookId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Webhook updated"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Webhooks"
+        ],
+        "summary": "Delete webhook",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          },
+          {
+            "$ref": "#/components/parameters/webhookId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Webhook deleted"
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/teams/{teamId}/webhooks/{webhookId}/deliveries": {
+      "get": {
+        "tags": [
+          "Webhooks"
+        ],
+        "summary": "List delivery logs",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          },
+          {
+            "$ref": "#/components/parameters/webhookId"
+          },
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/perPage"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Delivery logs"
+          }
+        }
+      }
     },
     "/orgs/{orgId}/teams/{teamId}/api-keys": {
-      "post": { "tags": ["API Keys"], "summary": "Create API key", "responses": { "201": { "description": "Key created" } } },
-      "get": { "tags": ["API Keys"], "summary": "List API keys", "responses": { "200": { "description": "Key list" } } }
+      "post": {
+        "tags": [
+          "API Keys"
+        ],
+        "summary": "Create API key",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Key created"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "API Keys"
+        ],
+        "summary": "List API keys",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          },
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/perPage"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Key list"
+          }
+        }
+      }
     },
-    "/orgs/{orgId}/audit": {
-      "get": { "tags": ["Audit"], "summary": "List audit logs", "parameters": [{"name":"orgId","in":"path","required":true,"schema":{"type":"string","format":"uuid"}}], "responses": { "200": { "description": "Audit log entries" } } }
+    "/orgs/{orgId}/teams/{teamId}/api-keys/{keyId}": {
+      "delete": {
+        "tags": [
+          "API Keys"
+        ],
+        "summary": "Revoke API key",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          },
+          {
+            "$ref": "#/components/parameters/keyId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Key revoked"
+          }
+        }
+      }
     },
     "/orgs/{orgId}/analytics": {
-      "get": { "tags": ["Analytics"], "summary": "Get org analytics", "responses": { "200": { "description": "Analytics data" } } }
+      "get": {
+        "tags": [
+          "Analytics"
+        ],
+        "summary": "Get org analytics",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Analytics data"
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/analytics/emails-per-day": {
+      "get": {
+        "tags": [
+          "Analytics"
+        ],
+        "summary": "Org emails per day",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Time series data"
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/teams/{teamId}/analytics": {
+      "get": {
+        "tags": [
+          "Analytics"
+        ],
+        "summary": "Get team analytics",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Team analytics"
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/teams/{teamId}/analytics/emails-per-day": {
+      "get": {
+        "tags": [
+          "Analytics"
+        ],
+        "summary": "Team emails per day",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Time series data"
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/audit": {
+      "get": {
+        "tags": [
+          "Audit"
+        ],
+        "summary": "List audit logs",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/perPage"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Audit log entries"
+          }
+        }
+      }
     },
     "/inboxes": {
-      "post": { "tags": ["Inboxes"], "summary": "Create inbox", "responses": { "201": { "description": "Inbox created" } } },
-      "get": { "tags": ["Inboxes"], "summary": "List my inboxes", "responses": { "200": { "description": "Inbox list" } } }
+      "post": {
+        "tags": [
+          "Inboxes"
+        ],
+        "summary": "Create inbox",
+        "responses": {
+          "201": {
+            "description": "Inbox created"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Inboxes"
+        ],
+        "summary": "List my inboxes",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/perPage"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Inbox list"
+          }
+        }
+      }
     },
     "/inboxes/{inboxId}": {
-      "get": { "tags": ["Inboxes"], "summary": "Get inbox", "parameters": [{"name":"inboxId","in":"path","required":true,"schema":{"type":"string","format":"uuid"}}], "responses": { "200": { "description": "Inbox details" } } },
-      "delete": { "tags": ["Inboxes"], "summary": "Delete inbox", "parameters": [{"name":"inboxId","in":"path","required":true,"schema":{"type":"string","format":"uuid"}}], "responses": { "200": { "description": "Inbox deleted" } } }
+      "get": {
+        "tags": [
+          "Inboxes"
+        ],
+        "summary": "Get inbox",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/inboxId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Inbox details"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Inboxes"
+        ],
+        "summary": "Delete inbox",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/inboxId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Inbox deleted"
+          }
+        }
+      }
+    },
+    "/inboxes/{inboxId}/extend": {
+      "post": {
+        "tags": [
+          "Inboxes"
+        ],
+        "summary": "Extend inbox TTL",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/inboxId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "TTL extended"
+          }
+        }
+      }
     },
     "/inboxes/{inboxId}/emails": {
-      "get": { "tags": ["Emails"], "summary": "List emails in inbox", "parameters": [{"name":"inboxId","in":"path","required":true,"schema":{"type":"string","format":"uuid"}}], "responses": { "200": { "description": "Email list" } } }
+      "get": {
+        "tags": [
+          "Emails"
+        ],
+        "summary": "List emails in inbox",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/inboxId"
+          },
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/perPage"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Email list"
+          }
+        }
+      }
     },
     "/emails/{emailId}": {
-      "get": { "tags": ["Emails"], "summary": "Get email", "parameters": [{"name":"emailId","in":"path","required":true,"schema":{"type":"string","format":"uuid"}}], "responses": { "200": { "description": "Email details" } } },
-      "patch": { "tags": ["Emails"], "summary": "Mark read/unread", "parameters": [{"name":"emailId","in":"path","required":true,"schema":{"type":"string","format":"uuid"}}], "responses": { "200": { "description": "Email updated" } } },
-      "delete": { "tags": ["Emails"], "summary": "Delete email", "parameters": [{"name":"emailId","in":"path","required":true,"schema":{"type":"string","format":"uuid"}}], "responses": { "200": { "description": "Email deleted" } } }
+      "get": {
+        "tags": [
+          "Emails"
+        ],
+        "summary": "Get email",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/emailId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Email details"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Emails"
+        ],
+        "summary": "Mark read/unread",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/emailId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Email updated"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Emails"
+        ],
+        "summary": "Delete email",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/emailId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Email deleted"
+          }
+        }
+      }
     },
     "/emails/{emailId}/attachments/{attachmentId}": {
-      "get": { "tags": ["Emails"], "summary": "Download attachment", "responses": { "302": { "description": "Redirect to presigned URL" } } }
-    },
-    "/ws/inboxes/{inboxId}": {
-      "get": { "tags": ["WebSocket"], "summary": "Real-time inbox updates", "responses": { "101": { "description": "WebSocket upgrade" } } }
+      "get": {
+        "tags": [
+          "Emails"
+        ],
+        "summary": "Download attachment",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/emailId"
+          },
+          {
+            "$ref": "#/components/parameters/attachmentId"
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirect to presigned URL"
+          }
+        }
+      }
     },
     "/admin/stats": {
-      "get": { "tags": ["Admin"], "summary": "System statistics", "responses": { "200": { "description": "System stats" } } }
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "System statistics",
+        "responses": {
+          "200": {
+            "description": "System stats"
+          }
+        }
+      }
     },
     "/admin/orgs": {
-      "get": { "tags": ["Admin"], "summary": "List all organizations", "responses": { "200": { "description": "All orgs" } } }
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "List all organizations",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/perPage"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "All orgs"
+          }
+        }
+      }
     },
     "/admin/health": {
-      "get": { "tags": ["Admin"], "summary": "System health check", "responses": { "200": { "description": "Health status" } } }
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "System health check",
+        "responses": {
+          "200": {
+            "description": "Health status"
+          }
+        }
+      }
+    },
+    "/ws/inboxes/{inboxId}": {
+      "get": {
+        "tags": [
+          "WebSocket"
+        ],
+        "summary": "Real-time inbox updates",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/inboxId"
+          }
+        ],
+        "responses": {
+          "101": {
+            "description": "WebSocket upgrade"
+          }
+        }
+      }
+    },
+    "/ws/notifications": {
+      "get": {
+        "tags": [
+          "WebSocket"
+        ],
+        "summary": "Real-time user notifications",
+        "responses": {
+          "101": {
+            "description": "WebSocket upgrade"
+          }
+        }
+      }
     }
   }
 }

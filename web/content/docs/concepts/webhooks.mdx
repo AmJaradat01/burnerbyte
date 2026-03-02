@@ -25,10 +25,10 @@ The response includes a `secret` — the HMAC-SHA256 signing key. **Shown only o
 
 ## HMAC-SHA256 Signing
 
-Every delivery includes an `X-Signature-256` header:
+Every delivery includes an `X-BurnerByte-Signature` header:
 
 ```
-X-Signature-256: sha256=<hex-encoded-hmac>
+X-BurnerByte-Signature: <hex-encoded-hmac>
 ```
 
 ## Retry Logic
@@ -40,9 +40,8 @@ Failed deliveries (non-2xx or timeout) are retried with exponential backoff:
 | 1 | Immediate |
 | 2 | 1 second |
 | 3 | 5 seconds |
-| 4 | 25 seconds |
 
-After 4 failed attempts, the delivery is marked as permanently failed.
+After 3 failed attempts, the delivery is marked as permanently failed.
 
 ## Delivery Logs
 

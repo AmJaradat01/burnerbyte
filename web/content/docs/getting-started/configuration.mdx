@@ -136,7 +136,9 @@ Mailer config can be overridden at runtime via the setup wizard. Values are stor
 | `defaults.invite_expiry_ttl` | `BB_DEFAULTS_INVITE_EXPIRY_TTL` | `48h` | Invite link lifetime |
 | `defaults.presigned_url_ttl` | `BB_DEFAULTS_PRESIGNED_URL_TTL` | `15m` | Attachment download URL lifetime |
 | `defaults.webhook_timeout` | `BB_DEFAULTS_WEBHOOK_TIMEOUT` | `10s` | Webhook HTTP timeout |
+| `defaults.webhook_max_retries` | `BB_DEFAULTS_WEBHOOK_MAX_RETRIES` | `3` | Max webhook delivery attempts |
 | `defaults.analytics_cache_ttl` | `BB_DEFAULTS_ANALYTICS_CACHE_TTL` | `2h` | Analytics cache duration |
+| `defaults.analytics_default_days` | `BB_DEFAULTS_ANALYTICS_DEFAULT_DAYS` | `30` | Default days for emails-per-day charts |
 
 ## Workers
 
@@ -153,7 +155,15 @@ Mailer config can be overridden at runtime via the setup wizard. Values are stor
 | Key | Env Var | Description |
 |---|---|---|
 | `cors.allowed_origins` | `BB_CORS_ALLOWED_ORIGINS` | Comma-separated origins |
+| `cors.allowed_methods` | `BB_CORS_ALLOWED_METHODS` | Allowed HTTP methods |
+| `cors.allowed_headers` | `BB_CORS_ALLOWED_HEADERS` | Allowed request headers |
 | `cors.max_age` | `BB_CORS_MAX_AGE` | Preflight cache duration (seconds) |
+
+## Email Verification
+
+| Key | Env Var | Default | Description |
+|---|---|---|---|
+| `email_verification.enabled` | `BB_EMAIL_VERIFICATION_ENABLED` | `true` | Require email verification on registration |
 
 ## Logging & Metrics
 

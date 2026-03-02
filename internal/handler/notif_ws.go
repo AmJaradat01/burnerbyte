@@ -56,7 +56,7 @@ func (h *NotifWSHandler) NotificationsWS(w http.ResponseWriter, r *http.Request)
 
 	// Writer
 	go func() {
-		pingTicker := time.NewTicker(54 * time.Second)
+		pingTicker := time.NewTicker(wsPingPeriod)
 		defer pingTicker.Stop()
 		defer conn.Close()
 		for {
@@ -66,12 +66,12 @@ func (h *NotifWSHandler) NotificationsWS(w http.ResponseWriter, r *http.Request)
 					conn.WriteMessage(websocket.CloseMessage, nil)
 					return
 				}
-				conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+				conn.SetWriteDeadline(time.Now().Add(wsWriteWait))
 				if err := conn.WriteMessage(websocket.TextMessage, msg); err != nil {
 					return
 				}
 			case <-pingTicker.C:
-				conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+				conn.SetWriteDeadline(time.Now().Add(wsWriteWait))
 				if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 					return
 				}
@@ -82,9 +82,9 @@ func (h *NotifWSHandler) NotificationsWS(w http.ResponseWriter, r *http.Request)
 	}()
 
 	// Reader (just handles pong/close)
-	conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+	conn.SetReadDeadline(time.Now().Add(wsPongWait))
 	conn.SetPongHandler(func(string) error {
-		conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+		conn.SetReadDeadline(time.Now().Add(wsPongWait))
 		return nil
 	})
 	for {

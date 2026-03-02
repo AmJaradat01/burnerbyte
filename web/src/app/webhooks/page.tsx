@@ -18,10 +18,10 @@ import { Pagination } from "@/components/pagination";
 import { ErrorState } from "@/components/error-state";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EmptyState } from "@/components/empty-state";
+import type { PaginatedResponse } from "@/types";
 
 interface Webhook { id: string; team_id: string; url: string; events: string[]; active: boolean; failure_count: number; last_status?: number; created_at: string; }
 interface DeliveryLog { id: string; webhook_id: string; event: string; response_status?: number; response_time_ms?: number; success: boolean; attempt: number; created_at: string; }
-interface PaginatedResponse<T> { data: T[]; total: number; page: number; per_page: number; total_pages: number; }
 
 export default function WebhooksPage() {
   const { currentOrg, currentTeam } = useOrgStore();

@@ -16,13 +16,13 @@ import { Pagination } from "@/components/pagination";
 import { ErrorState } from "@/components/error-state";
 import { toast } from "sonner";
 import { timeAgo } from "@/lib/time";
+import type { PaginatedResponse } from "@/types";
 
 interface AuditEntry {
   id: string; actor_id: string; actor_email?: string; action: string;
   resource_type: string; resource_id: string; metadata?: Record<string, unknown>;
   ip_address?: string; created_at: string;
 }
-interface PaginatedResponse<T> { data: T[]; total: number; page: number; per_page: number; total_pages: number; }
 
 function exportCSV(entries: AuditEntry[]) {
   const header = "Time,Actor,Action,Resource Type,Resource ID,IP Address";
