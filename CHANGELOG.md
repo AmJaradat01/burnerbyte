@@ -1,5 +1,47 @@
 # Changelog
 
+## v0.7.8 (2026-03-02)
+
+### Documentation
+- Synced all `/docs` pages with actual API implementation
+- Fixed team role names in RBAC docs (`team_admin` → `lead`, `team_member` → `member`, `team_viewer` → `viewer`)
+- Fixed audit log permission matrix (requires `admin`, not `member`)
+- Fixed API key hashing docs (`bcrypt` → `SHA-256`)
+- Fixed webhook signature header (`X-Signature-256` → `X-BurnerByte-Signature`)
+- Fixed webhook retry count (4 → 3 attempts)
+- Fixed SSO provider config example (short name → OIDC issuer URL)
+- Fixed settings cascade: `max_attachment_size_mb` is org-only, added branding fields
+- Fixed Docker service count (5 → 6)
+- Fixed Go version in installation docs (1.22+ → 1.25+)
+- Fixed Next.js version in README badge and tech stack (15 → 16)
+- Fixed page count in architecture overview (24 → 26)
+- Fixed attachment cascade description (org → domain → team → org → domain assignment)
+- Added missing `GET /orgs/:id/teams/:tid/inboxes` to API reference
+- Added missing Docs endpoint group to API reference
+- Clarified health endpoints are root-level (not under `/api/v1`)
+- Added missing CORS fields and email verification config to configuration docs
+- Documented new `webhook_max_retries` and `analytics_default_days` config options
+
+### Backend
+- Made webhook max retries configurable (`defaults.webhook_max_retries`, default: 3)
+- Made analytics default days configurable (`defaults.analytics_default_days`, default: 30)
+- Fixed SSO cookie `Secure` flag — derived from `FrontendURL` scheme instead of hardcoded `true`
+- Deduplicated WebSocket constants in `notif_ws.go` (reuses shared constants from `ws.go`)
+
+### Frontend
+- Deduplicated `WS_BASE` — single export from `lib/api.ts`
+- Deduplicated `PaginatedResponse` — removed 5 local redefinitions, import from `@/types`
+
+### OpenAPI
+- Expanded spec from ~30 to 52 paths covering all registered endpoints
+- Added 9 new schemas (Webhook, APIKey, DomainAssignment, Membership, Session, AuditEntry, Invite, PaginatedResponse)
+- Added reusable parameter components
+- Bumped spec version to 0.7.8
+
+### Version Bumps
+- Frontend: 0.1.0 → 0.7.8
+- OpenAPI spec: 0.6.12 → 0.7.8
+
 ## v0.7.7 (2026-03-01)
 
 ### CI/CD

@@ -22,15 +22,20 @@ import (
 type Dispatcher struct {
 	webhookRepo *postgres.WebhookRepo
 	client      *http.Client
+	maxRetries  int
 }
 
-func NewDispatcher(webhookRepo *postgres.WebhookRepo, timeout time.Duration) *Dispatcher {
+func NewDispatcher(webhookRepo *postgres.WebhookRepo, timeout time.Duration, maxRetries int) *Dispatcher {
 	if timeout <= 0 {
 		timeout = 10 * time.Second
+	}
+	if maxRetries <= 0 {
+		maxRetries = 3
 	}
 	return &Dispatcher{
 		webhookRepo: webhookRepo,
 		client:      &http.Client{Timeout: timeout},
+		maxRetries:  maxRetries,
 	}
 }
 
@@ -60,7 +65,7 @@ func (d *Dispatcher) deliver(ctx context.Context, wh domain.Webhook, event strin
 	idempotencyKey := fmt.Sprintf("%s:%s", uuid.New(), wh.ID)
 	backoffs := []time.Duration{0, 1 * time.Second, 5 * time.Second, 25 * time.Second}
 
-	for attempt := 1; attempt <= 3; attempt++ {
+	for attempt := 1; attempt <= d.maxRetries; attempt++ {
 		if attempt > 1 {
 			time.Sleep(backoffs[attempt])
 		}

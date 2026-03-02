@@ -1,6 +1,6 @@
 ---
 title: BurnerByte Documentation
-description: Self-hosted, open-source temporary email platform with multi-org, multi-team, multi-domain architecture.
+description: Self-hosted, open-source temporary email platform with multi-team, multi-domain architecture.
 ---
 
 ## Welcome
@@ -13,7 +13,7 @@ BurnerByte is a self-hosted temporary email platform built for teams that need d
 - **Multi-team, multi-domain** — Single org with teams scoped to specific domains
 - **Full RBAC** — 6 roles across org and team levels
 - **Real-time delivery** — WebSocket streaming for instant email notifications
-- **Configurable attachments** — Policy inheritance from org → domain → team
+- **Configurable attachments** — Policy inheritance from org → domain assignment
 - **Webhooks** — HMAC-SHA256 signed with retry and delivery logs
 - **Scoped API keys** — Programmatic access with granular permissions
 - **Audit logging** — Full activity trail with filtering and CSV export
@@ -60,7 +60,7 @@ Two separate Go binaries scale independently:
 
 | Layer | Technology |
 |---|---|
-| Backend | Go 1.22+, Chi router, pgxpool, go-redis, gorilla/websocket, enmime |
+| Backend | Go 1.25+, Chi router, pgxpool, go-redis, gorilla/websocket, enmime |
 | Frontend | Next.js 16, React 19, shadcn/ui, Tailwind CSS 4, Zustand, TanStack Query, Recharts |
 | Database | PostgreSQL 16 (21 migrations, 52+ indexes, 7 triggers) |
 | Cache | Redis 7 |
