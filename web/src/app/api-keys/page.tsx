@@ -17,9 +17,9 @@ import { Pagination } from "@/components/pagination";
 import { ErrorState } from "@/components/error-state";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EmptyState } from "@/components/empty-state";
+import type { PaginatedResponse } from "@/types";
 
 interface ApiKey { id: string; name: string; key_prefix: string; scopes: string[]; expires_at?: string; last_used_at?: string; created_at: string; }
-interface PaginatedResponse<T> { data: T[]; total: number; page: number; per_page: number; total_pages: number; }
 
 export default function ApiKeysPage() {
   const { currentOrg, currentTeam } = useOrgStore();

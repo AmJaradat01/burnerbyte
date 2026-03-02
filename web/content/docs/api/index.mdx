@@ -89,7 +89,7 @@ X-RateLimit-Reset: 1709251200
 | Teams | `POST /orgs/:id/teams`, `GET /orgs/:id/teams`, `GET /orgs/:id/teams/:tid`, `PATCH /orgs/:id/teams/:tid`, `DELETE /orgs/:id/teams/:tid` |
 | Team Members | `POST .../teams/:tid/members`, `GET .../members`, `PATCH .../members/:uid`, `DELETE .../members/:uid` |
 | Domain Assignments | `POST .../teams/:tid/domains`, `GET .../domains`, `PATCH .../domains/:did`, `DELETE .../domains/:did` |
-| Inboxes | `POST /inboxes`, `GET /inboxes`, `GET /inboxes/:id`, `POST /inboxes/:id/extend`, `DELETE /inboxes/:id` |
+| Inboxes | `POST /inboxes`, `GET /inboxes`, `GET /inboxes/:id`, `POST /inboxes/:id/extend`, `DELETE /inboxes/:id`, `GET /orgs/:id/teams/:tid/inboxes` |
 | Emails | `GET /inboxes/:id/emails`, `GET /emails/:id`, `PATCH /emails/:id`, `DELETE /emails/:id`, `GET /emails/:id/attachments/:aid` |
 | Webhooks | `POST .../webhooks`, `GET .../webhooks`, `PATCH .../webhooks/:wid`, `DELETE .../webhooks/:wid`, `GET .../webhooks/:wid/deliveries` |
 | API Keys | `POST .../api-keys`, `GET .../api-keys`, `DELETE .../api-keys/:kid` |
@@ -97,4 +97,5 @@ X-RateLimit-Reset: 1709251200
 | Audit | `GET /orgs/:id/audit` |
 | Admin | `GET /admin/stats`, `GET /admin/orgs`, `GET /admin/health` |
 | WebSocket | `GET /ws/inboxes/:id`, `GET /ws/notifications` |
-| Health | `GET /healthz`, `GET /readyz`, `GET /metrics` |
+| Docs | `GET /docs`, `GET /docs/openapi.json` |
+| Health | `GET /healthz`, `GET /readyz`, `GET /metrics` (root level, not under `/api/v1`) |

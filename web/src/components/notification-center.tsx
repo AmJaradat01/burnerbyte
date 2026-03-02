@@ -2,11 +2,10 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useAuthStore } from "@/stores/auth-store";
+import { WS_BASE } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-
-const WS_BASE = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8080/api/v1/ws";
 
 interface Notification {
   id: string;

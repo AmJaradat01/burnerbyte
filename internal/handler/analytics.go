@@ -11,10 +11,16 @@ import (
 	"gitlab.com/amjaradat01/burnerbyte/internal/service"
 )
 
-type AnalyticsHandler struct{ svc *service.AnalyticsService }
+type AnalyticsHandler struct {
+	svc         *service.AnalyticsService
+	defaultDays int
+}
 
-func NewAnalyticsHandler(svc *service.AnalyticsService) *AnalyticsHandler {
-	return &AnalyticsHandler{svc: svc}
+func NewAnalyticsHandler(svc *service.AnalyticsService, defaultDays int) *AnalyticsHandler {
+	if defaultDays <= 0 {
+		defaultDays = 30
+	}
+	return &AnalyticsHandler{svc: svc, defaultDays: defaultDays}
 }
 
 func (h *AnalyticsHandler) Routes(r chi.Router) {
@@ -42,7 +48,7 @@ func (h *AnalyticsHandler) OrgEmailsPerDay(w http.ResponseWriter, r *http.Reques
 	if checkOrgRole(w, r, orgID, rbac.OrgMember) {
 		return
 	}
-	days := 30
+	days := h.defaultDays
 	if v, err := strconv.Atoi(r.URL.Query().Get("days")); err == nil && v > 0 && v <= 365 {
 		days = v
 	}
@@ -74,7 +80,7 @@ func (h *AnalyticsHandler) TeamEmailsPerDay(w http.ResponseWriter, r *http.Reque
 	if checkTeamRole(w, r, orgID, teamID, rbac.OrgMember, rbac.TeamViewer) {
 		return
 	}
-	days := 30
+	days := h.defaultDays
 	if v, err := strconv.Atoi(r.URL.Query().Get("days")); err == nil && v > 0 && v <= 365 {
 		days = v
 	}

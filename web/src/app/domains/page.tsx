@@ -17,9 +17,7 @@ import { Pagination } from "@/components/pagination";
 import { ErrorState } from "@/components/error-state";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EmptyState } from "@/components/empty-state";
-import type { Domain } from "@/types";
-
-interface PaginatedResponse<T> { data: T[]; total: number; page: number; per_page: number; total_pages: number; }
+import type { Domain, PaginatedResponse } from "@/types";
 
 export default function DomainsPage() {
   const { currentOrg } = useOrgStore();

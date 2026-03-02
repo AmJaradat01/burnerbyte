@@ -4,7 +4,7 @@
 [![Release](https://gitlab.com/amjaradat01/burnerbyte/-/badges/release.svg)](https://gitlab.com/amjaradat01/burnerbyte/-/releases)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.25-00ADD8?logo=go&logoColor=white)](https://go.dev/)
-[![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js&logoColor=white)](https://nextjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js&logoColor=white)](https://nextjs.org/)
 [![Docker](https://img.shields.io/badge/self--hosted-docker-2496ED?logo=docker&logoColor=white)](docker-compose.yml)
 
 Self-hosted, open-source temporary email platform with multi-team, multi-domain architecture.
@@ -148,7 +148,7 @@ On first launch, navigate to `http://localhost:3000` — the setup wizard will g
 ## Tech Stack
 
 - **Backend**: Go 1.25, Chi, pgxpool, go-redis, MinIO
-- **Frontend**: Next.js 15, shadcn/ui, Tailwind CSS, Zustand, TanStack Query, Recharts
+- **Frontend**: Next.js 16, shadcn/ui, Tailwind CSS, Zustand, TanStack Query, Recharts
 - **Docs**: Fumadocs (MDX, full-text search)
 - **Infrastructure**: PostgreSQL 16, Redis 7, MinIO, Docker
 - **CI/CD**: GitLab CI (lint, build, test, Docker registry)
