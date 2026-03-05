@@ -75,9 +75,20 @@ func (r *InboxRepo) GetByFullAddress(ctx context.Context, addr string) (*domain.
 }
 
 func (r *InboxRepo) ListByUser(ctx context.Context, userID uuid.UUID, page, perPage int) ([]domain.Inbox, int, error) {
+	status := "active" // default kept for backward compat
+	return r.listByUser(ctx, userID, status, page, perPage)
+}
+
+func (r *InboxRepo) ListByUserWithStatus(ctx context.Context, userID uuid.UUID, status string, page, perPage int) ([]domain.Inbox, int, error) {
+	return r.listByUser(ctx, userID, status, page, perPage)
+}
+
+func (r *InboxRepo) listByUser(ctx context.Context, userID uuid.UUID, status string, page, perPage int) ([]domain.Inbox, int, error) {
+	statusFilter := statusClause(status)
+
 	var total int
 	err := r.db.QueryRow(ctx,
-		`SELECT COUNT(*) FROM inboxes WHERE created_by = $1 AND is_active = TRUE`, userID).Scan(&total)
+		`SELECT COUNT(*) FROM inboxes WHERE created_by = $1`+statusFilter, userID).Scan(&total)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -85,9 +96,11 @@ func (r *InboxRepo) ListByUser(ctx context.Context, userID uuid.UUID, page, perP
 	offset := (page - 1) * perPage
 	rows, err := r.db.Query(ctx,
 		`SELECT i.id, i.domain_assignment_id, i.domain_id, i.created_by, i.address, i.full_address,
-		        i.is_active, i.expires_at, i.created_at, d.domain_name
+		        i.is_active, i.expires_at, i.created_at, d.domain_name,
+		        (SELECT COUNT(*) FROM emails e WHERE e.inbox_id = i.id),
+		        (SELECT COUNT(*) FROM emails e WHERE e.inbox_id = i.id AND e.is_read = FALSE)
 		 FROM inboxes i JOIN domains d ON i.domain_id = d.id
-		 WHERE i.created_by = $1 AND i.is_active = TRUE
+		 WHERE i.created_by = $1`+statusFilter+`
 		 ORDER BY i.created_at DESC LIMIT $2 OFFSET $3`, userID, perPage, offset)
 	if err != nil {
 		return nil, 0, err
@@ -98,7 +111,7 @@ func (r *InboxRepo) ListByUser(ctx context.Context, userID uuid.UUID, page, perP
 	for rows.Next() {
 		var i domain.Inbox
 		if err := rows.Scan(&i.ID, &i.DomainAssignmentID, &i.DomainID, &i.CreatedBy, &i.Address, &i.FullAddress,
-			&i.IsActive, &i.ExpiresAt, &i.CreatedAt, &i.DomainName); err != nil {
+			&i.IsActive, &i.ExpiresAt, &i.CreatedAt, &i.DomainName, &i.EmailCount, &i.UnreadCount); err != nil {
 			return nil, 0, err
 		}
 		inboxes = append(inboxes, i)
@@ -106,12 +119,33 @@ func (r *InboxRepo) ListByUser(ctx context.Context, userID uuid.UUID, page, perP
 	return inboxes, total, nil
 }
 
+func statusClause(status string) string {
+	switch status {
+	case "expired":
+		return " AND is_active = FALSE"
+	case "all":
+		return ""
+	default:
+		return " AND is_active = TRUE"
+	}
+}
+
 func (r *InboxRepo) ListByTeam(ctx context.Context, teamID, userID uuid.UUID, page, perPage int) ([]domain.Inbox, int, error) {
+	return r.listByTeam(ctx, teamID, userID, "active", page, perPage)
+}
+
+func (r *InboxRepo) ListByTeamWithStatus(ctx context.Context, teamID, userID uuid.UUID, status string, page, perPage int) ([]domain.Inbox, int, error) {
+	return r.listByTeam(ctx, teamID, userID, status, page, perPage)
+}
+
+func (r *InboxRepo) listByTeam(ctx context.Context, teamID, userID uuid.UUID, status string, page, perPage int) ([]domain.Inbox, int, error) {
+	sf := statusClause(status)
+
 	var total int
 	err := r.db.QueryRow(ctx,
 		`SELECT COUNT(*) FROM inboxes i
 		 JOIN domain_assignments da ON i.domain_assignment_id = da.id
-		 WHERE da.team_id = $1 AND i.created_by = $2 AND i.is_active = TRUE`, teamID, userID).Scan(&total)
+		 WHERE da.team_id = $1 AND i.created_by = $2`+sf, teamID, userID).Scan(&total)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -119,11 +153,13 @@ func (r *InboxRepo) ListByTeam(ctx context.Context, teamID, userID uuid.UUID, pa
 	offset := (page - 1) * perPage
 	rows, err := r.db.Query(ctx,
 		`SELECT i.id, i.domain_assignment_id, i.domain_id, i.created_by, i.address, i.full_address,
-		        i.is_active, i.expires_at, i.created_at, d.domain_name
+		        i.is_active, i.expires_at, i.created_at, d.domain_name,
+		        (SELECT COUNT(*) FROM emails e WHERE e.inbox_id = i.id),
+		        (SELECT COUNT(*) FROM emails e WHERE e.inbox_id = i.id AND e.is_read = FALSE)
 		 FROM inboxes i
 		 JOIN domains d ON i.domain_id = d.id
 		 JOIN domain_assignments da ON i.domain_assignment_id = da.id
-		 WHERE da.team_id = $1 AND i.created_by = $2 AND i.is_active = TRUE
+		 WHERE da.team_id = $1 AND i.created_by = $2`+sf+`
 		 ORDER BY i.created_at DESC LIMIT $3 OFFSET $4`, teamID, userID, perPage, offset)
 	if err != nil {
 		return nil, 0, err
@@ -134,7 +170,7 @@ func (r *InboxRepo) ListByTeam(ctx context.Context, teamID, userID uuid.UUID, pa
 	for rows.Next() {
 		var i domain.Inbox
 		if err := rows.Scan(&i.ID, &i.DomainAssignmentID, &i.DomainID, &i.CreatedBy, &i.Address, &i.FullAddress,
-			&i.IsActive, &i.ExpiresAt, &i.CreatedAt, &i.DomainName); err != nil {
+			&i.IsActive, &i.ExpiresAt, &i.CreatedAt, &i.DomainName, &i.EmailCount, &i.UnreadCount); err != nil {
 			return nil, 0, err
 		}
 		inboxes = append(inboxes, i)
