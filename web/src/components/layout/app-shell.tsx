@@ -73,7 +73,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   if (!setupCompleted) return <main className="min-h-screen">{children}</main>;
-  if ((isPublic || isLanding) && !user) return <main className="min-h-screen">{children}</main>;
+  if ((isPublic || isLanding) && !user) return <main className="min-h-screen bg-mesh">{children}</main>;
   if (isPublic) return <main className="min-h-screen">{children}</main>;
 
   // ── Admin layout: sidebar ──
@@ -92,7 +92,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Sidebar />
           </SheetContent>
         </Sheet>
-        <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex-1 flex flex-col min-h-0 bg-mesh">
           <main className="flex-1 overflow-auto p-4 pt-14 md:p-6 md:pt-6">
             <div className="flex items-center justify-between mb-4">
               <Breadcrumbs />
@@ -110,7 +110,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   // ── Regular user layout: top nav + footer ──
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen bg-mesh">
       <TopNav />
       <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 py-6">
         <div className="flex items-center justify-between mb-4">
