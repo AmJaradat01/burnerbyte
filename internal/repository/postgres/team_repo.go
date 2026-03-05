@@ -64,8 +64,11 @@ func (r *TeamRepo) ListByOrg(ctx context.Context, orgID uuid.UUID, page, perPage
 
 	offset := (page - 1) * perPage
 	rows, err := r.db.Query(ctx,
-		`SELECT id, org_id, name, slug, settings, created_at, updated_at
-		 FROM teams WHERE org_id = $1 ORDER BY name LIMIT $2 OFFSET $3`, orgID, perPage, offset)
+		`SELECT t.id, t.org_id, t.name, t.slug, t.settings, t.created_at, t.updated_at,
+		        (SELECT COUNT(*) FROM team_memberships tm WHERE tm.team_id = t.id),
+		        (SELECT COUNT(DISTINCT da.domain_id) FROM domain_assignments da WHERE da.team_id = t.id),
+		        (SELECT COUNT(*) FROM inboxes i JOIN domain_assignments da ON i.domain_assignment_id = da.id WHERE da.team_id = t.id AND i.is_active = TRUE)
+		 FROM teams t WHERE t.org_id = $1 ORDER BY t.name LIMIT $2 OFFSET $3`, orgID, perPage, offset)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -75,7 +78,8 @@ func (r *TeamRepo) ListByOrg(ctx context.Context, orgID uuid.UUID, page, perPage
 	for rows.Next() {
 		var t domain.Team
 		var settings []byte
-		if err := rows.Scan(&t.ID, &t.OrgID, &t.Name, &t.Slug, &settings, &t.CreatedAt, &t.UpdatedAt); err != nil {
+		if err := rows.Scan(&t.ID, &t.OrgID, &t.Name, &t.Slug, &settings, &t.CreatedAt, &t.UpdatedAt,
+			&t.MemberCount, &t.DomainCount, &t.ActiveInboxes); err != nil {
 			return nil, 0, err
 		}
 		_ = json.Unmarshal(settings, &t.Settings)

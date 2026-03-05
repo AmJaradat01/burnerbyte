@@ -3,9 +3,11 @@ export interface User {
   email: string;
   display_name: string;
   avatar_url?: string;
+  sso_provider?: string;
   is_system_admin: boolean;
   email_verified: boolean;
   created_at: string;
+  updated_at: string;
 }
 
 export interface TokenPair {
@@ -32,6 +34,8 @@ export interface OrgSettings {
   max_teams?: number;
   max_inboxes_per_domain?: number;
   enforce_sso?: boolean;
+  primary_color?: string;
+  footer_text?: string;
 }
 
 export interface Team {
@@ -41,6 +45,9 @@ export interface Team {
   slug: string;
   settings: Record<string, unknown>;
   created_at: string;
+  member_count: number;
+  domain_count: number;
+  active_inboxes: number;
 }
 
 export interface Domain {
@@ -50,7 +57,10 @@ export interface Domain {
   mx_verified: boolean;
   txt_verified: boolean;
   verification_record?: string;
+  dns_last_checked_at?: string;
   created_at: string;
+  active_inboxes: number;
+  team_count: number;
 }
 
 export interface DomainAssignment {
@@ -58,7 +68,10 @@ export interface DomainAssignment {
   team_id: string;
   domain_id: string;
   domain_name?: string;
+  access_level: string;
   settings: Record<string, unknown>;
+  default_ttl?: string;
+  max_ttl?: string;
   created_at: string;
 }
 
@@ -73,6 +86,8 @@ export interface Inbox {
   expires_at: string;
   created_at: string;
   domain_name?: string;
+  email_count: number;
+  unread_count: number;
 }
 
 export interface EmailSummary {
@@ -114,6 +129,9 @@ export interface Webhook {
   url: string;
   events: string[];
   active: boolean;
+  failure_count: number;
+  last_status?: number;
+  last_attempt_at?: string;
   created_at: string;
 }
 
@@ -124,6 +142,7 @@ export interface APIKey {
   key_prefix: string;
   scopes: string[];
   last_used_at?: string;
+  expires_at?: string;
   created_at: string;
 }
 

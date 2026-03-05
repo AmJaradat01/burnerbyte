@@ -17,6 +17,9 @@ type Domain struct {
 	Settings           DomainSettings `json:"settings"`
 	CreatedAt          time.Time      `json:"created_at"`
 	UpdatedAt          time.Time      `json:"updated_at"`
+	// Joined counts
+	ActiveInboxes int `json:"active_inboxes"`
+	TeamCount     int `json:"team_count"`
 }
 
 type DomainSettings struct {

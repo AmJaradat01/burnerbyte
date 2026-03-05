@@ -153,6 +153,12 @@ func (s *InboxService) ListByTeam(ctx context.Context, teamID, userID uuid.UUID,
 	return s.inboxRepo.ListByTeam(ctx, teamID, userID, page, perPage)
 }
 
+func (s *InboxService) ListByTeamWithStatus(ctx context.Context, teamID, userID uuid.UUID, status string, page, perPage int) ([]domain.Inbox, int, error) {
+	if page < 1 { page = 1 }
+	if perPage < 1 || perPage > 100 { perPage = 20 }
+	return s.inboxRepo.ListByTeamWithStatus(ctx, teamID, userID, status, page, perPage)
+}
+
 func (s *InboxService) ExtendTTL(ctx context.Context, id, userID uuid.UUID, extension string) (*domain.Inbox, error) {
 	inbox, err := s.inboxRepo.GetByID(ctx, id)
 	if err != nil {
@@ -162,17 +168,23 @@ func (s *InboxService) ExtendTTL(ctx context.Context, id, userID uuid.UUID, exte
 		return nil, fmt.Errorf("forbidden: not your inbox")
 	}
 
-	ext, err := time.ParseDuration(extension)
-	if err != nil {
-		return nil, fmt.Errorf("invalid extension format")
+	resolver := NewSettingsResolver(s.assignmentRepo, s.domainRepo, s.orgRepo, s.cfg.Defaults)
+
+	var ext time.Duration
+	if extension == "" {
+		ext = resolver.ResolveDefaultInboxTTL(ctx, inbox.DomainAssignmentID)
+	} else {
+		ext, err = time.ParseDuration(extension)
+		if err != nil {
+			return nil, fmt.Errorf("invalid extension format")
+		}
 	}
 
 	newExpiry := inbox.ExpiresAt.Add(ext)
-	resolver := NewSettingsResolver(s.assignmentRepo, s.domainRepo, s.orgRepo, s.cfg.Defaults)
 	maxTTL := resolver.ResolveMaxInboxTTL(ctx, inbox.DomainAssignmentID)
 	maxExpiry := inbox.CreatedAt.Add(maxTTL)
 	if newExpiry.After(maxExpiry) {
-		return nil, fmt.Errorf("extension would exceed max TTL")
+		return nil, fmt.Errorf("extension would exceed max TTL (%s)", maxTTL)
 	}
 
 	if err := s.inboxRepo.ExtendTTL(ctx, id, newExpiry); err != nil {
@@ -206,6 +218,12 @@ func (s *InboxService) DeleteInbox(ctx context.Context, id, userID uuid.UUID) er
 
 func (s *InboxService) ListByUser(ctx context.Context, userID uuid.UUID, page, perPage int) ([]domain.Inbox, int, error) {
 	return s.inboxRepo.ListByUser(ctx, userID, page, perPage)
+}
+
+func (s *InboxService) ListByUserWithStatus(ctx context.Context, userID uuid.UUID, status string, page, perPage int) ([]domain.Inbox, int, error) {
+	if page < 1 { page = 1 }
+	if perPage < 1 || perPage > 100 { perPage = 20 }
+	return s.inboxRepo.ListByUserWithStatus(ctx, userID, status, page, perPage)
 }
 
 func (s *InboxService) CreateInboxByAssignment(ctx context.Context, assignmentID, userID uuid.UUID, input domain.CreateInboxInput) (*domain.Inbox, error) {

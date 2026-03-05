@@ -17,8 +17,10 @@ type Inbox struct {
 	ExpiresAt          time.Time `json:"expires_at"`
 	CreatedAt          time.Time `json:"created_at"`
 	// Joined
-	DomainName string `json:"domain_name,omitempty"`
-	TeamID     uuid.UUID `json:"team_id,omitempty"`
+	DomainName   string    `json:"domain_name,omitempty"`
+	TeamID       uuid.UUID `json:"team_id,omitempty"`
+	EmailCount   int       `json:"email_count"`
+	UnreadCount  int       `json:"unread_count"`
 }
 
 type CreateInboxInput struct {
