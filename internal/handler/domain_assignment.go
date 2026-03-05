@@ -22,10 +22,24 @@ func NewDomainAssignmentHandler(svc *service.DomainAssignmentService) *DomainAss
 }
 
 func (h *DomainAssignmentHandler) Routes(r chi.Router) {
+		r.Get("/my/domains", h.ListMyDomains)
 		r.Post("/orgs/{orgId}/teams/{teamId}/domains", h.AssignDomain)
 		r.Get("/orgs/{orgId}/teams/{teamId}/domains", h.ListAssignments)
 		r.Patch("/orgs/{orgId}/teams/{teamId}/domains/{domainId}", h.UpdateAssignment)
 		r.Delete("/orgs/{orgId}/teams/{teamId}/domains/{domainId}", h.Unassign)
+}
+
+func (h *DomainAssignmentHandler) ListMyDomains(w http.ResponseWriter, r *http.Request) {
+	uc := auth.GetUser(r.Context())
+	assignments, err := h.svc.ListByUser(r.Context(), uc.UserID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to list domains")
+		return
+	}
+	if assignments == nil {
+		assignments = []domain.DomainAssignment{}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"data": assignments})
 }
 
 func (h *DomainAssignmentHandler) AssignDomain(w http.ResponseWriter, r *http.Request) {

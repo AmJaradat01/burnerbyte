@@ -47,7 +47,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     }
     if (loading) return;
     if (!user && !isPublic && !isLanding) router.replace("/login");
-    if (user && isPublic && pathname !== "/setup" && !pathname.startsWith("/docs")) router.replace("/dashboard");
+    if (user && isPublic && pathname !== "/setup" && !pathname.startsWith("/docs")) router.replace("/");
   }, [user, loading, isPublic, isLanding, router, setupChecked, setupCompleted, pathname]);
 
   // Close mobile sidebar on navigation
@@ -65,7 +65,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   if (!setupCompleted) return <main className="min-h-screen">{children}</main>;
-  if (isPublic || isLanding) return <main className="min-h-screen">{children}</main>;
+  if ((isPublic || isLanding) && !user) return <main className="min-h-screen">{children}</main>;
+  if (isPublic) return <main className="min-h-screen">{children}</main>;
 
   return (
     <div className="flex h-screen">

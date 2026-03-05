@@ -60,8 +60,10 @@ func (r *DomainRepo) ListByOrg(ctx context.Context, orgID uuid.UUID, page, perPa
 
 	offset := (page - 1) * perPage
 	rows, err := r.db.Query(ctx,
-		`SELECT id, org_id, domain_name, mx_verified, txt_verified, dns_last_checked_at, settings, created_at, updated_at
-		 FROM domains WHERE org_id = $1 ORDER BY domain_name LIMIT $2 OFFSET $3`, orgID, perPage, offset)
+		`SELECT d.id, d.org_id, d.domain_name, d.mx_verified, d.txt_verified, d.dns_last_checked_at, d.settings, d.created_at, d.updated_at,
+		        (SELECT COUNT(*) FROM inboxes i WHERE i.domain_id = d.id AND i.is_active = TRUE),
+		        (SELECT COUNT(DISTINCT da.team_id) FROM domain_assignments da WHERE da.domain_id = d.id)
+		 FROM domains d WHERE d.org_id = $1 ORDER BY d.domain_name LIMIT $2 OFFSET $3`, orgID, perPage, offset)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -69,11 +71,15 @@ func (r *DomainRepo) ListByOrg(ctx context.Context, orgID uuid.UUID, page, perPa
 
 	var domains []domain.Domain
 	for rows.Next() {
-		d, err := r.scanRow(rows)
+		var d domain.Domain
+		var settings []byte
+		err := rows.Scan(&d.ID, &d.OrgID, &d.DomainName, &d.MXVerified, &d.TXTVerified,
+			&d.DNSLastCheckedAt, &settings, &d.CreatedAt, &d.UpdatedAt, &d.ActiveInboxes, &d.TeamCount)
 		if err != nil {
 			return nil, 0, err
 		}
-		domains = append(domains, *d)
+		_ = json.Unmarshal(settings, &d.Settings)
+		domains = append(domains, d)
 	}
 	return domains, total, nil
 }
