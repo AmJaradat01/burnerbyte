@@ -1,4 +1,4 @@
-module gitlab.com/amjaradat01/burnerbyte
+module gitlab.com/burnerbyte/burnerbyte
 
 go 1.25.0
 

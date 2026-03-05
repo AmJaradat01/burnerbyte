@@ -12,7 +12,7 @@ export function baseOptions(): BaseLayoutProps {
       { text: 'Self-Hosting', url: '/docs/self-hosting/production' },
       {
         text: 'GitLab',
-        url: 'https://gitlab.com/amjaradat01/burnerbyte',
+        url: 'https://gitlab.com/burnerbyte/burnerbyte',
         external: true,
       },
     ],

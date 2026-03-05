@@ -1,7 +1,7 @@
 # BurnerByte
 
-[![Pipeline](https://gitlab.com/amjaradat01/burnerbyte/badges/main/pipeline.svg)](https://gitlab.com/amjaradat01/burnerbyte/-/pipelines)
-[![Release](https://gitlab.com/amjaradat01/burnerbyte/-/badges/release.svg)](https://gitlab.com/amjaradat01/burnerbyte/-/releases)
+[![Pipeline](https://gitlab.com/burnerbyte/burnerbyte/badges/main/pipeline.svg)](https://gitlab.com/burnerbyte/burnerbyte/-/pipelines)
+[![Release](https://gitlab.com/burnerbyte/burnerbyte/-/badges/release.svg)](https://gitlab.com/burnerbyte/burnerbyte/-/releases)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.25-00ADD8?logo=go&logoColor=white)](https://go.dev/)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js&logoColor=white)](https://nextjs.org/)
@@ -63,7 +63,7 @@ Two separate binaries scale independently:
 
 ```bash
 # Clone
-git clone git@gitlab.com:amjaradat01/burnerbyte.git
+git clone git@gitlab.com:burnerbyte/burnerbyte.git
 cd burnerbyte
 
 # Start infrastructure (Redis + MinIO; skip if using local PG)

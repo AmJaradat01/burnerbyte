@@ -9,10 +9,10 @@ import (
 
 	"github.com/google/uuid"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
-	"gitlab.com/amjaradat01/burnerbyte/internal/realtime"
-	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
-	redisrepo "gitlab.com/amjaradat01/burnerbyte/internal/repository/redis"
+	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
+	"gitlab.com/burnerbyte/burnerbyte/internal/realtime"
+	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
+	redisrepo "gitlab.com/burnerbyte/burnerbyte/internal/repository/redis"
 )
 
 // InboundEmail represents a parsed inbound email.

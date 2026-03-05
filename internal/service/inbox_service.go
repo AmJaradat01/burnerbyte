@@ -9,11 +9,11 @@ import (
 
 	"github.com/google/uuid"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/config"
-	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
-	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
-	redisrepo "gitlab.com/amjaradat01/burnerbyte/internal/repository/redis"
-	"gitlab.com/amjaradat01/burnerbyte/pkg/randaddr"
+	"gitlab.com/burnerbyte/burnerbyte/internal/config"
+	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
+	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
+	redisrepo "gitlab.com/burnerbyte/burnerbyte/internal/repository/redis"
+	"gitlab.com/burnerbyte/burnerbyte/pkg/randaddr"
 )
 
 type InboxService struct {
@@ -180,7 +180,7 @@ func (s *InboxService) ExtendTTL(ctx context.Context, id, userID uuid.UUID, exte
 		}
 	}
 
-	newExpiry := inbox.ExpiresAt.Add(ext)
+	newExpiry := time.Now().Add(ext)
 	maxTTL := resolver.ResolveMaxInboxTTL(ctx, inbox.DomainAssignmentID)
 	maxExpiry := inbox.CreatedAt.Add(maxTTL)
 	if newExpiry.After(maxExpiry) {

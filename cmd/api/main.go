@@ -17,21 +17,21 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/audit"
-	"gitlab.com/amjaradat01/burnerbyte/internal/auth"
-	"gitlab.com/amjaradat01/burnerbyte/internal/auth/rbac"
-	"gitlab.com/amjaradat01/burnerbyte/internal/config"
-	"gitlab.com/amjaradat01/burnerbyte/internal/database"
-	"gitlab.com/amjaradat01/burnerbyte/internal/handler"
-	"gitlab.com/amjaradat01/burnerbyte/internal/mailer"
-	mw "gitlab.com/amjaradat01/burnerbyte/internal/middleware"
-	"gitlab.com/amjaradat01/burnerbyte/internal/realtime"
-	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
-	redisrepo "gitlab.com/amjaradat01/burnerbyte/internal/repository/redis"
-	"gitlab.com/amjaradat01/burnerbyte/internal/service"
-	"gitlab.com/amjaradat01/burnerbyte/internal/storage"
-	"gitlab.com/amjaradat01/burnerbyte/internal/webhook"
-	"gitlab.com/amjaradat01/burnerbyte/internal/worker"
+	"gitlab.com/burnerbyte/burnerbyte/internal/audit"
+	"gitlab.com/burnerbyte/burnerbyte/internal/auth"
+	"gitlab.com/burnerbyte/burnerbyte/internal/auth/rbac"
+	"gitlab.com/burnerbyte/burnerbyte/internal/config"
+	"gitlab.com/burnerbyte/burnerbyte/internal/database"
+	"gitlab.com/burnerbyte/burnerbyte/internal/handler"
+	"gitlab.com/burnerbyte/burnerbyte/internal/mailer"
+	mw "gitlab.com/burnerbyte/burnerbyte/internal/middleware"
+	"gitlab.com/burnerbyte/burnerbyte/internal/realtime"
+	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
+	redisrepo "gitlab.com/burnerbyte/burnerbyte/internal/repository/redis"
+	"gitlab.com/burnerbyte/burnerbyte/internal/service"
+	"gitlab.com/burnerbyte/burnerbyte/internal/storage"
+	"gitlab.com/burnerbyte/burnerbyte/internal/webhook"
+	"gitlab.com/burnerbyte/burnerbyte/internal/worker"
 )
 
 func main() {
@@ -102,7 +102,7 @@ func main() {
 	if s3Client != nil {
 		attachmentSvc = service.NewAttachmentService(attachmentRepo, emailRepo, inboxRepo, s3Client, cfg.MinIO, cfg.Defaults.MaxAttachmentSizeMB, cfg.Defaults.PresignedURLTTL)
 	}
-	authSvc := service.NewAuthService(pool, userRepo, sessionRepo, resetRepo, tokenMgr, lockout, ml, cfg)
+	authSvc := service.NewAuthService(pool, userRepo, sessionRepo, resetRepo, orgRepo, tokenMgr, lockout, ml, cfg)
 	orgSvc := service.NewOrgService(pool, orgRepo, ml, cfg.Server.FrontendURL, cfg.Defaults.InviteExpiryTTL)
 	domainSvc := service.NewDomainService(domainRepo, orgRepo, cfg)
 	teamSvc := service.NewTeamService(pool, teamRepo, orgRepo, cfg)
@@ -126,7 +126,7 @@ func main() {
 	notifHub := realtime.NewNotifHub()
 
 	// Handlers
-	ssoMgr := auth.NewSSOManager(cfg.SSO)
+	ssoMgr := auth.NewSSOManager(cfg)
 	authHandler := handler.NewAuthHandler(authSvc, ssoMgr, cfg)
 	orgHandler := handler.NewOrgHandler(orgSvc)
 	domainHandler := handler.NewDomainHandler(domainSvc)
@@ -138,7 +138,7 @@ func main() {
 	apikeyHandler := handler.NewAPIKeyHandler(apikeySvc)
 	auditHandler := handler.NewAuditHandler(auditSvc)
 	analyticsHandler := handler.NewAnalyticsHandler(analyticsSvc, cfg.Defaults.AnalyticsDefaultDays)
-	adminHandler := handler.NewAdminHandler(analyticsSvc, orgSvc, pool, rdb)
+	adminHandler := handler.NewAdminHandler(analyticsSvc, orgSvc, authSvc, sysConfigRepo, cfg, pool, rdb, s3Client, cfg.MinIO.Bucket)
 	setupHandler := handler.NewSetupHandler(pool, userRepo, orgRepo, domainRepo, teamRepo, sessionRepo, sysConfigRepo, tokenMgr, ml, cfg)
 	wsHandler := handler.NewWSHandler(hub, inboxRepo, cfg.CORS.AllowedOrigins)
 	notifWSHandler := handler.NewNotifWSHandler(notifHub, cfg.CORS.AllowedOrigins)
@@ -212,6 +212,7 @@ func main() {
 			r.Patch("/orgs/{orgId}/members/{userId}", orgHandler.ChangeRole)
 			r.Delete("/orgs/{orgId}/members/{userId}", orgHandler.RemoveMember)
 			r.Post("/orgs/{orgId}/invites", orgHandler.InviteMember)
+			r.Get("/orgs/{orgId}/invites", orgHandler.ListPendingInvites)
 			r.Post("/invites/{token}/accept", orgHandler.AcceptInvite)
 
 			// Domains
@@ -234,6 +235,7 @@ func main() {
 			r.Delete("/orgs/{orgId}/teams/{teamId}/members/{userId}", teamHandler.RemoveMember)
 
 			// Domain assignments
+			r.Get("/my/domains", assignmentHandler.ListMyDomains)
 			r.Post("/orgs/{orgId}/teams/{teamId}/domains", assignmentHandler.AssignDomain)
 			r.Get("/orgs/{orgId}/teams/{teamId}/domains", assignmentHandler.ListAssignments)
 			r.Patch("/orgs/{orgId}/teams/{teamId}/domains/{domainId}", assignmentHandler.UpdateAssignment)
@@ -281,6 +283,9 @@ func main() {
 			r.With(auth.RequireSystemAdmin).Get("/admin/stats", adminHandler.Stats)
 			r.With(auth.RequireSystemAdmin).Get("/admin/orgs", adminHandler.ListOrgs)
 			r.With(auth.RequireSystemAdmin).Get("/admin/health", adminHandler.Health)
+			r.With(auth.RequireSystemAdmin).Patch("/admin/users/{userId}", adminHandler.UpdateUser)
+			r.With(auth.RequireSystemAdmin).Get("/admin/sso", adminHandler.GetSSOConfig)
+			r.With(auth.RequireSystemAdmin).Put("/admin/sso", adminHandler.UpdateSSOConfig)
 
 			// WebSocket
 			r.Get("/ws/inboxes/{inboxId}", wsHandler.InboxWS)

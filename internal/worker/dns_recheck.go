@@ -4,8 +4,8 @@ import (
 	"context"
 	"log/slog"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/dns"
-	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
+	"gitlab.com/burnerbyte/burnerbyte/internal/dns"
+	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
 )
 
 func DNSRecheckJob(domainRepo *postgres.DomainRepo, expectedMXHost string) func(ctx context.Context) error {

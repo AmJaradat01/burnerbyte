@@ -73,9 +73,9 @@ cors:
 
 rate_limit:
   enabled: true
-  authenticated: 100    # requests per minute per user
-  unauthenticated: 20   # requests per minute per IP
-  login: 5              # attempts per minute per IP
+  authenticated: 300    # requests per minute per user
+  unauthenticated: 60   # requests per minute per IP
+  login: 10             # attempts per minute per IP
   forgot_password: 3    # attempts per hour per IP
 
 lockout:
