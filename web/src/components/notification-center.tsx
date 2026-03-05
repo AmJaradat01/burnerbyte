@@ -6,6 +6,7 @@ import { WS_BASE } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
+import { useTranslations } from "next-intl";
 
 interface Notification {
   id: string;
@@ -20,6 +21,7 @@ export function NotificationCenter() {
   const wsRef = useRef<WebSocket | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const unread = notifications.filter((n) => !n.read).length;
+  const t = useTranslations("common");
 
   useEffect(() => {
     if (!user) return;
@@ -69,14 +71,14 @@ export function NotificationCenter() {
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0" align="end">
         <div className="flex items-center justify-between border-b px-4 py-2">
-          <p className="text-sm font-medium">Notifications</p>
+          <p className="text-sm font-medium">{t("notifications")}</p>
           {unread > 0 && (
-            <Button variant="ghost" size="sm" className="text-xs" onClick={markAllRead}>Mark all read</Button>
+            <Button variant="ghost" size="sm" className="text-xs" onClick={markAllRead}>{t("markAllRead")}</Button>
           )}
         </div>
         <div className="max-h-64 overflow-auto">
           {notifications.length === 0 ? (
-            <p className="p-4 text-center text-sm text-muted-foreground">No notifications</p>
+            <p className="p-4 text-center text-sm text-muted-foreground">{t("noNotifications")}</p>
           ) : (
             notifications.map((n) => (
               <div key={n.id} className={`flex items-start gap-2 border-b px-4 py-2 text-sm ${!n.read ? "bg-muted/50" : ""}`}>

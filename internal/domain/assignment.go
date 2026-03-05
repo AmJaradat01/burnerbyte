@@ -17,6 +17,9 @@ type DomainAssignment struct {
 	UpdatedAt   time.Time          `json:"updated_at"`
 	// Joined fields
 	DomainName string `json:"domain_name,omitempty"`
+	// Resolved TTL settings (populated by handler, not DB)
+	DefaultTTL string `json:"default_ttl,omitempty"`
+	MaxTTL     string `json:"max_ttl,omitempty"`
 }
 
 type AssignmentSettings struct {

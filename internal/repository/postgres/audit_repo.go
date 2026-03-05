@@ -30,38 +30,38 @@ func (r *AuditRepo) Create(ctx context.Context, e *domain.AuditEntry) error {
 }
 
 func (r *AuditRepo) List(ctx context.Context, orgID uuid.UUID, filter domain.AuditFilter, page, perPage int) ([]domain.AuditEntry, int, error) {
-	query := `SELECT id, org_id, actor_id, action, resource_type, resource_id, metadata, ip_address::text, created_at FROM audit_logs WHERE org_id = $1`
-	countQuery := `SELECT COUNT(*) FROM audit_logs WHERE org_id = $1`
+	query := `SELECT a.id, a.org_id, a.actor_id, COALESCE(u.email,''), a.action, a.resource_type, a.resource_id, a.metadata, a.ip_address::text, a.created_at FROM audit_logs a LEFT JOIN users u ON a.actor_id = u.id WHERE a.org_id = $1`
+	countQuery := `SELECT COUNT(*) FROM audit_logs a WHERE a.org_id = $1`
 	args := []any{orgID}
 	idx := 2
 
 	if filter.ActorID != nil {
-		query += fmt.Sprintf(` AND actor_id = $%d`, idx)
-		countQuery += fmt.Sprintf(` AND actor_id = $%d`, idx)
+		query += fmt.Sprintf(` AND a.actor_id = $%d`, idx)
+		countQuery += fmt.Sprintf(` AND a.actor_id = $%d`, idx)
 		args = append(args, *filter.ActorID)
 		idx++
 	}
 	if filter.Action != nil {
-		query += fmt.Sprintf(` AND action = $%d`, idx)
-		countQuery += fmt.Sprintf(` AND action = $%d`, idx)
+		query += fmt.Sprintf(` AND a.action = $%d`, idx)
+		countQuery += fmt.Sprintf(` AND a.action = $%d`, idx)
 		args = append(args, *filter.Action)
 		idx++
 	}
 	if filter.ResourceType != nil {
-		query += fmt.Sprintf(` AND resource_type = $%d`, idx)
-		countQuery += fmt.Sprintf(` AND resource_type = $%d`, idx)
+		query += fmt.Sprintf(` AND a.resource_type = $%d`, idx)
+		countQuery += fmt.Sprintf(` AND a.resource_type = $%d`, idx)
 		args = append(args, *filter.ResourceType)
 		idx++
 	}
 	if filter.DateFrom != nil {
-		query += fmt.Sprintf(` AND created_at >= $%d`, idx)
-		countQuery += fmt.Sprintf(` AND created_at >= $%d`, idx)
+		query += fmt.Sprintf(` AND a.created_at >= $%d`, idx)
+		countQuery += fmt.Sprintf(` AND a.created_at >= $%d`, idx)
 		args = append(args, *filter.DateFrom)
 		idx++
 	}
 	if filter.DateTo != nil {
-		query += fmt.Sprintf(` AND created_at <= $%d`, idx)
-		countQuery += fmt.Sprintf(` AND created_at <= $%d`, idx)
+		query += fmt.Sprintf(` AND a.created_at <= $%d`, idx)
+		countQuery += fmt.Sprintf(` AND a.created_at <= $%d`, idx)
 		args = append(args, *filter.DateTo)
 		idx++
 	}
@@ -72,7 +72,7 @@ func (r *AuditRepo) List(ctx context.Context, orgID uuid.UUID, filter domain.Aud
 	}
 
 	offset := (page - 1) * perPage
-	query += fmt.Sprintf(` ORDER BY created_at DESC LIMIT $%d OFFSET $%d`, idx, idx+1)
+	query += fmt.Sprintf(` ORDER BY a.created_at DESC LIMIT $%d OFFSET $%d`, idx, idx+1)
 	args = append(args, perPage, offset)
 
 	rows, err := r.db.Query(ctx, query, args...)
@@ -83,7 +83,7 @@ func (r *AuditRepo) List(ctx context.Context, orgID uuid.UUID, filter domain.Aud
 	for rows.Next() {
 		var e domain.AuditEntry
 		var metadata []byte
-		if err := rows.Scan(&e.ID, &e.OrgID, &e.ActorID, &e.Action, &e.ResourceType, &e.ResourceID, &metadata, &e.IPAddress, &e.CreatedAt); err != nil {
+		if err := rows.Scan(&e.ID, &e.OrgID, &e.ActorID, &e.ActorEmail, &e.Action, &e.ResourceType, &e.ResourceID, &metadata, &e.IPAddress, &e.CreatedAt); err != nil {
 			return nil, 0, err
 		}
 		_ = json.Unmarshal(metadata, &e.Metadata)
