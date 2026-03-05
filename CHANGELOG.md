@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.8.1 (2026-03-06)
+
+### UI/UX Enhancements
+- **Brand theme** — Warm orange/amber color palette replacing neutral gray; primary color ties into 🔥 identity
+- **Gradient mesh background** — Subtle radial gradients on landing, admin, and regular user layouts for visual depth
+- **Dark mode** — Warm charcoal tones instead of pure neutral dark
+
 ## v0.8.0 (2026-03-05)
 
 ### Breaking Changes
