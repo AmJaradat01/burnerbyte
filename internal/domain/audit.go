@@ -10,6 +10,7 @@ type AuditEntry struct {
 	ID           uuid.UUID  `json:"id"`
 	OrgID        uuid.UUID  `json:"org_id"`
 	ActorID      *uuid.UUID `json:"actor_id,omitempty"`
+	ActorEmail   string     `json:"actor_email,omitempty"`
 	Action       string     `json:"action"`
 	ResourceType string     `json:"resource_type"`
 	ResourceID   uuid.UUID  `json:"resource_id"`

@@ -8,21 +8,38 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { TableSkeleton } from "@/components/table-skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Pagination } from "@/components/pagination";
 import { ErrorState } from "@/components/error-state";
+import { EmptyState } from "@/components/empty-state";
 import { toast } from "sonner";
 import { timeAgo } from "@/lib/time";
-import type { PaginatedResponse } from "@/types";
+import { Download, Globe, Inbox, Key, Shield, User, Webhook } from "lucide-react";
+import type { AuditEntry, PaginatedResponse } from "@/types";
 
-interface AuditEntry {
-  id: string; actor_id: string; actor_email?: string; action: string;
-  resource_type: string; resource_id: string; metadata?: Record<string, unknown>;
-  ip_address?: string; created_at: string;
+const RESOURCE_TYPES = ["user", "org", "team", "domain", "domain_assignment", "inbox", "email", "webhook", "api_key"];
+
+const ACTION_COLORS: Record<string, string> = {
+  created: "bg-green-100 text-green-700 border-green-200",
+  updated: "bg-blue-100 text-blue-700 border-blue-200",
+  deleted: "bg-red-100 text-red-700 border-red-200",
+  revoked: "bg-red-100 text-red-700 border-red-200",
+  verified: "bg-green-100 text-green-700 border-green-200",
+};
+
+function getActionColor(action: string): string {
+  for (const [key, cls] of Object.entries(ACTION_COLORS)) {
+    if (action.includes(key)) return cls;
+  }
+  return "";
 }
+
+const RESOURCE_ICONS: Record<string, typeof User> = {
+  user: User, org: Shield, team: User, domain: Globe,
+  domain_assignment: Globe, inbox: Inbox, webhook: Webhook, api_key: Key,
+};
 
 function exportCSV(entries: AuditEntry[]) {
   const header = "Time,Actor,Action,Resource Type,Resource ID,IP Address";
@@ -45,79 +62,138 @@ export default function AuditPage() {
   const { currentOrg } = useOrgStore();
   const [action, setAction] = useState("");
   const [resource, setResource] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(1);
 
   const params: Record<string, string> = { page: String(page), per_page: "50" };
   if (action) params.action = action;
   if (resource) params.resource_type = resource;
+  if (dateFrom) params.date_from = new Date(dateFrom).toISOString();
+  if (dateTo) params.date_to = new Date(dateTo + "T23:59:59").toISOString();
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["audit", currentOrg?.id, action, resource, page],
+    queryKey: ["audit", currentOrg?.id, action, resource, dateFrom, dateTo, page],
     queryFn: () => api.get<PaginatedResponse<AuditEntry>>(`/orgs/${currentOrg!.id}/audit`, params),
     enabled: !!currentOrg,
   });
+
+  const clearFilters = () => { setAction(""); setResource(""); setDateFrom(""); setDateTo(""); setPage(1); };
+  const hasFilters = action || resource || dateFrom || dateTo;
 
   if (!currentOrg) return <p className="text-muted-foreground">Select an organization first.</p>;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Audit Log</h1>
-        <Button variant="outline" size="sm" onClick={() => data?.data && exportCSV(data.data)} disabled={!data?.data?.length}>
-          Export CSV
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Audit Log</h1>
+          <p className="text-sm text-muted-foreground mt-1">{data?.total ?? 0} entries{hasFilters ? " (filtered)" : ""}</p>
+        </div>
+        <Button variant="outline" size="sm" className="gap-1.5" onClick={() => data?.data && exportCSV(data.data)} disabled={!data?.data?.length}>
+          <Download className="h-3.5 w-3.5" /> Export CSV
         </Button>
       </div>
-      <div className="flex gap-4 flex-wrap">
-        <div className="space-y-1">
-          <Label>Action</Label>
-          <Input value={action} onChange={(e) => { setAction(e.target.value); setPage(1); }} placeholder="Filter by action…" className="w-48" />
-        </div>
-        <div className="space-y-1">
-          <Label>Resource</Label>
-          <Select value={resource} onValueChange={(v) => { setResource(v === "all" ? "" : v); setPage(1); }}>
-            <SelectTrigger className="w-48"><SelectValue placeholder="All resources" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All</SelectItem>
-              {["user", "org", "team", "domain", "domain_assignment", "inbox", "email", "webhook", "api_key"].map((r) => (
-                <SelectItem key={r} value={r}>{r}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      {isError ? <ErrorState message="Failed to load audit log" onRetry={() => refetch()} /> :
-      isLoading ? <TableSkeleton rows={10} cols={5} /> : (
+
+      {/* Filters */}
       <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Time</TableHead>
-                <TableHead>Actor</TableHead>
-                <TableHead>Action</TableHead>
-                <TableHead>Resource</TableHead>
-                <TableHead>IP</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data?.data?.map((e) => (
-                <TableRow key={e.id}>
-                  <TableCell className="text-muted-foreground text-sm" title={new Date(e.created_at).toLocaleString()}>{timeAgo(e.created_at)}</TableCell>
-                  <TableCell className="text-sm">{e.actor_email || e.actor_id.slice(0, 8)}</TableCell>
-                  <TableCell><Badge variant="outline">{e.action}</Badge></TableCell>
-                  <TableCell className="text-sm">{e.resource_type}/{e.resource_id.slice(0, 8)}</TableCell>
-                  <TableCell className="text-muted-foreground text-sm">{e.ip_address}</TableCell>
-                </TableRow>
-              ))}
-              {(!data?.data || data.data.length === 0) && (
-                <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No audit entries found</TableCell></TableRow>
-              )}
-            </TableBody>
-          </Table>
-          <Pagination page={page} totalPages={data?.total_pages ?? 1} onPageChange={setPage} />
+        <CardContent className="py-4">
+          <div className="flex flex-wrap gap-4 items-end">
+            <div className="space-y-1">
+              <Label className="text-xs">Action</Label>
+              <Input value={action} onChange={(e) => { setAction(e.target.value); setPage(1); }} placeholder="e.g. domain.created" className="w-44 h-8" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Resource</Label>
+              <Select value={resource || "all"} onValueChange={(v) => { setResource(v === "all" ? "" : v); setPage(1); }}>
+                <SelectTrigger className="w-44 h-8"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All resources</SelectItem>
+                  {RESOURCE_TYPES.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">From</Label>
+              <Input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1); }} className="w-40 h-8" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">To</Label>
+              <Input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1); }} className="w-40 h-8" />
+            </div>
+            {hasFilters && (
+              <Button variant="ghost" size="sm" onClick={clearFilters}>Clear</Button>
+            )}
+          </div>
         </CardContent>
       </Card>
+
+      {/* Entries */}
+      {isError ? <ErrorState message="Failed to load audit log" onRetry={() => refetch()} /> :
+      isLoading ? <AuditSkeleton /> : (
+      <>
+        {(!data?.data || data.data.length === 0) ? (
+          <EmptyState icon="📋" title="No audit entries" description={hasFilters ? "Try adjusting your filters." : "Actions will appear here as they happen."} />
+        ) : (
+          <div className="space-y-2">
+            {data.data.map((e) => <AuditRow key={e.id} entry={e} />)}
+            <Pagination page={page} totalPages={data.total_pages} onPageChange={setPage} />
+          </div>
+        )}
+      </>
       )}
+    </div>
+  );
+}
+
+function AuditRow({ entry: e }: { entry: AuditEntry }) {
+  const [expanded, setExpanded] = useState(false);
+  const Icon = RESOURCE_ICONS[e.resource_type] || Shield;
+  const colorCls = getActionColor(e.action);
+
+  return (
+    <Card className="cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => setExpanded(!expanded)}>
+      <CardContent className="py-3 px-4">
+        <div className="flex items-center gap-3">
+          <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+          <Badge variant="outline" className={`shrink-0 text-xs ${colorCls}`}>{e.action}</Badge>
+          <span className="text-sm truncate flex-1">
+            <span className="text-muted-foreground">{e.resource_type}/</span>
+            <span className="font-mono">{e.resource_id.slice(0, 8)}</span>
+          </span>
+          <span className="text-xs text-muted-foreground shrink-0 hidden sm:block">
+            {e.actor_email || (e.actor_id ? e.actor_id.slice(0, 8) : "system")}
+          </span>
+          {e.ip_address && <span className="text-xs font-mono text-muted-foreground shrink-0 hidden md:block">{e.ip_address}</span>}
+          <span className="text-xs text-muted-foreground shrink-0" title={new Date(e.created_at).toLocaleString()}>
+            {timeAgo(e.created_at)}
+          </span>
+        </div>
+        {expanded && (
+          <div className="mt-3 pt-3 border-t grid gap-2 text-xs sm:grid-cols-2">
+            <div><span className="text-muted-foreground">Actor: </span>{e.actor_email || e.actor_id}</div>
+            <div><span className="text-muted-foreground">Resource ID: </span><span className="font-mono">{e.resource_id}</span></div>
+            <div><span className="text-muted-foreground">IP: </span>{e.ip_address || "—"}</div>
+            <div><span className="text-muted-foreground">Time: </span>{new Date(e.created_at).toLocaleString()}</div>
+            {e.metadata && Object.keys(e.metadata).length > 0 && (
+              <div className="sm:col-span-2">
+                <span className="text-muted-foreground">Metadata: </span>
+                <pre className="mt-1 rounded bg-muted p-2 text-xs overflow-auto">{JSON.stringify(e.metadata, null, 2)}</pre>
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function AuditSkeleton() {
+  return (
+    <div className="space-y-2">
+      {Array.from({ length: 8 }).map((_, i) => (
+        <Card key={i}><CardContent className="py-3 px-4"><Skeleton className="h-5 w-full" /></CardContent></Card>
+      ))}
     </div>
   );
 }

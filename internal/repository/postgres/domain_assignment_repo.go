@@ -80,6 +80,33 @@ func (r *DomainAssignmentRepo) GetByTeamAndDomain(ctx context.Context, teamID, d
 	return &a, nil
 }
 
+func (r *DomainAssignmentRepo) ListByUser(ctx context.Context, userID uuid.UUID) ([]domain.DomainAssignment, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT da.id, da.team_id, da.domain_id, da.access_level, da.settings, da.assigned_by,
+		        da.created_at, da.updated_at, d.domain_name
+		 FROM domain_assignments da
+		 JOIN domains d ON da.domain_id = d.id
+		 JOIN team_memberships tm ON tm.team_id = da.team_id
+		 WHERE tm.user_id = $1 AND da.access_level IN ('full','create_inbox')
+		 ORDER BY d.domain_name`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []domain.DomainAssignment
+	for rows.Next() {
+		var a domain.DomainAssignment
+		var settings []byte
+		if err := rows.Scan(&a.ID, &a.TeamID, &a.DomainID, &a.AccessLevel, &settings, &a.AssignedBy,
+			&a.CreatedAt, &a.UpdatedAt, &a.DomainName); err != nil {
+			return nil, err
+		}
+		_ = json.Unmarshal(settings, &a.Settings)
+		out = append(out, a)
+	}
+	return out, nil
+}
+
 func (r *DomainAssignmentRepo) ListByTeam(ctx context.Context, teamID uuid.UUID, page, perPage int) ([]domain.DomainAssignment, int, error) {
 	var total int
 	err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM domain_assignments WHERE team_id = $1`, teamID).Scan(&total)

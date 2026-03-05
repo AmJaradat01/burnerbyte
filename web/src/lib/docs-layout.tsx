@@ -9,7 +9,12 @@ export function baseOptions(): BaseLayoutProps {
     links: [
       { text: 'App', url: '/dashboard' },
       { text: 'API Reference', url: '/docs/api' },
-      { text: 'GitHub', url: 'https://gitlab.com/amjaradat01/burnerbyte', external: true },
+      { text: 'Self-Hosting', url: '/docs/self-hosting/production' },
+      {
+        text: 'GitLab',
+        url: 'https://gitlab.com/amjaradat01/burnerbyte',
+        external: true,
+      },
     ],
   };
 }

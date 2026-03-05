@@ -7,19 +7,36 @@ description: Self-hosted, open-source temporary email platform with multi-team, 
 
 BurnerByte is a self-hosted temporary email platform built for teams that need disposable email addresses for testing, development, and QA workflows. It provides a complete solution with real-time email delivery, configurable attachment policies, webhooks, and a full RBAC system.
 
-## Key Features
+## Get Started
 
-- **One-time setup wizard** — Admin account, org, SMTP, domain, team, branding, and invites
-- **Multi-team, multi-domain** — Single org with teams scoped to specific domains
-- **Full RBAC** — 6 roles across org and team levels
-- **Real-time delivery** — WebSocket streaming for instant email notifications
-- **Configurable attachments** — Policy inheritance from org → domain assignment
-- **Webhooks** — HMAC-SHA256 signed with retry and delivery logs
-- **Scoped API keys** — Programmatic access with granular permissions
-- **Audit logging** — Full activity trail with filtering and CSV export
-- **Analytics** — Time-series charts and aggregate stats
-- **SSO** — OIDC provider integration
-- **Private inboxes** — Only the creator can access
+<Cards>
+  <Card title="Installation" description="Prerequisites and setup instructions" href="/docs/getting-started/installation" />
+  <Card title="Quick Start" description="Run BurnerByte and receive your first email" href="/docs/getting-started/quick-start" />
+  <Card title="Docker Setup" description="Run everything with Docker Compose" href="/docs/getting-started/docker" />
+  <Card title="Configuration" description="All config options and environment variables" href="/docs/getting-started/configuration" />
+</Cards>
+
+## Learn
+
+<Cards>
+  <Card title="Architecture" description="Two-binary design, SMTP pipeline, WebSocket, workers" href="/docs/architecture/overview" />
+  <Card title="RBAC & Roles" description="6 roles across org and team levels" href="/docs/concepts/rbac" />
+  <Card title="Domains & Inboxes" description="Domain verification, assignments, and inbox lifecycle" href="/docs/concepts/domains" />
+  <Card title="Webhooks" description="HMAC-SHA256 signed events with retry and delivery logs" href="/docs/concepts/webhooks" />
+  <Card title="API Keys" description="Scoped programmatic access with SHA-256 hashing" href="/docs/concepts/api-keys" />
+  <Card title="SSO" description="OIDC provider integration" href="/docs/concepts/sso" />
+  <Card title="Settings Cascade" description="Policy inheritance from org → domain assignment" href="/docs/concepts/settings-cascade" />
+  <Card title="API Reference" description="Authentication, pagination, errors, 50+ endpoints" href="/docs/api" />
+</Cards>
+
+## Deploy
+
+<Cards>
+  <Card title="Production Hardening" description="Security, performance, and reliability" href="/docs/self-hosting/production" />
+  <Card title="Reverse Proxy" description="Nginx and Caddy configurations" href="/docs/self-hosting/reverse-proxy" />
+  <Card title="DNS Setup" description="MX and TXT records for email receiving" href="/docs/self-hosting/dns" />
+  <Card title="Monitoring" description="Health checks, metrics, and alerting" href="/docs/self-hosting/monitoring" />
+</Cards>
 
 ## Architecture at a Glance
 
@@ -45,16 +62,19 @@ Two separate Go binaries scale independently:
 - **`cmd/api`** — HTTP API server + background workers
 - **`cmd/smtpd`** — SMTP inbound server
 
-## Quick Links
+## Key Features
 
-<Cards>
-  <Card title="Installation" href="/docs/getting-started/installation" />
-  <Card title="Quick Start" href="/docs/getting-started/quick-start" />
-  <Card title="Docker Setup" href="/docs/getting-started/docker" />
-  <Card title="Configuration" href="/docs/getting-started/configuration" />
-  <Card title="API Reference" href="/docs/api" />
-  <Card title="Self-Hosting Guide" href="/docs/self-hosting/production" />
-</Cards>
+- **One-time setup wizard** — Admin account, org, SMTP, domain, team, branding, and invites
+- **Multi-team, multi-domain** — Single org with teams scoped to specific domains
+- **Full RBAC** — 6 roles across org and team levels
+- **Real-time delivery** — WebSocket streaming for instant email notifications
+- **Configurable attachments** — Policy inheritance from org → domain assignment
+- **Webhooks** — HMAC-SHA256 signed with retry and delivery logs
+- **Scoped API keys** — Programmatic access with granular permissions
+- **Audit logging** — Full activity trail with filtering and CSV export
+- **Analytics** — Time-series charts and aggregate stats
+- **SSO** — OIDC provider integration
+- **Private inboxes** — Only the creator can access
 
 ## Tech Stack
 
@@ -62,7 +82,9 @@ Two separate Go binaries scale independently:
 |---|---|
 | Backend | Go 1.25+, Chi router, pgxpool, go-redis, gorilla/websocket, enmime |
 | Frontend | Next.js 16, React 19, shadcn/ui, Tailwind CSS 4, Zustand, TanStack Query, Recharts |
+| Docs | Fumadocs (MDX, full-text search) |
 | Database | PostgreSQL 16 (21 migrations, 52+ indexes, 7 triggers) |
 | Cache | Redis 7 |
 | Storage | MinIO (S3-compatible) |
 | Infrastructure | Docker, Docker Compose |
+| CI/CD | GitLab CI (lint, build, test, Docker registry) |

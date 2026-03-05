@@ -14,6 +14,10 @@ type Team struct {
 	Settings  TeamSettings `json:"settings"`
 	CreatedAt time.Time    `json:"created_at"`
 	UpdatedAt time.Time    `json:"updated_at"`
+	// Joined counts
+	MemberCount   int `json:"member_count"`
+	DomainCount   int `json:"domain_count"`
+	ActiveInboxes int `json:"active_inboxes"`
 }
 
 type TeamSettings struct {
