@@ -1,28 +1,28 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth-store";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EmptyState } from "@/components/empty-state";
 import { ErrorState } from "@/components/error-state";
 import { Pagination } from "@/components/pagination";
-import { Clock, Copy, Mail, MailOpen, Plus, Timer, Trash2 } from "lucide-react";
+import { Check, ChevronDown, Clock, Copy, ExternalLink, Mail, MailOpen, RefreshCw, Timer, Trash2, Zap } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { WS_BASE } from "@/lib/api";
 import { LocaleSwitcher } from "@/components/locale-switcher";
+import { copyToClipboard } from "@/lib/clipboard";
 import type { Inbox, PaginatedResponse, DomainAssignment } from "@/types";
 
 export default function RootPage() {
@@ -33,15 +33,33 @@ export default function RootPage() {
   return <LandingPage />;
 }
 
+/* ── Helpers ── */
+
+function durationToMinutes(d?: string): number {
+  if (!d) return Infinity;
+  let mins = 0;
+  const h = d.match(/(\d+)h/);
+  const m = d.match(/(\d+)m/);
+  if (h) mins += parseInt(h[1]) * 60;
+  if (m) mins += parseInt(m[1]);
+  return mins || Infinity;
+}
+
+const ALL_PRESETS = [
+  { mins: 10, value: "10m", key: "10m" as const },
+  { mins: 30, value: "30m", key: "30m" as const },
+  { mins: 60, value: "1h", key: "1h" as const },
+  { mins: 360, value: "6h", key: "6h" as const },
+  { mins: 720, value: "12h", key: "12h" as const },
+  { mins: 1440, value: "24h", key: "24h" as const },
+];
+
 /* ── Authenticated home ── */
 
 function HomePage() {
   const user = useAuthStore((s) => s.user);
   const qc = useQueryClient();
-  const [page, setPage] = useState(1);
-  const [status, setStatus] = useState("active");
   const t = useTranslations("home");
-  const tc = useTranslations("common");
 
   const greeting = (() => {
     const h = new Date().getHours();
@@ -50,9 +68,12 @@ function HomePage() {
     return t("goodEvening");
   })();
 
+  const [page, setPage] = useState(1);
+
+  // All active inboxes with pagination
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["home-inboxes", page, status],
-    queryFn: () => api.get<PaginatedResponse<Inbox>>(`/inboxes`, { page: String(page), per_page: "12", status }),
+    queryKey: ["home-inboxes", page],
+    queryFn: () => api.get<PaginatedResponse<Inbox>>(`/inboxes`, { page: String(page), per_page: "12", status: "active" }),
   });
 
   // Live refresh via WebSocket
@@ -72,66 +93,265 @@ function HomePage() {
 
   const remove = useMutation({
     mutationFn: (id: string) => api.del(`/inboxes/${id}`),
-    onMutate: async (id) => {
-      await qc.cancelQueries({ queryKey: ["home-inboxes"] });
-      const key = ["home-inboxes", page, status];
-      const prev = qc.getQueryData(key);
-      qc.setQueryData(key, (old: PaginatedResponse<Inbox> | undefined) =>
-        old ? { ...old, data: old.data.filter((i) => i.id !== id) } : old
-      );
-      return { prev, key };
-    },
-    onError: (err, _id, ctx) => {
-      if (ctx?.prev) qc.setQueryData(ctx.key, ctx.prev);
-      toast.error(err instanceof Error ? err.message : "Failed");
-    },
-    onSettled: () => qc.invalidateQueries({ queryKey: ["home-inboxes"] }),
-    onSuccess: () => toast.success(t("inboxDeleted")),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["home-inboxes"] }); toast.success(t("inboxDeleted")); },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
   });
 
-  useEffect(() => setPage(1), [status]);
-
-  const statusLabel = status === "active"
-    ? t("activeInboxes", { count: data?.total ?? 0 })
-    : status === "expired"
-    ? t("expiredInboxes", { count: data?.total ?? 0 })
-    : t("totalInboxes", { count: data?.total ?? 0 });
-
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">{greeting}, {user?.display_name?.split(" ")[0] || "there"}</h1>
-          {data && <p className="text-sm text-muted-foreground">{statusLabel}</p>}
-        </div>
-        <CreateInboxDialog />
+    <div className="space-y-8">
+      {/* Greeting */}
+      <div>
+        <h1 className="text-2xl font-bold">{greeting}, {user?.display_name?.split(" ")[0] || "there"} 👋</h1>
+        <p className="text-sm text-muted-foreground mt-1">{t("quickCreateDesc")}</p>
       </div>
 
-      <Tabs value={status} onValueChange={setStatus}>
-        <TabsList>
-          <TabsTrigger value="active">{tc("active")}</TabsTrigger>
-          <TabsTrigger value="expired">{tc("expired")}</TabsTrigger>
-          <TabsTrigger value="all">{tc("all")}</TabsTrigger>
-        </TabsList>
-      </Tabs>
+      {/* Quick Create Hero */}
+      <QuickCreateCard />
 
-      {isError ? <ErrorState message="Failed to load inboxes" onRetry={() => refetch()} /> :
-       isLoading ? <InboxGridSkeleton /> :
-       (!data?.data || data.data.length === 0) ? (
-        <EmptyState
-          icon="📭"
-          title={status === "active" ? t("noActiveInboxes") : status === "expired" ? t("noExpiredInboxes") : t("noInboxes")}
-          description={t("createToStart")}
-        />
-      ) : (
-        <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {data.data.map((inbox) => (
-              <InboxCard key={inbox.id} inbox={inbox} onExtend={() => extend.mutate(inbox.id)} onDelete={() => remove.mutate(inbox.id)} />
-            ))}
+      {/* Your Inboxes */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">{t("recentInboxes")}</h2>
+          {data && data.total > 0 && (
+            <p className="text-sm text-muted-foreground">{data.total} active</p>
+          )}
+        </div>
+
+        {isError ? <ErrorState message="Failed to load inboxes" onRetry={() => refetch()} /> :
+         isLoading ? <InboxGridSkeleton /> :
+         (!data?.data || data.data.length === 0) ? (
+          <EmptyState icon="📭" title={t("noActiveInboxes")} description={t("createToStart")} />
+        ) : (
+          <>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {data.data.map((inbox) => (
+                <InboxCard key={inbox.id} inbox={inbox} onExtend={() => extend.mutate(inbox.id)} onDelete={() => remove.mutate(inbox.id)} />
+              ))}
+            </div>
+            {data.total_pages > 1 && (
+              <div className="mt-4">
+                <Pagination page={page} totalPages={data.total_pages} onPageChange={setPage} />
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── Quick Create Card ── */
+
+function QuickCreateCard() {
+  const [assignmentId, setAssignmentId] = useState("");
+  const [alias, setAlias] = useState("");
+  const [ttlPreset, setTtlPreset] = useState("");
+  const [customTtl, setCustomTtl] = useState("");
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createdInbox, setCreatedInbox] = useState<Inbox | null>(null);
+  const [copied, setCopied] = useState(false);
+  const qc = useQueryClient();
+  const router = useRouter();
+  const t = useTranslations("home");
+  const ti = useTranslations("createInbox");
+
+  const { data: assignments } = useQuery({
+    queryKey: ["my-domains"],
+    queryFn: () => api.get<{ data: DomainAssignment[] }>("/my/domains"),
+  });
+
+  useEffect(() => {
+    if (assignments?.data?.length && !assignmentId) setAssignmentId(assignments.data[0].id);
+  }, [assignments, assignmentId]);
+
+  const selected = assignments?.data?.find((a) => a.id === assignmentId);
+  const maxMins = durationToMinutes(selected?.max_ttl);
+  const availablePresets = ALL_PRESETS.filter((p) => p.mins <= maxMins);
+
+  useEffect(() => {
+    const defaultTtl = selected?.default_ttl;
+    if (!defaultTtl) { setTtlPreset("1h"); return; }
+    const mins = durationToMinutes(defaultTtl);
+    const closest = availablePresets.reduce((prev, curr) =>
+      Math.abs(curr.mins - mins) < Math.abs(prev.mins - mins) ? curr : prev
+    , ALL_PRESETS[0]);
+    setTtlPreset(closest?.value || "1h");
+  }, [selected?.default_ttl, maxMins]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const ttl = ttlPreset === "custom" ? customTtl : ttlPreset;
+
+  const create = useCallback(async () => {
+    if (!assignmentId || !ttl) return;
+    setCreating(true);
+    try {
+      const res = await api.post<Inbox>(`/inboxes`, { domain_assignment_id: assignmentId, alias: alias || undefined, ttl });
+      setCreatedInbox(res);
+      qc.invalidateQueries({ queryKey: ["home-inboxes"] });
+      qc.invalidateQueries({ queryKey: ["inboxes"] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+    } finally {
+      setCreating(false);
+    }
+  }, [assignmentId, ttl, alias, qc]);
+
+  const copyAddress = () => {
+    if (!createdInbox) return;
+    copyToClipboard(createdInbox.full_address || createdInbox.address);
+    setCopied(true);
+    toast.success("Copied!");
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const reset = () => {
+    setCreatedInbox(null);
+    setAlias("");
+    setCopied(false);
+    setShowAdvanced(false);
+  };
+
+  const presetLabels: Record<string, string> = {
+    "10m": ti("10m"), "30m": ti("30m"), "1h": ti("1h"),
+    "6h": ti("6h"), "12h": ti("12h"), "24h": ti("24h"),
+  };
+
+  const noDomains = assignments?.data?.length === 0;
+
+  if (noDomains) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-sm text-muted-foreground">{t("noDomains")}</p>
+      </div>
+    );
+  }
+
+  // ── Address created — hero display ──
+  if (createdInbox) {
+    const addr = createdInbox.full_address || createdInbox.address;
+    const [localPart, domainPart] = addr.split("@");
+
+    return (
+      <div className="text-center space-y-5">
+        <div className="inline-flex items-center gap-2 rounded-full border bg-green-500/10 border-green-500/20 px-3 py-1">
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
+          </span>
+          <span className="text-xs font-medium text-green-700 dark:text-green-400">{t("addressReady")}</span>
+        </div>
+
+        <div>
+          <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wider">{t("yourAddress")}</p>
+          <button
+            onClick={copyAddress}
+            className="group inline-flex items-center gap-3 rounded-2xl border-2 border-dashed border-primary/20 bg-muted/30 px-6 py-4 sm:px-8 sm:py-5 transition-all hover:border-primary/50 hover:bg-muted/50 hover:shadow-lg cursor-pointer max-w-full"
+          >
+            <span className="font-mono text-xl sm:text-2xl lg:text-3xl font-bold truncate">
+              <span>{localPart}</span>
+              <span className="text-muted-foreground">@</span>
+              <span className="text-primary">{domainPart}</span>
+            </span>
+            <span className="shrink-0 flex items-center justify-center h-9 w-9 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+              {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />}
+            </span>
+          </button>
+        </div>
+
+        <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            <Clock className="h-3.5 w-3.5" />
+            <ExpiryLabel expiresAt={createdInbox.expires_at} isActive={true} />
+          </span>
+        </div>
+
+        <div className="flex items-center justify-center gap-2">
+          <Button variant="outline" size="sm" className="gap-2 h-9" onClick={copyAddress}>
+            {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+            {copied ? "Copied" : "Copy"}
+          </Button>
+          <Button size="sm" className="gap-2 h-9" onClick={() => router.push(`/inboxes/${createdInbox.id}`)}>
+            <ExternalLink className="h-3.5 w-3.5" /> {t("openInbox")}
+          </Button>
+          <Button variant="outline" size="sm" className="gap-2 h-9" onClick={reset}>
+            <RefreshCw className="h-3.5 w-3.5" /> New
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Pre-create state — domain selector + generate button ──
+  return (
+    <div className="text-center space-y-5">
+      <p className="text-xs text-muted-foreground uppercase tracking-wider">{t("quickCreate")}</p>
+
+      {/* Domain selector as the hero element */}
+      <div className="inline-flex items-center gap-2 rounded-2xl border-2 border-dashed border-muted-foreground/20 bg-muted/20 px-6 py-4 sm:px-8 sm:py-5 max-w-full">
+        <Mail className="h-5 w-5 text-muted-foreground shrink-0" />
+        {showAdvanced && alias ? (
+          <span className="font-mono text-xl sm:text-2xl font-bold text-muted-foreground/60">{alias}</span>
+        ) : (
+          <span className="font-mono text-xl sm:text-2xl font-bold text-muted-foreground/40">•••••</span>
+        )}
+        <span className="font-mono text-xl sm:text-2xl font-bold text-muted-foreground/40">@</span>
+        {(assignments?.data?.length ?? 0) > 1 ? (
+          <Select value={assignmentId} onValueChange={setAssignmentId}>
+            <SelectTrigger className="h-auto border-0 bg-transparent p-0 font-mono text-xl sm:text-2xl font-bold text-primary shadow-none gap-1 w-auto">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {assignments?.data?.map((a) => (
+                <SelectItem key={a.id} value={a.id}>{a.domain_name || a.domain_id}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <span className="font-mono text-xl sm:text-2xl font-bold text-primary">{selected?.domain_name}</span>
+        )}
+      </div>
+
+      {/* Generate button */}
+      <div>
+        <Button onClick={create} disabled={!assignmentId || creating} size="lg" className="gap-2 h-12 px-8 text-sm font-semibold">
+          {creating ? (
+            <><RefreshCw className="h-4 w-4 animate-spin" /> {t("generating")}</>
+          ) : (
+            <><Zap className="h-4 w-4" /> {t("generate")}</>
+          )}
+        </Button>
+        <p className="text-[11px] text-muted-foreground mt-2">
+          {ttlPreset && presetLabels[ttlPreset] ? `⏱ ${presetLabels[ttlPreset]}` : ""}
+        </p>
+      </div>
+
+      {/* Advanced toggle */}
+      <button
+        onClick={() => setShowAdvanced(!showAdvanced)}
+        className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showAdvanced ? "rotate-180" : ""}`} />
+        {t("advancedOptions")}
+      </button>
+
+      {showAdvanced && (
+        <div className="max-w-md mx-auto border rounded-xl p-4 text-left space-y-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs">{ti("alias")}</Label>
+            <Input value={alias} onChange={(e) => setAlias(e.target.value)} placeholder={ti("aliasPlaceholder")} className="h-8 text-sm" />
           </div>
-          <Pagination page={page} totalPages={data.total_pages} onPageChange={setPage} />
-        </>
+          <div className="space-y-1.5">
+            <Label className="text-xs">{ti("lifetime")}</Label>
+            <Select value={ttlPreset} onValueChange={setTtlPreset}>
+              <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {availablePresets.map((p) => <SelectItem key={p.value} value={p.value}>{presetLabels[p.key]}</SelectItem>)}
+                <SelectItem value="custom">{ti("custom")}</SelectItem>
+              </SelectContent>
+            </Select>
+            {ttlPreset === "custom" && <Input value={customTtl} onChange={(e) => setCustomTtl(e.target.value)} placeholder={ti("customPlaceholder")} className="h-8 text-sm mt-1.5" />}
+          </div>
+        </div>
       )}
     </div>
   );
@@ -142,37 +362,68 @@ function HomePage() {
 function InboxCard({ inbox, onExtend, onDelete }: { inbox: Inbox; onExtend: () => void; onDelete: () => void }) {
   const tc = useTranslations("common");
   const t = useTranslations("home");
-  const copyAddress = () => { navigator.clipboard.writeText(inbox.full_address || inbox.address); toast.success(tc("copied")); };
+  const router = useRouter();
+  const [copied, setCopied] = useState(false);
+
+  const copyAddress = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    copyToClipboard(inbox.full_address || inbox.address);
+    setCopied(true);
+    toast.success(tc("copied"));
+    setTimeout(() => setCopied(false), 1500);
+  };
 
   return (
-    <Card className={!inbox.is_active ? "opacity-60" : ""}>
-      <CardHeader className="pb-3">
+    <Card
+      className={`transition-all hover:shadow-md hover:border-primary/30 cursor-pointer group ${!inbox.is_active ? "opacity-60" : ""}`}
+      onClick={() => router.push(`/inboxes/${inbox.id}`)}
+    >
+      <CardContent className="pt-4 pb-4 space-y-3">
+        {/* Address + badges */}
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
-            <Link href={`/inboxes/${inbox.id}`}>
-              <CardTitle className="text-sm font-mono truncate hover:underline cursor-pointer">{inbox.full_address || inbox.address}</CardTitle>
-            </Link>
-            {inbox.domain_name && <CardDescription className="text-xs mt-0.5">@{inbox.domain_name}</CardDescription>}
+            <p className="font-mono text-sm font-medium truncate group-hover:text-primary transition-colors">
+              {inbox.full_address || inbox.address}
+            </p>
           </div>
-          <div className="flex items-center gap-1.5 shrink-0">
-            {(inbox.unread_count ?? 0) > 0 && <Badge>{t("new", { count: inbox.unread_count })}</Badge>}
-            <Badge variant={inbox.is_active ? "outline" : "secondary"}>{inbox.is_active ? tc("active") : tc("expired")}</Badge>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-          <span className="flex items-center gap-1"><Mail className="h-3.5 w-3.5" /> {inbox.email_count ?? 0}</span>
           {(inbox.unread_count ?? 0) > 0 && (
-            <span className="flex items-center gap-1 text-primary font-medium"><MailOpen className="h-3.5 w-3.5" /> {t("unread", { count: inbox.unread_count })}</span>
+            <Badge className="shrink-0 animate-in fade-in">{inbox.unread_count}</Badge>
           )}
-          <span className="flex items-center gap-1 ml-auto"><Clock className="h-3.5 w-3.5" /><ExpiryLabel expiresAt={inbox.expires_at} isActive={inbox.is_active} /></span>
         </div>
-        <div className="flex items-center gap-2 pt-1">
-          <Button variant="outline" size="sm" className="gap-1.5 flex-1" onClick={copyAddress}><Copy className="h-3.5 w-3.5" /> {tc("copy")}</Button>
-          {inbox.is_active && <Button variant="outline" size="sm" className="gap-1.5 flex-1" onClick={onExtend}><Timer className="h-3.5 w-3.5" /> {t("renew")}</Button>}
+
+        {/* Stats */}
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <Mail className="h-3 w-3" /> {t("emails", { count: inbox.email_count ?? 0 })}
+          </span>
+          {(inbox.unread_count ?? 0) > 0 && (
+            <span className="flex items-center gap-1 text-primary font-medium">
+              <MailOpen className="h-3 w-3" /> {t("unread", { count: inbox.unread_count })}
+            </span>
+          )}
+          <span className="flex items-center gap-1 ml-auto">
+            <Clock className="h-3 w-3" />
+            <ExpiryLabel expiresAt={inbox.expires_at} isActive={inbox.is_active} />
+          </span>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-1.5 pt-1" onClick={(e) => e.stopPropagation()}>
+          <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs flex-1" onClick={copyAddress}>
+            {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+            {copied ? tc("copied") : tc("copy")}
+          </Button>
+          {inbox.is_active && (
+            <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs flex-1" onClick={(e) => { e.stopPropagation(); onExtend(); }}>
+              <Timer className="h-3 w-3" /> {t("renew")}
+            </Button>
+          )}
           <ConfirmDialog
-            trigger={<Button variant="ghost" size="sm" className="text-destructive hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button>}
+            trigger={
+              <Button variant="ghost" size="sm" className="h-7 text-destructive hover:text-destructive">
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            }
             title={t("deleteInbox")}
             description={t("deleteInboxDesc", { address: inbox.full_address || inbox.address })}
             onConfirm={onDelete}
@@ -209,171 +460,17 @@ function ExpiryLabel({ expiresAt, isActive }: { expiresAt: string; isActive: boo
 
 function InboxGridSkeleton() {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {Array.from({ length: 6 }).map((_, i) => (
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: 3 }).map((_, i) => (
         <Card key={i}>
-          <CardHeader className="pb-3"><Skeleton className="h-4 w-3/4" /><Skeleton className="h-3 w-1/3 mt-1" /></CardHeader>
-          <CardContent><Skeleton className="h-4 w-full" /><Skeleton className="h-8 w-full mt-2" /></CardContent>
+          <CardContent className="pt-4 pb-4 space-y-3">
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-3 w-1/2" />
+            <Skeleton className="h-7 w-full" />
+          </CardContent>
         </Card>
       ))}
     </div>
-  );
-}
-
-/* ── Create inbox dialog — fetches user's available domains from BE ── */
-
-/** Parse Go duration string (e.g. "1h0m0s", "10m0s") to minutes */
-function durationToMinutes(d?: string): number {
-  if (!d) return Infinity;
-  let mins = 0;
-  const h = d.match(/(\d+)h/);
-  const m = d.match(/(\d+)m/);
-  if (h) mins += parseInt(h[1]) * 60;
-  if (m) mins += parseInt(m[1]);
-  return mins || Infinity;
-}
-
-function formatDuration(d: string): string {
-  const h = d.match(/(\d+)h/);
-  const m = d.match(/(\d+)m/);
-  const parts: string[] = [];
-  if (h && parseInt(h[1]) > 0) parts.push(`${h[1]}h`);
-  if (m && parseInt(m[1]) > 0) parts.push(`${m[1]}m`);
-  return parts.join(" ") || d;
-}
-
-const ALL_PRESETS = [
-  { mins: 10, value: "10m", key: "10m" as const },
-  { mins: 30, value: "30m", key: "30m" as const },
-  { mins: 60, value: "1h", key: "1h" as const },
-  { mins: 360, value: "6h", key: "6h" as const },
-  { mins: 720, value: "12h", key: "12h" as const },
-  { mins: 1440, value: "24h", key: "24h" as const },
-];
-
-function CreateInboxDialog() {
-  const [alias, setAlias] = useState("");
-  const [assignmentId, setAssignmentId] = useState("");
-  const [ttlPreset, setTtlPreset] = useState("");
-  const [customTtl, setCustomTtl] = useState("");
-  const [open, setOpen] = useState(false);
-  const [creating, setCreating] = useState(false);
-  const qc = useQueryClient();
-  const t = useTranslations("createInbox");
-  const th = useTranslations("home");
-
-  const { data: assignments } = useQuery({
-    queryKey: ["my-domains"],
-    queryFn: () => api.get<{ data: DomainAssignment[] }>("/my/domains"),
-    enabled: open,
-  });
-
-  // Auto-select first assignment and set default TTL preset
-  useEffect(() => {
-    if (assignments?.data?.length && !assignmentId) {
-      const first = assignments.data[0];
-      setAssignmentId(first.id);
-    }
-  }, [assignments, assignmentId]);
-
-  const selected = assignments?.data?.find((a) => a.id === assignmentId);
-  const maxMins = durationToMinutes(selected?.max_ttl);
-  const defaultTtl = selected?.default_ttl;
-
-  // Filter presets to those within max TTL, add custom option
-  const presetLabels: Record<string, string> = {
-    "10m": t("10m"), "30m": t("30m"), "1h": t("1h"),
-    "6h": t("6h"), "12h": t("12h"), "24h": t("24h"),
-  };
-  const availablePresets = ALL_PRESETS.filter((p) => p.mins <= maxMins);
-
-  // Set default TTL when domain changes
-  useEffect(() => {
-    if (!defaultTtl) return;
-    const match = ALL_PRESETS.find((p) => p.value === defaultTtl.replace("0s", "").replace("0m0s", ""));
-    if (match) setTtlPreset(match.value);
-    else {
-      // Default TTL doesn't match a preset — find closest
-      const mins = durationToMinutes(defaultTtl);
-      const closest = ALL_PRESETS.filter((p) => p.mins <= maxMins).reduce((prev, curr) =>
-        Math.abs(curr.mins - mins) < Math.abs(prev.mins - mins) ? curr : prev
-      , ALL_PRESETS[0]);
-      setTtlPreset(closest?.value || "1h");
-    }
-  }, [defaultTtl, maxMins]);
-
-  const ttl = ttlPreset === "custom" ? customTtl : ttlPreset;
-
-  const create = async () => {
-    if (!assignmentId || !ttl) return;
-    setCreating(true);
-    try {
-      await api.post(`/inboxes`, { domain_assignment_id: assignmentId, alias: alias || undefined, ttl });
-      qc.invalidateQueries({ queryKey: ["home-inboxes"] });
-      qc.invalidateQueries({ queryKey: ["inboxes"] });
-      toast.success(th("inboxCreated"));
-      setOpen(false);
-      setAlias("");
-      setTtlPreset("");
-      setCustomTtl("");
-      setAssignmentId("");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed");
-    } finally {
-      setCreating(false);
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="gap-2"><Plus className="h-4 w-4" /> {th("newInbox")}</Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader><DialogTitle>{t("title")}</DialogTitle></DialogHeader>
-        {assignments?.data?.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-4">{th("noDomains")}</p>
-        ) : (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>{t("domain")}</Label>
-              <Select value={assignmentId} onValueChange={setAssignmentId}>
-                <SelectTrigger><SelectValue placeholder={t("selectDomain")} /></SelectTrigger>
-                <SelectContent>
-                  {assignments?.data?.map((a) => (
-                    <SelectItem key={a.id} value={a.id}>{a.domain_name || a.domain_id}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>{t("alias")} <span className="text-muted-foreground font-normal">({t("aliasOptional")})</span></Label>
-              <div className="flex items-center gap-2">
-                <Input value={alias} onChange={(e) => setAlias(e.target.value)} placeholder={t("aliasPlaceholder")} className="flex-1" />
-                {selected?.domain_name && <span className="text-sm text-muted-foreground shrink-0">@{selected.domain_name}</span>}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>{t("lifetime")}</Label>
-              <Select value={ttlPreset} onValueChange={setTtlPreset}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {availablePresets.map((p) => <SelectItem key={p.value} value={p.value}>{presetLabels[p.key]}</SelectItem>)}
-                  <SelectItem value="custom">{t("custom")}</SelectItem>
-                </SelectContent>
-              </Select>
-              {ttlPreset === "custom" && <Input value={customTtl} onChange={(e) => setCustomTtl(e.target.value)} placeholder={t("customPlaceholder")} className="mt-2" />}
-              {selected?.max_ttl && (
-                <p className="text-xs text-muted-foreground">{t("maxLifetime", { max: formatDuration(selected.max_ttl) })}</p>
-              )}
-            </div>
-            <Button onClick={create} className="w-full" disabled={!assignmentId || !ttl || creating}>
-              {creating ? t("creating") : t("createInbox")}
-            </Button>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
   );
 }
 

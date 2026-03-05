@@ -23,6 +23,7 @@ export interface Organization {
   logo_url?: string;
   settings: OrgSettings;
   created_at: string;
+  updated_at: string;
 }
 
 export interface OrgSettings {
@@ -183,6 +184,7 @@ export interface Membership {
   email?: string;
   display_name?: string;
   created_at: string;
+  last_login_at?: string;
 }
 
 export interface AnalyticsStats {
@@ -202,7 +204,19 @@ export interface EmailsPerDay {
 export interface SystemStats {
   total_users: number;
   total_orgs: number;
+  total_teams: number;
   total_emails: number;
   total_inboxes: number;
   total_domains: number;
+  active_inboxes: number;
+  total_sessions: number;
+}
+
+export interface Invite {
+  id: string;
+  org_id: string;
+  email: string;
+  org_role: string;
+  expires_at: string;
+  created_at: string;
 }

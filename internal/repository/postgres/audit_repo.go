@@ -7,8 +7,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/database"
-	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
+	"gitlab.com/burnerbyte/burnerbyte/internal/database"
+	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
 )
 
 type AuditRepo struct {

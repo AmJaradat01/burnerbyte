@@ -7,8 +7,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/auth"
-	"gitlab.com/amjaradat01/burnerbyte/internal/service"
+	"gitlab.com/burnerbyte/burnerbyte/internal/auth"
+	"gitlab.com/burnerbyte/burnerbyte/internal/service"
 )
 
 type EmailHandler struct {

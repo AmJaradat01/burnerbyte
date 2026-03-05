@@ -24,4 +24,10 @@ func (c *Config) LoadFromDB(ctx context.Context, repo SystemConfigLoader) {
 		c.MinIO = storage
 		slog.Info("loaded storage config from database")
 	}
+
+	var sso SSOConfig
+	if err := repo.Get(ctx, "sso", &sso); err == nil {
+		c.SSO = sso
+		slog.Info("loaded sso config from database")
+	}
 }

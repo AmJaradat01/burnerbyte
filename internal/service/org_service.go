@@ -14,9 +14,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
-	"gitlab.com/amjaradat01/burnerbyte/internal/mailer"
-	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
+	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
+	"gitlab.com/burnerbyte/burnerbyte/internal/mailer"
+	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
 )
 
 type OrgService struct {
@@ -361,4 +361,8 @@ func (s *OrgService) GetMembership(ctx context.Context, userID, orgID uuid.UUID)
 
 func (s *OrgService) ListAll(ctx context.Context, page, perPage int) ([]domain.Organization, int, error) {
 	return s.orgRepo.ListAll(ctx, page, perPage)
+}
+
+func (s *OrgService) ListPendingInvites(ctx context.Context, orgID uuid.UUID) ([]domain.Invite, error) {
+	return s.orgRepo.ListPendingInvites(ctx, orgID)
 }

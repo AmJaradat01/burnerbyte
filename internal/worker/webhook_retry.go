@@ -4,8 +4,8 @@ import (
 	"context"
 	"log/slog"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
-	"gitlab.com/amjaradat01/burnerbyte/internal/webhook"
+	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
+	"gitlab.com/burnerbyte/burnerbyte/internal/webhook"
 )
 
 func WebhookRetryJob(webhookRepo *postgres.WebhookRepo, dispatcher *webhook.Dispatcher) func(ctx context.Context) error {

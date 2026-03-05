@@ -7,7 +7,7 @@ import (
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/config"
+	"gitlab.com/burnerbyte/burnerbyte/internal/config"
 )
 
 func NewS3(ctx context.Context, cfg config.MinIOConfig) (*minio.Client, error) {

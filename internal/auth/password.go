@@ -6,7 +6,7 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/config"
+	"gitlab.com/burnerbyte/burnerbyte/internal/config"
 )
 
 func HashPassword(password string) (string, error) {

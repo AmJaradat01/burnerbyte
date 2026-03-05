@@ -2,26 +2,40 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
+	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/minio/minio-go/v7"
 	"github.com/redis/go-redis/v9"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/auth"
-	"gitlab.com/amjaradat01/burnerbyte/internal/service"
+	"gitlab.com/burnerbyte/burnerbyte/internal/auth"
+	"gitlab.com/burnerbyte/burnerbyte/internal/config"
+	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
+	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
+	"gitlab.com/burnerbyte/burnerbyte/internal/service"
 )
+
+var startTime = time.Now()
 
 type AdminHandler struct {
 	analyticsSvc *service.AnalyticsService
 	orgSvc       *service.OrgService
+	authSvc      *service.AuthService
+	sysConfig    *postgres.SystemConfigRepo
+	cfg          *config.Config
 	pool         *pgxpool.Pool
 	rdb          *redis.Client
+	s3           *minio.Client
+	bucket       string
 }
 
-func NewAdminHandler(analyticsSvc *service.AnalyticsService, orgSvc *service.OrgService, pool *pgxpool.Pool, rdb *redis.Client) *AdminHandler {
-	return &AdminHandler{analyticsSvc: analyticsSvc, orgSvc: orgSvc, pool: pool, rdb: rdb}
+func NewAdminHandler(analyticsSvc *service.AnalyticsService, orgSvc *service.OrgService, authSvc *service.AuthService, sysConfig *postgres.SystemConfigRepo, cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, s3 *minio.Client, bucket string) *AdminHandler {
+	return &AdminHandler{analyticsSvc: analyticsSvc, orgSvc: orgSvc, authSvc: authSvc, sysConfig: sysConfig, cfg: cfg, pool: pool, rdb: rdb, s3: s3, bucket: bucket}
 }
 
 func (h *AdminHandler) Routes(r chi.Router) {
@@ -48,26 +62,87 @@ func (h *AdminHandler) Health(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
 
-	health := map[string]string{}
-
-	if err := h.pool.Ping(ctx); err != nil {
-		health["postgres"] = "error: " + err.Error()
-	} else {
-		health["postgres"] = "ok"
+	type svcHealth struct {
+		Status  string `json:"status"`
+		Latency string `json:"latency"`
 	}
 
-	if err := h.rdb.Ping(ctx).Err(); err != nil {
-		health["redis"] = "error: " + err.Error()
-	} else {
-		health["redis"] = "ok"
+	services := map[string]svcHealth{}
+
+	check := func(name string, fn func() error) {
+		t0 := time.Now()
+		if err := fn(); err != nil {
+			services[name] = svcHealth{Status: "error: " + err.Error(), Latency: time.Since(t0).Round(time.Microsecond).String()}
+		} else {
+			services[name] = svcHealth{Status: "ok", Latency: time.Since(t0).Round(time.Microsecond).String()}
+		}
+	}
+
+	check("postgres", func() error { return h.pool.Ping(ctx) })
+	check("redis", func() error { return h.rdb.Ping(ctx).Err() })
+	if h.s3 != nil {
+		check("minio", func() error {
+			_, err := h.s3.BucketExists(ctx, h.bucket)
+			return err
+		})
 	}
 
 	status := http.StatusOK
-	for _, v := range health {
-		if v != "ok" {
+	for _, v := range services {
+		if v.Status != "ok" {
 			status = http.StatusServiceUnavailable
 			break
 		}
 	}
-	writeJSON(w, status, health)
+	writeJSON(w, status, map[string]any{
+		"services": services,
+		"uptime":   time.Since(startTime).Round(time.Second).String(),
+	})
+}
+
+func (h *AdminHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
+	userID, err := uuid.Parse(chi.URLParam(r, "userId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid user ID")
+		return
+	}
+	var input domain.UpdateProfileInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	user, err := h.authSvc.UpdateProfile(r.Context(), userID, input)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to update user")
+		return
+	}
+	writeJSON(w, http.StatusOK, user)
+}
+
+func (h *AdminHandler) GetSSOConfig(w http.ResponseWriter, r *http.Request) {
+	// Return current SSO config (mask secret)
+	masked := h.cfg.SSO
+	if masked.ClientSecret != "" {
+		masked.ClientSecret = "••••••••"
+	}
+	writeJSON(w, http.StatusOK, masked)
+}
+
+func (h *AdminHandler) UpdateSSOConfig(w http.ResponseWriter, r *http.Request) {
+	var input config.SSOConfig
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	// If secret is masked, keep the existing one
+	if input.ClientSecret == "••••••••" {
+		input.ClientSecret = h.cfg.SSO.ClientSecret
+	}
+	if err := h.sysConfig.Set(r.Context(), "sso", input); err != nil {
+		slog.Error("failed to save SSO config", "error", err)
+		writeError(w, http.StatusInternalServerError, "failed to save SSO config")
+		return
+	}
+	h.cfg.SSO = input
+	writeJSON(w, http.StatusOK, map[string]string{"message": "SSO config updated"})
 }

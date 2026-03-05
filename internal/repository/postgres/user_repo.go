@@ -9,8 +9,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/database"
-	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
+	"gitlab.com/burnerbyte/burnerbyte/internal/database"
+	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
 )
 
 var ErrConflict = errors.New("conflict: resource already exists")

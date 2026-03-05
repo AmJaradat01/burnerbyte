@@ -7,16 +7,17 @@ import (
 	"log/slog"
 	"net"
 	"net/mail"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/auth"
-	"gitlab.com/amjaradat01/burnerbyte/internal/config"
-	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
-	"gitlab.com/amjaradat01/burnerbyte/internal/mailer"
-	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
+	"gitlab.com/burnerbyte/burnerbyte/internal/auth"
+	"gitlab.com/burnerbyte/burnerbyte/internal/config"
+	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
+	"gitlab.com/burnerbyte/burnerbyte/internal/mailer"
+	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
 )
 
 // stripPort extracts the host/IP from a "host:port" string.
@@ -34,6 +35,7 @@ type AuthService struct {
 	userRepo    *postgres.UserRepo
 	sessionRepo *postgres.SessionRepo
 	resetRepo   *postgres.PasswordResetRepo
+	orgRepo     *postgres.OrgRepo
 	tokens      *auth.TokenManager
 	lockout     *auth.Lockout
 	mailer      *mailer.Mailer
@@ -45,6 +47,7 @@ func NewAuthService(
 	userRepo *postgres.UserRepo,
 	sessionRepo *postgres.SessionRepo,
 	resetRepo *postgres.PasswordResetRepo,
+	orgRepo *postgres.OrgRepo,
 	tokens *auth.TokenManager,
 	lockout *auth.Lockout,
 	mailer *mailer.Mailer,
@@ -52,7 +55,7 @@ func NewAuthService(
 ) *AuthService {
 	return &AuthService{
 		pool: pool, userRepo: userRepo, sessionRepo: sessionRepo,
-		resetRepo: resetRepo,
+		resetRepo: resetRepo, orgRepo: orgRepo,
 		tokens: tokens, lockout: lockout, mailer: mailer, cfg: cfg,
 	}
 }
@@ -399,30 +402,44 @@ func (s *AuthService) ResetPassword(ctx context.Context, input domain.ResetPassw
 
 func (s *AuthService) SSOLogin(ctx context.Context, email, displayName, provider, subject, ip, userAgent string) (*domain.User, *domain.TokenPair, error) {
 	ip = stripPort(ip)
+	ssoCfg := s.cfg.SSO
+
+	// Check allowed domains
+	if ssoCfg.AllowedDomains != "" {
+		parts := strings.Split(email, "@")
+		if len(parts) != 2 {
+			return nil, nil, fmt.Errorf("invalid email")
+		}
+		emailDomain := parts[1]
+		allowed := false
+		for _, d := range strings.Split(ssoCfg.AllowedDomains, ",") {
+			if strings.TrimSpace(d) == emailDomain {
+				allowed = true
+				break
+			}
+		}
+		if !allowed {
+			return nil, nil, fmt.Errorf("email domain %s is not allowed for SSO", emailDomain)
+		}
+	}
 
 	// Try to find existing SSO user
+	isNew := false
 	user, err := s.userRepo.GetBySSO(ctx, provider, subject)
 	if err != nil {
-		// Not found — try by email or create new
 		user, err = s.userRepo.GetByEmail(ctx, email)
 		if err != nil {
-			// Create new user
-			now := time.Now()
 			user = &domain.User{
-				ID:                uuid.New(),
-				Email:             email,
-				DisplayName:       displayName,
-				SSOProvider:       &provider,
-				SSOSubject:        &subject,
-				IsSystemAdmin:     false,
-				EmailVerified:     true, // SSO users are auto-verified
-				PasswordChangedAt: &now,
+				ID: uuid.New(), Email: email, DisplayName: displayName,
+				SSOProvider: &provider, SSOSubject: &subject,
+				IsSystemAdmin: false, EmailVerified: true,
+				PasswordChangedAt: func() *time.Time { t := time.Now(); return &t }(),
 			}
 			if err := s.userRepo.Create(ctx, user); err != nil {
 				return nil, nil, fmt.Errorf("create SSO user: %w", err)
 			}
+			isNew = true
 		} else {
-			// Link SSO to existing email account
 			user.SSOProvider = &provider
 			user.SSOSubject = &subject
 			user.EmailVerified = true
@@ -432,11 +449,31 @@ func (s *AuthService) SSOLogin(ctx context.Context, email, displayName, provider
 		}
 	}
 
+	// Auto-provision into org
+	if isNew && ssoCfg.AutoProvision && s.orgRepo != nil {
+		s.autoProvisionSSO(ctx, user, ssoCfg)
+	}
+
 	tokenPair, err := s.createSession(ctx, s.sessionRepo, user, ip, userAgent)
 	if err != nil {
 		return nil, nil, err
 	}
 	return user, tokenPair, nil
+}
+
+func (s *AuthService) autoProvisionSSO(ctx context.Context, user *domain.User, ssoCfg config.SSOConfig) {
+	orgs, _, err := s.orgRepo.ListAll(ctx, 1, 1)
+	if err != nil || len(orgs) == 0 {
+		return
+	}
+	role := ssoCfg.DefaultOrgRole
+	if role == "" {
+		role = "member"
+	}
+	_ = s.orgRepo.CreateMembership(ctx, &domain.OrgMembership{
+		ID: uuid.New(), UserID: user.ID, OrgID: orgs[0].ID, Role: role,
+	})
+	slog.Info("SSO auto-provisioned user into org", "user", user.Email, "org", orgs[0].Name, "role", role)
 }
 
 func (s *AuthService) VerifyEmail(ctx context.Context, userID uuid.UUID) error {
@@ -447,6 +484,13 @@ func (s *AuthService) VerifyEmail(ctx context.Context, userID uuid.UUID) error {
 
 	user.EmailVerified = true
 	return s.userRepo.Update(ctx, user)
+}
+
+func (s *AuthService) ListAllOrgs(ctx context.Context, page, perPage int) ([]domain.Organization, int, error) {
+	if s.orgRepo == nil {
+		return nil, 0, nil
+	}
+	return s.orgRepo.ListAll(ctx, page, perPage)
 }
 
 func (s *AuthService) createSession(ctx context.Context, repo *postgres.SessionRepo, user *domain.User, ip, userAgent string) (*domain.TokenPair, error) {
