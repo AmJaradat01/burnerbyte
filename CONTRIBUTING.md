@@ -13,7 +13,7 @@
 ### Getting Started
 
 ```bash
-git clone git@gitlab.com:amjaradat01/burnerbyte.git
+git clone git@gitlab.com:burnerbyte/burnerbyte.git
 cd burnerbyte
 
 # Start infrastructure

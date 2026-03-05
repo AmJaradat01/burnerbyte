@@ -1,5 +1,29 @@
 # Changelog
 
+## v0.8.0 (2026-03-05)
+
+### Breaking Changes
+- **Module rename** — Go module path changed from `gitlab.com/amjaradat01/burnerbyte` to `gitlab.com/burnerbyte/burnerbyte`
+
+### Features
+- **Dual layout** — Regular users get a top navbar + footer (no sidebar); admins/owners keep the sidebar with full Manage section
+- **SSO configuration** — OIDC SSO setup UI and backend (`GET/PUT /admin/sso`), auto-provisioning, domain filtering, login page SSO button
+- **Settings page** — Unified 5-tab settings (General, Members, System, Orgs, Health); admin panel merged into Settings
+- **Clipboard fallback** — `copyToClipboard()` utility with `document.execCommand` fallback for non-HTTPS environments
+
+### UI/UX Enhancements
+- **Home page redesign** — Hero-style quick-create card inspired by temp-mail.org; domain selector, dashed address preview, advanced options toggle; no auto-create on load
+- **Inbox detail redesign** — Split-pane email client layout; left panel email list with search/unread dots; right panel email preview with attachments, mark read/unread, delete; responsive with mobile back-to-list
+- **Inboxes list removed** — `/inboxes` now redirects to `/` (home serves as inbox hub)
+- **RBAC sidebar gating** — Manage section only visible to org admins/owners and system admins
+- **Layout flash prevention** — AppShell waits for role resolution before rendering authenticated layout
+
+### Bug Fixes
+- **Inbox expiry** — `ExtendTTL` now resets from `time.Now()` instead of adding to current `expires_at`
+- **Dynamic `is_active`** — All inbox queries compute active status as `is_active AND expires_at > NOW()`
+- **Missing route** — Registered `GET /my/domains` in router (was defined but never mounted)
+- **ESLint clean** — Resolved all 22 warnings (unused imports, `<img>` elements, `set-state-in-effect`)
+
 ## v0.7.9 (2026-03-05)
 
 ### Features

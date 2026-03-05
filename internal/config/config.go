@@ -82,10 +82,17 @@ type MailerConfig struct {
 }
 
 type SSOConfig struct {
-	Provider     string `mapstructure:"provider"`
-	ClientID     string `mapstructure:"client_id"`
-	ClientSecret string `mapstructure:"client_secret"`
-	RedirectURL  string `mapstructure:"redirect_url"`
+	Provider     string `mapstructure:"provider" json:"provider"`
+	ClientID     string `mapstructure:"client_id" json:"client_id"`
+	ClientSecret string `mapstructure:"client_secret" json:"client_secret"`
+	RedirectURL  string `mapstructure:"redirect_url" json:"redirect_url"`
+	TenantID     string `mapstructure:"tenant_id" json:"tenant_id,omitempty"`
+	IssuerURL    string `mapstructure:"issuer_url" json:"issuer_url,omitempty"`
+	// Auto-provisioning
+	AutoProvision   bool   `mapstructure:"auto_provision" json:"auto_provision"`
+	DefaultOrgRole  string `mapstructure:"default_org_role" json:"default_org_role,omitempty"`
+	DefaultTeamRole string `mapstructure:"default_team_role" json:"default_team_role,omitempty"`
+	AllowedDomains  string `mapstructure:"allowed_domains" json:"allowed_domains,omitempty"` // comma-separated
 }
 
 type CORSConfig struct {

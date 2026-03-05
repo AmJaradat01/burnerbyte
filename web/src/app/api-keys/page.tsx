@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { api } from "@/lib/api";
+import { copyToClipboard } from "@/lib/clipboard";
 import { useOrgStore } from "@/stores/org-store";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -92,7 +93,7 @@ export default function ApiKeysPage() {
 
 function ApiKeyCard({ apiKey: k, onRevoke }: { apiKey: APIKey; onRevoke: () => void }) {
   const isExpired = k.expires_at && new Date(k.expires_at) < new Date();
-  const copyPrefix = () => { navigator.clipboard.writeText(k.key_prefix); toast.success("Prefix copied"); };
+  const copyPrefix = () => { copyToClipboard(k.key_prefix); toast.success("Prefix copied"); };
 
   return (
     <Card className={isExpired ? "opacity-60" : ""}>
@@ -170,7 +171,7 @@ function CreateApiKeyDialog({ orgId, teamId }: { orgId: string; teamId: string }
     setScopes((prev) => prev.includes(scope) ? prev.filter((s) => s !== scope) : [...prev, scope]);
 
   const copyKey = () => {
-    if (rawKey) { navigator.clipboard.writeText(rawKey); toast.success("API key copied"); }
+    if (rawKey) { copyToClipboard(rawKey); toast.success("API key copied"); }
   };
 
   const create = async () => {

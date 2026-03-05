@@ -31,7 +31,7 @@ real-time email delivery via WebSocket, configurable attachment policies,
 webhooks, API keys, audit logging, and analytics.
 
 - **License:** Apache 2.0
-- **Repository:** `gitlab.com/amjaradat01/burnerbyte`
+- **Repository:** `gitlab.com/burnerbyte/burnerbyte`
 
 ---
 
@@ -875,7 +875,7 @@ GET    /api/v1/admin/health                       -- system health (DB, Redis, S
 
 - [ ] `.gitignore` — Go, Node, IDE, env, binaries, MinIO data
 - [ ] `.env.example` — documented environment variables (DB URL, Redis URL, MinIO credentials, JWT secret, SMTP config, SSO provider credentials)
-- [ ] `go.mod` + `go.sum` — module `gitlab.com/amjaradat01/burnerbyte`
+- [ ] `go.mod` + `go.sum` — module `gitlab.com/burnerbyte/burnerbyte`
 - [ ] `cmd/api/main.go` — HTTP server entrypoint with graceful shutdown (SIGINT/SIGTERM)
 - [ ] `cmd/smtpd/main.go` — SMTP server entrypoint with graceful shutdown
 - [ ] `internal/config/config.go` — config struct loaded from env + `config.yaml` via Viper

@@ -9,7 +9,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/config"
+	"gitlab.com/burnerbyte/burnerbyte/internal/config"
 )
 
 type Claims struct {

@@ -9,8 +9,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/database"
-	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
+	"gitlab.com/burnerbyte/burnerbyte/internal/database"
+	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
 )
 
 type DomainRepo struct {

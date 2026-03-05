@@ -4,7 +4,7 @@ import (
 	"context"
 	"log/slog"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/config"
+	"gitlab.com/burnerbyte/burnerbyte/internal/config"
 )
 
 // Server wraps the SMTP inbound processing pipeline.

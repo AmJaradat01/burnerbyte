@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { copyToClipboard } from "@/lib/clipboard";
 import { useOrgStore } from "@/stores/org-store";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -117,7 +118,7 @@ function DomainCard({ domain: d, onVerify, onDelete, verifying }: { domain: Doma
   const fullyVerified = d.mx_verified && d.txt_verified;
   const copyRecord = () => {
     if (d.verification_record) {
-      navigator.clipboard.writeText(d.verification_record);
+      copyToClipboard(d.verification_record);
       toast.success("Verification record copied");
     }
   };

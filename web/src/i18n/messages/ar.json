@@ -25,6 +25,7 @@
     "home": "الرئيسية",
     "inboxes": "صناديق البريد",
     "docs": "المستندات",
+    "organization": "المنظمة",
     "manage": "الإدارة",
     "dashboard": "لوحة التحكم",
     "domains": "النطاقات",
@@ -57,7 +58,19 @@
     "inboxDeleted": "تم حذف صندوق البريد",
     "renew": "تجديد",
     "unread": "{count} غير مقروء",
-    "new": "{count} جديد"
+    "new": "{count} جديد",
+    "quickCreate": "احصل على بريد إلكتروني مؤقت",
+    "quickCreateDesc": "أنشئ صندوق بريد مؤقت فوراً. تُحذف الرسائل تلقائياً عند انتهاء الصلاحية.",
+    "generate": "إنشاء عنوان بريد",
+    "generating": "جاري الإنشاء…",
+    "yourAddress": "عنوان بريدك المؤقت",
+    "addressReady": "جاهز لاستقبال الرسائل",
+    "openInbox": "فتح صندوق البريد",
+    "createAnother": "إنشاء آخر",
+    "advancedOptions": "خيارات متقدمة",
+    "recentInboxes": "صناديق بريدك",
+    "viewAll": "عرض الكل",
+    "emails": "{count} {count, plural, one {رسالة} other {رسائل}}"
   },
   "createInbox": {
     "title": "إنشاء صندوق بريد مؤقت",

@@ -7,10 +7,10 @@ import (
 
 	"github.com/google/uuid"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/config"
-	dnspkg "gitlab.com/amjaradat01/burnerbyte/internal/dns"
-	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
-	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
+	"gitlab.com/burnerbyte/burnerbyte/internal/config"
+	dnspkg "gitlab.com/burnerbyte/burnerbyte/internal/dns"
+	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
+	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
 )
 
 type DomainService struct {
