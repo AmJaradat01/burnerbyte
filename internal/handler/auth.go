@@ -11,11 +11,11 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/auth"
-	"gitlab.com/amjaradat01/burnerbyte/internal/config"
-	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
-	"gitlab.com/amjaradat01/burnerbyte/internal/middleware"
-	"gitlab.com/amjaradat01/burnerbyte/internal/service"
+	"gitlab.com/burnerbyte/burnerbyte/internal/auth"
+	"gitlab.com/burnerbyte/burnerbyte/internal/config"
+	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
+	"gitlab.com/burnerbyte/burnerbyte/internal/middleware"
+	"gitlab.com/burnerbyte/burnerbyte/internal/service"
 )
 
 type AuthHandler struct {
@@ -37,6 +37,7 @@ func (h *AuthHandler) PublicRoutes(r chi.Router, rl *middleware.RateLimiter) {
 	r.Get("/auth/verify-email/{token}", h.VerifyEmail)
 	r.Get("/auth/sso/{provider}", h.SSORedirect)
 	r.Get("/auth/sso/{provider}/callback", h.SSOCallback)
+	r.Get("/auth/sso-status", h.SSOStatus)
 }
 
 func (h *AuthHandler) AuthenticatedRoutes(r chi.Router) {
@@ -259,6 +260,28 @@ func (h *AuthHandler) RevokeAllSessions(w http.ResponseWriter, r *http.Request) 
 	}
 
 	writeJSON(w, http.StatusOK, map[string]string{"message": "all sessions revoked"})
+}
+
+func (h *AuthHandler) SSOStatus(w http.ResponseWriter, r *http.Request) {
+	enabled := h.sso.IsConfigured()
+	resp := map[string]any{"enabled": enabled}
+	if enabled {
+		cfg := h.cfg.SSO
+		resp["provider"] = cfg.Provider
+		labels := map[string]string{"google": "Google", "github": "GitHub", "azure": "Microsoft", "okta": "Okta", "oidc": "SSO"}
+		if l, ok := labels[cfg.Provider]; ok {
+			resp["provider_label"] = l
+		} else {
+			resp["provider_label"] = "SSO"
+		}
+		// Check if org enforces SSO
+		resp["enforce_sso"] = false
+		orgs, _, err := h.svc.ListAllOrgs(r.Context(), 1, 1)
+		if err == nil && len(orgs) > 0 && orgs[0].Settings.EnforceSSO != nil && *orgs[0].Settings.EnforceSSO {
+			resp["enforce_sso"] = true
+		}
+	}
+	writeJSON(w, http.StatusOK, resp)
 }
 
 func (h *AuthHandler) SSORedirect(w http.ResponseWriter, r *http.Request) {

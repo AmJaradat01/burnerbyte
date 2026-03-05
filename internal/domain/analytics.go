@@ -38,4 +38,5 @@ type SystemStats struct {
 	TotalEmails     int64 `json:"total_emails"`
 	TotalInboxes    int64 `json:"total_inboxes"`
 	ActiveInboxes   int64 `json:"active_inboxes"`
+	TotalSessions   int64 `json:"total_sessions"`
 }

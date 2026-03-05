@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { copyToClipboard } from "@/lib/clipboard";
 import { useOrgStore } from "@/stores/org-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -133,7 +134,7 @@ export default function OnboardingPage() {
                   <p className="text-sm font-medium">DNS Records for {domainName}</p>
                   <p className="text-xs text-muted-foreground">Add this TXT record to verify ownership:</p>
                   <code className="text-xs break-all block">{verificationRecord}</code>
-                  <Button variant="outline" size="sm" onClick={() => { navigator.clipboard.writeText(verificationRecord); toast.success("Copied"); }}>Copy</Button>
+                  <Button variant="outline" size="sm" onClick={() => { copyToClipboard(verificationRecord); toast.success("Copied"); }}>Copy</Button>
                 </div>
               )}
               <div className="space-y-2">

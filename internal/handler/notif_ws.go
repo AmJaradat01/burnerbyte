@@ -7,8 +7,8 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/auth"
-	"gitlab.com/amjaradat01/burnerbyte/internal/realtime"
+	"gitlab.com/burnerbyte/burnerbyte/internal/auth"
+	"gitlab.com/burnerbyte/burnerbyte/internal/realtime"
 )
 
 type NotifWSHandler struct {

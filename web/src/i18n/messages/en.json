@@ -25,6 +25,7 @@
     "home": "Home",
     "inboxes": "Inboxes",
     "docs": "Docs",
+    "organization": "Organization",
     "manage": "Manage",
     "dashboard": "Dashboard",
     "domains": "Domains",
@@ -57,7 +58,19 @@
     "inboxDeleted": "Inbox deleted",
     "renew": "Renew",
     "unread": "{count} unread",
-    "new": "{count} new"
+    "new": "{count} new",
+    "quickCreate": "Get a temporary email address",
+    "quickCreateDesc": "Instantly create a disposable inbox. Emails auto-delete when it expires.",
+    "generate": "Generate Email Address",
+    "generating": "Generating…",
+    "yourAddress": "Your temporary email address",
+    "addressReady": "Ready to receive emails",
+    "openInbox": "Open Inbox",
+    "createAnother": "Create Another",
+    "advancedOptions": "Advanced options",
+    "recentInboxes": "Your Inboxes",
+    "viewAll": "View All",
+    "emails": "{count} {count, plural, one {email} other {emails}}"
   },
   "createInbox": {
     "title": "Create a temporary inbox",

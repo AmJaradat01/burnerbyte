@@ -5,8 +5,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/database"
-	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
+	"gitlab.com/burnerbyte/burnerbyte/internal/database"
+	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
 )
 
 type AnalyticsRepo struct {
@@ -109,6 +109,7 @@ func (r *AnalyticsRepo) GetSystemStats(ctx context.Context) (*domain.SystemStats
 	_ = r.db.QueryRow(ctx, `SELECT COUNT(*) FROM emails`).Scan(&stats.TotalEmails)
 	_ = r.db.QueryRow(ctx, `SELECT COUNT(*) FROM inboxes`).Scan(&stats.TotalInboxes)
 	_ = r.db.QueryRow(ctx, `SELECT COUNT(*) FROM inboxes WHERE is_active = TRUE`).Scan(&stats.ActiveInboxes)
+	_ = r.db.QueryRow(ctx, `SELECT COUNT(*) FROM sessions`).Scan(&stats.TotalSessions)
 	return stats, nil
 }
 

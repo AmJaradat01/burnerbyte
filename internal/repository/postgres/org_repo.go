@@ -9,8 +9,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/database"
-	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
+	"gitlab.com/burnerbyte/burnerbyte/internal/database"
+	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
 )
 
 type OrgRepo struct {
@@ -164,7 +164,8 @@ func (r *OrgRepo) ListMembers(ctx context.Context, orgID uuid.UUID, page, perPag
 
 	offset := (page - 1) * perPage
 	rows, err := r.db.Query(ctx,
-		`SELECT om.id, om.user_id, om.org_id, om.role, om.created_at, u.email, u.display_name
+		`SELECT om.id, om.user_id, om.org_id, om.role, om.created_at, u.email, u.display_name,
+		        (SELECT MAX(s.created_at) FROM sessions s WHERE s.user_id = om.user_id) AS last_login_at
 		 FROM org_memberships om JOIN users u ON om.user_id = u.id
 		 WHERE om.org_id = $1 ORDER BY om.created_at LIMIT $2 OFFSET $3`, orgID, perPage, offset)
 	if err != nil {
@@ -175,7 +176,7 @@ func (r *OrgRepo) ListMembers(ctx context.Context, orgID uuid.UUID, page, perPag
 	var members []domain.OrgMembership
 	for rows.Next() {
 		var m domain.OrgMembership
-		if err := rows.Scan(&m.ID, &m.UserID, &m.OrgID, &m.Role, &m.CreatedAt, &m.Email, &m.DisplayName); err != nil {
+		if err := rows.Scan(&m.ID, &m.UserID, &m.OrgID, &m.Role, &m.CreatedAt, &m.Email, &m.DisplayName, &m.LastLoginAt); err != nil {
 			return nil, 0, err
 		}
 		members = append(members, m)
@@ -239,6 +240,26 @@ func (r *OrgRepo) GetInviteByToken(ctx context.Context, token string) (*domain.I
 func (r *OrgRepo) MarkInviteAccepted(ctx context.Context, id uuid.UUID) error {
 	_, err := r.db.Exec(ctx, `UPDATE invites SET accepted_at = NOW() WHERE id = $1`, id)
 	return err
+}
+
+func (r *OrgRepo) ListPendingInvites(ctx context.Context, orgID uuid.UUID) ([]domain.Invite, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT id, org_id, team_id, email, org_role, team_role, invited_by, expires_at, created_at
+		 FROM invites WHERE org_id = $1 AND accepted_at IS NULL AND expires_at > NOW()
+		 ORDER BY created_at DESC`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list pending invites: %w", err)
+	}
+	defer rows.Close()
+	var invites []domain.Invite
+	for rows.Next() {
+		var inv domain.Invite
+		if err := rows.Scan(&inv.ID, &inv.OrgID, &inv.TeamID, &inv.Email, &inv.OrgRole, &inv.TeamRole, &inv.InvitedBy, &inv.ExpiresAt, &inv.CreatedAt); err != nil {
+			return nil, err
+		}
+		invites = append(invites, inv)
+	}
+	return invites, nil
 }
 
 func (r *OrgRepo) ListAll(ctx context.Context, page, perPage int) ([]domain.Organization, int, error) {

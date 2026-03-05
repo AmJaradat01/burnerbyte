@@ -10,11 +10,11 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/auth"
-	"gitlab.com/amjaradat01/burnerbyte/internal/auth/rbac"
-	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
-	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
-	"gitlab.com/amjaradat01/burnerbyte/internal/service"
+	"gitlab.com/burnerbyte/burnerbyte/internal/auth"
+	"gitlab.com/burnerbyte/burnerbyte/internal/auth/rbac"
+	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
+	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
+	"gitlab.com/burnerbyte/burnerbyte/internal/service"
 )
 
 type OrgHandler struct {
@@ -39,6 +39,7 @@ func (h *OrgHandler) Routes(r chi.Router) {
 	r.Patch("/orgs/{orgId}/members/{userId}", h.ChangeRole)
 	r.Delete("/orgs/{orgId}/members/{userId}", h.RemoveMember)
 	r.Post("/orgs/{orgId}/invites", h.InviteMember)
+	r.Get("/orgs/{orgId}/invites", h.ListPendingInvites)
 	r.Post("/invites/{token}/accept", h.AcceptInvite)
 }
 
@@ -297,6 +298,23 @@ func (h *OrgHandler) AcceptInvite(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, map[string]string{"message": "invite accepted"})
+}
+
+func (h *OrgHandler) ListPendingInvites(w http.ResponseWriter, r *http.Request) {
+	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid org ID")
+		return
+	}
+	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+		return
+	}
+	invites, err := h.svc.ListPendingInvites(r.Context(), orgID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to list invites")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"data": invites})
 }
 
 // ── Pagination helpers ──

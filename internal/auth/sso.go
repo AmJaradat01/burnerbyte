@@ -10,48 +10,73 @@ import (
 	"github.com/coreos/go-oidc/v3/oidc"
 	"golang.org/x/oauth2"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/config"
+	"gitlab.com/burnerbyte/burnerbyte/internal/config"
 )
 
 // SSOManager handles OIDC-based SSO authentication.
 type SSOManager struct {
-	cfg      config.SSOConfig
+	cfg      *config.Config
 	provider *oidc.Provider
 	verifier *oidc.IDTokenVerifier
 	oauth    *oauth2.Config
+	lastCfg  config.SSOConfig // track when config changes
 }
 
-func NewSSOManager(cfg config.SSOConfig) *SSOManager {
-	m := &SSOManager{cfg: cfg}
-	if !m.IsConfigured() {
-		return m
-	}
-	// Lazy-init provider on first use via initProvider()
-	return m
+func NewSSOManager(cfg *config.Config) *SSOManager {
+	return &SSOManager{cfg: cfg}
 }
+
+func (s *SSOManager) sso() config.SSOConfig { return s.cfg.SSO }
 
 func (s *SSOManager) IsConfigured() bool {
-	return s.cfg.Provider != "" && s.cfg.ClientID != "" && s.cfg.ClientSecret != ""
+	c := s.sso()
+	return c.Provider != "" && c.ClientID != "" && c.ClientSecret != ""
 }
 
 func (s *SSOManager) initProvider(ctx context.Context) error {
-	if s.provider != nil {
+	c := s.sso()
+	// Re-init if config changed
+	if s.provider != nil && s.lastCfg == c {
 		return nil
 	}
-	p, err := oidc.NewProvider(ctx, s.cfg.Provider)
+	issuer := providerIssuer(c)
+	p, err := oidc.NewProvider(ctx, issuer)
 	if err != nil {
 		return fmt.Errorf("oidc discovery: %w", err)
 	}
 	s.provider = p
-	s.verifier = p.Verifier(&oidc.Config{ClientID: s.cfg.ClientID})
+	s.verifier = p.Verifier(&oidc.Config{ClientID: c.ClientID})
 	s.oauth = &oauth2.Config{
-		ClientID:     s.cfg.ClientID,
-		ClientSecret: s.cfg.ClientSecret,
-		RedirectURL:  s.cfg.RedirectURL,
+		ClientID:     c.ClientID,
+		ClientSecret: c.ClientSecret,
+		RedirectURL:  c.RedirectURL,
 		Endpoint:     p.Endpoint(),
 		Scopes:       []string{oidc.ScopeOpenID, "profile", "email"},
 	}
+	s.lastCfg = c
 	return nil
+}
+
+// providerIssuer maps short provider names to OIDC issuer URLs.
+func providerIssuer(cfg config.SSOConfig) string {
+	switch cfg.Provider {
+	case "google":
+		return "https://accounts.google.com"
+	case "github":
+		return "https://token.actions.githubusercontent.com"
+	case "azure":
+		tenant := cfg.TenantID
+		if tenant == "" {
+			tenant = "common"
+		}
+		return "https://login.microsoftonline.com/" + tenant + "/v2.0"
+	default:
+		// okta, oidc, or any custom — use issuer_url or provider as-is
+		if cfg.IssuerURL != "" {
+			return cfg.IssuerURL
+		}
+		return cfg.Provider
+	}
 }
 
 // GenerateState creates a random state parameter for CSRF protection.
@@ -116,5 +141,5 @@ func (s *SSOManager) HandleCallback(ctx context.Context, r *http.Request) (email
 		return "", "", "", "", fmt.Errorf("email claim missing from id_token")
 	}
 
-	return claims.Email, claims.Name, s.cfg.Provider, claims.Subject, nil
+	return claims.Email, claims.Name, s.sso().Provider, claims.Subject, nil
 }

@@ -7,14 +7,14 @@ import (
 	"os/signal"
 	"syscall"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/config"
-	"gitlab.com/amjaradat01/burnerbyte/internal/database"
-	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
-	redisrepo "gitlab.com/amjaradat01/burnerbyte/internal/repository/redis"
-	"gitlab.com/amjaradat01/burnerbyte/internal/service"
-	"gitlab.com/amjaradat01/burnerbyte/internal/smtp"
-	"gitlab.com/amjaradat01/burnerbyte/internal/storage"
-	"gitlab.com/amjaradat01/burnerbyte/internal/webhook"
+	"gitlab.com/burnerbyte/burnerbyte/internal/config"
+	"gitlab.com/burnerbyte/burnerbyte/internal/database"
+	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
+	redisrepo "gitlab.com/burnerbyte/burnerbyte/internal/repository/redis"
+	"gitlab.com/burnerbyte/burnerbyte/internal/service"
+	"gitlab.com/burnerbyte/burnerbyte/internal/smtp"
+	"gitlab.com/burnerbyte/burnerbyte/internal/storage"
+	"gitlab.com/burnerbyte/burnerbyte/internal/webhook"
 )
 
 func main() {

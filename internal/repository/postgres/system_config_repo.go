@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/database"
+	"gitlab.com/burnerbyte/burnerbyte/internal/database"
 )
 
 type SystemConfigRepo struct {

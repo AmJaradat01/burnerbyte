@@ -10,7 +10,7 @@ import (
 	"net/smtp"
 	"time"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/config"
+	"gitlab.com/burnerbyte/burnerbyte/internal/config"
 )
 
 //go:embed templates/*.html

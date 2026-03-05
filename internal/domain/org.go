@@ -37,8 +37,9 @@ type OrgMembership struct {
 	Role      string    `json:"role"`
 	CreatedAt time.Time `json:"created_at"`
 	// Joined fields for list responses
-	Email       string `json:"email,omitempty"`
-	DisplayName string `json:"display_name,omitempty"`
+	Email       string     `json:"email,omitempty"`
+	DisplayName string     `json:"display_name,omitempty"`
+	LastLoginAt *time.Time `json:"last_login_at,omitempty"`
 }
 
 type CreateOrgInput struct {
