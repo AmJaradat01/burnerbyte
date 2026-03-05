@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"gitlab.com/amjaradat01/burnerbyte/internal/config"
 	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
 	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
 )
@@ -14,10 +15,12 @@ import (
 type DomainAssignmentService struct {
 	assignmentRepo *postgres.DomainAssignmentRepo
 	domainRepo     *postgres.DomainRepo
+	orgRepo        *postgres.OrgRepo
+	defaults       config.DefaultsConfig
 }
 
-func NewDomainAssignmentService(assignmentRepo *postgres.DomainAssignmentRepo, domainRepo *postgres.DomainRepo) *DomainAssignmentService {
-	return &DomainAssignmentService{assignmentRepo: assignmentRepo, domainRepo: domainRepo}
+func NewDomainAssignmentService(assignmentRepo *postgres.DomainAssignmentRepo, domainRepo *postgres.DomainRepo, orgRepo *postgres.OrgRepo, defaults config.DefaultsConfig) *DomainAssignmentService {
+	return &DomainAssignmentService{assignmentRepo: assignmentRepo, domainRepo: domainRepo, orgRepo: orgRepo, defaults: defaults}
 }
 
 func (s *DomainAssignmentService) AssignDomain(ctx context.Context, teamID uuid.UUID, input domain.CreateAssignmentInput, assignedBy uuid.UUID) (*domain.DomainAssignment, error) {
@@ -58,6 +61,19 @@ func (s *DomainAssignmentService) AssignDomain(ctx context.Context, teamID uuid.
 	}
 
 	return a, nil
+}
+
+func (s *DomainAssignmentService) ListByUser(ctx context.Context, userID uuid.UUID) ([]domain.DomainAssignment, error) {
+	assignments, err := s.assignmentRepo.ListByUser(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	resolver := NewSettingsResolver(s.assignmentRepo, s.domainRepo, s.orgRepo, s.defaults)
+	for i := range assignments {
+		assignments[i].DefaultTTL = resolver.ResolveDefaultInboxTTL(ctx, assignments[i].ID).String()
+		assignments[i].MaxTTL = resolver.ResolveMaxInboxTTL(ctx, assignments[i].ID).String()
+	}
+	return assignments, nil
 }
 
 func (s *DomainAssignmentService) ListByTeam(ctx context.Context, teamID uuid.UUID, page, perPage int) ([]domain.DomainAssignment, int, error) {

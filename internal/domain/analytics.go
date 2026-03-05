@@ -2,6 +2,7 @@ package domain
 
 type OrgStats struct {
 	TotalEmails      int64            `json:"total_emails"`
+	TotalInboxes     int64            `json:"total_inboxes"`
 	ActiveInboxes    int64            `json:"active_inboxes"`
 	TotalDomains     int64            `json:"total_domains"`
 	TotalTeams       int64            `json:"total_teams"`
@@ -12,9 +13,11 @@ type OrgStats struct {
 }
 
 type TeamStats struct {
-	TotalEmails      int64            `json:"total_emails"`
-	ActiveInboxes    int64            `json:"active_inboxes"`
-	EmailsPerDay     []TimeSeriesPoint `json:"emails_per_day"`
+	TotalEmails   int64             `json:"total_emails"`
+	TotalInboxes  int64             `json:"total_inboxes"`
+	ActiveInboxes int64             `json:"active_inboxes"`
+	TotalMembers  int64             `json:"total_members"`
+	EmailsPerDay  []TimeSeriesPoint `json:"emails_per_day"`
 }
 
 type SenderDomain struct {
@@ -28,8 +31,11 @@ type TimeSeriesPoint struct {
 }
 
 type SystemStats struct {
-	TotalUsers   int64 `json:"total_users"`
-	TotalOrgs    int64 `json:"total_orgs"`
-	TotalEmails  int64 `json:"total_emails"`
-	TotalInboxes int64 `json:"total_inboxes"`
+	TotalUsers      int64 `json:"total_users"`
+	TotalOrgs       int64 `json:"total_orgs"`
+	TotalTeams      int64 `json:"total_teams"`
+	TotalDomains    int64 `json:"total_domains"`
+	TotalEmails     int64 `json:"total_emails"`
+	TotalInboxes    int64 `json:"total_inboxes"`
+	ActiveInboxes   int64 `json:"active_inboxes"`
 }

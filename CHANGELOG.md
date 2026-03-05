@@ -1,5 +1,55 @@
 # Changelog
 
+## v0.7.9 (2026-03-05)
+
+### Features
+- **i18n support** — Added `next-intl` with English and Arabic translations; locale switcher in sidebar and landing page; RTL support for Arabic; cookie-based locale persistence
+- **Live inbox updates** — Home page connects to notification WebSocket and auto-refreshes inbox cards when new emails arrive
+- **TTL cascade exposed to frontend** — `GET /my/domains` returns resolved `default_ttl` and `max_ttl` per domain assignment; create dialog dynamically filters TTL presets and shows max limit
+- **Smart renew** — Extend/renew endpoint accepts empty duration and defaults to the domain's resolved default TTL; error message now shows the max TTL
+- **New endpoint `GET /my/domains`** — Returns all domain assignments the user can create inboxes on (across all their teams), with resolved TTL settings
+
+### UI/UX Enhancements
+- **Home page (`/`)** — Auth-aware: landing page for guests, inbox workspace for logged-in users with create inbox, status tabs, card grid, pagination, live refresh
+- **Sidebar restructured** — Removed org/team selectors (single-org, auto-selected); nav split into User (Home, Inboxes, Docs), Manage (Dashboard, Domains, Teams, etc.), and System (Admin) sections; logo links to `/`
+- **All list pages rewritten as card grids** — Inboxes, Domains, Teams, Webhooks, API Keys with counts, badges, and actions
+- **Profile page** — 2-column layout, avatar, SSO detection, password section hidden for SSO users, confirm password with mismatch indicator
+- **Audit page** — Timeline cards, date range filters, expandable detail panel, color-coded action badges
+- **Analytics page** — Stat cards with icons, top sender domains with progress bars, improved chart
+- **Settings page** — 2-column layout, branding fields (primary color swatch, footer text), danger zone
+- **Admin page** — Three tabs: Overview (stat cards with icons), Organizations (paginated table), Health (auto-refreshing Postgres/Redis status)
+- **Docs landing** — 3 categorized card sections, Self-Hosting link in nav
+- **Renew button** — Replaced "Extend" with "Renew" across all pages; uses backend-resolved default TTL instead of hardcoded 1h
+- **Create inbox dialog** — Uses `GET /my/domains` (no team selection needed); shows `alias@domain` preview; TTL presets filtered by max TTL; empty state when no domains available
+
+### Backend Enhancements
+- Added `TotalInboxes` to `OrgStats` and `TeamStats`; `TotalTeams`, `TotalDomains`, `ActiveInboxes` to `SystemStats`
+- Added `top_sender_domains` query to org analytics
+- Added `EmailCount`, `UnreadCount` to `Inbox` struct with correlated subqueries
+- Added `ActiveInboxes`, `TeamCount` to `Domain` struct
+- Added `MemberCount`, `DomainCount`, `ActiveInboxes` to `Team` struct
+- Added `ActorEmail` to `AuditEntry` via LEFT JOIN
+- Added inbox status filter (`?status=active|expired|all`) with `ListByUserWithStatus` and `ListByTeamWithStatus`
+- Added `ListByUser` to `DomainAssignmentRepo` — returns assignments across all user's teams
+- Added `DefaultTTL`, `MaxTTL` resolved fields to `DomainAssignment` struct
+- `ExtendTTL` now accepts empty duration (uses resolved default TTL)
+
+### Bug Fixes
+- Fixed analytics/admin page crash on undefined stat values (`?? 0` guard)
+- Fixed authenticated users seeing landing page instead of home on `/`
+- Fixed `currentTeam` always null after removing sidebar selectors (auto-select first team)
+- Added CORS origin for LAN IP
+
+### Types Updated
+- `User`: added `sso_provider`, `updated_at`
+- `Inbox`: added `email_count`, `unread_count`
+- `Domain`: added `dns_last_checked_at`, `active_inboxes`, `team_count`
+- `Team`: added `member_count`, `domain_count`, `active_inboxes`
+- `Webhook`: added `failure_count`, `last_status`, `last_attempt_at`
+- `APIKey`: added `expires_at`
+- `OrgSettings`: added `primary_color`, `footer_text`
+- `DomainAssignment`: added `access_level`, `default_ttl`, `max_ttl`
+
 ## v0.7.8 (2026-03-02)
 
 ### Documentation

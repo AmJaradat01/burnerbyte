@@ -29,6 +29,10 @@ func (r *AnalyticsRepo) GetOrgStats(ctx context.Context, orgID uuid.UUID) (*doma
 		`SELECT COUNT(*) FROM inboxes i JOIN domain_assignments da ON i.domain_assignment_id = da.id
 		 JOIN domains d ON da.domain_id = d.id WHERE d.org_id = $1 AND i.is_active = TRUE`, orgID).Scan(&stats.ActiveInboxes)
 
+	_ = r.db.QueryRow(ctx,
+		`SELECT COUNT(*) FROM inboxes i JOIN domain_assignments da ON i.domain_assignment_id = da.id
+		 JOIN domains d ON da.domain_id = d.id WHERE d.org_id = $1`, orgID).Scan(&stats.TotalInboxes)
+
 	_ = r.db.QueryRow(ctx, `SELECT COUNT(*) FROM domains WHERE org_id = $1`, orgID).Scan(&stats.TotalDomains)
 	_ = r.db.QueryRow(ctx, `SELECT COUNT(*) FROM teams WHERE org_id = $1`, orgID).Scan(&stats.TotalTeams)
 	_ = r.db.QueryRow(ctx, `SELECT COUNT(*) FROM org_memberships WHERE org_id = $1`, orgID).Scan(&stats.TotalMembers)
@@ -55,6 +59,23 @@ func (r *AnalyticsRepo) GetOrgStats(ctx context.Context, orgID uuid.UUID) (*doma
 		}
 	}
 
+	// Top sender domains
+	senderRows, err := r.db.Query(ctx,
+		`SELECT SPLIT_PART(e.from_address, '@', 2) AS sender_domain, COUNT(*) AS cnt
+		 FROM emails e JOIN inboxes i ON e.inbox_id = i.id
+		 JOIN domain_assignments da ON i.domain_assignment_id = da.id
+		 JOIN domains d ON da.domain_id = d.id
+		 WHERE d.org_id = $1 AND e.from_address LIKE '%@%'
+		 GROUP BY sender_domain ORDER BY cnt DESC LIMIT 5`, orgID)
+	if err == nil {
+		defer senderRows.Close()
+		for senderRows.Next() {
+			var sd domain.SenderDomain
+			_ = senderRows.Scan(&sd.Domain, &sd.Count)
+			stats.TopSenderDomains = append(stats.TopSenderDomains, sd)
+		}
+	}
+
 	return stats, nil
 }
 
@@ -69,6 +90,13 @@ func (r *AnalyticsRepo) GetTeamStats(ctx context.Context, teamID uuid.UUID) (*do
 		`SELECT COUNT(*) FROM inboxes i JOIN domain_assignments da ON i.domain_assignment_id = da.id
 		 WHERE da.team_id = $1 AND i.is_active = TRUE`, teamID).Scan(&stats.ActiveInboxes)
 
+	_ = r.db.QueryRow(ctx,
+		`SELECT COUNT(*) FROM inboxes i JOIN domain_assignments da ON i.domain_assignment_id = da.id
+		 WHERE da.team_id = $1`, teamID).Scan(&stats.TotalInboxes)
+
+	_ = r.db.QueryRow(ctx,
+		`SELECT COUNT(*) FROM team_memberships WHERE team_id = $1`, teamID).Scan(&stats.TotalMembers)
+
 	return stats, nil
 }
 
@@ -76,8 +104,11 @@ func (r *AnalyticsRepo) GetSystemStats(ctx context.Context) (*domain.SystemStats
 	stats := &domain.SystemStats{}
 	_ = r.db.QueryRow(ctx, `SELECT COUNT(*) FROM users`).Scan(&stats.TotalUsers)
 	_ = r.db.QueryRow(ctx, `SELECT COUNT(*) FROM organizations`).Scan(&stats.TotalOrgs)
+	_ = r.db.QueryRow(ctx, `SELECT COUNT(*) FROM teams`).Scan(&stats.TotalTeams)
+	_ = r.db.QueryRow(ctx, `SELECT COUNT(*) FROM domains`).Scan(&stats.TotalDomains)
 	_ = r.db.QueryRow(ctx, `SELECT COUNT(*) FROM emails`).Scan(&stats.TotalEmails)
-	_ = r.db.QueryRow(ctx, `SELECT COUNT(*) FROM inboxes WHERE is_active = TRUE`).Scan(&stats.TotalInboxes)
+	_ = r.db.QueryRow(ctx, `SELECT COUNT(*) FROM inboxes`).Scan(&stats.TotalInboxes)
+	_ = r.db.QueryRow(ctx, `SELECT COUNT(*) FROM inboxes WHERE is_active = TRUE`).Scan(&stats.ActiveInboxes)
 	return stats, nil
 }
 

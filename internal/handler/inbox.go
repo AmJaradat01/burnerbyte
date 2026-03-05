@@ -79,7 +79,9 @@ func (h *InboxHandler) CreateInboxFlat(w http.ResponseWriter, r *http.Request) {
 func (h *InboxHandler) ListMyInboxes(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
 	page, perPage := parsePagination(r)
-	inboxes, total, err := h.svc.ListByUser(r.Context(), uc.UserID, page, perPage)
+	status := r.URL.Query().Get("status")
+	if status == "" { status = "active" }
+	inboxes, total, err := h.svc.ListByUserWithStatus(r.Context(), uc.UserID, status, page, perPage)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to list inboxes")
 		return
@@ -95,7 +97,9 @@ func (h *InboxHandler) ListInboxes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	page, perPage := parsePagination(r)
-	inboxes, total, err := h.svc.ListByTeam(r.Context(), teamID, uc.UserID, page, perPage)
+	status := r.URL.Query().Get("status")
+	if status == "" { status = "active" }
+	inboxes, total, err := h.svc.ListByTeamWithStatus(r.Context(), teamID, uc.UserID, status, page, perPage)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to list inboxes")
 		return
@@ -132,10 +136,7 @@ func (h *InboxHandler) ExtendTTL(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Duration string `json:"duration"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Duration == "" {
-		writeError(w, http.StatusBadRequest, "duration is required (e.g. \"1h\")")
-		return
-	}
+	_ = json.NewDecoder(r.Body).Decode(&body)
 	inbox, err := h.svc.ExtendTTL(r.Context(), id, uc.UserID, body.Duration)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())

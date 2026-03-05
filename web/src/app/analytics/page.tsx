@@ -4,22 +4,34 @@ import { useState } from "react";
 import { api } from "@/lib/api";
 import { useOrgStore } from "@/stores/org-store";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { ErrorState } from "@/components/error-state";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Globe, HardDrive, Inbox, Mail, Users, Building2 } from "lucide-react";
 
-interface OrgStats { total_members: number; total_teams: number; total_domains: number; total_inboxes: number; total_emails: number; active_inboxes: number; }
+interface OrgStats {
+  total_members: number; total_teams: number; total_domains: number;
+  total_inboxes: number; total_emails: number; active_inboxes: number;
+  storage_used_bytes: number; top_sender_domains?: { domain: string; count: number }[];
+}
 interface TeamStats { total_members: number; total_inboxes: number; total_emails: number; active_inboxes: number; }
 interface TimeSeriesPoint { date: string; count: number; }
 
 const RANGES = [
-  { label: "Last 7 days", value: "7" },
-  { label: "Last 30 days", value: "30" },
-  { label: "Last 90 days", value: "90" },
+  { label: "7 days", value: "7" },
+  { label: "30 days", value: "30" },
+  { label: "90 days", value: "90" },
 ];
+
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return `${(bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0)} ${units[i]}`;
+}
 
 export default function AnalyticsPage() {
   const { currentOrg, currentTeam } = useOrgStore();
@@ -31,7 +43,7 @@ export default function AnalyticsPage() {
       <Tabs defaultValue="org">
         <TabsList>
           <TabsTrigger value="org">Organization</TabsTrigger>
-          {currentTeam && <TabsTrigger value="team">Team</TabsTrigger>}
+          {currentTeam && <TabsTrigger value="team">{currentTeam.name}</TabsTrigger>}
         </TabsList>
         <TabsContent value="org"><OrgAnalytics orgId={currentOrg.id} /></TabsContent>
         {currentTeam && <TabsContent value="team"><TeamAnalytics orgId={currentOrg.id} teamId={currentTeam.id} /></TabsContent>}
@@ -52,19 +64,59 @@ function OrgAnalytics({ orgId }: { orgId: string }) {
   });
 
   if (isError) return <ErrorState message="Failed to load analytics" onRetry={() => refetch()} />;
-  if (isLoading) return <div className="grid grid-cols-2 md:grid-cols-3 gap-4">{Array.from({ length: 6 }).map((_, i) => <Card key={i}><CardContent className="pt-6"><Skeleton className="h-10 w-20" /></CardContent></Card>)}</div>;
+  if (isLoading) return <StatsSkeleton count={7} />;
 
   return (
     <div className="space-y-6">
-      {stats && <StatsGrid stats={[
-        { label: "Members", value: stats.total_members },
-        { label: "Teams", value: stats.total_teams },
-        { label: "Domains", value: stats.total_domains },
-        { label: "Active Inboxes", value: stats.active_inboxes },
-        { label: "Total Inboxes", value: stats.total_inboxes },
-        { label: "Total Emails", value: stats.total_emails },
-      ]} />}
-      <DateRangeSelector value={days} onChange={setDays} />
+      {stats && (
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <StatCard icon={Mail} label="Total Emails" value={stats.total_emails} />
+            <StatCard icon={Inbox} label="Active Inboxes" value={stats.active_inboxes} subtitle={`${stats.total_inboxes ?? 0} total`} />
+            <StatCard icon={Globe} label="Domains" value={stats.total_domains} />
+            <StatCard icon={Building2} label="Teams" value={stats.total_teams} />
+            <StatCard icon={Users} label="Members" value={stats.total_members} />
+            <StatCard icon={HardDrive} label="Storage" value={formatBytes(stats.storage_used_bytes ?? 0)} />
+          </div>
+
+          {/* Top sender domains */}
+          {stats.top_sender_domains && stats.top_sender_domains.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Top Sender Domains</CardTitle>
+                <CardDescription>Most common origins of received emails</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {stats.top_sender_domains.map((sd, i) => {
+                    const max = stats.top_sender_domains![0].count;
+                    const pct = max > 0 ? (sd.count / max) * 100 : 0;
+                    return (
+                      <div key={sd.domain} className="flex items-center gap-3">
+                        <span className="w-5 text-xs text-muted-foreground text-right">{i + 1}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm font-mono truncate">{sd.domain}</span>
+                            <span className="text-sm text-muted-foreground ml-2">{sd.count.toLocaleString()}</span>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                            <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </>
+      )}
+
+      <div className="flex items-center justify-between">
+        <h2 className="text-base font-semibold">Emails per Day</h2>
+        <DateRangeSelector value={days} onChange={setDays} />
+      </div>
       {timeSeries?.data && <EmailChart data={timeSeries.data} />}
     </div>
   );
@@ -72,7 +124,7 @@ function OrgAnalytics({ orgId }: { orgId: string }) {
 
 function TeamAnalytics({ orgId, teamId }: { orgId: string; teamId: string }) {
   const [days, setDays] = useState("30");
-  const { data: stats } = useQuery({
+  const { data: stats, isLoading } = useQuery({
     queryKey: ["analytics-team", teamId],
     queryFn: () => api.get<TeamStats>(`/orgs/${orgId}/teams/${teamId}/analytics`),
   });
@@ -81,58 +133,75 @@ function TeamAnalytics({ orgId, teamId }: { orgId: string; teamId: string }) {
     queryFn: () => api.get<{ data: TimeSeriesPoint[] }>(`/orgs/${orgId}/teams/${teamId}/analytics/emails-per-day`, { days }),
   });
 
+  if (isLoading) return <StatsSkeleton count={4} />;
+
   return (
     <div className="space-y-6">
-      {stats && <StatsGrid stats={[
-        { label: "Members", value: stats.total_members },
-        { label: "Active Inboxes", value: stats.active_inboxes },
-        { label: "Total Inboxes", value: stats.total_inboxes },
-        { label: "Total Emails", value: stats.total_emails },
-      ]} />}
-      <DateRangeSelector value={days} onChange={setDays} />
+      {stats && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <StatCard icon={Mail} label="Total Emails" value={stats.total_emails} />
+          <StatCard icon={Inbox} label="Active Inboxes" value={stats.active_inboxes} subtitle={`${stats.total_inboxes ?? 0} total`} />
+          <StatCard icon={Users} label="Members" value={stats.total_members} />
+        </div>
+      )}
+      <div className="flex items-center justify-between">
+        <h2 className="text-base font-semibold">Emails per Day</h2>
+        <DateRangeSelector value={days} onChange={setDays} />
+      </div>
       {timeSeries?.data && <EmailChart data={timeSeries.data} />}
     </div>
   );
 }
 
-function DateRangeSelector({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function StatCard({ icon: Icon, label, value, subtitle }: { icon: typeof Mail; label: string; value: number | string; subtitle?: string }) {
+  const display = typeof value === "number" ? (value ?? 0).toLocaleString() : value;
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-sm text-muted-foreground">Range:</span>
-      <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-        <SelectContent>
-          {RANGES.map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
-        </SelectContent>
-      </Select>
-    </div>
+    <Card>
+      <CardContent className="pt-6">
+        <div className="flex items-center gap-2 mb-1">
+          <Icon className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">{label}</span>
+        </div>
+        <p className="text-2xl font-bold">{display}</p>
+        {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
+      </CardContent>
+    </Card>
   );
 }
 
-function StatsGrid({ stats }: { stats: { label: string; value: number }[] }) {
+function DateRangeSelector({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-      {stats.map((s) => (
-        <Card key={s.label}>
-          <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">{s.label}</CardTitle></CardHeader>
-          <CardContent><p className="text-3xl font-bold">{s.value.toLocaleString()}</p></CardContent>
-        </Card>
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className="w-32 h-8"><SelectValue /></SelectTrigger>
+      <SelectContent>
+        {RANGES.map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
+      </SelectContent>
+    </Select>
+  );
+}
+
+function StatsSkeleton({ count }: { count: number }) {
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {Array.from({ length: count }).map((_, i) => (
+        <Card key={i}><CardContent className="pt-6"><Skeleton className="h-4 w-20 mb-2" /><Skeleton className="h-8 w-16" /></CardContent></Card>
       ))}
     </div>
   );
 }
 
 function EmailChart({ data }: { data: TimeSeriesPoint[] }) {
+  if (data.length === 0) return <Card><CardContent className="py-12 text-center text-sm text-muted-foreground">No email data for this period.</CardContent></Card>;
+
   return (
     <Card>
-      <CardHeader><CardTitle>Emails per day</CardTitle></CardHeader>
-      <CardContent>
+      <CardContent className="pt-6">
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-            <YAxis />
-            <Tooltip />
+            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+            <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(v) => v.slice(5)} />
+            <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+            <Tooltip labelFormatter={(v) => `Date: ${v}`} formatter={(v) => [`${Number(v).toLocaleString()}`, "Emails"]} />
             <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
