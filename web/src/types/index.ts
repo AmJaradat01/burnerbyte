@@ -58,6 +58,7 @@ export interface Domain {
   mx_verified: boolean;
   txt_verified: boolean;
   verification_record?: string;
+  mx_target?: string;
   dns_last_checked_at?: string;
   created_at: string;
   active_inboxes: number;

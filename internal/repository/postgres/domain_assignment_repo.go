@@ -88,6 +88,7 @@ func (r *DomainAssignmentRepo) ListByUser(ctx context.Context, userID uuid.UUID)
 		 JOIN domains d ON da.domain_id = d.id
 		 JOIN team_memberships tm ON tm.team_id = da.team_id
 		 WHERE tm.user_id = $1 AND da.access_level IN ('full','create_inbox')
+		   AND d.mx_verified = TRUE
 		 ORDER BY d.domain_name`, userID)
 	if err != nil {
 		return nil, err

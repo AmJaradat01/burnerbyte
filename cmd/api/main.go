@@ -129,7 +129,7 @@ func main() {
 	ssoMgr := auth.NewSSOManager(cfg)
 	authHandler := handler.NewAuthHandler(authSvc, ssoMgr, cfg)
 	orgHandler := handler.NewOrgHandler(orgSvc)
-	domainHandler := handler.NewDomainHandler(domainSvc)
+	domainHandler := handler.NewDomainHandler(domainSvc, cfg.SMTP.Hostname)
 	teamHandler := handler.NewTeamHandler(teamSvc)
 	assignmentHandler := handler.NewDomainAssignmentHandler(assignmentSvc)
 	inboxHandler := handler.NewInboxHandler(inboxSvc)

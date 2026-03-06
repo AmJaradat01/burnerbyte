@@ -41,8 +41,8 @@ func (s *DomainAssignmentService) AssignDomain(ctx context.Context, teamID uuid.
 		}
 		return nil, err
 	}
-	if !d.MXVerified && !d.TXTVerified {
-		return nil, fmt.Errorf("domain must be verified before assignment")
+	if !d.MXVerified || !d.TXTVerified {
+		return nil, fmt.Errorf("domain must have both MX and TXT records verified before assignment")
 	}
 
 	a := &domain.DomainAssignment{
