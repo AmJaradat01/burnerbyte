@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.8.2 (2026-03-07)
+
+### Features
+- **Dynamic SSO redirect** — SSO callback derives frontend origin from the request instead of hardcoded config; works across any network/IP
+- **Full DNS setup page** — Domain detail shows all required DNS records (MX + TXT) with type, name, priority, value, copy buttons, and live verification status
+- **`mx_target` in API** — `GET /orgs/:id/domains/:did` now includes the expected MX hostname
+
+### Bug Fixes
+- **Domain assignment gate** — Now requires both MX and TXT verified (was allowing assignment with only one)
+- **Inbox creation gate** — Blocks inbox creation if domain MX is not verified
+- **Domain dropdown filter** — `/my/domains` only returns MX-verified domains so unverified domains don't appear in create inbox
+
 ## v0.8.1 (2026-03-06)
 
 ### UI/UX Enhancements
