@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
-	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -294,10 +294,31 @@ func (h *AuthHandler) SSORedirect(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to generate state")
 		return
 	}
+	// Capture the frontend origin so the callback can redirect back
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		if ref := r.Header.Get("Referer"); ref != "" {
+			if u, err := url.Parse(ref); err == nil {
+				origin = u.Scheme + "://" + u.Host
+			}
+		}
+	}
+	if origin == "" {
+		origin = h.cfg.Server.FrontendURL // fallback to config
+	}
+	scheme := "http"
+	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
+		scheme = "https"
+	}
 	http.SetCookie(w, &http.Cookie{
 		Name: "sso_state", Value: state, Path: "/", MaxAge: 600,
 		HttpOnly: true, SameSite: http.SameSiteLaxMode,
-		Secure: strings.HasPrefix(h.cfg.Server.FrontendURL, "https"),
+		Secure: scheme == "https",
+	})
+	http.SetCookie(w, &http.Cookie{
+		Name: "sso_origin", Value: origin, Path: "/", MaxAge: 600,
+		HttpOnly: true, SameSite: http.SameSiteLaxMode,
+		Secure: scheme == "https",
 	})
 	url, err := h.sso.RedirectURL(r.Context(), state)
 	if err != nil {
@@ -320,6 +341,13 @@ func (h *AuthHandler) SSOCallback(w http.ResponseWriter, r *http.Request) {
 	// Clear state cookie
 	http.SetCookie(w, &http.Cookie{Name: "sso_state", Path: "/", MaxAge: -1})
 
+	// Read and clear origin cookie
+	frontendURL := h.cfg.Server.FrontendURL
+	if oc, err := r.Cookie("sso_origin"); err == nil && oc.Value != "" {
+		frontendURL = oc.Value
+	}
+	http.SetCookie(w, &http.Cookie{Name: "sso_origin", Path: "/", MaxAge: -1})
+
 	email, displayName, provider, subject, err := h.sso.HandleCallback(r.Context(), r)
 	if err != nil {
 		writeError(w, http.StatusUnauthorized, err.Error())
@@ -333,7 +361,6 @@ func (h *AuthHandler) SSOCallback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Redirect to frontend with tokens as query params
-	frontendURL := h.cfg.Server.FrontendURL
 	http.Redirect(w, r, fmt.Sprintf("%s/login?access_token=%s&refresh_token=%s&user_id=%s",
 		frontendURL, tokens.AccessToken, tokens.RefreshToken, user.ID), http.StatusFound)
 }
