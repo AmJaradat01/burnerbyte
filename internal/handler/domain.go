@@ -15,11 +15,12 @@ import (
 )
 
 type DomainHandler struct {
-	svc *service.DomainService
+	svc      *service.DomainService
+	mxTarget string
 }
 
-func NewDomainHandler(svc *service.DomainService) *DomainHandler {
-	return &DomainHandler{svc: svc}
+func NewDomainHandler(svc *service.DomainService, smtpHostname string) *DomainHandler {
+	return &DomainHandler{svc: svc, mxTarget: smtpHostname}
 }
 
 func (h *DomainHandler) Routes(r chi.Router) {
@@ -105,7 +106,10 @@ func (h *DomainHandler) GetDomain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, d)
+	writeJSON(w, http.StatusOK, struct {
+		domain.Domain
+		MXTarget string `json:"mx_target"`
+	}{*d, h.mxTarget})
 }
 
 func (h *DomainHandler) UpdateDomain(w http.ResponseWriter, r *http.Request) {

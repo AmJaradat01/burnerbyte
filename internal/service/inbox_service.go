@@ -62,6 +62,9 @@ func (s *InboxService) CreateInbox(ctx context.Context, teamID, domainID, userID
 	if err != nil {
 		return nil, err
 	}
+	if !dom.MXVerified {
+		return nil, fmt.Errorf("domain MX record not verified — mail cannot be received")
+	}
 	org, err := s.orgRepo.GetByID(ctx, dom.OrgID)
 	if err != nil {
 		return nil, err
