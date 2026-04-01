@@ -181,7 +181,7 @@ function CreateApiKeyDialog({ orgId, teamId }: { orgId: string; teamId: string }
     setCreating(true);
     try {
       const body: Record<string, unknown> = { name: name.trim(), scopes };
-      if (expiresIn) body.expires_in = expiresIn;
+      if (expiresIn && expiresIn !== "none") body.expires_in = expiresIn;
       const res = await api.post<{ raw_key: string }>(`/orgs/${orgId}/teams/${teamId}/api-keys`, body);
       qc.invalidateQueries({ queryKey: ["api-keys"] });
       setRawKey(res.raw_key);

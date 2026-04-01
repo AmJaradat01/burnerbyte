@@ -21,7 +21,11 @@ func (h *AuditHandler) Routes(r chi.Router) {
 }
 
 func (h *AuditHandler) List(w http.ResponseWriter, r *http.Request) {
-	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
+	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid org ID")
+		return
+	}
 	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
 		return
 	}
@@ -29,17 +33,29 @@ func (h *AuditHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	filter := domain.AuditFilter{}
 	if v := r.URL.Query().Get("actor_id"); v != "" {
-		id, _ := uuid.Parse(v)
+		id, err := uuid.Parse(v)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid actor_id")
+			return
+		}
 		filter.ActorID = &id
 	}
 	if v := r.URL.Query().Get("action"); v != "" { filter.Action = &v }
 	if v := r.URL.Query().Get("resource_type"); v != "" { filter.ResourceType = &v }
 	if v := r.URL.Query().Get("date_from"); v != "" {
-		t, _ := time.Parse(time.RFC3339, v)
+		t, err := time.Parse(time.RFC3339, v)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid date_from, use RFC3339 format")
+			return
+		}
 		filter.DateFrom = &t
 	}
 	if v := r.URL.Query().Get("date_to"); v != "" {
-		t, _ := time.Parse(time.RFC3339, v)
+		t, err := time.Parse(time.RFC3339, v)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid date_to, use RFC3339 format")
+			return
+		}
 		filter.DateTo = &t
 	}
 
