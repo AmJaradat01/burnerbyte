@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuthStore } from "@/stores/auth-store";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +20,18 @@ export default function RegisterPage() {
   const register = useAuthStore((s) => s.register);
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  const { data: sso } = useQuery({
+    queryKey: ["sso-status"],
+    queryFn: () => api.get<{ allow_registration: boolean }>("/auth/sso-status"),
+    staleTime: 60000,
+  });
+
+  // Redirect to login if registration is disabled
+  if (sso && !sso.allow_registration) {
+    router.replace("/login");
+    return null;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

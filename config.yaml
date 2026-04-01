@@ -91,6 +91,7 @@ password_policy:
 
 defaults:
   attachments_enabled: true
+  allow_registration: true
   default_inbox_ttl: 10m
   max_inbox_ttl: 24h
   max_attachment_size_mb: 25

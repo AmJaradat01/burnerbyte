@@ -16,6 +16,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v
 
 interface SSOStatus {
   enabled: boolean;
+  allow_registration: boolean;
   provider?: string;
   provider_label?: string;
   enforce_sso?: boolean;
@@ -112,7 +113,9 @@ export default function LoginPage() {
                 </Button>
                 <div className="flex justify-between text-sm w-full">
                   <Link href="/forgot-password" className="text-muted-foreground hover:underline">Forgot password?</Link>
-                  <Link href="/register" className="text-muted-foreground hover:underline">Create account</Link>
+                  {(sso?.allow_registration ?? true) && (
+                    <Link href="/register" className="text-muted-foreground hover:underline">Create account</Link>
+                  )}
                 </div>
               </CardFooter>
             </form>
