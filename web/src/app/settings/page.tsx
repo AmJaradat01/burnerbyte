@@ -803,8 +803,6 @@ function UsersTab() {
     onError: (err) => toast.error(err instanceof Error ? err.message : "Failed to delete user"),
   });
 
-  const [deleteTarget, setDeleteTarget] = useState<{ id: string; email: string } | null>(null);
-
   const filtered = data?.data?.filter((u) =>
     u.email.toLowerCase().includes(search.toLowerCase()) ||
     u.display_name.toLowerCase().includes(search.toLowerCase())
@@ -842,7 +840,7 @@ function UsersTab() {
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
           {filtered?.map((u) => (
-            <Card key={u.id} className="relative">
+            <Card key={u.id}>
               <CardContent className="pt-5 pb-4">
                 <div className="flex items-start justify-between">
                   <div className="min-w-0">
@@ -860,9 +858,12 @@ function UsersTab() {
                     </p>
                   </div>
                   {u.id !== currentUser?.id && (
-                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setDeleteTarget({ id: u.id, email: u.email })}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <ConfirmDialog
+                      trigger={<Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>}
+                      title="Delete user?"
+                      description={`Permanently delete ${u.email}? This will remove all their data including org memberships, inboxes, and emails. This action cannot be undone.`}
+                      onConfirm={() => deleteUser.mutate(u.id)}
+                    />
                   )}
                 </div>
               </CardContent>
@@ -873,15 +874,6 @@ function UsersTab() {
       )}
 
       {data && data.total_pages > 1 && <Pagination page={page} totalPages={data.total_pages} onPageChange={setPage} />}
-
-      <ConfirmDialog
-        open={!!deleteTarget}
-        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
-        title="Delete user"
-        description={`Permanently delete ${deleteTarget?.email}? This will remove all their data including org memberships, inboxes, and emails. This action cannot be undone.`}
-        onConfirm={() => { if (deleteTarget) { deleteUser.mutate(deleteTarget.id); setDeleteTarget(null); } }}
-        variant="destructive"
-      />
     </div>
   );
 }
