@@ -200,6 +200,24 @@ func (r *InboxRepo) CountActiveByDomain(ctx context.Context, domainID uuid.UUID)
 	return count, err
 }
 
+func (r *InboxRepo) ListActiveAddressesByDomain(ctx context.Context, domainID uuid.UUID) ([]string, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT i.address || '@' || d.domain_name FROM inboxes i
+		 JOIN domains d ON i.domain_id = d.id
+		 WHERE i.domain_id = $1 AND i.is_active = TRUE AND i.expires_at > NOW()`, domainID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var addresses []string
+	for rows.Next() {
+		var addr string
+		if err := rows.Scan(&addr); err != nil { return nil, err }
+		addresses = append(addresses, addr)
+	}
+	return addresses, nil
+}
+
 func (r *InboxRepo) DeleteExpired(ctx context.Context) (int64, error) {
 	tag, err := r.db.Exec(ctx, `DELETE FROM inboxes WHERE expires_at < NOW()`)
 	if err != nil {

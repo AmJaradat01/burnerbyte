@@ -32,6 +32,12 @@ func (m *Manager) Start(ctx context.Context) {
 		go func(j Job) {
 			defer wg.Done()
 			slog.Info("worker started", "name", j.Name, "interval", j.Interval)
+
+			// Run immediately on start
+			if err := j.Fn(ctx); err != nil {
+				slog.Error("worker initial run error", "name", j.Name, "error", err)
+			}
+
 			ticker := time.NewTicker(j.Interval)
 			defer ticker.Stop()
 			for {

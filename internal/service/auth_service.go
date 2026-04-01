@@ -230,7 +230,8 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken, ip, userAgent s
 	}
 
 	// Create new session in same family
-	rawRefresh, refreshHash, _ := s.tokens.GenerateRefreshToken()
+	rawRefresh, refreshHash, err := s.tokens.GenerateRefreshToken()
+	if err != nil { return nil, fmt.Errorf("generate refresh token: %w", err) }
 	accessToken, err := s.tokens.GenerateAccessToken(user.ID, user.Email, user.IsSystemAdmin)
 	if err != nil {
 		return nil, err
@@ -580,7 +581,8 @@ func (s *AuthService) createSession(ctx context.Context, repo *postgres.SessionR
 		return nil, err
 	}
 
-	rawRefresh, refreshHash, _ := s.tokens.GenerateRefreshToken()
+	rawRefresh, refreshHash, err := s.tokens.GenerateRefreshToken()
+	if err != nil { return nil, fmt.Errorf("generate refresh token: %w", err) }
 
 	var ipPtr, uaPtr *string
 	if ip != "" {
