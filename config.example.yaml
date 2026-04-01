@@ -122,3 +122,8 @@ workers:
   webhook_retry_interval: 1m
   reconciler_interval: 1m
   analytics_interval: 5m
+
+# Encryption at rest for sensitive DB values (SSO secrets, SMTP passwords)
+# Generate with: openssl rand -hex 32
+encryption:
+  key: "" # Leave empty to disable, or set 64-char hex string for AES-256-GCM
