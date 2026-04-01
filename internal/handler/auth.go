@@ -205,7 +205,9 @@ func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Revoke all sessions on password change (uuid.Nil = no exclusion)
+	// Revoke all refresh sessions on password change. The current access token
+	// remains valid until expiry; the middleware's password_changed_at check
+	// ensures tokens issued before the change are rejected on next refresh.
 	if err := h.svc.ChangePassword(r.Context(), uc.UserID, input, uuid.Nil); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
@@ -348,10 +350,13 @@ func (h *AuthHandler) SSOCallback(w http.ResponseWriter, r *http.Request) {
 	// Clear state cookie
 	http.SetCookie(w, &http.Cookie{Name: "sso_state", Path: "/", MaxAge: -1})
 
-	// Read and clear origin cookie
+	// Read and clear origin cookie — validate against allowed frontend URL
 	frontendURL := h.cfg.Server.FrontendURL
 	if oc, err := r.Cookie("sso_origin"); err == nil && oc.Value != "" {
-		frontendURL = oc.Value
+		// Only allow the configured frontend URL to prevent open redirect
+		if oc.Value == h.cfg.Server.FrontendURL {
+			frontendURL = oc.Value
+		}
 	}
 	http.SetCookie(w, &http.Cookie{Name: "sso_origin", Path: "/", MaxAge: -1})
 
@@ -367,9 +372,13 @@ func (h *AuthHandler) SSOCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Redirect to frontend with tokens as query params
-	http.Redirect(w, r, fmt.Sprintf("%s/login?access_token=%s&refresh_token=%s&user_id=%s",
-		frontendURL, tokens.AccessToken, tokens.RefreshToken, user.ID), http.StatusFound)
+	// Use fragment (#) instead of query params to prevent tokens from being
+	// logged by proxies, appearing in Referer headers, or stored in server logs
+	http.Redirect(w, r, fmt.Sprintf("%s/login#access_token=%s&refresh_token=%s&user_id=%s",
+		frontendURL,
+		url.QueryEscape(tokens.AccessToken),
+		url.QueryEscape(tokens.RefreshToken),
+		url.QueryEscape(user.ID.String())), http.StatusFound)
 }
 
 // Shared JSON helpers

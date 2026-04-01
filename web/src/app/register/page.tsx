@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuthStore } from "@/stores/auth-store";
@@ -27,11 +27,12 @@ export default function RegisterPage() {
     staleTime: 60000,
   });
 
-  // Redirect to login if registration is disabled
-  if (sso && !sso.allow_registration) {
-    router.replace("/login");
-    return null;
-  }
+  // Redirect to login if registration is disabled (in useEffect, not during render)
+  useEffect(() => {
+    if (sso && !sso.allow_registration) {
+      router.replace("/login");
+    }
+  }, [sso, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,6 +47,9 @@ export default function RegisterPage() {
       setLoading(false);
     }
   };
+
+  // Don't render form if registration is disabled
+  if (sso && !sso.allow_registration) return null;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-muted/50 to-background">

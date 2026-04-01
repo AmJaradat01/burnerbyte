@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -27,6 +28,7 @@ type AdminHandler struct {
 	authSvc      *service.AuthService
 	sysConfig    *postgres.SystemConfigRepo
 	cfg          *config.Config
+	cfgMu        sync.Mutex
 	pool         *pgxpool.Pool
 	rdb          *redis.Client
 	s3           *minio.Client
@@ -204,11 +206,21 @@ func (h *AdminHandler) UpdatePlatformSettings(w http.ResponseWriter, r *http.Req
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
+	if input.PasswordMinLength < 6 {
+		input.PasswordMinLength = 6
+	}
+	if input.LockoutMaxAttempts < 1 {
+		input.LockoutMaxAttempts = 1
+	}
+	if input.LockoutDurationMins < 1 {
+		input.LockoutDurationMins = 1
+	}
 	if err := h.sysConfig.Set(r.Context(), "platform", input); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to save")
 		return
 	}
-	// Apply to running config
+	// Apply to running config under lock
+	h.cfgMu.Lock()
 	h.cfg.Defaults.AllowRegistration = input.AllowRegistration
 	h.cfg.EmailVerification.Enabled = input.EmailVerification
 	h.cfg.Password.MinLength = input.PasswordMinLength
@@ -218,6 +230,7 @@ func (h *AdminHandler) UpdatePlatformSettings(w http.ResponseWriter, r *http.Req
 	h.cfg.Password.RequireSpecial = input.PasswordRequireSpec
 	h.cfg.Lockout.MaxAttempts = input.LockoutMaxAttempts
 	h.cfg.Lockout.Duration = time.Duration(input.LockoutDurationMins) * time.Minute
+	h.cfgMu.Unlock()
 	writeJSON(w, http.StatusOK, map[string]string{"message": "platform settings updated"})
 }
 
@@ -227,15 +240,19 @@ func (h *AdminHandler) UpdateSSOConfig(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
+	h.cfgMu.Lock()
 	// If secret is masked, keep the existing one
 	if input.ClientSecret == "••••••••" {
 		input.ClientSecret = h.cfg.SSO.ClientSecret
 	}
+	h.cfgMu.Unlock()
 	if err := h.sysConfig.Set(r.Context(), "sso", input); err != nil {
 		slog.Error("failed to save SSO config", "error", err)
 		writeError(w, http.StatusInternalServerError, "failed to save SSO config")
 		return
 	}
+	h.cfgMu.Lock()
 	h.cfg.SSO = input
+	h.cfgMu.Unlock()
 	writeJSON(w, http.StatusOK, map[string]string{"message": "SSO config updated"})
 }
