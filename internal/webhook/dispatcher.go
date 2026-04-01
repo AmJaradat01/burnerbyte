@@ -67,7 +67,11 @@ func (d *Dispatcher) deliver(ctx context.Context, wh domain.Webhook, event strin
 
 	for attempt := 1; attempt <= d.maxRetries; attempt++ {
 		if attempt > 1 {
-			time.Sleep(backoffs[attempt])
+			idx := attempt
+			if idx >= len(backoffs) {
+				idx = len(backoffs) - 1
+			}
+			time.Sleep(backoffs[idx])
 		}
 
 		start := time.Now()
