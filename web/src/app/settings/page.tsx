@@ -822,7 +822,60 @@ function OverviewTab() {
           </Card>
         ))}
       </div>
+      <PlatformSettingsCard />
     </div>
+  );
+}
+
+function PlatformSettingsCard() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["admin-platform"],
+    queryFn: () => api.get<{ allow_registration: boolean }>("/admin/platform"),
+  });
+  const qc = useQueryClient();
+  const [allowReg, setAllowReg] = useState(true);
+  const [initialized, setInitialized] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  if (data && !initialized) {
+    setAllowReg(data.allow_registration);
+    setInitialized(true);
+  }
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await api.put("/admin/platform", { allow_registration: allowReg });
+      qc.invalidateQueries({ queryKey: ["admin-platform"] });
+      toast.success("Platform settings saved");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (isLoading) return <Card><CardContent className="pt-6"><Skeleton className="h-20 w-full" /></CardContent></Card>;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Platform Settings</CardTitle>
+        <CardDescription>Control access to the platform.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <Label>Allow public registration</Label>
+            <p className="text-xs text-muted-foreground">When disabled, only invited users can join.</p>
+          </div>
+          <Switch checked={allowReg} onCheckedChange={setAllowReg} />
+        </div>
+        <Button onClick={save} disabled={saving} size="sm">
+          {saving ? "Saving…" : "Save"}
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 
