@@ -2,10 +2,16 @@ pipeline {
     agent any
 
     parameters {
-        string(
+        gitParameter(
             name: 'TAG',
+            type: 'PT_TAG',
             defaultValue: 'latest',
-            description: 'Git tag to build and deploy'
+            description: 'Git tag to build and deploy',
+            sortMode: 'DESCENDING_SMART',
+            selectedValue: 'TOP',
+            tagFilter: 'v*',
+            listSize: '10',
+            quickFilterEnabled: true
         )
     }
 
