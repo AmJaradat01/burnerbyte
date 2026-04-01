@@ -830,22 +830,31 @@ function OverviewTab() {
 function PlatformSettingsCard() {
   const { data, isLoading } = useQuery({
     queryKey: ["admin-platform"],
-    queryFn: () => api.get<{ allow_registration: boolean }>("/admin/platform"),
+    queryFn: () => api.get<{
+      allow_registration: boolean; email_verification: boolean;
+      password_min_length: number; password_require_upper: boolean; password_require_lower: boolean;
+      password_require_number: boolean; password_require_special: boolean;
+      lockout_max_attempts: number; lockout_duration_mins: number;
+    }>("/admin/platform"),
   });
   const qc = useQueryClient();
-  const [allowReg, setAllowReg] = useState(true);
+  const [form, setForm] = useState({
+    allow_registration: true, email_verification: true,
+    password_min_length: 8, password_require_upper: true, password_require_lower: true,
+    password_require_number: true, password_require_special: true,
+    lockout_max_attempts: 5, lockout_duration_mins: 15,
+  });
   const [initialized, setInitialized] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  if (data && !initialized) {
-    setAllowReg(data.allow_registration);
-    setInitialized(true);
-  }
+  if (data && !initialized) { setForm(data); setInitialized(true); }
+
+  const set = <K extends keyof typeof form>(k: K, v: typeof form[K]) => setForm((f) => ({ ...f, [k]: v }));
 
   const save = async () => {
     setSaving(true);
     try {
-      await api.put("/admin/platform", { allow_registration: allowReg });
+      await api.put("/admin/platform", form);
       qc.invalidateQueries({ queryKey: ["admin-platform"] });
       toast.success("Platform settings saved");
     } catch (err) {
@@ -855,24 +864,62 @@ function PlatformSettingsCard() {
     }
   };
 
-  if (isLoading) return <Card><CardContent className="pt-6"><Skeleton className="h-20 w-full" /></CardContent></Card>;
+  if (isLoading) return <Card><CardContent className="pt-6"><Skeleton className="h-40 w-full" /></CardContent></Card>;
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-base">Platform Settings</CardTitle>
-        <CardDescription>Control access to the platform.</CardDescription>
+        <CardDescription>Control access, security, and authentication policies.</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <Label>Allow public registration</Label>
-            <p className="text-xs text-muted-foreground">When disabled, only invited users can join.</p>
+      <CardContent className="space-y-6">
+        {/* Access */}
+        <div className="space-y-3">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Access</p>
+          <div className="flex items-center justify-between">
+            <div><Label>Allow public registration</Label><p className="text-xs text-muted-foreground">When disabled, only invited users can join.</p></div>
+            <Switch checked={form.allow_registration} onCheckedChange={(v) => set("allow_registration", v)} />
           </div>
-          <Switch checked={allowReg} onCheckedChange={setAllowReg} />
+          <div className="flex items-center justify-between">
+            <div><Label>Require email verification</Label><p className="text-xs text-muted-foreground">New users must verify their email before accessing the platform.</p></div>
+            <Switch checked={form.email_verification} onCheckedChange={(v) => set("email_verification", v)} />
+          </div>
         </div>
+
+        {/* Password policy */}
+        <div className="space-y-3">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Password Policy</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Min length</Label>
+              <Input type="number" min={6} max={128} value={form.password_min_length} onChange={(e) => set("password_min_length", Number(e.target.value) || 8)} className="h-8" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex items-center justify-between"><Label className="text-xs">Uppercase</Label><Switch checked={form.password_require_upper} onCheckedChange={(v) => set("password_require_upper", v)} /></div>
+            <div className="flex items-center justify-between"><Label className="text-xs">Lowercase</Label><Switch checked={form.password_require_lower} onCheckedChange={(v) => set("password_require_lower", v)} /></div>
+            <div className="flex items-center justify-between"><Label className="text-xs">Number</Label><Switch checked={form.password_require_number} onCheckedChange={(v) => set("password_require_number", v)} /></div>
+            <div className="flex items-center justify-between"><Label className="text-xs">Special char</Label><Switch checked={form.password_require_special} onCheckedChange={(v) => set("password_require_special", v)} /></div>
+          </div>
+        </div>
+
+        {/* Lockout */}
+        <div className="space-y-3">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Account Lockout</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Max failed attempts</Label>
+              <Input type="number" min={1} max={50} value={form.lockout_max_attempts} onChange={(e) => set("lockout_max_attempts", Number(e.target.value) || 5)} className="h-8" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Lockout duration (min)</Label>
+              <Input type="number" min={1} max={1440} value={form.lockout_duration_mins} onChange={(e) => set("lockout_duration_mins", Number(e.target.value) || 15)} className="h-8" />
+            </div>
+          </div>
+        </div>
+
         <Button onClick={save} disabled={saving} size="sm">
-          {saving ? "Saving…" : "Save"}
+          {saving ? "Saving…" : "Save Platform Settings"}
         </Button>
       </CardContent>
     </Card>

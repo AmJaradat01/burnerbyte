@@ -83,7 +83,14 @@ export default function InvitePage() {
       }
       // After auth, the useEffect will detect user and auto-accept
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed");
+      const msg = err instanceof Error ? err.message : "Failed";
+      // If email already registered, switch to login mode
+      if (mode === "register" && msg.toLowerCase().includes("already registered")) {
+        setMode("login");
+        toast.error("This email already has an account. Please sign in instead.");
+      } else {
+        toast.error(msg);
+      }
       setSubmitting(false);
     }
   };
