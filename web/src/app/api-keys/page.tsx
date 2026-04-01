@@ -67,7 +67,9 @@ export default function ApiKeysPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">API Keys</h1>
-          <p className="text-sm text-muted-foreground mt-1">Manage programmatic access to your team&apos;s resources.</p>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {data?.data?.length ? `${data.data.length} key${data.data.length !== 1 ? "s" : ""}` : "Manage programmatic access to your team's resources."}
+          </p>
         </div>
         <CreateApiKeyDialog orgId={currentOrg!.id} teamId={currentTeam.id} />
       </div>
@@ -96,7 +98,7 @@ function ApiKeyCard({ apiKey: k, onRevoke }: { apiKey: APIKey; onRevoke: () => v
   const copyPrefix = () => { copyToClipboard(k.key_prefix); toast.success("Prefix copied"); };
 
   return (
-    <Card className={isExpired ? "opacity-60" : ""}>
+    <Card className={`hover:shadow-md transition-all ${isExpired ? "opacity-60" : ""}`}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
