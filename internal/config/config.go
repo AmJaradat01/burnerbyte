@@ -25,6 +25,13 @@ type Config struct {
 	Logging  LoggingConfig  `mapstructure:"logging"`
 	Metrics  MetricsConfig  `mapstructure:"metrics"`
 	Workers  WorkersConfig  `mapstructure:"workers"`
+	Encryption EncryptionConfig `mapstructure:"encryption"`
+}
+
+// EncryptionConfig holds the key for encrypting sensitive data at rest (DB).
+type EncryptionConfig struct {
+	// Key must be exactly 32 bytes (hex-encoded = 64 chars) for AES-256-GCM.
+	Key string `mapstructure:"key"`
 }
 
 type ServerConfig struct {

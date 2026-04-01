@@ -21,6 +21,7 @@ import { ErrorState } from "@/components/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Activity, AlertTriangle, Building2, Calendar, CheckCircle2, Clock, Database, Globe, HardDrive, Inbox, Info, Mail, Monitor, Palette, RefreshCw, Settings, Shield, Trash2, UserPlus, Users, XCircle } from "lucide-react";
 import { UnifiedUsersTab } from "@/components/settings/unified-users-tab";
+import { RolesTab } from "@/components/settings/roles-tab";
 import type { Organization, Membership, Invite, OrgSettings, PaginatedResponse, SystemStats, User } from "@/types";
 
 export default function SettingsPage() {
@@ -40,12 +41,14 @@ export default function SettingsPage() {
         <TabsList className="flex-wrap">
           <TabsTrigger value="general" className="gap-1.5"><Settings className="h-3.5 w-3.5" /> General</TabsTrigger>
           <TabsTrigger value="users" className="gap-1.5"><Users className="h-3.5 w-3.5" /> Users</TabsTrigger>
+          {isAdmin && <TabsTrigger value="roles" className="gap-1.5"><Shield className="h-3.5 w-3.5" /> Roles</TabsTrigger>}
           {isAdmin && <TabsTrigger value="overview" className="gap-1.5"><Activity className="h-3.5 w-3.5" /> System</TabsTrigger>}
           {isAdmin && <TabsTrigger value="orgs" className="gap-1.5"><Building2 className="h-3.5 w-3.5" /> Organizations</TabsTrigger>}
           {isAdmin && <TabsTrigger value="health" className="gap-1.5"><Monitor className="h-3.5 w-3.5" /> Health</TabsTrigger>}
         </TabsList>
         <TabsContent value="general"><GeneralTab org={currentOrg} onSaved={fetchOrgs} /></TabsContent>
         <TabsContent value="users"><UnifiedUsersTab orgId={currentOrg.id} /></TabsContent>
+        {isAdmin && <TabsContent value="roles"><RolesTab /></TabsContent>}
         {isAdmin && <TabsContent value="overview"><OverviewTab /></TabsContent>}
         {isAdmin && <TabsContent value="orgs"><OrgsTab /></TabsContent>}
         {isAdmin && <TabsContent value="health"><HealthTab /></TabsContent>}
