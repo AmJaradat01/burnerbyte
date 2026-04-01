@@ -2,23 +2,17 @@ pipeline {
     agent any
 
     parameters {
-        gitParameter(
+        string(
             name: 'TAG',
-            type: 'PT_TAG',
             defaultValue: 'latest',
-            description: 'Git tag to build and deploy',
-            sortMode: 'DESCENDING_SMART'
+            description: 'Git tag to build and deploy'
         )
     }
 
     environment {
         APP_NAME    = 'burnerbyte'
         DEPLOY_HOST = credentials('burnerbyte-deploy-host')
-    }
-
-    tools {
-        go 'go-1.25'
-        nodejs 'node-22'
+        PATH        = "/usr/local/go/bin:${env.PATH}"
     }
 
     stages {
@@ -37,6 +31,7 @@ pipeline {
         stage('Build Go') {
             steps {
                 sh '''
+                    go version
                     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/api ./cmd/api
                     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/smtpd ./cmd/smtpd
                 '''
