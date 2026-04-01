@@ -119,6 +119,14 @@ func (r *EmailRepo) MarkRead(ctx context.Context, id uuid.UUID, isRead bool) err
 	return err
 }
 
+func (r *EmailRepo) MarkAllRead(ctx context.Context, inboxID uuid.UUID) (int64, error) {
+	tag, err := r.db.Exec(ctx, `UPDATE emails SET is_read = true WHERE inbox_id = $1 AND is_read = false`, inboxID)
+	if err != nil {
+		return 0, err
+	}
+	return tag.RowsAffected(), nil
+}
+
 func (r *EmailRepo) Delete(ctx context.Context, id uuid.UUID) error {
 	_, err := r.db.Exec(ctx, `DELETE FROM emails WHERE id = $1`, id)
 	return err

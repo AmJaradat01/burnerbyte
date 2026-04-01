@@ -14,7 +14,7 @@ import { EmailList } from "@/components/inbox/email-list";
 import { EmailPreview } from "@/components/inbox/email-preview";
 import { InboxEmptyPreview } from "@/components/inbox/inbox-empty-preview";
 import {
-  ArrowLeft, Check, Clock, Copy, Mail, MailOpen, Timer, Trash2,
+  ArrowLeft, Check, Clock, Copy, Mail, MailOpen, CheckCheck, Timer, Trash2,
 } from "lucide-react";
 import type { EmailSummary, Email, Inbox, PaginatedResponse } from "@/types";
 
@@ -130,6 +130,17 @@ export default function InboxDetailPage() {
     onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
   });
 
+  const markAllRead = useMutation({
+    mutationFn: () => api.post<{ marked: number }>(`/inboxes/${id}/emails/mark-all-read`, {}),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["emails", id] });
+      qc.invalidateQueries({ queryKey: ["inbox", id] });
+      if (selectedEmailId) qc.invalidateQueries({ queryKey: ["email", selectedEmailId] });
+      toast.success(`Marked ${data.marked} email${data.marked !== 1 ? "s" : ""} as read`);
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
+  });
+
   const onNewEmail = useCallback(() => {
     qc.invalidateQueries({ queryKey: ["emails", id] });
     qc.invalidateQueries({ queryKey: ["inbox", id] });
@@ -205,6 +216,11 @@ export default function InboxDetailPage() {
             </div>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
+            {totalEmails > 0 && (
+              <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={() => markAllRead.mutate()} disabled={markAllRead.isPending}>
+                <CheckCheck className="h-3.5 w-3.5" /> Read all
+              </Button>
+            )}
             {inbox?.is_active && (
               <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={() => extend.mutate()}>
                 <Timer className="h-3.5 w-3.5" /> Renew
