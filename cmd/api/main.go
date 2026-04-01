@@ -109,7 +109,13 @@ func main() {
 	assignmentSvc := service.NewDomainAssignmentService(assignmentRepo, domainRepo, orgRepo, cfg.Defaults)
 	redisInboxRepo := redisrepo.NewInboxRepo(rdb)
 	inboxSvc := service.NewInboxService(inboxRepo, redisInboxRepo, assignmentRepo, domainRepo, orgRepo, teamRepo, cfg)
-	emailSvc := service.NewEmailService(emailRepo, inboxRepo, attachmentRepo, attachmentSvc)
+	// Pass explicit nil interface when attachments are disabled to avoid
+	// Go's nil-concrete-pointer-in-interface trap causing a panic on delete.
+	var emailAttachmentCleaner service.AttachmentCleaner
+	if attachmentSvc != nil {
+		emailAttachmentCleaner = attachmentSvc
+	}
+	emailSvc := service.NewEmailService(emailRepo, inboxRepo, attachmentRepo, emailAttachmentCleaner)
 	webhookSvc := service.NewWebhookService(webhookRepo)
 	webhookDispatcher := webhook.NewDispatcher(webhookRepo, cfg.Defaults.WebhookTimeout, cfg.Defaults.WebhookMaxRetries)
 	apikeySvc := service.NewAPIKeyService(apikeyRepo)
