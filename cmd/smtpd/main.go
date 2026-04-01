@@ -65,15 +65,15 @@ func main() {
 	sysConfigRepo := postgres.NewSystemConfigRepo(pool)
 	cfg.LoadFromDB(ctx, sysConfigRepo)
 
-	// MinIO
+	// MinIO (optional — attachments disabled when unavailable)
 	s3Client, err := storage.NewS3(ctx, cfg.MinIO)
 	if err != nil {
-		slog.Error("failed to connect to minio", "error", err)
-		os.Exit(1)
+		slog.Warn("minio unavailable, attachments disabled", "error", err)
 	}
-
-	// Services
-	attachmentSvc := service.NewAttachmentService(attachmentRepo, emailRepo, inboxRepoPG, s3Client, cfg.MinIO, cfg.Defaults.MaxAttachmentSizeMB, cfg.Defaults.PresignedURLTTL)
+	var attachmentSvc *service.AttachmentService
+	if s3Client != nil {
+		attachmentSvc = service.NewAttachmentService(attachmentRepo, emailRepo, inboxRepoPG, s3Client, cfg.MinIO, cfg.Defaults.MaxAttachmentSizeMB, cfg.Defaults.PresignedURLTTL)
+	}
 	settingsResolver := service.NewSettingsResolver(assignmentRepo, domainRepo, orgRepo, cfg.Defaults)
 
 	// SMTP components
