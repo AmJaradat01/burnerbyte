@@ -14,7 +14,6 @@ pipeline {
     environment {
         APP_NAME    = 'burnerbyte'
         DEPLOY_HOST = credentials('burnerbyte-deploy-host')
-        INFISICAL_URL = credentials('INFISICAL_API_URL')
     }
 
     tools {
@@ -50,7 +49,7 @@ pipeline {
                     sh '''
                         corepack enable
                         pnpm install --frozen-lockfile
-                        pnpm build
+                        NEXT_PUBLIC_API_URL=https://burnerbyte.com/api/v1 NEXT_PUBLIC_WS_URL=wss://burnerbyte.com/api/v1/ws pnpm build
                     '''
                 }
             }
@@ -60,16 +59,11 @@ pipeline {
             steps {
                 sh """
                     mkdir -p dist
-
-                    # Go binaries + migrations
                     cp bin/api bin/smtpd dist/
                     cp -r migrations dist/
-
-                    # Frontend standalone
                     cp -r web/.next/standalone dist/frontend
                     cp -r web/.next/static dist/frontend/.next/static
                     [ -d web/public ] && cp -r web/public dist/frontend/public
-
                     tar -czf ${APP_NAME}-${params.TAG}.tar.gz -C dist .
                 """
                 archiveArtifacts artifacts: "${APP_NAME}-${params.TAG}.tar.gz", fingerprint: true
@@ -81,7 +75,7 @@ pipeline {
                 withCredentials([sshUserPrivateKey(credentialsId: 'burnerbyte-deploy-key', keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
                     sh """
                         scp -i \$SSH_KEY -o StrictHostKeyChecking=no ${APP_NAME}-${params.TAG}.tar.gz \$SSH_USER@${DEPLOY_HOST}:/tmp/${APP_NAME}.tar.gz
-                        scp -i \$SSH_KEY deploy/remote-deploy.sh \$SSH_USER@${DEPLOY_HOST}:/tmp/burnerbyte-deploy.sh
+                        scp -i \$SSH_KEY deploy/remote-deploy-hetzner.sh \$SSH_USER@${DEPLOY_HOST}:/tmp/burnerbyte-deploy.sh
                         ssh -i \$SSH_KEY \$SSH_USER@${DEPLOY_HOST} 'chmod +x /tmp/burnerbyte-deploy.sh && /tmp/burnerbyte-deploy.sh ${params.TAG}'
                     """
                 }
