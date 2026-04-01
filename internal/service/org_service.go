@@ -255,6 +255,9 @@ func (s *OrgService) InviteMember(ctx context.Context, orgID uuid.UUID, input do
 		return nil, fmt.Errorf("invalid org_role: %s", input.OrgRole)
 	}
 
+	// Delete any existing pending invite for this email+org (prevents duplicates on resend)
+	_ = s.orgRepo.DeletePendingInviteByEmail(ctx, orgID, input.Email)
+
 	b := make([]byte, 32)
 	rand.Read(b)
 	token := hex.EncodeToString(b)
