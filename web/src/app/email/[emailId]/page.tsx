@@ -3,6 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/error-state";
 import { EmailPreview } from "@/components/inbox/email-preview";
@@ -27,9 +28,7 @@ export default function EmailDetailPage() {
     mutationFn: () => api.del(`/emails/${emailId}`),
     onSuccess: () => { router.back(); },
     onError: (err) => {
-      const msg = err instanceof Error ? err.message : "Failed";
-      // toast imported via sonner in EmailPreview, but we handle nav here
-      console.error(msg);
+      toast.error(err instanceof Error ? err.message : "Failed to delete email");
     },
   });
 

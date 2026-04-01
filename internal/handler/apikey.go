@@ -58,7 +58,11 @@ func (h *APIKeyHandler) Revoke(w http.ResponseWriter, r *http.Request) {
 	if checkTeamRole(w, r, orgID, teamID, rbac.OrgAdmin, rbac.TeamLead) {
 		return
 	}
-	id, _ := uuid.Parse(chi.URLParam(r, "keyId"))
+	id, err := uuid.Parse(chi.URLParam(r, "keyId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid key ID")
+		return
+	}
 	if err := h.svc.Revoke(r.Context(), teamID, id); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed"); return
 	}
