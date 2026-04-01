@@ -213,6 +213,7 @@ func main() {
 			r.Delete("/orgs/{orgId}/members/{userId}", orgHandler.RemoveMember)
 			r.Post("/orgs/{orgId}/invites", orgHandler.InviteMember)
 			r.Get("/orgs/{orgId}/invites", orgHandler.ListPendingInvites)
+			r.Delete("/orgs/{orgId}/invites/{inviteId}", orgHandler.RevokeInvite)
 			r.Post("/invites/{token}/accept", orgHandler.AcceptInvite)
 
 			// Domains

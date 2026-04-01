@@ -355,6 +355,10 @@ func (s *OrgService) AcceptInvite(ctx context.Context, token string, userID uuid
 	return tx.Commit(ctx)
 }
 
+func (s *OrgService) RevokeInvite(ctx context.Context, inviteID uuid.UUID) error {
+	return s.orgRepo.DeleteInvite(ctx, inviteID)
+}
+
 func (s *OrgService) GetMembership(ctx context.Context, userID, orgID uuid.UUID) (*domain.OrgMembership, error) {
 	return s.orgRepo.GetMembership(ctx, userID, orgID)
 }
