@@ -88,7 +88,7 @@ export default function AuditPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Audit Log</h1>
-          <p className="text-sm text-muted-foreground mt-1">{data?.total ?? 0} entries{hasFilters ? " (filtered)" : ""}</p>
+          <p className="text-sm text-muted-foreground mt-0.5">{data?.total ?? 0} entries{hasFilters ? " (filtered)" : ""}</p>
         </div>
         <Button variant="outline" size="sm" className="gap-1.5" onClick={() => data?.data && exportCSV(data.data)} disabled={!data?.data?.length}>
           <Download className="h-3.5 w-3.5" /> Export CSV
@@ -152,10 +152,12 @@ function AuditRow({ entry: e }: { entry: AuditEntry }) {
   const colorCls = getActionColor(e.action);
 
   return (
-    <Card className="cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => setExpanded(!expanded)}>
+    <Card className="cursor-pointer hover:shadow-sm transition-all" onClick={() => setExpanded(!expanded)}>
       <CardContent className="py-3 px-4">
         <div className="flex items-center gap-3">
-          <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+          <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
+            <Icon className="h-4 w-4 text-muted-foreground" />
+          </div>
           <Badge variant="outline" className={`shrink-0 text-xs ${colorCls}`}>{e.action}</Badge>
           <span className="text-sm truncate flex-1">
             <span className="text-muted-foreground">{e.resource_type}/</span>

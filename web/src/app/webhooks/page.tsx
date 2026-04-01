@@ -79,7 +79,9 @@ export default function WebhooksPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Webhooks</h1>
-          <p className="text-sm text-muted-foreground mt-1">Receive HTTP callbacks when events occur in your team.</p>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {data?.data?.length ? `${data.data.length} webhook${data.data.length !== 1 ? "s" : ""} · ${data.data.filter(w => w.active).length} active` : "Receive HTTP callbacks when events occur in your team."}
+          </p>
         </div>
         <CreateWebhookDialog orgId={currentOrg!.id} teamId={currentTeam.id} />
       </div>
@@ -123,7 +125,7 @@ function WebhookCard({ webhook: w, expanded, onToggleExpand, onToggleActive, onD
   webhook: Webhook; expanded: boolean; onToggleExpand: () => void; onToggleActive: (v: boolean) => void; onDelete: () => void; orgId: string; teamId: string;
 }) {
   return (
-    <Card>
+    <Card className="hover:shadow-md transition-all">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1 space-y-1">
