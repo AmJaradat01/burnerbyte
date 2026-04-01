@@ -30,7 +30,12 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
     if (typeof window !== "undefined") {
       localStorage.removeItem("access_token");
       localStorage.removeItem("refresh_token");
-      window.location.href = "/login";
+      // Don't redirect if already on a public page (e.g. invite flow)
+      const publicPrefixes = ["/login", "/register", "/invite", "/setup", "/onboarding", "/verify-email", "/forgot-password", "/reset-password"];
+      const isPublic = publicPrefixes.some((p) => window.location.pathname.startsWith(p));
+      if (!isPublic) {
+        window.location.href = "/login";
+      }
     }
   }
 
