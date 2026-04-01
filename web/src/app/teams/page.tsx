@@ -266,7 +266,7 @@ function TeamMembersTab({ orgId, teamId }: { orgId: string; teamId: string }) {
                 <Select value={role} onValueChange={setRole}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {["lead", "member", "viewer"].map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                    {["lead", "member"].map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -303,7 +303,7 @@ function TeamMembersTab({ orgId, teamId }: { orgId: string; teamId: string }) {
                   <Select value={m.role} onValueChange={(r) => changeRole.mutate({ uid: m.user_id, role: r })}>
                     <SelectTrigger className="w-28 h-8"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {["lead", "member", "viewer"].map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                      {["lead", "member"].map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </TableCell>
