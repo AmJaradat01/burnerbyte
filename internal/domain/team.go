@@ -45,7 +45,8 @@ type UpdateTeamInput struct {
 }
 
 type AddTeamMemberInput struct {
-	UserID string `json:"user_id"`
+	UserID string `json:"user_id,omitempty"`
+	Email  string `json:"email,omitempty"`
 	Role   string `json:"role"`
 }
 

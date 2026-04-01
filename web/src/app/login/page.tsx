@@ -43,7 +43,8 @@ export default function LoginPage() {
     if (accessToken && refreshToken) {
       localStorage.setItem("access_token", accessToken);
       localStorage.setItem("refresh_token", refreshToken);
-      fetchMe().then(() => router.replace("/"));
+      const redirect = searchParams.get("redirect") || "/";
+      fetchMe().then(() => router.replace(redirect));
     }
   }, [searchParams, fetchMe, router]);
 
@@ -52,7 +53,8 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await login(email, password);
-      router.push("/");
+      const redirect = searchParams.get("redirect") || "/";
+      router.push(redirect);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Login failed");
     } finally {

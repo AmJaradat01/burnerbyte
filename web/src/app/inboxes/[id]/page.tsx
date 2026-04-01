@@ -5,22 +5,18 @@ import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useInboxSocket } from "@/hooks/use-inbox-socket";
-import { timeAgo } from "@/lib/time";
 import { copyToClipboard } from "@/lib/clipboard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { ErrorState } from "@/components/error-state";
-import { Pagination } from "@/components/pagination";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { EmailList } from "@/components/inbox/email-list";
+import { EmailPreview } from "@/components/inbox/email-preview";
+import { InboxEmptyPreview } from "@/components/inbox/inbox-empty-preview";
 import {
-  ArrowLeft, Check, Clock, Copy, Download, Eye, EyeOff,
-  Mail, MailOpen, Paperclip, RefreshCw, Search,
-  Timer, Trash2,
+  ArrowLeft, Check, Clock, Copy, Mail, MailOpen, CheckCheck, Timer, Trash2,
 } from "lucide-react";
-import type { EmailSummary, Email, Inbox, Attachment, PaginatedResponse } from "@/types";
+import type { EmailSummary, Email, Inbox, PaginatedResponse } from "@/types";
 
 /* ── Countdown ── */
 
@@ -31,7 +27,7 @@ function Countdown({ expiresAt }: { expiresAt: string }) {
     const update = () => {
       const diff = new Date(expiresAt).getTime() - Date.now();
       if (diff <= 0) { setRemaining("Expired"); setUrgent(true); return; }
-      setUrgent(diff < 600000); // < 10 min
+      setUrgent(diff < 600000);
       const h = Math.floor(diff / 3600000);
       const m = Math.floor((diff % 3600000) / 60000);
       const s = Math.floor((diff % 60000) / 1000);
@@ -64,7 +60,6 @@ export default function InboxDetailPage() {
     queryFn: () => api.get<Inbox>(`/inboxes/${id}`),
   });
 
-  // Redirect if expired or not found
   useEffect(() => {
     if (inbox && !inbox.is_active) {
       toast.error("This inbox has expired");
@@ -94,7 +89,6 @@ export default function InboxDetailPage() {
     enabled: !!selectedEmailId,
   });
 
-  // Auto-mark as read
   useEffect(() => {
     if (selectedEmail && !selectedEmail.is_read) {
       api.patch(`/emails/${selectedEmail.id}`, { is_read: true }).then(() => {
@@ -114,7 +108,10 @@ export default function InboxDetailPage() {
   const toggleRead = useMutation({
     mutationFn: ({ emailId, is_read }: { emailId: string; is_read: boolean }) =>
       api.patch(`/emails/${emailId}`, { is_read }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["emails", id] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["emails", id] });
+      qc.invalidateQueries({ queryKey: ["email", selectedEmailId] });
+    },
   });
 
   const deleteEmail = useMutation({
@@ -133,6 +130,17 @@ export default function InboxDetailPage() {
     onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
   });
 
+  const markAllRead = useMutation({
+    mutationFn: () => api.post<{ marked: number }>(`/inboxes/${id}/emails/mark-all-read`, {}),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["emails", id] });
+      qc.invalidateQueries({ queryKey: ["inbox", id] });
+      if (selectedEmailId) qc.invalidateQueries({ queryKey: ["email", selectedEmailId] });
+      toast.success(`Marked ${data.marked} email${data.marked !== 1 ? "s" : ""} as read`);
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
+  });
+
   const onNewEmail = useCallback(() => {
     qc.invalidateQueries({ queryKey: ["emails", id] });
     qc.invalidateQueries({ queryKey: ["inbox", id] });
@@ -140,6 +148,29 @@ export default function InboxDetailPage() {
   }, [qc, id]);
 
   useInboxSocket(id, onNewEmail);
+
+  /* Keyboard navigation */
+  useEffect(() => {
+    const emails = emailsData?.data ?? [];
+    const handler = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      const idx = emails.findIndex((em) => em.id === selectedEmailId);
+      if (e.key === "j" || e.key === "ArrowDown") {
+        e.preventDefault();
+        const next = idx < emails.length - 1 ? idx + 1 : 0;
+        setSelectedEmailId(emails[next]?.id ?? null);
+      } else if (e.key === "k" || e.key === "ArrowUp") {
+        e.preventDefault();
+        const prev = idx > 0 ? idx - 1 : emails.length - 1;
+        setSelectedEmailId(emails[prev]?.id ?? null);
+      } else if (e.key === "Escape") {
+        setSelectedEmailId(null);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [emailsData?.data, selectedEmailId]);
 
   const copyAddress = () => {
     if (!inbox) return;
@@ -149,7 +180,7 @@ export default function InboxDetailPage() {
     setTimeout(() => setCopied(false), 1500);
   };
 
-  if (inboxError) return null; // redirecting via useEffect
+  if (inboxError) return null;
 
   const address = inbox?.full_address || inbox?.address || "";
   const emails = emailsData?.data ?? [];
@@ -185,6 +216,11 @@ export default function InboxDetailPage() {
             </div>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
+            {totalEmails > 0 && (
+              <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={() => markAllRead.mutate()} disabled={markAllRead.isPending}>
+                <CheckCheck className="h-3.5 w-3.5" /> Read all
+              </Button>
+            )}
             {inbox?.is_active && (
               <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={() => extend.mutate()}>
                 <Timer className="h-3.5 w-3.5" /> Renew
@@ -207,234 +243,37 @@ export default function InboxDetailPage() {
       {/* ── Split pane ── */}
       <div className="flex flex-1 min-h-0">
         {/* ── Email list ── */}
-        <div className={`w-full md:w-80 lg:w-96 shrink-0 border-r flex flex-col ${selectedEmailId ? "hidden md:flex" : "flex"}`}>
-          {/* Search */}
-          <div className="p-2 border-b">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <Input
-                value={search}
-                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                placeholder="Search emails…"
-                className="h-8 pl-8 text-sm"
-              />
-            </div>
-          </div>
-
-          {/* List */}
-          <div className="flex-1 overflow-y-auto">
-            {emailsError ? (
-              <div className="p-4"><ErrorState message="Failed to load" onRetry={() => refetchEmails()} /></div>
-            ) : emailsLoading ? (
-              <EmailListSkeleton />
-            ) : emails.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-center p-6">
-                <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
-                  <Mail className="h-6 w-6 text-muted-foreground" />
-                </div>
-                <p className="text-sm font-medium">No emails yet</p>
-                <p className="text-xs text-muted-foreground mt-1">Waiting for incoming mail…</p>
-                <div className="flex items-center gap-1.5 mt-3 text-xs text-muted-foreground">
-                  <RefreshCw className="h-3 w-3 animate-spin" />
-                  Listening for new emails
-                </div>
-              </div>
-            ) : (
-              <>
-                {emails.map((e) => (
-                  <EmailRow
-                    key={e.id}
-                    email={e}
-                    selected={selectedEmailId === e.id}
-                    onClick={() => setSelectedEmailId(e.id)}
-                  />
-                ))}
-                {(emailsData?.total_pages ?? 1) > 1 && (
-                  <div className="p-2 border-t">
-                    <Pagination page={page} totalPages={emailsData?.total_pages ?? 1} onPageChange={setPage} />
-                  </div>
-                )}
-              </>
-            )}
-          </div>
+        <div className={`w-full md:w-[340px] lg:w-[400px] shrink-0 border-r flex flex-col bg-muted/20 ${selectedEmailId ? "hidden md:flex" : "flex"}`}>
+          <EmailList
+            emails={emails}
+            totalEmails={totalEmails}
+            totalPages={emailsData?.total_pages ?? 1}
+            page={page}
+            search={search}
+            selectedEmailId={selectedEmailId}
+            isLoading={emailsLoading}
+            isError={emailsError}
+            onSearchChange={(v) => { setSearch(v); setPage(1); }}
+            onPageChange={setPage}
+            onSelect={setSelectedEmailId}
+            onRetry={() => refetchEmails()}
+          />
         </div>
 
         {/* ── Email preview ── */}
         <div className={`flex-1 flex flex-col min-w-0 ${selectedEmailId ? "flex" : "hidden md:flex"}`}>
           {selectedEmail ? (
-            <>
-              {/* Preview header */}
-              <div className="shrink-0 border-b px-4 py-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    {/* Mobile back */}
-                    <button onClick={() => setSelectedEmailId(null)} className="md:hidden flex items-center gap-1 text-xs text-muted-foreground mb-2 hover:text-foreground">
-                      <ArrowLeft className="h-3 w-3" /> Back to list
-                    </button>
-                    <h2 className="font-semibold truncate">{selectedEmail.subject || "(no subject)"}</h2>
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                        <span className="text-xs font-semibold text-primary">
-                          {selectedEmail.from_address.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">{selectedEmail.from_address}</p>
-                        <p className="text-xs text-muted-foreground">to {selectedEmail.to_address}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <span className="text-xs text-muted-foreground mr-1">{timeAgo(selectedEmail.received_at)}</span>
-                    <Button
-                      variant="ghost" size="sm" className="h-7 w-7 p-0"
-                      title={selectedEmail.is_read ? "Mark unread" : "Mark read"}
-                      onClick={() => toggleRead.mutate({ emailId: selectedEmail.id, is_read: !selectedEmail.is_read })}
-                    >
-                      {selectedEmail.is_read ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                    </Button>
-                    <ConfirmDialog
-                      trigger={
-                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:text-destructive">
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      }
-                      title="Delete email?"
-                      description="This email and its attachments will be permanently deleted."
-                      onConfirm={() => deleteEmail.mutate(selectedEmail.id)}
-                    />
-                  </div>
-                </div>
-
-                {/* Attachments */}
-                {selectedEmail.attachments && selectedEmail.attachments.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    {selectedEmail.attachments.map((att) => (
-                      <AttachmentChip key={att.id} attachment={att} emailId={selectedEmail.id} />
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Email body */}
-              <div className="flex-1 overflow-y-auto p-4">
-                {selectedEmail.body_html ? (
-                  <iframe
-                    srcDoc={selectedEmail.body_html}
-                    title="Email content"
-                    className="w-full h-full min-h-[400px] border-0 rounded"
-                    sandbox=""
-                  />
-                ) : (
-                  <pre className="whitespace-pre-wrap text-sm font-sans leading-relaxed">{selectedEmail.body_text || "(empty)"}</pre>
-                )}
-              </div>
-            </>
+            <EmailPreview
+              email={selectedEmail}
+              onBack={() => setSelectedEmailId(null)}
+              onToggleRead={() => toggleRead.mutate({ emailId: selectedEmail.id, is_read: !selectedEmail.is_read })}
+              onDelete={() => deleteEmail.mutate(selectedEmail.id)}
+            />
           ) : (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center">
-                <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
-                  <MailOpen className="h-8 w-8 text-muted-foreground" />
-                </div>
-                <p className="font-medium">Select an email to read</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {totalEmails > 0 ? `${totalEmails} emails in this inbox` : "Waiting for incoming emails…"}
-                </p>
-              </div>
-            </div>
+            <InboxEmptyPreview totalEmails={totalEmails} />
           )}
         </div>
       </div>
-    </div>
-  );
-}
-
-/* ── Email row ── */
-
-function EmailRow({ email, selected, onClick }: { email: EmailSummary; selected: boolean; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`w-full text-left px-3 py-2.5 border-b transition-colors hover:bg-muted/50 ${
-        selected ? "bg-primary/5 border-l-2 border-l-primary" : "border-l-2 border-l-transparent"
-      }`}
-    >
-      <div className="flex items-start gap-2.5">
-        {/* Unread dot */}
-        <div className="pt-1.5 shrink-0 w-2">
-          {!email.is_read && <span className="block h-2 w-2 rounded-full bg-primary" />}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between gap-2">
-            <p className={`text-sm truncate ${!email.is_read ? "font-semibold" : "text-muted-foreground"}`}>
-              {email.from_address}
-            </p>
-            <span className="text-[10px] text-muted-foreground shrink-0">{timeAgo(email.received_at)}</span>
-          </div>
-          <p className={`text-sm truncate mt-0.5 ${!email.is_read ? "font-medium" : "text-muted-foreground"}`}>
-            {email.subject || "(no subject)"}
-          </p>
-          <div className="flex items-center gap-2 mt-1">
-            {email.has_attachments && (
-              <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
-                <Paperclip className="h-3 w-3" />
-              </span>
-            )}
-            <span className="text-[10px] text-muted-foreground">
-              {email.size_bytes < 1024 ? `${email.size_bytes}B` : `${Math.round(email.size_bytes / 1024)}KB`}
-            </span>
-          </div>
-        </div>
-      </div>
-    </button>
-  );
-}
-
-/* ── Attachment chip ── */
-
-function AttachmentChip({ attachment, emailId }: { attachment: Attachment; emailId: string }) {
-  const download = async () => {
-    try {
-      const res = await api.get<{ url: string }>(`/emails/${emailId}/attachments/${attachment.id}`);
-      window.open(res.url, "_blank");
-    } catch {
-      toast.error("Failed to download");
-    }
-  };
-
-  const sizeKB = Math.round(attachment.size_bytes / 1024);
-  const icon = attachment.content_type?.startsWith("image/") ? "🖼️" : "📄";
-
-  return (
-    <button
-      onClick={download}
-      className="flex items-center gap-1.5 rounded-lg border bg-muted/30 px-2.5 py-1.5 text-xs hover:bg-muted transition-colors group"
-    >
-      <span>{icon}</span>
-      <span className="truncate max-w-[140px]">{attachment.filename}</span>
-      <span className="text-muted-foreground">({sizeKB > 0 ? `${sizeKB}KB` : `${attachment.size_bytes}B`})</span>
-      <Download className="h-3 w-3 text-muted-foreground group-hover:text-foreground transition-colors" />
-    </button>
-  );
-}
-
-/* ── Skeleton ── */
-
-function EmailListSkeleton() {
-  return (
-    <div>
-      {Array.from({ length: 5 }).map((_, i) => (
-        <div key={i} className="px-3 py-2.5 border-b">
-          <div className="flex items-start gap-2.5">
-            <div className="w-2" />
-            <div className="flex-1 space-y-1.5">
-              <Skeleton className="h-3.5 w-2/3" />
-              <Skeleton className="h-3.5 w-4/5" />
-              <Skeleton className="h-3 w-1/4" />
-            </div>
-          </div>
-        </div>
-      ))}
     </div>
   );
 }

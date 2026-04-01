@@ -98,6 +98,17 @@ func (s *EmailService) MarkReadUnread(ctx context.Context, emailID, userID uuid.
 	return s.emailRepo.MarkRead(ctx, emailID, isRead)
 }
 
+func (s *EmailService) MarkAllRead(ctx context.Context, inboxID, userID uuid.UUID) (int64, error) {
+	inbox, err := s.inboxRepo.GetByID(ctx, inboxID)
+	if err != nil {
+		return 0, err
+	}
+	if inbox.CreatedBy != userID {
+		return 0, fmt.Errorf("forbidden: not your inbox")
+	}
+	return s.emailRepo.MarkAllRead(ctx, inboxID)
+}
+
 func (s *EmailService) DeleteEmail(ctx context.Context, emailID, userID uuid.UUID) error {
 	email, err := s.emailRepo.GetByID(ctx, emailID)
 	if err != nil {

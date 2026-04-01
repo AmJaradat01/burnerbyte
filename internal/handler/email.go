@@ -22,6 +22,7 @@ func NewEmailHandler(svc *service.EmailService, attachmentSvc *service.Attachmen
 
 func (h *EmailHandler) Routes(r chi.Router) {
 		r.Get("/inboxes/{inboxId}/emails", h.ListEmails)
+		r.Post("/inboxes/{inboxId}/emails/mark-all-read", h.MarkAllRead)
 		r.Get("/emails/{emailId}", h.GetEmail)
 		r.Patch("/emails/{emailId}", h.MarkReadUnread)
 		r.Delete("/emails/{emailId}", h.DeleteEmail)
@@ -72,6 +73,21 @@ func (h *EmailHandler) GetEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, email)
+}
+
+func (h *EmailHandler) MarkAllRead(w http.ResponseWriter, r *http.Request) {
+	uc := auth.GetUser(r.Context())
+	inboxID, err := uuid.Parse(chi.URLParam(r, "inboxId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid inbox ID")
+		return
+	}
+	count, err := h.svc.MarkAllRead(r.Context(), inboxID, uc.UserID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]int64{"marked": count})
 }
 
 func (h *EmailHandler) MarkReadUnread(w http.ResponseWriter, r *http.Request) {

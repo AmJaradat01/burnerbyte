@@ -21,11 +21,12 @@ type TeamService struct {
 	pool     *pgxpool.Pool
 	teamRepo *postgres.TeamRepo
 	orgRepo  *postgres.OrgRepo
+	userRepo *postgres.UserRepo
 	cfg      *config.Config
 }
 
-func NewTeamService(pool *pgxpool.Pool, teamRepo *postgres.TeamRepo, orgRepo *postgres.OrgRepo, cfg *config.Config) *TeamService {
-	return &TeamService{pool: pool, teamRepo: teamRepo, orgRepo: orgRepo, cfg: cfg}
+func NewTeamService(pool *pgxpool.Pool, teamRepo *postgres.TeamRepo, orgRepo *postgres.OrgRepo, userRepo *postgres.UserRepo, cfg *config.Config) *TeamService {
+	return &TeamService{pool: pool, teamRepo: teamRepo, orgRepo: orgRepo, userRepo: userRepo, cfg: cfg}
 }
 
 var teamSlugRe = regexp.MustCompile(`[^a-z0-9]+`)
@@ -142,10 +143,24 @@ func (s *TeamService) AddMember(ctx context.Context, teamID uuid.UUID, input dom
 	if input.Role != "lead" && input.Role != "member" && input.Role != "viewer" {
 		return fmt.Errorf("invalid role: %s", input.Role)
 	}
-	userID, err := uuid.Parse(input.UserID)
-	if err != nil {
-		return fmt.Errorf("invalid user_id")
+
+	var userID uuid.UUID
+	if input.Email != "" {
+		user, err := s.userRepo.GetByEmail(ctx, strings.TrimSpace(input.Email))
+		if err != nil {
+			return fmt.Errorf("user not found with email: %s", input.Email)
+		}
+		userID = user.ID
+	} else if input.UserID != "" {
+		var err error
+		userID, err = uuid.Parse(input.UserID)
+		if err != nil {
+			return fmt.Errorf("invalid user_id")
+		}
+	} else {
+		return fmt.Errorf("email or user_id is required")
 	}
+
 	m := &domain.TeamMembership{ID: uuid.New(), UserID: userID, TeamID: teamID, Role: input.Role}
 	if err := s.teamRepo.CreateMembership(ctx, m); err != nil {
 		if errors.Is(err, postgres.ErrConflict) {
