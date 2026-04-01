@@ -29,7 +29,19 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [setupChecked, setSetupChecked] = useState(false);
   const [setupCompleted, setSetupCompleted] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    if (typeof window !== "undefined") return localStorage.getItem("sidebar-collapsed") === "true";
+    return false;
+  });
   const shortcutHelp = useShortcutHelp();
+
+  const toggleSidebar = () => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem("sidebar-collapsed", String(next));
+      return next;
+    });
+  };
 
   const isOrgAdmin = currentRole === "owner" || currentRole === "admin" || user?.is_system_admin;
   const roleResolved = currentRole !== null || user?.is_system_admin || !user;
@@ -81,7 +93,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     return (
       <div className="flex h-screen">
         <div className="hidden md:block">
-          <Sidebar />
+          <Sidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
         </div>
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild>
@@ -89,7 +101,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </SheetTrigger>
           <SheetContent side="left" className="w-64 p-0">
             <SheetTitle className="sr-only">Navigation</SheetTitle>
-            <Sidebar />
+            <Sidebar collapsed={false} onToggle={() => setMobileOpen(false)} />
           </SheetContent>
         </Sheet>
         <div className="flex-1 flex flex-col min-h-0 bg-mesh">
