@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"gitlab.com/burnerbyte/burnerbyte/internal/auth/rbac"
 	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
 	"gitlab.com/burnerbyte/burnerbyte/internal/mailer"
 	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
@@ -82,7 +83,7 @@ func (s *OrgService) CreateOrg(ctx context.Context, input domain.CreateOrgInput,
 		ID:     uuid.New(),
 		UserID: creatorID,
 		OrgID:  org.ID,
-		Role:   "owner",
+		Role:   rbac.OrgOwner,
 	}
 	if err := orgRepoTx.CreateMembership(ctx, membership); err != nil {
 		return nil, err
@@ -206,7 +207,7 @@ func (s *OrgService) ListMembers(ctx context.Context, orgID uuid.UUID, page, per
 }
 
 func (s *OrgService) ChangeRole(ctx context.Context, orgID, targetUserID uuid.UUID, role string) error {
-	if role != "owner" && role != "admin" && role != "member" {
+	if !rbac.ValidOrgRole(role) {
 		return fmt.Errorf("invalid role: %s", role)
 	}
 
@@ -215,7 +216,7 @@ func (s *OrgService) ChangeRole(ctx context.Context, orgID, targetUserID uuid.UU
 	if err != nil {
 		return err
 	}
-	if current.Role == "owner" && role != "owner" {
+	if current.Role == rbac.OrgOwner && role != rbac.OrgOwner {
 		count, err := s.orgRepo.CountOwners(ctx, orgID)
 		if err != nil {
 			return err
@@ -233,7 +234,7 @@ func (s *OrgService) RemoveMember(ctx context.Context, orgID, targetUserID uuid.
 	if err != nil {
 		return err
 	}
-	if m.Role == "owner" {
+	if m.Role == rbac.OrgOwner {
 		count, err := s.orgRepo.CountOwners(ctx, orgID)
 		if err != nil {
 			return err
@@ -251,7 +252,7 @@ func (s *OrgService) InviteMember(ctx context.Context, orgID uuid.UUID, input do
 	if input.Email == "" {
 		return nil, fmt.Errorf("email is required")
 	}
-	if input.OrgRole != "owner" && input.OrgRole != "admin" && input.OrgRole != "member" {
+	if !rbac.ValidOrgRole(input.OrgRole) {
 		return nil, fmt.Errorf("invalid org_role: %s", input.OrgRole)
 	}
 

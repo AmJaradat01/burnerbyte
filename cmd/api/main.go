@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -192,6 +193,15 @@ func main() {
 		setupHandler.Routes(r)
 		authHandler.PublicRoutes(r, rateLimiter)
 		r.Get("/invites/{token}/preview", orgHandler.PreviewInvite)
+
+		// Roles (public, no auth needed — just returns role definitions)
+		r.Get("/roles", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]any{
+				"org_roles":  rbac.OrgRoles(),
+				"team_roles": rbac.TeamRoles(),
+			})
+		})
 
 		// Docs (public)
 		r.Get("/docs", handler.SwaggerUI)

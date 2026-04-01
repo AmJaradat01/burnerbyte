@@ -23,6 +23,43 @@ const (
 var orgRank = map[string]int{OrgOwner: 3, OrgAdmin: 2, OrgMember: 1}
 var teamRank = map[string]int{TeamLead: 2, TeamMember: 1}
 
+// OrgRoles returns the available org roles with descriptions, ordered by rank.
+func OrgRoles() []RoleInfo {
+	return []RoleInfo{
+		{Value: OrgOwner, Label: "Owner", Description: "Full control over the organization", Rank: 3},
+		{Value: OrgAdmin, Label: "Admin", Description: "Manage settings, members, and resources", Rank: 2},
+		{Value: OrgMember, Label: "Member", Description: "Standard access to assigned resources", Rank: 1},
+	}
+}
+
+// TeamRoles returns the available team roles with descriptions, ordered by rank.
+func TeamRoles() []RoleInfo {
+	return []RoleInfo{
+		{Value: TeamLead, Label: "Lead", Description: "Manage team settings, webhooks, API keys, and members", Rank: 2},
+		{Value: TeamMember, Label: "Member", Description: "Create inboxes, view emails, use team domains", Rank: 1},
+	}
+}
+
+// RoleInfo describes a role for API responses and UI rendering.
+type RoleInfo struct {
+	Value       string `json:"value"`
+	Label       string `json:"label"`
+	Description string `json:"description"`
+	Rank        int    `json:"rank"`
+}
+
+// ValidOrgRole checks if a role string is a valid org role.
+func ValidOrgRole(role string) bool {
+	_, ok := orgRank[role]
+	return ok
+}
+
+// ValidTeamRole checks if a role string is a valid team role.
+func ValidTeamRole(role string) bool {
+	_, ok := teamRank[role]
+	return ok
+}
+
 type OrgMembershipRepo interface {
 	GetMembership(ctx context.Context, userID, orgID uuid.UUID) (*domain.OrgMembership, error)
 }
