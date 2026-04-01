@@ -7,7 +7,6 @@ import { useOrgStore } from "@/stores/org-store";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { LocaleSwitcher } from "@/components/locale-switcher";
 import { useTranslations } from "next-intl";
 import { ChevronsLeft, ChevronsRight, LogOut } from "lucide-react";
 
@@ -149,7 +148,6 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         )}
         <div className={cn("flex items-center gap-1", collapsed ? "flex-col" : "px-1")}>
           <ThemeToggle />
-          {!collapsed && <LocaleSwitcher />}
           {!collapsed && <div className="flex-1" />}
           <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground" onClick={logout} title={tc("signOut")}>
             <LogOut className="h-4 w-4" />
