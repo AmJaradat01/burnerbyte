@@ -274,6 +274,7 @@ func main() {
 
 			// Emails
 			r.Get("/inboxes/{inboxId}/emails", emailHandler.ListEmails)
+			r.Post("/inboxes/{inboxId}/emails/mark-all-read", emailHandler.MarkAllRead)
 			r.Get("/emails/{emailId}", emailHandler.GetEmail)
 			r.Patch("/emails/{emailId}", emailHandler.MarkReadUnread)
 			r.Delete("/emails/{emailId}", emailHandler.DeleteEmail)
