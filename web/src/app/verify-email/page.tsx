@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function VerifyEmailPage() {
   const params = useSearchParams();
+  const router = useRouter();
   const token = params.get("token");
   const [status, setStatus] = useState<"loading" | "success" | "error">(() => token ? "loading" : "error");
 
@@ -18,13 +19,19 @@ export default function VerifyEmailPage() {
       .catch(() => setStatus("error"));
   }, [token]);
 
+  useEffect(() => {
+    if (status !== "success") return;
+    const timer = setTimeout(() => router.replace("/login"), 3000);
+    return () => clearTimeout(timer);
+  }, [status, router]);
+
   return (
     <div className="flex min-h-screen items-center justify-center">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>{status === "loading" ? "Verifying…" : status === "success" ? "Email verified" : "Verification failed"}</CardTitle>
           <CardDescription>
-            {status === "success" && "Your email has been verified. You can now sign in."}
+            {status === "success" && "Your email has been verified. Redirecting to sign in…"}
             {status === "error" && "The verification link is invalid or expired."}
           </CardDescription>
         </CardHeader>
