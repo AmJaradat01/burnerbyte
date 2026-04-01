@@ -17,9 +17,12 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
 
   const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
     ...(init.headers as Record<string, string>),
   };
+  // Only set Content-Type for requests with a body
+  if (init.body) {
+    headers["Content-Type"] = "application/json";
+  }
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
   const res = await fetch(url, { ...init, headers });
@@ -30,13 +33,13 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
     if (typeof window !== "undefined") {
       localStorage.removeItem("access_token");
       localStorage.removeItem("refresh_token");
-      // Don't redirect if already on a public page (e.g. invite flow)
       const publicPrefixes = ["/login", "/register", "/invite", "/setup", "/onboarding", "/verify-email", "/forgot-password", "/reset-password"];
       const isPublic = publicPrefixes.some((p) => window.location.pathname.startsWith(p));
       if (!isPublic) {
         window.location.href = "/login";
       }
     }
+    throw new ApiError("session expired", 401);
   }
 
   if (!res.ok) {
@@ -44,11 +47,15 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
     throw new ApiError(body.error || res.statusText, res.status);
   }
 
+  // Handle 204 No Content and empty responses
+  if (res.status === 204 || res.headers.get("content-length") === "0") {
+    return undefined as T;
+  }
+
   return res.json();
 }
 
 async function tryRefresh(): Promise<boolean> {
-  // Deduplicate concurrent refresh attempts — only one in-flight at a time
   if (refreshPromise) return refreshPromise;
 
   refreshPromise = (async () => {
@@ -87,11 +94,11 @@ export const api = {
   get: <T>(path: string, params?: Record<string, string>) =>
     request<T>(path, { params }),
   post: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: "POST", body: JSON.stringify(body) }),
+    request<T>(path, { method: "POST", body: body !== undefined ? JSON.stringify(body) : undefined }),
   patch: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: "PATCH", body: JSON.stringify(body) }),
+    request<T>(path, { method: "PATCH", body: body !== undefined ? JSON.stringify(body) : undefined }),
   put: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: "PUT", body: JSON.stringify(body) }),
+    request<T>(path, { method: "PUT", body: body !== undefined ? JSON.stringify(body) : undefined }),
   del: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: "DELETE", body: body ? JSON.stringify(body) : undefined }),
+    request<T>(path, { method: "DELETE", body: body !== undefined ? JSON.stringify(body) : undefined }),
 };

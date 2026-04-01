@@ -350,7 +350,7 @@ func (s *AuthService) ForgotPassword(ctx context.Context, input domain.ForgotPas
 	_ = s.resetRepo.InvalidateForUser(ctx, user.ID)
 
 	// Generate and store hashed token
-	rawToken := uuid.New().String()
+	rawToken := generateSecureToken(32)
 	tokenHash := postgres.HashToken(rawToken)
 	ttl := s.cfg.Defaults.PasswordResetTTL
 	if ttl <= 0 {
@@ -489,26 +489,40 @@ func (s *AuthService) autoProvisionSSO(ctx context.Context, user *domain.User, s
 
 func (s *AuthService) VerifyEmail(ctx context.Context, token string) error {
 	tokenHash := postgres.HashToken(token)
-	vt, err := s.emailVerifyRepo.Consume(ctx, tokenHash)
+
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	emailVerifyRepoTx := &postgres.EmailVerificationRepo{}
+	*emailVerifyRepoTx = *s.emailVerifyRepo
+	emailVerifyRepoTx = postgres.NewEmailVerificationRepo(tx)
+
+	vt, err := emailVerifyRepoTx.Consume(ctx, tokenHash)
 	if err != nil {
 		return fmt.Errorf("invalid or expired verification link")
 	}
 
-	user, err := s.userRepo.GetByID(ctx, vt.UserID)
+	userRepoTx := s.userRepo.WithTx(tx)
+	user, err := userRepoTx.GetByID(ctx, vt.UserID)
 	if err != nil {
 		return err
 	}
 
-	if user.EmailVerified {
-		return nil // already verified, idempotent
+	if !user.EmailVerified {
+		user.EmailVerified = true
+		if err := userRepoTx.Update(ctx, user); err != nil {
+			return err
+		}
 	}
 
-	user.EmailVerified = true
-	if err := s.userRepo.Update(ctx, user); err != nil {
-		return err
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit: %w", err)
 	}
 
-	// Invalidate remaining verification tokens for this user
+	// Invalidate remaining tokens outside transaction (best-effort)
 	_ = s.emailVerifyRepo.InvalidateForUser(ctx, vt.UserID)
 
 	return nil

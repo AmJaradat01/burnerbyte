@@ -37,11 +37,17 @@ export default function LoginPage() {
     staleTime: 60000,
   });
 
-  // Handle SSO callback tokens from URL
+  // Handle SSO callback tokens from URL fragment (hash)
+  // Tokens are passed as fragment to prevent logging by proxies/servers
   useEffect(() => {
-    const accessToken = searchParams.get("access_token");
-    const refreshToken = searchParams.get("refresh_token");
+    const hash = window.location.hash;
+    if (!hash) return;
+    const params = new URLSearchParams(hash.substring(1));
+    const accessToken = params.get("access_token");
+    const refreshToken = params.get("refresh_token");
     if (accessToken && refreshToken) {
+      // Strip tokens from URL immediately to prevent exposure in history
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
       localStorage.setItem("access_token", accessToken);
       localStorage.setItem("refresh_token", refreshToken);
       const redirect = searchParams.get("redirect") || "/";

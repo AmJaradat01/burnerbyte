@@ -214,7 +214,7 @@ func (r *OrgRepo) CreateInvite(ctx context.Context, inv *domain.Invite) error {
 	_, err := r.db.Exec(ctx,
 		`INSERT INTO invites (id, org_id, team_id, email, org_role, team_role, token, invited_by, expires_at)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-		inv.ID, inv.OrgID, inv.TeamID, inv.Email, inv.OrgRole, inv.TeamRole, inv.Token, inv.InvitedBy, inv.ExpiresAt)
+		inv.ID, inv.OrgID, inv.TeamID, inv.Email, inv.OrgRole, inv.TeamRole, HashToken(inv.Token), inv.InvitedBy, inv.ExpiresAt)
 	if err != nil {
 		return fmt.Errorf("create invite: %w", err)
 	}
@@ -225,7 +225,7 @@ func (r *OrgRepo) GetInviteByToken(ctx context.Context, token string) (*domain.I
 	var inv domain.Invite
 	err := r.db.QueryRow(ctx,
 		`SELECT id, org_id, team_id, email, org_role, team_role, token, invited_by, accepted_at, expires_at, created_at
-		 FROM invites WHERE token = $1`, token).
+		 FROM invites WHERE token = $1`, HashToken(token)).
 		Scan(&inv.ID, &inv.OrgID, &inv.TeamID, &inv.Email, &inv.OrgRole, &inv.TeamRole,
 			&inv.Token, &inv.InvitedBy, &inv.AcceptedAt, &inv.ExpiresAt, &inv.CreatedAt)
 	if err != nil {
@@ -242,8 +242,8 @@ func (r *OrgRepo) MarkInviteAccepted(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
-func (r *OrgRepo) DeleteInvite(ctx context.Context, id uuid.UUID) error {
-	_, err := r.db.Exec(ctx, `DELETE FROM invites WHERE id = $1`, id)
+func (r *OrgRepo) DeleteInvite(ctx context.Context, orgID, id uuid.UUID) error {
+	_, err := r.db.Exec(ctx, `DELETE FROM invites WHERE id = $1 AND org_id = $2`, id, orgID)
 	return err
 }
 
