@@ -8,7 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/error-state";
 import type { AnalyticsStats, EmailsPerDay } from "@/types";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area } from "recharts";
+import { Activity, Globe, Inbox, Mail, TrendingUp, Users } from "lucide-react";
 
 export default function DashboardPage() {
   const org = useOrgStore((s) => s.currentOrg);
@@ -29,67 +30,182 @@ export default function DashboardPage() {
 
   const { data: chart } = useQuery({
     queryKey: ["org-emails-per-day", org?.id],
-    queryFn: () => api.get<{ data: EmailsPerDay[] }>(`/orgs/${org!.id}/analytics/emails-per-day`),
+    queryFn: () => api.get<{ data: EmailsPerDay[] }>(`/orgs/${org!.id}/analytics/emails-per-day`, { days: "30" }),
+    enabled: !!org,
+  });
+
+  const { data: chartWeek } = useQuery({
+    queryKey: ["org-emails-week", org?.id],
+    queryFn: () => api.get<{ data: EmailsPerDay[] }>(`/orgs/${org!.id}/analytics/emails-per-day`, { days: "7" }),
     enabled: !!org,
   });
 
   if (!org) return <p className="text-muted-foreground">Select an organization to view the dashboard.</p>;
   if (isError) return <ErrorState message="Failed to load dashboard" onRetry={() => refetch()} />;
 
-  const statCards = [
-    { label: "Total Inboxes", value: stats?.total_inboxes },
-    { label: "Active Inboxes", value: stats?.active_inboxes },
-    { label: "Total Emails", value: stats?.total_emails },
-    { label: "Domains", value: stats?.total_domains },
-    { label: "Teams", value: stats?.total_teams },
-    { label: "Members", value: stats?.total_members },
-  ];
+  const weekTotal = chartWeek?.data?.reduce((sum, d) => sum + d.count, 0) ?? 0;
+  const todayCount = chartWeek?.data?.at(-1)?.count ?? 0;
+  const yesterdayCount = chartWeek?.data?.at(-2)?.count ?? 0;
+  const todayDelta = todayCount - yesterdayCount;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">{greeting}, {user?.display_name?.split(" ")[0] || "there"}</h1>
-          <p className="text-muted-foreground text-sm">{org.name} overview</p>
-        </div>
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold">{greeting}, {user?.display_name?.split(" ")[0] || "there"}</h1>
+        <p className="text-muted-foreground text-sm mt-0.5">Here&apos;s what&apos;s happening with {org.name}</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {statCards.map((s) => (
-          <Card key={s.label}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">{s.label}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <Skeleton className="h-8 w-20" />
-              ) : (
-                <p className="text-2xl font-bold">{s.value ?? 0}</p>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+      {/* Primary stats */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          icon={Mail}
+          label="Total Emails"
+          value={stats?.total_emails}
+          loading={isLoading}
+          accent="text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400"
+          footer={todayDelta !== 0 ? (
+            <span className={`flex items-center gap-1 text-xs ${todayDelta > 0 ? "text-green-600" : "text-muted-foreground"}`}>
+              <TrendingUp className="h-3 w-3" /> {todayDelta > 0 ? "+" : ""}{todayDelta} today
+            </span>
+          ) : undefined}
+        />
+        <StatCard
+          icon={Inbox}
+          label="Active Inboxes"
+          value={stats?.active_inboxes}
+          loading={isLoading}
+          accent="text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400"
+          footer={<span className="text-xs text-muted-foreground">{stats?.total_inboxes ?? 0} total created</span>}
+        />
+        <StatCard
+          icon={Globe}
+          label="Domains"
+          value={stats?.total_domains}
+          loading={isLoading}
+          accent="text-violet-600 bg-violet-100 dark:bg-violet-900/30 dark:text-violet-400"
+        />
+        <StatCard
+          icon={Users}
+          label="Members"
+          value={stats?.total_members}
+          loading={isLoading}
+          accent="text-amber-600 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400"
+          footer={<span className="text-xs text-muted-foreground">{stats?.total_teams ?? 0} teams</span>}
+        />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Emails per Day</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {chart?.data && chart.data.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={chart.data}>
-                <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                <YAxis allowDecimals={false} />
-                <Tooltip />
-                <Bar dataKey="count" fill="var(--color-primary)" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <p className="py-8 text-center text-sm text-muted-foreground">No email data yet</p>
-          )}
-        </CardContent>
-      </Card>
+      {/* Charts row */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        {/* Main chart - 30 day */}
+        <Card className="lg:col-span-2">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Email Volume</CardTitle>
+              <span className="text-xs text-muted-foreground">Last 30 days</span>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {chart?.data && chart.data.length > 0 ? (
+              <ResponsiveContainer width="100%" height={280}>
+                <AreaChart data={chart.data}>
+                  <defs>
+                    <linearGradient id="emailGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.2} />
+                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                  <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(v) => v.slice(5)} stroke="hsl(var(--muted-foreground))" />
+                  <YAxis tick={{ fontSize: 11 }} allowDecimals={false} stroke="hsl(var(--muted-foreground))" />
+                  <Tooltip
+                    contentStyle={{ borderRadius: 8, border: "1px solid hsl(var(--border))", background: "hsl(var(--popover))", color: "hsl(var(--popover-foreground))" }}
+                    labelFormatter={(v) => v}
+                    formatter={(v) => [`${Number(v).toLocaleString()}`, "Emails"]}
+                  />
+                  <Area type="monotone" dataKey="count" stroke="hsl(var(--primary))" strokeWidth={2} fill="url(#emailGradient)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-[280px] text-sm text-muted-foreground">No email data yet</div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Weekly summary */}
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">This Week</CardTitle>
+              <span className="flex items-center gap-1 text-xs text-muted-foreground"><Activity className="h-3 w-3" /> 7 days</span>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <p className="text-3xl font-bold">{weekTotal.toLocaleString()}</p>
+              <p className="text-xs text-muted-foreground">emails received</p>
+            </div>
+            {chartWeek?.data && chartWeek.data.length > 0 ? (
+              <ResponsiveContainer width="100%" height={140}>
+                <BarChart data={chartWeek.data}>
+                  <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={(v) => {
+                    const d = new Date(v);
+                    return d.toLocaleDateString(undefined, { weekday: "short" });
+                  }} stroke="hsl(var(--muted-foreground))" />
+                  <Tooltip
+                    contentStyle={{ borderRadius: 8, border: "1px solid hsl(var(--border))", background: "hsl(var(--popover))", color: "hsl(var(--popover-foreground))" }}
+                    labelFormatter={(v) => v}
+                    formatter={(v) => [`${Number(v).toLocaleString()}`, "Emails"]}
+                  />
+                  <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-[140px] text-xs text-muted-foreground">No data</div>
+            )}
+            <div className="grid grid-cols-2 gap-3 pt-2 border-t">
+              <div>
+                <p className="text-lg font-semibold">{todayCount}</p>
+                <p className="text-[11px] text-muted-foreground">Today</p>
+              </div>
+              <div>
+                <p className="text-lg font-semibold">{Math.round(weekTotal / 7)}</p>
+                <p className="text-[11px] text-muted-foreground">Daily avg</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
+  );
+}
+
+/* ── Stat Card ── */
+
+function StatCard({ icon: Icon, label, value, loading, accent, footer }: {
+  icon: typeof Mail;
+  label: string;
+  value?: number;
+  loading: boolean;
+  accent: string;
+  footer?: React.ReactNode;
+}) {
+  return (
+    <Card>
+      <CardContent className="pt-5 pb-4">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-sm text-muted-foreground">{label}</span>
+          <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${accent}`}>
+            <Icon className="h-4 w-4" />
+          </div>
+        </div>
+        {loading ? (
+          <Skeleton className="h-8 w-20" />
+        ) : (
+          <p className="text-2xl font-bold tabular-nums">{(value ?? 0).toLocaleString()}</p>
+        )}
+        {footer && <div className="mt-1.5">{footer}</div>}
+      </CardContent>
+    </Card>
   );
 }
