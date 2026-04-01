@@ -119,8 +119,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   // Close mobile nav on route change
   useEffect(() => { setMobileOpen(false); }, [pathname]); // eslint-disable-line react-hooks/set-state-in-effect
 
-  // Loading states
-  if (!setupChecked || loading || (user && !roleResolved)) {
+  // Loading states — don't block public pages (onboarding, invite, etc.)
+  if (!setupChecked || loading || (user && !roleResolved && !isPublic)) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" role="status">
