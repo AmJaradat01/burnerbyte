@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -54,7 +56,7 @@ func (s *AttachmentService) StoreAttachment(ctx context.Context, emailID uuid.UU
 		return nil, fmt.Errorf("attachment exceeds max size (%dMB)", s.maxSizeMB)
 	}
 
-	storageKey := fmt.Sprintf("attachments/%s/%s/%s", emailID, uuid.New(), filename)
+	storageKey := fmt.Sprintf("attachments/%s/%s/%s", emailID, uuid.New(), sanitizeFilename(filename))
 
 	_, err := s.s3.PutObject(ctx, s.bucket, storageKey, bytes.NewReader(data), int64(len(data)),
 		minio.PutObjectOptions{ContentType: contentType})
@@ -116,4 +118,25 @@ func (s *AttachmentService) DeleteByEmail(ctx context.Context, emailID uuid.UUID
 		s.s3.RemoveObject(ctx, s.bucket, key, minio.RemoveObjectOptions{})
 	}
 	return nil
+}
+
+// sanitizeFilename strips path traversal sequences and dangerous characters
+// from attachment filenames to prevent S3 key manipulation.
+func sanitizeFilename(name string) string {
+	// Extract just the base filename, stripping any directory components
+	name = filepath.Base(name)
+	// Remove null bytes
+	name = strings.ReplaceAll(name, "\x00", "")
+	// Replace path separators that survived Base()
+	name = strings.ReplaceAll(name, "/", "_")
+	name = strings.ReplaceAll(name, "\\", "_")
+	name = strings.ReplaceAll(name, "..", "_")
+	if name == "" || name == "." {
+		name = "unnamed"
+	}
+	// Limit length
+	if len(name) > 255 {
+		name = name[:255]
+	}
+	return name
 }
