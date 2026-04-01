@@ -140,7 +140,7 @@ func (s *TeamService) DeleteTeam(ctx context.Context, orgID, id uuid.UUID) error
 }
 
 func (s *TeamService) AddMember(ctx context.Context, teamID uuid.UUID, input domain.AddTeamMemberInput) error {
-	if input.Role != "lead" && input.Role != "member" && input.Role != "viewer" {
+	if input.Role != "lead" && input.Role != "member" {
 		return fmt.Errorf("invalid role: %s", input.Role)
 	}
 
@@ -178,7 +178,7 @@ func (s *TeamService) ListMembers(ctx context.Context, teamID uuid.UUID, page, p
 }
 
 func (s *TeamService) ChangeRole(ctx context.Context, teamID, userID uuid.UUID, role string) error {
-	if role != "lead" && role != "member" && role != "viewer" {
+	if role != "lead" && role != "member" {
 		return fmt.Errorf("invalid role: %s", role)
 	}
 	return s.teamRepo.UpdateMemberRole(ctx, userID, teamID, role)
