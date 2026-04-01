@@ -313,7 +313,7 @@ func (h *OrgHandler) RevokeInvite(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid invite ID")
 		return
 	}
-	if err := h.svc.RevokeInvite(r.Context(), inviteID); err != nil {
+	if err := h.svc.RevokeInvite(r.Context(), orgID, inviteID); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}

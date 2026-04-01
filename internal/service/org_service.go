@@ -369,8 +369,8 @@ func (s *OrgService) AcceptInvite(ctx context.Context, token string, userID uuid
 	return tx.Commit(ctx)
 }
 
-func (s *OrgService) RevokeInvite(ctx context.Context, inviteID uuid.UUID) error {
-	return s.orgRepo.DeleteInvite(ctx, inviteID)
+func (s *OrgService) RevokeInvite(ctx context.Context, orgID, inviteID uuid.UUID) error {
+	return s.orgRepo.DeleteInvite(ctx, orgID, inviteID)
 }
 
 func (s *OrgService) PreviewInvite(ctx context.Context, token string) (map[string]any, error) {

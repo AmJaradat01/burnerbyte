@@ -98,7 +98,7 @@ func (r *UserRepo) ListAll(ctx context.Context, page, perPage int) ([]domain.Use
 	}
 	offset := (page - 1) * perPage
 	rows, err := r.db.Query(ctx,
-		`SELECT id, email, display_name, avatar_url, password_hash, sso_provider, sso_subject,
+		`SELECT id, email, display_name, avatar_url, sso_provider, sso_subject,
 		        is_system_admin, email_verified, password_changed_at, created_at, updated_at
 		 FROM users ORDER BY created_at DESC LIMIT $1 OFFSET $2`, perPage, offset)
 	if err != nil {
@@ -108,7 +108,7 @@ func (r *UserRepo) ListAll(ctx context.Context, page, perPage int) ([]domain.Use
 	var users []domain.User
 	for rows.Next() {
 		var u domain.User
-		if err := rows.Scan(&u.ID, &u.Email, &u.DisplayName, &u.AvatarURL, &u.PasswordHash,
+		if err := rows.Scan(&u.ID, &u.Email, &u.DisplayName, &u.AvatarURL,
 			&u.SSOProvider, &u.SSOSubject, &u.IsSystemAdmin, &u.EmailVerified,
 			&u.PasswordChangedAt, &u.CreatedAt, &u.UpdatedAt); err != nil {
 			return nil, 0, err
