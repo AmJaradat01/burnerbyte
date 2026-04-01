@@ -373,34 +373,33 @@ function InboxCard({ inbox, onExtend, onDelete }: { inbox: Inbox; onExtend: () =
     setTimeout(() => setCopied(false), 1500);
   };
 
+  const addr = inbox.full_address || inbox.address;
+  const [localPart, domainPart] = addr.split("@");
+  const hasUnread = (inbox.unread_count ?? 0) > 0;
+
   return (
     <Card
       className={`transition-all hover:shadow-md hover:border-primary/30 cursor-pointer group ${!inbox.is_active ? "opacity-60" : ""}`}
       onClick={() => router.push(`/inboxes/${inbox.id}`)}
     >
-      <CardContent className="pt-4 pb-4 space-y-3">
-        {/* Address + badges */}
+      <CardContent className="pt-4 pb-3 space-y-2.5">
+        {/* Address */}
         <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0 flex-1">
-            <p className="font-mono text-sm font-medium truncate group-hover:text-primary transition-colors">
-              {inbox.full_address || inbox.address}
-            </p>
-          </div>
-          {(inbox.unread_count ?? 0) > 0 && (
-            <Badge className="shrink-0 animate-in fade-in">{inbox.unread_count}</Badge>
+          <p className="font-mono text-sm font-medium truncate group-hover:text-primary transition-colors">
+            <span>{localPart}</span>
+            <span className="text-muted-foreground">@</span>
+            <span className="text-primary/80">{domainPart}</span>
+          </p>
+          {hasUnread && (
+            <Badge className="shrink-0 text-[10px] px-1.5 py-0 animate-in fade-in">{inbox.unread_count}</Badge>
           )}
         </div>
 
-        {/* Stats */}
+        {/* Stats row */}
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
-            <Mail className="h-3 w-3" /> {t("emails", { count: inbox.email_count ?? 0 })}
+            <Mail className="h-3 w-3" /> {inbox.email_count ?? 0}
           </span>
-          {(inbox.unread_count ?? 0) > 0 && (
-            <span className="flex items-center gap-1 text-primary font-medium">
-              <MailOpen className="h-3 w-3" /> {t("unread", { count: inbox.unread_count })}
-            </span>
-          )}
           <span className="flex items-center gap-1 ml-auto">
             <Clock className="h-3 w-3" />
             <ExpiryLabel expiresAt={inbox.expires_at} isActive={inbox.is_active} />
@@ -408,7 +407,7 @@ function InboxCard({ inbox, onExtend, onDelete }: { inbox: Inbox; onExtend: () =
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-1.5 pt-1" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-1 pt-0.5 border-t" onClick={(e) => e.stopPropagation()}>
           <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs flex-1" onClick={copyAddress}>
             {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
             {copied ? tc("copied") : tc("copy")}
@@ -420,12 +419,12 @@ function InboxCard({ inbox, onExtend, onDelete }: { inbox: Inbox; onExtend: () =
           )}
           <ConfirmDialog
             trigger={
-              <Button variant="ghost" size="sm" className="h-7 text-destructive hover:text-destructive">
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:text-destructive">
                 <Trash2 className="h-3 w-3" />
               </Button>
             }
             title={t("deleteInbox")}
-            description={t("deleteInboxDesc", { address: inbox.full_address || inbox.address })}
+            description={t("deleteInboxDesc", { address: addr })}
             onConfirm={onDelete}
           />
         </div>
