@@ -172,3 +172,8 @@ func (r *WebhookRepo) ListFailedRetryable(ctx context.Context) ([]domain.Webhook
 	}
 	return webhooks, nil
 }
+
+func (r *WebhookRepo) ResetFailureCount(ctx context.Context, id uuid.UUID) error {
+	_, err := r.db.Exec(ctx, `UPDATE webhooks SET failure_count = 0 WHERE id = $1`, id)
+	return err
+}

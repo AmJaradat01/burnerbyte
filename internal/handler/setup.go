@@ -368,7 +368,8 @@ func (h *SetupHandler) Complete(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to generate token")
 		return
 	}
-	rawRefresh, refreshHash, _ := h.tokens.GenerateRefreshToken()
+	rawRefresh, refreshHash, err := h.tokens.GenerateRefreshToken()
+	if err != nil { writeError(w, http.StatusInternalServerError, "failed to generate token"); return }
 	session := &domain.Session{
 		ID:               uuid.New(),
 		UserID:           adminUser.ID,
