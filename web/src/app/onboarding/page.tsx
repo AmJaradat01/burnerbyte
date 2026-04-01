@@ -19,6 +19,7 @@ export default function OnboardingPage() {
   const router = useRouter();
   const { fetchOrgs, setCurrentOrg, fetchTeams, setCurrentTeam } = useOrgStore();
   const [step, setStep] = useState(0);
+  const [busy, setBusy] = useState(false);
   const [org, setOrg] = useState<Organization | null>(null);
   const [domainId, setDomainId] = useState<string | null>(null);
   const [domainName, setDomainName] = useState("");
@@ -30,16 +31,19 @@ export default function OnboardingPage() {
   // Step 0: Create org
   const [orgName, setOrgName] = useState("");
   const createOrg = async () => {
+    setBusy(true);
     try {
       const res = await api.post<Organization>("/orgs", { name: orgName });
       setOrg(res);
       setStep(1);
     } catch (err) { toast.error(err instanceof Error ? err.message : "Failed"); }
+    finally { setBusy(false); }
   };
 
   // Step 1: Add domain
   const [domainInput, setDomainInput] = useState("");
   const addDomain = async () => {
+    setBusy(true);
     try {
       const res = await api.post<{ id: string; domain_name: string; verification_record?: string }>(`/orgs/${org!.id}/domains`, { domain_name: domainInput });
       setDomainId(res.id);
@@ -47,32 +51,41 @@ export default function OnboardingPage() {
       setVerificationRecord(res.verification_record || "");
       setStep(2);
     } catch (err) { toast.error(err instanceof Error ? err.message : "Failed"); }
+    finally { setBusy(false); }
   };
 
   // Step 2: Create team
   const [teamName, setTeamName] = useState("");
   const createTeam = async () => {
+    setBusy(true);
     try {
       const res = await api.post<Team>(`/orgs/${org!.id}/teams`, { name: teamName });
       setTeam(res);
-      // Auto-assign domain to team
-      const assignment = await api.post<{ id: string }>(`/orgs/${org!.id}/teams/${res.id}/domains`, { domain_id: domainId, access_level: "full" });
-      setAssignmentId(assignment.id);
+      // Only auto-assign domain if one was added in step 1
+      if (domainId) {
+        const assignment = await api.post<{ id: string }>(`/orgs/${org!.id}/teams/${res.id}/domains`, { domain_id: domainId, access_level: "full" });
+        setAssignmentId(assignment.id);
+      }
       setStep(3);
     } catch (err) { toast.error(err instanceof Error ? err.message : "Failed"); }
+    finally { setBusy(false); }
   };
 
-  // Step 3: Create inbox
+  // Step 3: Create inbox (only if we have a domain assignment)
   const createInbox = async () => {
+    if (!assignmentId) { setStep(4); return; }
+    setBusy(true);
     try {
       const res = await api.post<{ full_address: string }>("/inboxes", { domain_assignment_id: assignmentId, ttl: "1h" });
       setInboxAddress(res.full_address);
       setStep(4);
     } catch (err) { toast.error(err instanceof Error ? err.message : "Failed"); }
+    finally { setBusy(false); }
   };
 
   // Step 4: Done
   const finish = async () => {
+    setBusy(true);
     localStorage.setItem("bb_onboarding_done", "true");
     await fetchOrgs();
     if (org) setCurrentOrg(org);
@@ -87,6 +100,8 @@ export default function OnboardingPage() {
     localStorage.setItem("bb_onboarding_done", "true");
     router.push("/dashboard");
   };
+
+  const back = () => { if (step > 0) setStep(step - 1); };
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
@@ -105,11 +120,11 @@ export default function OnboardingPage() {
             <>
               <div className="space-y-2">
                 <Label>Organization name</Label>
-                <Input value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="My Company" autoFocus />
+                <Input value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="My Company" autoFocus onKeyDown={(e) => e.key === "Enter" && orgName && createOrg()} />
               </div>
               <div className="flex justify-between">
-                <Button variant="ghost" onClick={skip}>Skip setup</Button>
-                <Button onClick={createOrg} disabled={!orgName}>Create org →</Button>
+                <Button variant="ghost" onClick={skip} disabled={busy}>Skip setup</Button>
+                <Button onClick={createOrg} disabled={!orgName || busy}>{busy ? "Creating…" : "Create org →"}</Button>
               </div>
             </>
           )}
@@ -118,11 +133,14 @@ export default function OnboardingPage() {
             <>
               <div className="space-y-2">
                 <Label>Domain name</Label>
-                <Input value={domainInput} onChange={(e) => setDomainInput(e.target.value)} placeholder="example.com" autoFocus />
+                <Input value={domainInput} onChange={(e) => setDomainInput(e.target.value)} placeholder="example.com" autoFocus onKeyDown={(e) => e.key === "Enter" && domainInput && addDomain()} />
               </div>
               <div className="flex justify-between">
-                <Button variant="ghost" onClick={() => setStep(2)}>Skip</Button>
-                <Button onClick={addDomain} disabled={!domainInput}>Add domain →</Button>
+                <div className="flex gap-2">
+                  <Button variant="ghost" onClick={back} disabled={busy}>← Back</Button>
+                  <Button variant="ghost" onClick={() => setStep(2)} disabled={busy}>Skip</Button>
+                </div>
+                <Button onClick={addDomain} disabled={!domainInput || busy}>{busy ? "Adding…" : "Add domain →"}</Button>
               </div>
             </>
           )}
@@ -139,21 +157,36 @@ export default function OnboardingPage() {
               )}
               <div className="space-y-2">
                 <Label>Team name</Label>
-                <Input value={teamName} onChange={(e) => setTeamName(e.target.value)} placeholder="Engineering" autoFocus />
+                <Input value={teamName} onChange={(e) => setTeamName(e.target.value)} placeholder="Engineering" autoFocus onKeyDown={(e) => e.key === "Enter" && teamName && createTeam()} />
               </div>
               <div className="flex justify-between">
-                <Button variant="ghost" onClick={() => setStep(3)}>Skip</Button>
-                <Button onClick={createTeam} disabled={!teamName}>Create team →</Button>
+                <div className="flex gap-2">
+                  <Button variant="ghost" onClick={back} disabled={busy}>← Back</Button>
+                  <Button variant="ghost" onClick={() => setStep(3)} disabled={busy}>Skip</Button>
+                </div>
+                <Button onClick={createTeam} disabled={!teamName || busy}>{busy ? "Creating…" : "Create team →"}</Button>
               </div>
             </>
           )}
 
           {step === 3 && (
             <>
-              <p className="text-sm text-muted-foreground">Create your first temporary inbox to start receiving emails.</p>
+              <p className="text-sm text-muted-foreground">
+                {assignmentId
+                  ? "Create your first temporary inbox to start receiving emails."
+                  : "No domain was configured. You can set one up later in Settings."}
+              </p>
               <div className="flex justify-between">
-                <Button variant="ghost" onClick={() => setStep(4)}>Skip</Button>
-                <Button onClick={createInbox}>Create inbox →</Button>
+                <div className="flex gap-2">
+                  <Button variant="ghost" onClick={back} disabled={busy}>← Back</Button>
+                  <Button variant="ghost" onClick={() => setStep(4)} disabled={busy}>Skip</Button>
+                </div>
+                {assignmentId && (
+                  <Button onClick={createInbox} disabled={busy}>{busy ? "Creating…" : "Create inbox →"}</Button>
+                )}
+                {!assignmentId && (
+                  <Button onClick={() => setStep(4)}>Continue →</Button>
+                )}
               </div>
             </>
           )}
@@ -170,7 +203,7 @@ export default function OnboardingPage() {
                   </div>
                 )}
               </div>
-              <Button onClick={finish} className="w-full">Go to Dashboard</Button>
+              <Button onClick={finish} className="w-full" disabled={busy}>{busy ? "Loading…" : "Go to Dashboard"}</Button>
             </>
           )}
         </CardContent>
