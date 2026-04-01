@@ -42,6 +42,9 @@ func (h *AdminHandler) Routes(r chi.Router) {
 		r.Use(auth.RequireSystemAdmin)
 		r.Get("/admin/stats", h.Stats)
 		r.Get("/admin/orgs", h.ListOrgs)
+		r.Get("/admin/users", h.ListUsers)
+		r.Delete("/admin/users/{userId}", h.DeleteUser)
+		r.Patch("/admin/users/{userId}", h.UpdateUser)
 		r.Get("/admin/health", h.Health)
 		r.Get("/admin/platform", h.GetPlatformSettings)
 		r.Put("/admin/platform", h.UpdatePlatformSettings)
@@ -58,6 +61,35 @@ func (h *AdminHandler) ListOrgs(w http.ResponseWriter, r *http.Request) {
 	orgs, total, err := h.orgSvc.ListAll(r.Context(), page, perPage)
 	if err != nil { writeError(w, http.StatusInternalServerError, "failed"); return }
 	writeJSON(w, http.StatusOK, paginatedResponse(orgs, total, page, perPage))
+}
+
+func (h *AdminHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
+	page, perPage := parsePagination(r)
+	users, total, err := h.authSvc.ListAllUsers(r.Context(), page, perPage)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to list users")
+		return
+	}
+	writeJSON(w, http.StatusOK, paginatedResponse(users, total, page, perPage))
+}
+
+func (h *AdminHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
+	uc := auth.GetUser(r.Context())
+	userID, err := uuid.Parse(chi.URLParam(r, "userId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid user ID")
+		return
+	}
+	// Prevent self-deletion
+	if userID == uc.UserID {
+		writeError(w, http.StatusBadRequest, "cannot delete your own account from admin panel")
+		return
+	}
+	if err := h.authSvc.DeleteUser(r.Context(), userID); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to delete user")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"message": "user deleted"})
 }
 
 func (h *AdminHandler) Health(w http.ResponseWriter, r *http.Request) {
