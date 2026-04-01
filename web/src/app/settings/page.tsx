@@ -794,14 +794,14 @@ function OverviewTab() {
   if (isLoading) return <div className="grid grid-cols-2 md:grid-cols-4 gap-4">{Array.from({ length: 8 }).map((_, i) => <Card key={i}><CardContent className="pt-6"><Skeleton className="h-4 w-20 mb-2" /><Skeleton className="h-8 w-16" /></CardContent></Card>)}</div>;
   if (!data) return null;
 
-  const stats: { icon: typeof Mail; label: string; value: number; desc?: string; color: string }[] = [
-    { icon: Users, label: "Users", value: data.total_users, color: "text-blue-600" },
-    { icon: Building2, label: "Organizations", value: data.total_orgs, color: "text-purple-600" },
-    { icon: Users, label: "Teams", value: data.total_teams ?? 0, color: "text-indigo-600" },
-    { icon: Globe, label: "Domains", value: data.total_domains, color: "text-green-600" },
-    { icon: Inbox, label: "Active Inboxes", value: data.active_inboxes ?? 0, desc: `${(data.total_inboxes ?? 0).toLocaleString()} total`, color: "text-orange-600" },
-    { icon: Mail, label: "Total Emails", value: data.total_emails, color: "text-pink-600" },
-    { icon: Monitor, label: "Sessions", value: data.total_sessions ?? 0, color: "text-cyan-600" },
+  const stats: { icon: typeof Mail; label: string; value: number; desc?: string; accent: string }[] = [
+    { icon: Users, label: "Users", value: data.total_users, accent: "text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400" },
+    { icon: Building2, label: "Organizations", value: data.total_orgs, accent: "text-violet-600 bg-violet-100 dark:bg-violet-900/30 dark:text-violet-400" },
+    { icon: Users, label: "Teams", value: data.total_teams ?? 0, accent: "text-indigo-600 bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-400" },
+    { icon: Globe, label: "Domains", value: data.total_domains, accent: "text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400" },
+    { icon: Inbox, label: "Active Inboxes", value: data.active_inboxes ?? 0, desc: `${(data.total_inboxes ?? 0).toLocaleString()} total`, accent: "text-amber-600 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400" },
+    { icon: Mail, label: "Total Emails", value: data.total_emails, accent: "text-rose-600 bg-rose-100 dark:bg-rose-900/30 dark:text-rose-400" },
+    { icon: Monitor, label: "Sessions", value: data.total_sessions ?? 0, accent: "text-cyan-600 bg-cyan-100 dark:bg-cyan-900/30 dark:text-cyan-400" },
   ];
 
   return (
@@ -810,11 +810,13 @@ function OverviewTab() {
         {stats.map((s) => (
           <Card key={s.label}>
             <CardContent className="pt-5 pb-4">
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-medium text-muted-foreground">{s.label}</span>
-                <s.icon className={`h-4 w-4 ${s.color}`} />
+                <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${s.accent}`}>
+                  <s.icon className="h-4 w-4" />
+                </div>
               </div>
-              <p className="text-2xl font-bold">{(s.value ?? 0).toLocaleString()}</p>
+              <p className="text-2xl font-bold tabular-nums">{(s.value ?? 0).toLocaleString()}</p>
               {s.desc && <p className="text-xs text-muted-foreground mt-1">{s.desc}</p>}
             </CardContent>
           </Card>
