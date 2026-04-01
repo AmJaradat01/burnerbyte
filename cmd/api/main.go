@@ -185,6 +185,7 @@ func main() {
 		// Public routes (no auth)
 		setupHandler.Routes(r)
 		authHandler.PublicRoutes(r, rateLimiter)
+		r.Get("/invites/{token}/preview", orgHandler.PreviewInvite)
 
 		// Docs (public)
 		r.Get("/docs", handler.SwaggerUI)
@@ -285,6 +286,8 @@ func main() {
 			r.With(auth.RequireSystemAdmin).Get("/admin/stats", adminHandler.Stats)
 			r.With(auth.RequireSystemAdmin).Get("/admin/orgs", adminHandler.ListOrgs)
 			r.With(auth.RequireSystemAdmin).Get("/admin/health", adminHandler.Health)
+			r.With(auth.RequireSystemAdmin).Get("/admin/platform", adminHandler.GetPlatformSettings)
+			r.With(auth.RequireSystemAdmin).Put("/admin/platform", adminHandler.UpdatePlatformSettings)
 			r.With(auth.RequireSystemAdmin).Patch("/admin/users/{userId}", adminHandler.UpdateUser)
 			r.With(auth.RequireSystemAdmin).Get("/admin/sso", adminHandler.GetSSOConfig)
 			r.With(auth.RequireSystemAdmin).Put("/admin/sso", adminHandler.UpdateSSOConfig)

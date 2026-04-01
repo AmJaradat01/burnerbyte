@@ -30,4 +30,12 @@ func (c *Config) LoadFromDB(ctx context.Context, repo SystemConfigLoader) {
 		c.SSO = sso
 		slog.Info("loaded sso config from database")
 	}
+
+	var platform struct {
+		AllowRegistration bool `json:"allow_registration"`
+	}
+	if err := repo.Get(ctx, "platform", &platform); err == nil {
+		c.Defaults.AllowRegistration = platform.AllowRegistration
+		slog.Info("loaded platform config from database")
+	}
 }
