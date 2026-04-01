@@ -324,8 +324,14 @@ func (h *OrgHandler) AcceptInvite(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
 	token := chi.URLParam(r, "token")
 
-	if err := h.svc.AcceptInvite(r.Context(), token, uc.UserID); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+	if err := h.svc.AcceptInvite(r.Context(), token, uc.UserID, uc.Email); err != nil {
+		if err.Error() == "invite not found" || err.Error() == "invite expired" {
+			writeError(w, http.StatusNotFound, err.Error())
+		} else if err.Error() == "email mismatch: this invite was sent to a different email address" {
+			writeError(w, http.StatusForbidden, err.Error())
+		} else {
+			writeError(w, http.StatusBadRequest, err.Error())
+		}
 		return
 	}
 

@@ -307,7 +307,7 @@ func (s *OrgService) InviteMember(ctx context.Context, orgID uuid.UUID, input do
 	return invite, nil
 }
 
-func (s *OrgService) AcceptInvite(ctx context.Context, token string, userID uuid.UUID) error {
+func (s *OrgService) AcceptInvite(ctx context.Context, token string, userID uuid.UUID, userEmail string) error {
 	invite, err := s.orgRepo.GetInviteByToken(ctx, token)
 	if err != nil {
 		if errors.Is(err, postgres.ErrNotFound) {
@@ -323,6 +323,17 @@ func (s *OrgService) AcceptInvite(ctx context.Context, token string, userID uuid
 
 	if time.Now().After(invite.ExpiresAt) {
 		return fmt.Errorf("invite expired")
+	}
+
+	// Security: verify the accepting user's email matches the invite
+	if !strings.EqualFold(invite.Email, userEmail) {
+		slog.Warn("invite email mismatch",
+			"invite_email", invite.Email,
+			"user_email", userEmail,
+			"user_id", userID,
+			"invite_id", invite.ID,
+		)
+		return fmt.Errorf("email mismatch: this invite was sent to a different email address")
 	}
 
 	tx, err := s.pool.Begin(ctx)
