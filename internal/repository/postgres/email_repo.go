@@ -62,7 +62,7 @@ func (r *EmailRepo) ListByInbox(ctx context.Context, inboxID uuid.UUID, page, pe
 
 	offset := (page - 1) * perPage
 	rows, err := r.db.Query(ctx,
-		`SELECT id, from_address, subject, has_attachments, is_read, size_bytes, received_at
+		`SELECT id, from_address, subject, COALESCE(LEFT(body_text, 120), ''), has_attachments, is_read, size_bytes, received_at
 		 FROM emails WHERE inbox_id = $1 ORDER BY received_at DESC LIMIT $2 OFFSET $3`,
 		inboxID, perPage, offset)
 	if err != nil {
@@ -73,7 +73,7 @@ func (r *EmailRepo) ListByInbox(ctx context.Context, inboxID uuid.UUID, page, pe
 	var emails []domain.EmailSummary
 	for rows.Next() {
 		var e domain.EmailSummary
-		if err := rows.Scan(&e.ID, &e.FromAddress, &e.Subject, &e.HasAttachments,
+		if err := rows.Scan(&e.ID, &e.FromAddress, &e.Subject, &e.Snippet, &e.HasAttachments,
 			&e.IsRead, &e.SizeBytes, &e.ReceivedAt); err != nil {
 			return nil, 0, err
 		}
@@ -93,7 +93,7 @@ func (r *EmailRepo) Search(ctx context.Context, inboxID uuid.UUID, query string,
 
 	offset := (page - 1) * perPage
 	rows, err := r.db.Query(ctx,
-		`SELECT id, from_address, subject, has_attachments, is_read, size_bytes, received_at
+		`SELECT id, from_address, subject, COALESCE(LEFT(body_text, 120), ''), has_attachments, is_read, size_bytes, received_at
 		 FROM emails WHERE inbox_id = $1 AND search_vector @@ plainto_tsquery('english', $2)
 		 ORDER BY received_at DESC LIMIT $3 OFFSET $4`,
 		inboxID, query, perPage, offset)
@@ -105,7 +105,7 @@ func (r *EmailRepo) Search(ctx context.Context, inboxID uuid.UUID, query string,
 	var emails []domain.EmailSummary
 	for rows.Next() {
 		var e domain.EmailSummary
-		if err := rows.Scan(&e.ID, &e.FromAddress, &e.Subject, &e.HasAttachments,
+		if err := rows.Scan(&e.ID, &e.FromAddress, &e.Subject, &e.Snippet, &e.HasAttachments,
 			&e.IsRead, &e.SizeBytes, &e.ReceivedAt); err != nil {
 			return nil, 0, err
 		}

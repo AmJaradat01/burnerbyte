@@ -29,6 +29,7 @@ type EmailSummary struct {
 	ID             uuid.UUID `json:"id"`
 	FromAddress    string    `json:"from_address"`
 	Subject        *string   `json:"subject,omitempty"`
+	Snippet        string    `json:"snippet"`
 	HasAttachments bool      `json:"has_attachments"`
 	IsRead         bool      `json:"is_read"`
 	SizeBytes      int64     `json:"size_bytes"`
