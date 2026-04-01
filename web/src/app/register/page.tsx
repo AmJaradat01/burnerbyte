@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuthStore } from "@/stores/auth-store";
 import { Button } from "@/components/ui/button";
@@ -17,13 +17,15 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const register = useAuthStore((s) => s.register);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
       await register(email, password, displayName);
-      router.push("/inboxes");
+      const redirect = searchParams.get("redirect") || "/";
+      router.push(redirect);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Registration failed");
     } finally {
