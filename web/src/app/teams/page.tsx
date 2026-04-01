@@ -27,6 +27,7 @@ interface DomainAssignment {
   team_id: string;
   access_level: string;
   domain_name?: string;
+  created_at?: string;
 }
 
 export default function TeamsPage() {
@@ -214,8 +215,9 @@ function TeamMembersTab({ orgId, teamId }: { orgId: string; teamId: string }) {
   const [addOpen, setAddOpen] = useState(false);
   const [memberEmail, setMemberEmail] = useState("");
   const [role, setRole] = useState("member");
+  const [search, setSearch] = useState("");
 
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["team-members", teamId],
     queryFn: () => api.get<{ data: Membership[] }>(`/orgs/${orgId}/teams/${teamId}/members`),
   });
@@ -245,30 +247,44 @@ function TeamMembersTab({ orgId, teamId }: { orgId: string; teamId: string }) {
     onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
   });
 
+  const members = data?.data ?? [];
+  const filtered = search
+    ? members.filter((m) => (m.display_name || "").toLowerCase().includes(search.toLowerCase()) || (m.email || "").toLowerCase().includes(search.toLowerCase()))
+    : members;
+  const leadCount = members.filter((m) => m.role === "lead").length;
+
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle className="text-base">Members</CardTitle>
-          {data?.data && <p className="text-xs text-muted-foreground mt-0.5">{data.data.length} member{data.data.length !== 1 ? "s" : ""}</p>}
-        </div>
+    <div className="space-y-4">
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-3">
+        <Card><CardContent className="pt-4 pb-3"><p className="text-xs text-muted-foreground">Total</p><p className="text-xl font-bold">{members.length}</p></CardContent></Card>
+        <Card><CardContent className="pt-4 pb-3"><p className="text-xs text-muted-foreground">Leads</p><p className="text-xl font-bold">{leadCount}</p></CardContent></Card>
+        <Card><CardContent className="pt-4 pb-3"><p className="text-xs text-muted-foreground">Members</p><p className="text-xl font-bold">{members.length - leadCount}</p></CardContent></Card>
+      </div>
+
+      {/* Search + Add */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {members.length > 3 && <Input placeholder="Search members…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />}
         <Dialog open={addOpen} onOpenChange={setAddOpen}>
           <DialogTrigger asChild>
             <Button size="sm" className="gap-1.5"><UserPlus className="h-3.5 w-3.5" /> Add Member</Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>Add team member</DialogTitle></DialogHeader>
+            <DialogHeader>
+              <DialogTitle>Add team member</DialogTitle>
+              <DialogDescription>Add an existing org member to this team.</DialogDescription>
+            </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Email address</Label>
-                <Input value={memberEmail} onChange={(e) => setMemberEmail(e.target.value)} placeholder="user@example.com" type="email" />
+                <Input value={memberEmail} onChange={(e) => setMemberEmail(e.target.value)} placeholder="user@example.com" type="email" onKeyDown={(e) => e.key === "Enter" && memberEmail && addMember.mutate()} />
               </div>
               <div className="space-y-2">
                 <Label>Role</Label>
                 <Select value={role} onValueChange={setRole}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {teamRoles.map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
+                    {teamRoles.map((r) => <SelectItem key={r.value} value={r.value}>{r.label} — {r.description}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -278,60 +294,74 @@ function TeamMembersTab({ orgId, teamId }: { orgId: string; teamId: string }) {
             </div>
           </DialogContent>
         </Dialog>
-      </CardHeader>
-      <CardContent className="p-0">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data?.data?.map((m) => (
-              <TableRow key={m.id}>
-                <TableCell>
-                  <div className="flex items-center gap-2.5">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                      {(m.display_name || m.email || "?").charAt(0).toUpperCase()}
-                    </div>
-                    <span className="font-medium">{m.display_name || "—"}</span>
-                  </div>
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">{m.email || "—"}</TableCell>
-                <TableCell>
-                  <Select value={m.role} onValueChange={(r) => changeRole.mutate({ uid: m.user_id, role: r })}>
-                    <SelectTrigger className="w-28 h-8"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {teamRoles.map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </TableCell>
-                <TableCell className="text-right">
-                  <ConfirmDialog
-                    trigger={<Button variant="ghost" size="sm" className="text-destructive hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button>}
-                    title="Remove member?"
-                    description={`${m.display_name || m.email} will lose access to this team.`}
-                    onConfirm={() => removeMember.mutate(m.user_id)}
-                  />
-                </TableCell>
+      </div>
+
+      {/* Table */}
+      <div className="rounded-lg border overflow-hidden">
+        {isLoading ? (
+          <div className="p-4 space-y-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/50">
+                <TableHead className="font-medium">Member</TableHead>
+                <TableHead className="font-medium">Role</TableHead>
+                <TableHead className="font-medium hidden sm:table-cell">Joined</TableHead>
+                <TableHead className="text-right font-medium">Actions</TableHead>
               </TableRow>
-            ))}
-            {(!data?.data || data.data.length === 0) && (
-              <TableRow><TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-8">No members yet</TableCell></TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+            </TableHeader>
+            <TableBody>
+              {filtered.map((m) => (
+                <TableRow key={m.id} className="hover:bg-muted/30">
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                        {(m.display_name || m.email || "?").charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm truncate">{m.display_name || "—"}</p>
+                        <p className="text-xs text-muted-foreground font-mono truncate">{m.email || "—"}</p>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Select value={m.role} onValueChange={(r) => changeRole.mutate({ uid: m.user_id, role: r })}>
+                      <SelectTrigger className="w-28 h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {teamRoles.map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground hidden sm:table-cell">
+                    {m.created_at ? new Date(m.created_at).toLocaleDateString() : "—"}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <ConfirmDialog
+                      trigger={<Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button>}
+                      title="Remove member?"
+                      description={`${m.display_name || m.email} will lose access to this team.`}
+                      onConfirm={() => removeMember.mutate(m.user_id)}
+                    />
+                  </TableCell>
+                </TableRow>
+              ))}
+              {filtered.length === 0 && (
+                <TableRow><TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-12">{search ? "No matching members" : "No members yet"}</TableCell></TableRow>
+              )}
+            </TableBody>
+          </Table>
+        )}
+      </div>
+    </div>
   );
 }
 
 function DomainAssignmentsTab({ orgId, teamId }: { orgId: string; teamId: string }) {
   const qc = useQueryClient();
-  const { data: assignments } = useQuery({
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [selectedDomain, setSelectedDomain] = useState("");
+
+  const { data: assignments, isLoading } = useQuery({
     queryKey: ["domain-assignments", teamId],
     queryFn: () => api.get<{ data: DomainAssignment[] }>(`/orgs/${orgId}/teams/${teamId}/domains`),
   });
@@ -344,66 +374,112 @@ function DomainAssignmentsTab({ orgId, teamId }: { orgId: string; teamId: string
   const assign = useMutation({
     mutationFn: (domainId: string) =>
       api.post(`/orgs/${orgId}/teams/${teamId}/domains`, { domain_id: domainId, access_level: "full" }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["domain-assignments", teamId] }); toast.success("Domain assigned"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["domain-assignments", teamId] });
+      toast.success("Domain assigned");
+      setAssignOpen(false);
+      setSelectedDomain("");
+    },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
   });
 
   const unassign = useMutation({
-    mutationFn: (domainId: string) => api.del(`/orgs/${orgId}/teams/${teamId}/domains/${domainId}`),
+    mutationFn: (assignmentId: string) => api.del(`/orgs/${orgId}/teams/${teamId}/domains/${assignmentId}`),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["domain-assignments", teamId] }); toast.success("Domain unassigned"); },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
   });
 
   const assignedIds = new Set(assignments?.data?.map((a) => a.domain_id));
   const available = domains?.data?.filter((d) => !assignedIds.has(d.id)) ?? [];
+  const assignmentList = assignments?.data ?? [];
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle className="text-base">Domain Assignments</CardTitle>
-          {assignments?.data && <p className="text-xs text-muted-foreground mt-0.5">{assignments.data.length} domain{assignments.data.length !== 1 ? "s" : ""} assigned</p>}
-        </div>
+    <div className="space-y-4">
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-3">
+        <Card><CardContent className="pt-4 pb-3"><p className="text-xs text-muted-foreground">Assigned</p><p className="text-xl font-bold">{assignmentList.length}</p></CardContent></Card>
+        <Card><CardContent className="pt-4 pb-3"><p className="text-xs text-muted-foreground">Available</p><p className="text-xl font-bold">{available.length}</p></CardContent></Card>
+        <Card><CardContent className="pt-4 pb-3"><p className="text-xs text-muted-foreground">Total Org Domains</p><p className="text-xl font-bold">{domains?.data?.length ?? 0}</p></CardContent></Card>
+      </div>
+
+      {/* Assign button */}
+      <div className="flex justify-end">
         {available.length > 0 && (
-          <Select onValueChange={(id) => assign.mutate(id)}>
-            <SelectTrigger className="w-48 h-8"><SelectValue placeholder="Assign domain…" /></SelectTrigger>
-            <SelectContent>
-              {available.map((d) => <SelectItem key={d.id} value={d.id}>{d.domain_name}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" className="gap-1.5"><Plus className="h-3.5 w-3.5" /> Assign Domain</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Assign domain to team</DialogTitle>
+                <DialogDescription>Select a domain to make available for this team&apos;s inboxes.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Domain</Label>
+                  <Select value={selectedDomain} onValueChange={setSelectedDomain}>
+                    <SelectTrigger><SelectValue placeholder="Select a domain…" /></SelectTrigger>
+                    <SelectContent>
+                      {available.map((d) => <SelectItem key={d.id} value={d.id}>{d.domain_name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button onClick={() => selectedDomain && assign.mutate(selectedDomain)} className="w-full" disabled={!selectedDomain || assign.isPending}>
+                  {assign.isPending ? "Assigning…" : "Assign Domain"}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         )}
-      </CardHeader>
-      <CardContent className="p-0">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Domain</TableHead>
-              <TableHead>Access Level</TableHead>
-              <TableHead />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {assignments?.data?.map((a) => (
-              <TableRow key={a.id}>
-                <TableCell className="font-medium font-mono text-sm">{a.domain_name || a.domain_id}</TableCell>
-                <TableCell><Badge variant="outline">{a.access_level}</Badge></TableCell>
-                <TableCell className="text-right">
-                  <ConfirmDialog
-                    trigger={<Button variant="ghost" size="sm" className="text-destructive hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button>}
-                    title="Unassign domain?"
-                    description={`${a.domain_name || "This domain"} will be removed from this team.`}
-                    onConfirm={() => unassign.mutate(a.domain_id)}
-                  />
-                </TableCell>
+      </div>
+
+      {/* Table */}
+      <div className="rounded-lg border overflow-hidden">
+        {isLoading ? (
+          <div className="p-4 space-y-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/50">
+                <TableHead className="font-medium">Domain</TableHead>
+                <TableHead className="font-medium">Access Level</TableHead>
+                <TableHead className="font-medium hidden sm:table-cell">Assigned</TableHead>
+                <TableHead className="text-right font-medium">Actions</TableHead>
               </TableRow>
-            ))}
-            {(!assignments?.data || assignments.data.length === 0) && (
-              <TableRow><TableCell colSpan={3} className="text-center text-sm text-muted-foreground py-8">No domains assigned</TableCell></TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+            </TableHeader>
+            <TableBody>
+              {assignmentList.map((a) => (
+                <TableRow key={a.id} className="hover:bg-muted/30">
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-xs font-bold text-emerald-600">
+                        <Globe className="h-4 w-4" />
+                      </div>
+                      <p className="font-medium font-mono text-sm">{a.domain_name || a.domain_id}</p>
+                    </div>
+                  </TableCell>
+                  <TableCell><Badge variant="outline" className="capitalize text-xs">{a.access_level}</Badge></TableCell>
+                  <TableCell className="text-xs text-muted-foreground hidden sm:table-cell">
+                    {a.created_at ? new Date(a.created_at).toLocaleDateString() : "—"}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <ConfirmDialog
+                      trigger={<Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button>}
+                      title="Unassign domain?"
+                      description={`${a.domain_name || "This domain"} will be removed from this team. Existing inboxes will stop receiving mail.`}
+                      onConfirm={() => unassign.mutate(a.id)}
+                    />
+                  </TableCell>
+                </TableRow>
+              ))}
+              {assignmentList.length === 0 && (
+                <TableRow><TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-12">No domains assigned yet</TableCell></TableRow>
+              )}
+            </TableBody>
+          </Table>
+        )}
+      </div>
+    </div>
   );
 }
 
