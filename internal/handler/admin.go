@@ -43,6 +43,8 @@ func (h *AdminHandler) Routes(r chi.Router) {
 		r.Get("/admin/stats", h.Stats)
 		r.Get("/admin/orgs", h.ListOrgs)
 		r.Get("/admin/health", h.Health)
+		r.Get("/admin/platform", h.GetPlatformSettings)
+		r.Put("/admin/platform", h.UpdatePlatformSettings)
 }
 
 func (h *AdminHandler) Stats(w http.ResponseWriter, r *http.Request) {
@@ -126,6 +128,30 @@ func (h *AdminHandler) GetSSOConfig(w http.ResponseWriter, r *http.Request) {
 		masked.ClientSecret = "••••••••"
 	}
 	writeJSON(w, http.StatusOK, masked)
+}
+
+type PlatformSettings struct {
+	AllowRegistration bool `json:"allow_registration"`
+}
+
+func (h *AdminHandler) GetPlatformSettings(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, PlatformSettings{
+		AllowRegistration: h.cfg.Defaults.AllowRegistration,
+	})
+}
+
+func (h *AdminHandler) UpdatePlatformSettings(w http.ResponseWriter, r *http.Request) {
+	var input PlatformSettings
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if err := h.sysConfig.Set(r.Context(), "platform", input); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to save")
+		return
+	}
+	h.cfg.Defaults.AllowRegistration = input.AllowRegistration
+	writeJSON(w, http.StatusOK, map[string]string{"message": "platform settings updated"})
 }
 
 func (h *AdminHandler) UpdateSSOConfig(w http.ResponseWriter, r *http.Request) {

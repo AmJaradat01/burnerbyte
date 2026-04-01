@@ -362,6 +362,28 @@ func (s *OrgService) RevokeInvite(ctx context.Context, inviteID uuid.UUID) error
 	return s.orgRepo.DeleteInvite(ctx, inviteID)
 }
 
+func (s *OrgService) PreviewInvite(ctx context.Context, token string) (map[string]any, error) {
+	invite, err := s.orgRepo.GetInviteByToken(ctx, token)
+	if err != nil {
+		return nil, err
+	}
+	if invite.AcceptedAt != nil {
+		return nil, fmt.Errorf("invite already accepted")
+	}
+	if time.Now().After(invite.ExpiresAt) {
+		return nil, fmt.Errorf("invite expired")
+	}
+	orgName := ""
+	if org, err := s.orgRepo.GetByID(ctx, invite.OrgID); err == nil {
+		orgName = org.Name
+	}
+	return map[string]any{
+		"email":    invite.Email,
+		"org_name": orgName,
+		"org_role": invite.OrgRole,
+	}, nil
+}
+
 func (s *OrgService) GetMembership(ctx context.Context, userID, orgID uuid.UUID) (*domain.OrgMembership, error) {
 	return s.orgRepo.GetMembership(ctx, userID, orgID)
 }

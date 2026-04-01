@@ -44,6 +44,16 @@ func (h *OrgHandler) Routes(r chi.Router) {
 	r.Post("/invites/{token}/accept", h.AcceptInvite)
 }
 
+func (h *OrgHandler) PreviewInvite(w http.ResponseWriter, r *http.Request) {
+	token := chi.URLParam(r, "token")
+	invite, err := h.svc.PreviewInvite(r.Context(), token)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "invite not found or expired")
+		return
+	}
+	writeJSON(w, http.StatusOK, invite)
+}
+
 func (h *OrgHandler) CreateOrg(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
 	var input domain.CreateOrgInput
