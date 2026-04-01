@@ -242,6 +242,11 @@ func (r *OrgRepo) MarkInviteAccepted(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+func (r *OrgRepo) DeleteInvite(ctx context.Context, id uuid.UUID) error {
+	_, err := r.db.Exec(ctx, `DELETE FROM invites WHERE id = $1`, id)
+	return err
+}
+
 func (r *OrgRepo) ListPendingInvites(ctx context.Context, orgID uuid.UUID) ([]domain.Invite, error) {
 	rows, err := r.db.Query(ctx,
 		`SELECT id, org_id, team_id, email, org_role, team_role, invited_by, expires_at, created_at
