@@ -18,13 +18,20 @@ import (
 var domainNameRe = regexp.MustCompile(`^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$`)
 
 type DomainService struct {
-	domainRepo *postgres.DomainRepo
-	orgRepo    *postgres.OrgRepo
-	cfg        *config.Config
+	domainRepo    *postgres.DomainRepo
+	orgRepo       *postgres.OrgRepo
+	inboxRepo     *postgres.InboxRepo
+	redisInboxRepo RedisInboxDeleter
+	cfg           *config.Config
 }
 
-func NewDomainService(domainRepo *postgres.DomainRepo, orgRepo *postgres.OrgRepo, cfg *config.Config) *DomainService {
-	return &DomainService{domainRepo: domainRepo, orgRepo: orgRepo, cfg: cfg}
+// RedisInboxDeleter is the minimal interface for cleaning up Redis inbox keys.
+type RedisInboxDeleter interface {
+	Delete(ctx context.Context, fullAddress string) error
+}
+
+func NewDomainService(domainRepo *postgres.DomainRepo, orgRepo *postgres.OrgRepo, inboxRepo *postgres.InboxRepo, redisInboxRepo RedisInboxDeleter, cfg *config.Config) *DomainService {
+	return &DomainService{domainRepo: domainRepo, orgRepo: orgRepo, inboxRepo: inboxRepo, redisInboxRepo: redisInboxRepo, cfg: cfg}
 }
 
 func (s *DomainService) AddDomain(ctx context.Context, orgID uuid.UUID, input domain.CreateDomainInput) (*domain.Domain, error) {
@@ -134,6 +141,17 @@ func (s *DomainService) DeleteDomain(ctx context.Context, orgID, id uuid.UUID) e
 	d, err := s.domainRepo.GetByID(ctx, id)
 	if err != nil { return err }
 	if d.OrgID != orgID { return fmt.Errorf("domain not found") }
+
+	// Clean up Redis inbox keys for this domain's active inboxes
+	if s.redisInboxRepo != nil && s.inboxRepo != nil {
+		addresses, err := s.inboxRepo.ListActiveAddressesByDomain(ctx, id)
+		if err == nil {
+			for _, addr := range addresses {
+				_ = s.redisInboxRepo.Delete(ctx, addr)
+			}
+		}
+	}
+
 	return s.domainRepo.Delete(ctx, id)
 }
 

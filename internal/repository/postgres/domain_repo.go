@@ -100,6 +100,34 @@ func (r *DomainRepo) UpdateDNSStatus(ctx context.Context, id uuid.UUID, mx, txt 
 }
 
 func (r *DomainRepo) ListAll(ctx context.Context) ([]domain.Domain, error) {
+	return r.listAllInternal(ctx, 0, 0)
+}
+
+func (r *DomainRepo) ListByPage(ctx context.Context, page, perPage int) ([]domain.Domain, int, error) {
+	var total int
+	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM domains`).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+	if page < 1 { page = 1 }
+	if perPage < 1 || perPage > 500 { perPage = 100 }
+	offset := (page - 1) * perPage
+	rows, err := r.db.Query(ctx,
+		`SELECT id, org_id, domain_name, mx_verified, txt_verified, dns_last_checked_at, settings, created_at, updated_at
+		 FROM domains ORDER BY created_at LIMIT $1 OFFSET $2`, perPage, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+	var domains []domain.Domain
+	for rows.Next() {
+		d, err := r.scanRow(rows)
+		if err != nil { return nil, 0, err }
+		domains = append(domains, *d)
+	}
+	return domains, total, nil
+}
+
+func (r *DomainRepo) listAllInternal(ctx context.Context, limit, offset int) ([]domain.Domain, error) {
 	rows, err := r.db.Query(ctx,
 		`SELECT id, org_id, domain_name, mx_verified, txt_verified, dns_last_checked_at, settings, created_at, updated_at FROM domains`)
 	if err != nil {
