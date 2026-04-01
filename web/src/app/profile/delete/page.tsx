@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth-store";
 import { Button } from "@/components/ui/button";
@@ -8,12 +9,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { ArrowLeft } from "lucide-react";
 
 export default function DeleteAccountPage() {
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [deleting, setDeleting] = useState(false);
-  const logout = useAuthStore((s) => s.logout);
+
+  const isSSO = !!user?.sso_provider;
 
   const handleDelete = async () => {
     if (confirm !== "DELETE") {
@@ -22,7 +27,7 @@ export default function DeleteAccountPage() {
     }
     setDeleting(true);
     try {
-      await api.del("/auth/me", { password });
+      await api.del("/auth/me", { password: isSSO ? "" : password });
       toast.success("Account deleted");
       logout();
     } catch (e: unknown) {
@@ -34,6 +39,11 @@ export default function DeleteAccountPage() {
 
   return (
     <div className="max-w-md space-y-6">
+      <div className="flex items-center gap-2">
+        <Link href="/profile">
+          <Button variant="ghost" size="sm" className="gap-1.5"><ArrowLeft className="h-4 w-4" /> Back to Profile</Button>
+        </Link>
+      </div>
       <h1 className="text-2xl font-bold text-destructive">Delete Account</h1>
 
       <Card>
@@ -44,15 +54,27 @@ export default function DeleteAccountPage() {
           <p className="text-sm text-muted-foreground">
             All your data, inboxes, and emails will be permanently deleted.
           </p>
-          <div>
-            <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-          </div>
-          <div>
+          {!isSSO && (
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter your password to confirm" />
+            </div>
+          )}
+          {isSSO && (
+            <p className="text-sm text-muted-foreground bg-muted rounded-lg p-3">
+              You&apos;re signed in via {user.sso_provider}. No password required — just type DELETE below to confirm.
+            </p>
+          )}
+          <div className="space-y-2">
             <Label htmlFor="confirm">Type DELETE to confirm</Label>
             <Input id="confirm" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="DELETE" />
           </div>
-          <Button variant="destructive" onClick={handleDelete} disabled={deleting || confirm !== "DELETE"}>
+          <Button
+            variant="destructive"
+            onClick={handleDelete}
+            disabled={deleting || confirm !== "DELETE" || (!isSSO && !password)}
+            className="w-full"
+          >
             {deleting ? "Deleting…" : "Delete My Account"}
           </Button>
         </CardContent>

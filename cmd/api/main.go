@@ -105,10 +105,10 @@ func main() {
 	}
 	authSvc := service.NewAuthService(pool, userRepo, sessionRepo, resetRepo, postgres.NewEmailVerificationRepo(pool), orgRepo, tokenMgr, lockout, ml, cfg)
 	orgSvc := service.NewOrgService(pool, orgRepo, ml, cfg.Server.FrontendURL, cfg.Defaults.InviteExpiryTTL)
-	domainSvc := service.NewDomainService(domainRepo, orgRepo, cfg)
+	redisInboxRepo := redisrepo.NewInboxRepo(rdb)
+	domainSvc := service.NewDomainService(domainRepo, orgRepo, inboxRepo, redisInboxRepo, cfg)
 	teamSvc := service.NewTeamService(pool, teamRepo, orgRepo, userRepo, cfg)
 	assignmentSvc := service.NewDomainAssignmentService(assignmentRepo, domainRepo, orgRepo, cfg.Defaults)
-	redisInboxRepo := redisrepo.NewInboxRepo(rdb)
 	inboxSvc := service.NewInboxService(inboxRepo, redisInboxRepo, assignmentRepo, domainRepo, orgRepo, teamRepo, cfg)
 	// Pass explicit nil interface when attachments are disabled to avoid
 	// Go's nil-concrete-pointer-in-interface trap causing a panic on delete.
