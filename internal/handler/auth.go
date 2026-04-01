@@ -158,14 +158,13 @@ func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 
 func (h *AuthHandler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	token := chi.URLParam(r, "token")
-	userID, err := uuid.Parse(token)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid verification token")
+	if token == "" {
+		writeError(w, http.StatusBadRequest, "missing verification token")
 		return
 	}
 
-	if err := h.svc.VerifyEmail(r.Context(), userID); err != nil {
-		writeError(w, http.StatusNotFound, "verification failed")
+	if err := h.svc.VerifyEmail(r.Context(), token); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid or expired verification link")
 		return
 	}
 

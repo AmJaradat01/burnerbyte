@@ -30,6 +30,15 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: () => {
+    // Revoke all server sessions before clearing local state
+    const token = localStorage.getItem("access_token");
+    if (token) {
+      // Fire-and-forget — don't block logout on network
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1"}/auth/sessions`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      }).catch(() => {});
+    }
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
     set({ user: null });
@@ -43,6 +52,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       const user = await api.get<User>("/auth/me");
       set({ user, loading: false });
     } catch {
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
       set({ user: null, loading: false });
     }
   },

@@ -102,7 +102,7 @@ func main() {
 	if s3Client != nil {
 		attachmentSvc = service.NewAttachmentService(attachmentRepo, emailRepo, inboxRepo, s3Client, cfg.MinIO, cfg.Defaults.MaxAttachmentSizeMB, cfg.Defaults.PresignedURLTTL)
 	}
-	authSvc := service.NewAuthService(pool, userRepo, sessionRepo, resetRepo, orgRepo, tokenMgr, lockout, ml, cfg)
+	authSvc := service.NewAuthService(pool, userRepo, sessionRepo, resetRepo, postgres.NewEmailVerificationRepo(pool), orgRepo, tokenMgr, lockout, ml, cfg)
 	orgSvc := service.NewOrgService(pool, orgRepo, ml, cfg.Server.FrontendURL, cfg.Defaults.InviteExpiryTTL)
 	domainSvc := service.NewDomainService(domainRepo, orgRepo, cfg)
 	teamSvc := service.NewTeamService(pool, teamRepo, orgRepo, userRepo, cfg)
