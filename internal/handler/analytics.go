@@ -63,7 +63,7 @@ func (h *AnalyticsHandler) OrgEmailsPerDay(w http.ResponseWriter, r *http.Reques
 func (h *AnalyticsHandler) TeamAnalytics(w http.ResponseWriter, r *http.Request) {
 	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
 	teamID, _ := uuid.Parse(chi.URLParam(r, "teamId"))
-	if checkTeamRole(w, r, orgID, teamID, rbac.OrgMember, rbac.TeamViewer) {
+	if checkTeamRole(w, r, orgID, teamID, rbac.OrgMember, rbac.TeamMember) {
 		return
 	}
 	stats, err := h.svc.GetTeamAnalytics(r.Context(), teamID)
@@ -77,7 +77,7 @@ func (h *AnalyticsHandler) TeamAnalytics(w http.ResponseWriter, r *http.Request)
 func (h *AnalyticsHandler) TeamEmailsPerDay(w http.ResponseWriter, r *http.Request) {
 	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
 	teamID, _ := uuid.Parse(chi.URLParam(r, "teamId"))
-	if checkTeamRole(w, r, orgID, teamID, rbac.OrgMember, rbac.TeamViewer) {
+	if checkTeamRole(w, r, orgID, teamID, rbac.OrgMember, rbac.TeamMember) {
 		return
 	}
 	days := h.defaultDays
