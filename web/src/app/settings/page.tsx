@@ -39,12 +39,14 @@ export default function SettingsPage() {
         <TabsList className="flex-wrap">
           <TabsTrigger value="general" className="gap-1.5"><Settings className="h-3.5 w-3.5" /> General</TabsTrigger>
           <TabsTrigger value="members" className="gap-1.5"><Users className="h-3.5 w-3.5" /> Members</TabsTrigger>
+          {isAdmin && <TabsTrigger value="users" className="gap-1.5"><UserPlus className="h-3.5 w-3.5" /> Users</TabsTrigger>}
           {isAdmin && <TabsTrigger value="overview" className="gap-1.5"><Activity className="h-3.5 w-3.5" /> System</TabsTrigger>}
           {isAdmin && <TabsTrigger value="orgs" className="gap-1.5"><Building2 className="h-3.5 w-3.5" /> Organizations</TabsTrigger>}
           {isAdmin && <TabsTrigger value="health" className="gap-1.5"><Monitor className="h-3.5 w-3.5" /> Health</TabsTrigger>}
         </TabsList>
         <TabsContent value="general"><GeneralTab org={currentOrg} onSaved={fetchOrgs} /></TabsContent>
         <TabsContent value="members"><MembersTab orgId={currentOrg.id} /></TabsContent>
+        {isAdmin && <TabsContent value="users"><UsersTab /></TabsContent>}
         {isAdmin && <TabsContent value="overview"><OverviewTab /></TabsContent>}
         {isAdmin && <TabsContent value="orgs"><OrgsTab /></TabsContent>}
         {isAdmin && <TabsContent value="health"><HealthTab /></TabsContent>}
@@ -780,6 +782,106 @@ function PendingInviteRow({ invite: inv, orgId }: { invite: Invite; orgId: strin
           onConfirm={() => revoke.mutate()}
         />
       </div>
+    </div>
+  );
+}
+
+function UsersTab() {
+  const qc = useQueryClient();
+  const currentUser = useAuthStore((s) => s.user);
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["admin-users", page],
+    queryFn: () => api.get<PaginatedResponse<{ id: string; email: string; display_name: string; is_system_admin: boolean; email_verified: boolean; sso_provider?: string; created_at: string; updated_at: string }>>("/admin/users", { page: String(page), per_page: "20" }),
+  });
+
+  const deleteUser = useMutation({
+    mutationFn: (userId: string) => api.del(`/admin/users/${userId}`),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-users"] }); toast.success("User deleted"); },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Failed to delete user"),
+  });
+
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; email: string } | null>(null);
+
+  const filtered = data?.data?.filter((u) =>
+    u.email.toLowerCase().includes(search.toLowerCase()) ||
+    u.display_name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  if (isError) return <ErrorState message="Failed to load users" onRetry={() => refetch()} />;
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="pt-5 pb-4">
+            <p className="text-xs text-muted-foreground">Total Users</p>
+            <p className="text-2xl font-bold">{data?.total ?? 0}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-5 pb-4">
+            <p className="text-xs text-muted-foreground">Verified</p>
+            <p className="text-2xl font-bold">{data?.data?.filter((u) => u.email_verified).length ?? 0}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-5 pb-4">
+            <p className="text-xs text-muted-foreground">System Admins</p>
+            <p className="text-2xl font-bold">{data?.data?.filter((u) => u.is_system_admin).length ?? 0}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Input placeholder="Search users…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />
+
+      {isLoading ? (
+        <div className="grid gap-3 md:grid-cols-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 w-full rounded-lg" />)}</div>
+      ) : (
+        <div className="grid gap-3 md:grid-cols-2">
+          {filtered?.map((u) => (
+            <Card key={u.id} className="relative">
+              <CardContent className="pt-5 pb-4">
+                <div className="flex items-start justify-between">
+                  <div className="min-w-0">
+                    <p className="font-medium truncate">{u.display_name}</p>
+                    <p className="text-sm text-muted-foreground font-mono truncate">{u.email}</p>
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {u.is_system_admin && <Badge variant="default" className="text-[10px]">Admin</Badge>}
+                      <Badge variant={u.email_verified ? "default" : "outline"} className="text-[10px]">
+                        {u.email_verified ? <><CheckCircle2 className="h-3 w-3 mr-0.5" /> Verified</> : <><XCircle className="h-3 w-3 mr-0.5" /> Unverified</>}
+                      </Badge>
+                      {u.sso_provider && <Badge variant="outline" className="text-[10px]"><Shield className="h-3 w-3 mr-0.5" /> {u.sso_provider}</Badge>}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-2">
+                      <Calendar className="inline h-3 w-3 mr-0.5" /> Joined {new Date(u.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                  {u.id !== currentUser?.id && (
+                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setDeleteTarget({ id: u.id, email: u.email })}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+          {filtered?.length === 0 && <p className="text-sm text-muted-foreground col-span-2 text-center py-8">No users found.</p>}
+        </div>
+      )}
+
+      {data && data.total_pages > 1 && <Pagination page={page} totalPages={data.total_pages} onPageChange={setPage} />}
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        title="Delete user"
+        description={`Permanently delete ${deleteTarget?.email}? This will remove all their data including org memberships, inboxes, and emails. This action cannot be undone.`}
+        onConfirm={() => { if (deleteTarget) { deleteUser.mutate(deleteTarget.id); setDeleteTarget(null); } }}
+        variant="destructive"
+      />
     </div>
   );
 }
