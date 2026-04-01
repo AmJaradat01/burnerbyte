@@ -131,12 +131,28 @@ func (h *AdminHandler) GetSSOConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 type PlatformSettings struct {
-	AllowRegistration bool `json:"allow_registration"`
+	AllowRegistration    bool `json:"allow_registration"`
+	EmailVerification    bool `json:"email_verification"`
+	PasswordMinLength    int  `json:"password_min_length"`
+	PasswordRequireUpper bool `json:"password_require_upper"`
+	PasswordRequireLower bool `json:"password_require_lower"`
+	PasswordRequireNum   bool `json:"password_require_number"`
+	PasswordRequireSpec  bool `json:"password_require_special"`
+	LockoutMaxAttempts   int  `json:"lockout_max_attempts"`
+	LockoutDurationMins  int  `json:"lockout_duration_mins"`
 }
 
 func (h *AdminHandler) GetPlatformSettings(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, PlatformSettings{
-		AllowRegistration: h.cfg.Defaults.AllowRegistration,
+		AllowRegistration:    h.cfg.Defaults.AllowRegistration,
+		EmailVerification:    h.cfg.EmailVerification.Enabled,
+		PasswordMinLength:    h.cfg.Password.MinLength,
+		PasswordRequireUpper: h.cfg.Password.RequireUppercase,
+		PasswordRequireLower: h.cfg.Password.RequireLowercase,
+		PasswordRequireNum:   h.cfg.Password.RequireNumber,
+		PasswordRequireSpec:  h.cfg.Password.RequireSpecial,
+		LockoutMaxAttempts:   h.cfg.Lockout.MaxAttempts,
+		LockoutDurationMins:  int(h.cfg.Lockout.Duration.Minutes()),
 	})
 }
 
@@ -150,7 +166,16 @@ func (h *AdminHandler) UpdatePlatformSettings(w http.ResponseWriter, r *http.Req
 		writeError(w, http.StatusInternalServerError, "failed to save")
 		return
 	}
+	// Apply to running config
 	h.cfg.Defaults.AllowRegistration = input.AllowRegistration
+	h.cfg.EmailVerification.Enabled = input.EmailVerification
+	h.cfg.Password.MinLength = input.PasswordMinLength
+	h.cfg.Password.RequireUppercase = input.PasswordRequireUpper
+	h.cfg.Password.RequireLowercase = input.PasswordRequireLower
+	h.cfg.Password.RequireNumber = input.PasswordRequireNum
+	h.cfg.Password.RequireSpecial = input.PasswordRequireSpec
+	h.cfg.Lockout.MaxAttempts = input.LockoutMaxAttempts
+	h.cfg.Lockout.Duration = time.Duration(input.LockoutDurationMins) * time.Minute
 	writeJSON(w, http.StatusOK, map[string]string{"message": "platform settings updated"})
 }
 
