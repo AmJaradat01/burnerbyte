@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import { useOrgStore } from "@/stores/org-store";
 import { useAuthStore } from "@/stores/auth-store";
@@ -487,10 +487,10 @@ function PlatformSettingsCard() {
     password_require_number: true, password_require_special: true,
     lockout_max_attempts: 5, lockout_duration_mins: 15,
   });
-  const [initialized, setInitialized] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  if (data && !initialized) { setForm(data); setInitialized(true); }
+  // Sync form when data loads or refreshes
+  useEffect(() => { if (data) setForm(data); }, [data]);
 
   const set = <K extends keyof typeof form>(k: K, v: typeof form[K]) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -579,14 +579,11 @@ function OrgsTab() {
   const [name, setName] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [saving, setSaving] = useState(false);
-  const [initialized, setInitialized] = useState(false);
 
-  // Sync form state when org loads
-  if (org && !initialized) {
-    setName(org.name);
-    setLogoUrl(org.logo_url ?? "");
-    setInitialized(true);
-  }
+  // Sync form state when org loads or refreshes
+  useEffect(() => {
+    if (org) { setName(org.name); setLogoUrl(org.logo_url ?? ""); }
+  }, [org]);
 
   const dirty = org ? (name !== org.name || logoUrl !== (org.logo_url ?? "")) : false;
 

@@ -220,6 +220,8 @@ func (s *InboxService) DeleteInbox(ctx context.Context, id, userID uuid.UUID) er
 }
 
 func (s *InboxService) ListByUser(ctx context.Context, userID uuid.UUID, page, perPage int) ([]domain.Inbox, int, error) {
+	if page < 1 { page = 1 }
+	if perPage < 1 || perPage > 100 { perPage = 20 }
 	return s.inboxRepo.ListByUser(ctx, userID, page, perPage)
 }
 
