@@ -85,7 +85,7 @@ func (h *TeamHandler) GetTeam(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid team ID")
 		return
 	}
-	if checkTeamRole(w, r, orgID, id, rbac.OrgMember, rbac.TeamViewer) {
+	if checkTeamRole(w, r, orgID, id, rbac.OrgMember, rbac.TeamMember) {
 		return
 	}
 	team, err := h.svc.GetTeam(r.Context(), orgID, id)
@@ -175,7 +175,7 @@ func (h *TeamHandler) ListMembers(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid team ID")
 		return
 	}
-	if checkTeamRole(w, r, orgID, teamID, rbac.OrgMember, rbac.TeamViewer) {
+	if checkTeamRole(w, r, orgID, teamID, rbac.OrgMember, rbac.TeamMember) {
 		return
 	}
 	page, perPage := parsePagination(r)

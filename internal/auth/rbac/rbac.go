@@ -18,11 +18,10 @@ const (
 
 	TeamLead   = "lead"
 	TeamMember = "member"
-	TeamViewer = "viewer"
 )
 
 var orgRank = map[string]int{OrgOwner: 3, OrgAdmin: 2, OrgMember: 1}
-var teamRank = map[string]int{TeamLead: 3, TeamMember: 2, TeamViewer: 1}
+var teamRank = map[string]int{TeamLead: 2, TeamMember: 1}
 
 type OrgMembershipRepo interface {
 	GetMembership(ctx context.Context, userID, orgID uuid.UUID) (*domain.OrgMembership, error)
