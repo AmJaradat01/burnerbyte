@@ -51,6 +51,11 @@ func (h *AuthHandler) AuthenticatedRoutes(r chi.Router) {
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
+	if !h.cfg.Defaults.AllowRegistration {
+		writeError(w, http.StatusForbidden, "public registration is disabled")
+		return
+	}
+
 	var input domain.CreateUserInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -264,7 +269,10 @@ func (h *AuthHandler) RevokeAllSessions(w http.ResponseWriter, r *http.Request) 
 
 func (h *AuthHandler) SSOStatus(w http.ResponseWriter, r *http.Request) {
 	enabled := h.sso.IsConfigured()
-	resp := map[string]any{"enabled": enabled}
+	resp := map[string]any{
+		"enabled":            enabled,
+		"allow_registration": h.cfg.Defaults.AllowRegistration,
+	}
 	if enabled {
 		cfg := h.cfg.SSO
 		resp["provider"] = cfg.Provider
