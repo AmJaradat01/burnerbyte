@@ -42,7 +42,6 @@ pipeline {
             steps {
                 dir('web') {
                     sh '''
-                        corepack enable
                         pnpm install --frozen-lockfile
                         NEXT_PUBLIC_API_URL=https://burnerbyte.com/api/v1 NEXT_PUBLIC_WS_URL=wss://burnerbyte.com/api/v1/ws pnpm build
                     '''
