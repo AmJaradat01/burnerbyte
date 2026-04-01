@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/empty-state";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { useRoles } from "@/hooks/use-roles";
 import { ArrowLeft, Globe, Inbox, Plus, Settings, Trash2, UserPlus, Users } from "lucide-react";
 import type { Team, Membership, Domain } from "@/types";
 
@@ -209,6 +210,7 @@ function CreateTeamDialog({ orgId }: { orgId: string }) {
 
 function TeamMembersTab({ orgId, teamId }: { orgId: string; teamId: string }) {
   const qc = useQueryClient();
+  const { teamRoles } = useRoles();
   const [addOpen, setAddOpen] = useState(false);
   const [memberEmail, setMemberEmail] = useState("");
   const [role, setRole] = useState("member");
@@ -266,7 +268,7 @@ function TeamMembersTab({ orgId, teamId }: { orgId: string; teamId: string }) {
                 <Select value={role} onValueChange={setRole}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {["lead", "member"].map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                    {teamRoles.map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -303,7 +305,7 @@ function TeamMembersTab({ orgId, teamId }: { orgId: string; teamId: string }) {
                   <Select value={m.role} onValueChange={(r) => changeRole.mutate({ uid: m.user_id, role: r })}>
                     <SelectTrigger className="w-28 h-8"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {["lead", "member"].map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                      {teamRoles.map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </TableCell>

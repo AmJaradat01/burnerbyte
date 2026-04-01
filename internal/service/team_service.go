@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"gitlab.com/burnerbyte/burnerbyte/internal/auth/rbac"
 	"gitlab.com/burnerbyte/burnerbyte/internal/config"
 	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
 	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
@@ -85,7 +86,7 @@ func (s *TeamService) CreateTeam(ctx context.Context, orgID uuid.UUID, input dom
 		}
 	}
 
-	membership := &domain.TeamMembership{ID: uuid.New(), UserID: creatorID, TeamID: team.ID, Role: "lead"}
+	membership := &domain.TeamMembership{ID: uuid.New(), UserID: creatorID, TeamID: team.ID, Role: rbac.TeamLead}
 	if err := teamRepoTx.CreateMembership(ctx, membership); err != nil {
 		return nil, err
 	}
@@ -140,7 +141,7 @@ func (s *TeamService) DeleteTeam(ctx context.Context, orgID, id uuid.UUID) error
 }
 
 func (s *TeamService) AddMember(ctx context.Context, teamID uuid.UUID, input domain.AddTeamMemberInput) error {
-	if input.Role != "lead" && input.Role != "member" {
+	if !rbac.ValidTeamRole(input.Role) {
 		return fmt.Errorf("invalid role: %s", input.Role)
 	}
 
@@ -178,7 +179,7 @@ func (s *TeamService) ListMembers(ctx context.Context, teamID uuid.UUID, page, p
 }
 
 func (s *TeamService) ChangeRole(ctx context.Context, teamID, userID uuid.UUID, role string) error {
-	if role != "lead" && role != "member" {
+	if !rbac.ValidTeamRole(role) {
 		return fmt.Errorf("invalid role: %s", role)
 	}
 	return s.teamRepo.UpdateMemberRole(ctx, userID, teamID, role)
