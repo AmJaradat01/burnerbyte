@@ -15,7 +15,6 @@ import (
 
 	"gitlab.com/burnerbyte/burnerbyte/internal/auth"
 	"gitlab.com/burnerbyte/burnerbyte/internal/config"
-	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
 	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
 	"gitlab.com/burnerbyte/burnerbyte/internal/service"
 )
@@ -135,17 +134,28 @@ func (h *AdminHandler) Health(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AdminHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
+	uc := auth.GetUser(r.Context())
 	userID, err := uuid.Parse(chi.URLParam(r, "userId"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid user ID")
 		return
 	}
-	var input domain.UpdateProfileInput
+	var input struct {
+		DisplayName   *string `json:"display_name,omitempty"`
+		AvatarURL     *string `json:"avatar_url,omitempty"`
+		IsSystemAdmin *bool   `json:"is_system_admin,omitempty"`
+		EmailVerified *bool   `json:"email_verified,omitempty"`
+	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	user, err := h.authSvc.UpdateProfile(r.Context(), userID, input)
+	// Prevent removing your own admin status
+	if input.IsSystemAdmin != nil && !*input.IsSystemAdmin && userID == uc.UserID {
+		writeError(w, http.StatusBadRequest, "cannot remove your own system admin status")
+		return
+	}
+	user, err := h.authSvc.AdminUpdateUser(r.Context(), userID, input.DisplayName, input.AvatarURL, input.IsSystemAdmin, input.EmailVerified)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to update user")
 		return
