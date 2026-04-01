@@ -21,7 +21,6 @@ import { Pagination } from "@/components/pagination";
 import { Check, ChevronDown, Clock, Copy, ExternalLink, Mail, MailOpen, RefreshCw, Timer, Trash2, Zap } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { WS_BASE } from "@/lib/api";
-import { LocaleSwitcher } from "@/components/locale-switcher";
 import { copyToClipboard } from "@/lib/clipboard";
 import type { Inbox, PaginatedResponse, DomainAssignment } from "@/types";
 
@@ -488,7 +487,6 @@ function LandingPage() {
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
           <span className="text-xl font-bold tracking-tight">🔥 BurnerByte</span>
           <div className="flex items-center gap-3">
-            <LocaleSwitcher />
             <Link href="/login" className="rounded-md px-4 py-2 text-sm font-medium hover:bg-muted transition-colors">{tc("signIn")}</Link>
             <Link href="/register" className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 transition-opacity">{tc("getStarted")}</Link>
           </div>
