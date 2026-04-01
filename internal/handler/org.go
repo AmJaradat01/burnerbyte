@@ -40,6 +40,7 @@ func (h *OrgHandler) Routes(r chi.Router) {
 	r.Delete("/orgs/{orgId}/members/{userId}", h.RemoveMember)
 	r.Post("/orgs/{orgId}/invites", h.InviteMember)
 	r.Get("/orgs/{orgId}/invites", h.ListPendingInvites)
+	r.Delete("/orgs/{orgId}/invites/{inviteId}", h.RevokeInvite)
 	r.Post("/invites/{token}/accept", h.AcceptInvite)
 }
 
@@ -286,6 +287,27 @@ func (h *OrgHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 
 	auditRecord(r, orgID, "member.removed", "org", userID)
 	writeJSON(w, http.StatusOK, map[string]string{"message": "member removed"})
+}
+
+func (h *OrgHandler) RevokeInvite(w http.ResponseWriter, r *http.Request) {
+	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid org ID")
+		return
+	}
+	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+		return
+	}
+	inviteID, err := uuid.Parse(chi.URLParam(r, "inviteId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid invite ID")
+		return
+	}
+	if err := h.svc.RevokeInvite(r.Context(), inviteID); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"message": "invite revoked"})
 }
 
 func (h *OrgHandler) AcceptInvite(w http.ResponseWriter, r *http.Request) {

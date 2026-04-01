@@ -19,7 +19,7 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Pagination } from "@/components/pagination";
 import { ErrorState } from "@/components/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Activity, AlertTriangle, Building2, Calendar, CheckCircle2, Clock, Database, Globe, HardDrive, Inbox, Info, Mail, Monitor, Palette, Settings, Shield, Trash2, UserPlus, Users, XCircle } from "lucide-react";
+import { Activity, AlertTriangle, Building2, Calendar, CheckCircle2, Clock, Database, Globe, HardDrive, Inbox, Info, Mail, Monitor, Palette, RefreshCw, Settings, Shield, Trash2, UserPlus, Users, XCircle } from "lucide-react";
 import type { Organization, Membership, Invite, OrgSettings, PaginatedResponse, SystemStats } from "@/types";
 
 export default function SettingsPage() {
@@ -593,18 +593,7 @@ function MembersTab({ orgId }: { orgId: string }) {
           </CardHeader>
           <CardContent className="space-y-2 pt-0">
             {pendingInvites.map((inv) => (
-              <div key={inv.id} className="flex items-center justify-between rounded-lg border p-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground">
-                    {inv.email.charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">{inv.email}</p>
-                    <p className="text-xs text-muted-foreground">Expires {new Date(inv.expires_at).toLocaleDateString()}</p>
-                  </div>
-                </div>
-                <Badge variant="outline" className={`capitalize text-xs ${ROLE_COLORS[inv.org_role] ?? ""}`}>{inv.org_role}</Badge>
-              </div>
+              <PendingInviteRow key={inv.id} invite={inv} orgId={orgId} />
             ))}
           </CardContent>
         </Card>
@@ -738,6 +727,60 @@ function InviteDialog({ orgId }: { orgId: string }) {
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function PendingInviteRow({ invite: inv, orgId }: { invite: Invite; orgId: string }) {
+  const qc = useQueryClient();
+  const [resending, setResending] = useState(false);
+
+  const revoke = useMutation({
+    mutationFn: () => api.del(`/orgs/${orgId}/invites/${inv.id}`),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["org-invites", orgId] }); toast.success("Invite revoked"); },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
+  });
+
+  const resend = async () => {
+    setResending(true);
+    try {
+      await api.post(`/orgs/${orgId}/invites`, { email: inv.email, org_role: inv.org_role });
+      qc.invalidateQueries({ queryKey: ["org-invites", orgId] });
+      toast.success(`Invite resent to ${inv.email}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+    } finally {
+      setResending(false);
+    }
+  };
+
+  const daysLeft = Math.max(0, Math.ceil((new Date(inv.expires_at).getTime() - Date.now()) / 86400000));
+
+  return (
+    <div className="flex items-center justify-between rounded-lg border p-3">
+      <div className="flex items-center gap-3">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground">
+          {inv.email.charAt(0).toUpperCase()}
+        </div>
+        <div>
+          <p className="text-sm font-medium">{inv.email}</p>
+          <p className="text-xs text-muted-foreground">
+            {daysLeft > 0 ? `Expires in ${daysLeft}d` : "Expiring today"} · Sent {new Date(inv.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+          </p>
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <Badge variant="outline" className={`capitalize text-xs ${ROLE_COLORS[inv.org_role] ?? ""}`}>{inv.org_role}</Badge>
+        <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={resend} disabled={resending}>
+          <RefreshCw className={`h-3 w-3 ${resending ? "animate-spin" : ""}`} /> Resend
+        </Button>
+        <ConfirmDialog
+          trigger={<Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:text-destructive"><XCircle className="h-3.5 w-3.5" /></Button>}
+          title="Revoke invite?"
+          description={`The invite to ${inv.email} will be cancelled.`}
+          onConfirm={() => revoke.mutate()}
+        />
+      </div>
+    </div>
   );
 }
 
