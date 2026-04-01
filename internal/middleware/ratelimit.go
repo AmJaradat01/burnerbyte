@@ -184,8 +184,10 @@ func (rl *RateLimiter) ForgotPasswordLimiter(next http.Handler) http.Handler {
 // and X-Real-IP headers. Handles IPv6 bracket notation.
 func RealIP(r *http.Request) string {
 	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		// Take the first (leftmost) IP — the original client
-		ip := strings.TrimSpace(strings.SplitN(xff, ",", 2)[0])
+		// Take the LAST (rightmost) IP — the one added by the trusted reverse proxy.
+		// The leftmost IP is client-controlled and can be spoofed.
+		parts := strings.Split(xff, ",")
+		ip := strings.TrimSpace(parts[len(parts)-1])
 		if ip != "" {
 			return ip
 		}
