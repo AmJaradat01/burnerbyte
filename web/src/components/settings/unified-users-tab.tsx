@@ -17,6 +17,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ErrorState } from "@/components/error-state";
 import { Pagination } from "@/components/pagination";
+import { useRoles } from "@/hooks/use-roles";
 import { AlertTriangle, Calendar, CheckCircle2, Clock, RefreshCw, Shield, Trash2, UserPlus, Users, XCircle } from "lucide-react";
 import type { User, Membership, Invite, PaginatedResponse } from "@/types";
 
@@ -41,6 +42,7 @@ export function UnifiedUsersTab({ orgId }: { orgId: string }) {
   const qc = useQueryClient();
   const currentUser = useAuthStore((s) => s.user);
   const isAdmin = currentUser?.is_system_admin ?? false;
+  const { orgRoles } = useRoles();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "members" | "non-members" | "unverified" | "admin">("all");
@@ -190,7 +192,7 @@ export function UnifiedUsersTab({ orgId }: { orgId: string }) {
                             <Select value={u.org_role} onValueChange={(role) => changeRole.mutate({ userId: u.id, role })}>
                               <SelectTrigger className="h-7 w-24 text-xs"><SelectValue /></SelectTrigger>
                               <SelectContent>
-                                {["owner", "admin", "member"].map((r) => <SelectItem key={r} value={r} className="capitalize">{r}</SelectItem>)}
+                                {orgRoles.map((r) => <SelectItem key={r.value} value={r.value} className="capitalize">{r.label}</SelectItem>)}
                               </SelectContent>
                             </Select>
                           ) : (
@@ -423,6 +425,7 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
 
 function InviteDialog({ orgId }: { orgId: string }) {
   const qc = useQueryClient();
+  const { orgRoles } = useRoles();
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("member");
   const [open, setOpen] = useState(false);
@@ -465,9 +468,9 @@ function InviteDialog({ orgId }: { orgId: string }) {
             <Select value={role} onValueChange={setRole}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="owner">Owner — Full control</SelectItem>
-                <SelectItem value="admin">Admin — Manage settings & members</SelectItem>
-                <SelectItem value="member">Member — Standard access</SelectItem>
+                {orgRoles.map((r) => (
+                  <SelectItem key={r.value} value={r.value}>{r.label} — {r.description}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
