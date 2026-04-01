@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState, useEffect, useRef } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth-store";
+import { useOrgStore } from "@/stores/org-store";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,19 +19,23 @@ interface InvitePreview { email: string; org_name: string; org_role: string; }
 interface SSOStatus { enabled: boolean; allow_registration: boolean; provider?: string; provider_label?: string; enforce_sso?: boolean; }
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
+const REDIRECT_DELAY_MS = 3000;
 
 export default function InvitePage() {
   const params = useSearchParams();
+  const router = useRouter();
   const token = params.get("token");
   const user = useAuthStore((s) => s.user);
   const authLoading = useAuthStore((s) => s.loading);
   const login = useAuthStore((s) => s.login);
   const register = useAuthStore((s) => s.register);
   const fetchMe = useAuthStore((s) => s.fetchMe);
+  const { fetchOrgs } = useOrgStore();
 
   const [status, setStatus] = useState<"loading" | "auth" | "accepting" | "accepted" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState("");
   const [mode, setMode] = useState<"login" | "register">("register");
+  const acceptingRef = useRef(false);
 
   // Form state
   const [password, setPassword] = useState("");
@@ -38,7 +43,7 @@ export default function InvitePage() {
   const [submitting, setSubmitting] = useState(false);
 
   // Fetch invite preview (public, no auth needed)
-  const { data: preview } = useQuery({
+  const { data: preview, error: previewError, isLoading: previewLoading } = useQuery({
     queryKey: ["invite-preview", token],
     queryFn: () => api.get<InvitePreview>(`/invites/${token}/preview`),
     enabled: !!token,
@@ -51,25 +56,62 @@ export default function InvitePage() {
     staleTime: 60000,
   });
 
-  // Determine state
+  // Handle preview errors (expired, already accepted, invalid token)
   useEffect(() => {
-    if (authLoading) return;
+    if (previewError) {
+      setStatus("error");
+      const msg = previewError instanceof Error ? previewError.message : "Unknown error";
+      if (msg.toLowerCase().includes("expired")) {
+        setErrorMsg("This invite has expired. Please ask the admin to send a new one.");
+      } else if (msg.toLowerCase().includes("accepted")) {
+        setErrorMsg("This invite has already been accepted.");
+      } else {
+        setErrorMsg("This invite link is invalid or has expired.");
+      }
+    }
+  }, [previewError]);
+
+  // Determine state when auth resolves
+  useEffect(() => {
+    if (authLoading || previewLoading) return;
     if (!token) { setStatus("error"); setErrorMsg("No invite token found."); return; }
-    if (user) { setStatus("accepting"); acceptInvite(); return; }
-    if (preview) { setStatus("auth"); }
+    if (previewError) return; // handled above
+    if (user && preview && !acceptingRef.current) {
+      acceptingRef.current = true;
+      setStatus("accepting");
+      acceptInvite();
+      return;
+    }
+    if (!user && preview) { setStatus("auth"); }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, user, token, preview]);
+  }, [authLoading, previewLoading, user, token, preview, previewError]);
 
   const acceptInvite = async () => {
     try {
       await api.post(`/invites/${token}/accept`);
+      // Refresh orgs so the new membership is reflected in the sidebar
+      await fetchOrgs();
       setStatus("accepted");
       toast.success("Welcome to the organization!");
     } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to accept invite";
       setStatus("error");
-      setErrorMsg(err instanceof Error ? err.message : "Failed to accept invite");
+      if (msg.toLowerCase().includes("expired")) {
+        setErrorMsg("This invite has expired.");
+      } else if (msg.toLowerCase().includes("not found")) {
+        setErrorMsg("This invite is no longer valid.");
+      } else {
+        setErrorMsg(msg);
+      }
     }
   };
+
+  // Auto-redirect to dashboard after acceptance
+  useEffect(() => {
+    if (status !== "accepted") return;
+    const timer = setTimeout(() => router.replace("/"), REDIRECT_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [status, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,7 +167,9 @@ export default function InvitePage() {
           <CardTitle>Invite failed</CardTitle>
           <CardDescription>{errorMsg || "This invite link is invalid or has expired."}</CardDescription>
         </CardHeader>
-        <CardFooter><Link href="/" className="text-sm text-primary hover:underline">Go to dashboard</Link></CardFooter>
+        <CardFooter>
+          <Link href="/" className="text-sm text-primary hover:underline">Go to dashboard</Link>
+        </CardFooter>
       </CenteredCard>
     );
   }
@@ -140,15 +184,17 @@ export default function InvitePage() {
     );
   }
 
-  // Accepted
+  // Accepted — auto-redirects after REDIRECT_DELAY_MS
   if (status === "accepted") {
     return (
       <CenteredCard>
         <CardHeader>
           <CardTitle>Welcome to {preview?.org_name}!</CardTitle>
-          <CardDescription>You&apos;ve joined as {preview?.org_role}.</CardDescription>
+          <CardDescription>You&apos;ve joined as {preview?.org_role}. Redirecting to dashboard…</CardDescription>
         </CardHeader>
-        <CardFooter><Link href="/" className="text-sm text-primary hover:underline font-medium">Go to dashboard →</Link></CardFooter>
+        <CardFooter>
+          <Link href="/" className="text-sm text-primary hover:underline font-medium">Go to dashboard →</Link>
+        </CardFooter>
       </CenteredCard>
     );
   }
