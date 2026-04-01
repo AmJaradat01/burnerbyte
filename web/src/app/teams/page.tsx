@@ -182,7 +182,7 @@ function CreateTeamDialog({ orgId }: { orgId: string }) {
 function TeamMembersTab({ orgId, teamId }: { orgId: string; teamId: string }) {
   const qc = useQueryClient();
   const [addOpen, setAddOpen] = useState(false);
-  const [userId, setUserId] = useState("");
+  const [memberEmail, setMemberEmail] = useState("");
   const [role, setRole] = useState("member");
 
   const { data } = useQuery({
@@ -191,12 +191,12 @@ function TeamMembersTab({ orgId, teamId }: { orgId: string; teamId: string }) {
   });
 
   const addMember = useMutation({
-    mutationFn: () => api.post(`/orgs/${orgId}/teams/${teamId}/members`, { user_id: userId, role }),
+    mutationFn: () => api.post(`/orgs/${orgId}/teams/${teamId}/members`, { email: memberEmail, role }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["team-members", teamId] });
       toast.success("Member added");
       setAddOpen(false);
-      setUserId("");
+      setMemberEmail("");
       setRole("member");
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
@@ -227,8 +227,8 @@ function TeamMembersTab({ orgId, teamId }: { orgId: string; teamId: string }) {
             <DialogHeader><DialogTitle>Add team member</DialogTitle></DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label>User ID</Label>
-                <Input value={userId} onChange={(e) => setUserId(e.target.value)} placeholder="User UUID" />
+                <Label>Email address</Label>
+                <Input value={memberEmail} onChange={(e) => setMemberEmail(e.target.value)} placeholder="user@example.com" type="email" />
               </div>
               <div className="space-y-2">
                 <Label>Role</Label>
@@ -239,7 +239,7 @@ function TeamMembersTab({ orgId, teamId }: { orgId: string; teamId: string }) {
                   </SelectContent>
                 </Select>
               </div>
-              <Button onClick={() => addMember.mutate()} className="w-full" disabled={!userId || addMember.isPending}>
+              <Button onClick={() => addMember.mutate()} className="w-full" disabled={!memberEmail || addMember.isPending}>
                 {addMember.isPending ? "Adding…" : "Add Member"}
               </Button>
             </div>
