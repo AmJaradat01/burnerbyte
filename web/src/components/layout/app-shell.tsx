@@ -69,7 +69,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     }
     if (loading) return;
     if (!user && !isPublic && !isLanding) router.replace("/login");
-    if (user && isPublic && pathname !== "/setup" && !pathname.startsWith("/docs")) router.replace("/");
+    if (user && isPublic && pathname !== "/setup" && pathname !== "/onboarding" && !pathname.startsWith("/docs")) router.replace("/");
   }, [user, loading, isPublic, isLanding, router, setupChecked, setupCompleted, pathname]);
 
   useEffect(() => { setMobileOpen(false); }, [pathname]); // eslint-disable-line react-hooks/set-state-in-effect
