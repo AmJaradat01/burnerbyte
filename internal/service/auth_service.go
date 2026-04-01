@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -31,15 +33,16 @@ func stripPort(addr string) string {
 }
 
 type AuthService struct {
-	pool        *pgxpool.Pool
-	userRepo    *postgres.UserRepo
-	sessionRepo *postgres.SessionRepo
-	resetRepo   *postgres.PasswordResetRepo
-	orgRepo     *postgres.OrgRepo
-	tokens      *auth.TokenManager
-	lockout     *auth.Lockout
-	mailer      *mailer.Mailer
-	cfg         *config.Config
+	pool            *pgxpool.Pool
+	userRepo        *postgres.UserRepo
+	sessionRepo     *postgres.SessionRepo
+	resetRepo       *postgres.PasswordResetRepo
+	emailVerifyRepo *postgres.EmailVerificationRepo
+	orgRepo         *postgres.OrgRepo
+	tokens          *auth.TokenManager
+	lockout         *auth.Lockout
+	mailer          *mailer.Mailer
+	cfg             *config.Config
 }
 
 func NewAuthService(
@@ -47,6 +50,7 @@ func NewAuthService(
 	userRepo *postgres.UserRepo,
 	sessionRepo *postgres.SessionRepo,
 	resetRepo *postgres.PasswordResetRepo,
+	emailVerifyRepo *postgres.EmailVerificationRepo,
 	orgRepo *postgres.OrgRepo,
 	tokens *auth.TokenManager,
 	lockout *auth.Lockout,
@@ -55,7 +59,7 @@ func NewAuthService(
 ) *AuthService {
 	return &AuthService{
 		pool: pool, userRepo: userRepo, sessionRepo: sessionRepo,
-		resetRepo: resetRepo, orgRepo: orgRepo,
+		resetRepo: resetRepo, emailVerifyRepo: emailVerifyRepo, orgRepo: orgRepo,
 		tokens: tokens, lockout: lockout, mailer: mailer, cfg: cfg,
 	}
 }
@@ -114,7 +118,14 @@ func (s *AuthService) Register(ctx context.Context, input domain.CreateUserInput
 	// Send verification email (non-blocking)
 	if s.cfg.EmailVerification.Enabled {
 		go func() {
-			verifyURL := fmt.Sprintf("%s/verify-email?token=%s", s.cfg.Server.FrontendURL, user.ID)
+			token := generateSecureToken(32)
+			tokenHash := postgres.HashToken(token)
+			expiresAt := time.Now().Add(24 * time.Hour)
+			if err := s.emailVerifyRepo.Create(context.Background(), user.ID, tokenHash, expiresAt); err != nil {
+				slog.Error("failed to create email verification token", "error", err, "user_id", user.ID)
+				return
+			}
+			verifyURL := fmt.Sprintf("%s/verify-email?token=%s", s.cfg.Server.FrontendURL, token)
 			if err := s.mailer.Send(user.Email, "Verify your email", "verify_email.html", map[string]string{
 				"VerifyURL": verifyURL,
 			}); err != nil {
@@ -476,14 +487,40 @@ func (s *AuthService) autoProvisionSSO(ctx context.Context, user *domain.User, s
 	slog.Info("SSO auto-provisioned user into org", "user", user.Email, "org", orgs[0].Name, "role", role)
 }
 
-func (s *AuthService) VerifyEmail(ctx context.Context, userID uuid.UUID) error {
-	user, err := s.userRepo.GetByID(ctx, userID)
+func (s *AuthService) VerifyEmail(ctx context.Context, token string) error {
+	tokenHash := postgres.HashToken(token)
+	vt, err := s.emailVerifyRepo.Consume(ctx, tokenHash)
+	if err != nil {
+		return fmt.Errorf("invalid or expired verification link")
+	}
+
+	user, err := s.userRepo.GetByID(ctx, vt.UserID)
 	if err != nil {
 		return err
 	}
 
+	if user.EmailVerified {
+		return nil // already verified, idempotent
+	}
+
 	user.EmailVerified = true
-	return s.userRepo.Update(ctx, user)
+	if err := s.userRepo.Update(ctx, user); err != nil {
+		return err
+	}
+
+	// Invalidate remaining verification tokens for this user
+	_ = s.emailVerifyRepo.InvalidateForUser(ctx, vt.UserID)
+
+	return nil
+}
+
+// generateSecureToken creates a cryptographically random hex token.
+func generateSecureToken(bytes int) string {
+	b := make([]byte, bytes)
+	if _, err := rand.Read(b); err != nil {
+		panic("crypto/rand failed: " + err.Error())
+	}
+	return hex.EncodeToString(b)
 }
 
 func (s *AuthService) ListAllOrgs(ctx context.Context, page, perPage int) ([]domain.Organization, int, error) {

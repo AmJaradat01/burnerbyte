@@ -17,7 +17,34 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { api } from "@/lib/api";
 
-const publicPaths = ["/login", "/register", "/forgot-password", "/reset-password", "/verify-email", "/invite", "/setup", "/onboarding", "/docs"];
+/**
+ * Paths accessible without authentication.
+ */
+const publicPaths = [
+  "/login",
+  "/register",
+  "/forgot-password",
+  "/reset-password",
+  "/verify-email",
+  "/invite",
+  "/setup",
+  "/onboarding",
+  "/docs",
+];
+
+/**
+ * Public paths that should redirect authenticated users away to "/".
+ * Paths NOT in this list (e.g. /onboarding, /invite, /setup, /docs)
+ * remain accessible to authenticated users — they have legitimate reasons
+ * to be there (completing onboarding, accepting invites, etc.).
+ */
+const authBouncePaths = [
+  "/login",
+  "/register",
+  "/forgot-password",
+  "/reset-password",
+  "/verify-email",
+];
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, loading } = useAuthStore();
@@ -26,6 +53,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const isPublic = publicPaths.some((p) => pathname.startsWith(p));
   const isLanding = pathname === "/";
+  const shouldBounceAuth = authBouncePaths.some((p) => pathname.startsWith(p));
   const [setupChecked, setSetupChecked] = useState(false);
   const [setupCompleted, setSetupCompleted] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -52,6 +80,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     "?": shortcutHelp.toggle,
   });
 
+  // Check initial setup status
   useEffect(() => {
     api.get<{ completed: boolean }>("/setup/status")
       .then((res) => {
@@ -61,19 +90,36 @@ export function AppShell({ children }: { children: ReactNode }) {
       .catch(() => setSetupChecked(true));
   }, []);
 
+  // Routing guards
   useEffect(() => {
     if (!setupChecked) return;
+
+    // Force setup if not completed
     if (!setupCompleted && pathname !== "/setup") {
       router.replace("/setup");
       return;
     }
-    if (loading) return;
-    if (!user && !isPublic && !isLanding) router.replace("/login");
-    if (user && isPublic && pathname !== "/setup" && pathname !== "/onboarding" && pathname !== "/invite" && !pathname.startsWith("/docs")) router.replace("/");
-  }, [user, loading, isPublic, isLanding, router, setupChecked, setupCompleted, pathname]);
 
+    if (loading) return;
+
+    // Unauthenticated user on protected route → login
+    if (!user && !isPublic && !isLanding) {
+      router.replace("/login");
+      return;
+    }
+
+    // Authenticated user on auth-only pages (login/register/etc.) → home
+    // Does NOT bounce from /onboarding, /invite, /setup, /docs
+    if (user && shouldBounceAuth) {
+      router.replace("/");
+      return;
+    }
+  }, [user, loading, isPublic, isLanding, shouldBounceAuth, router, setupChecked, setupCompleted, pathname]);
+
+  // Close mobile nav on route change
   useEffect(() => { setMobileOpen(false); }, [pathname]); // eslint-disable-line react-hooks/set-state-in-effect
 
+  // Loading states
   if (!setupChecked || loading || (user && !roleResolved)) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -84,8 +130,13 @@ export function AppShell({ children }: { children: ReactNode }) {
     );
   }
 
+  // Setup not completed — minimal layout
   if (!setupCompleted) return <main className="min-h-screen">{children}</main>;
+
+  // Public/landing pages for unauthenticated users
   if ((isPublic || isLanding) && !user) return <main className="min-h-screen bg-mesh">{children}</main>;
+
+  // Authenticated user on public pages (onboarding, invite, docs) — minimal layout
   if (isPublic) return <main className="min-h-screen">{children}</main>;
 
   // ── Admin layout: sidebar ──
