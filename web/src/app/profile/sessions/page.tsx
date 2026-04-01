@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
@@ -70,17 +71,29 @@ export default function SessionsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sessions?.map((s) => (
-                  <TableRow key={s.id}>
-                    <TableCell className="font-mono text-sm">{s.ip_address ?? "—"}</TableCell>
+                {sessions?.map((s) => {
+                  // Heuristic: the most recently used session is likely the current one
+                  const isCurrent = sessions.length > 0 && s.id === sessions.reduce((a, b) =>
+                    new Date(a.last_used_at) > new Date(b.last_used_at) ? a : b
+                  ).id;
+                  return (
+                  <TableRow key={s.id} className={isCurrent ? "bg-primary/5" : ""}>
+                    <TableCell className="font-mono text-sm">
+                      <div className="flex items-center gap-2">
+                        {s.ip_address ?? "—"}
+                        {isCurrent && <Badge variant="outline" className="text-[10px] px-1">Current</Badge>}
+                      </div>
+                    </TableCell>
                     <TableCell className="max-w-[200px] truncate text-sm">{s.user_agent ?? "—"}</TableCell>
                     <TableCell className="text-sm">{new Date(s.created_at).toLocaleDateString()}</TableCell>
                     <TableCell className="text-sm">{new Date(s.expires_at).toLocaleDateString()}</TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm" onClick={() => revoke.mutate(s.id)}>Revoke</Button>
+                      {!isCurrent && <Button variant="ghost" size="sm" onClick={() => revoke.mutate(s.id)}>Revoke</Button>}
+                      {isCurrent && <span className="text-xs text-muted-foreground">Active</span>}
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
                 {(!sessions || sessions.length === 0) && (
                   <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">No active sessions</TableCell></TableRow>
                 )}

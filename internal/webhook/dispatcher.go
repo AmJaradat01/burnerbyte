@@ -79,6 +79,7 @@ func (d *Dispatcher) deliver(ctx context.Context, wh domain.Webhook, event strin
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-BurnerByte-Signature", sign(body, wh.Secret))
 		req.Header.Set("X-BurnerByte-Event", event)
+		req.Header.Set("X-BurnerByte-Delivery-ID", idempotencyKey)
 
 		resp, err := d.client.Do(req)
 		elapsed := int(time.Since(start).Milliseconds())
