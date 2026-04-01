@@ -47,8 +47,18 @@ export default function TeamsPage() {
           <Button variant="ghost" size="sm" onClick={() => setCurrentTeam(null as unknown as Team)} className="gap-1.5">
             <ArrowLeft className="h-4 w-4" /> Teams
           </Button>
-          <h1 className="text-2xl font-bold">{currentTeam.name}</h1>
-          <Badge variant="outline" className="font-mono text-xs">{currentTeam.slug}</Badge>
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-sm font-bold text-primary">
+            {currentTeam.name.charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <h1 className="text-xl font-bold">{currentTeam.name}</h1>
+            <p className="text-xs text-muted-foreground font-mono">{currentTeam.slug}</p>
+          </div>
+          <div className="flex items-center gap-2 ml-auto text-xs text-muted-foreground">
+            <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {currentTeam.member_count}</span>
+            <span className="flex items-center gap-1"><Globe className="h-3 w-3" /> {currentTeam.domain_count}</span>
+            <span className="flex items-center gap-1"><Inbox className="h-3 w-3" /> {currentTeam.active_inboxes}</span>
+          </div>
         </div>
         <Tabs defaultValue="members">
           <TabsList>
@@ -68,7 +78,14 @@ export default function TeamsPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold">Teams</h1>
+        <div>
+          <h1 className="text-2xl font-bold">Teams</h1>
+          {teamsData?.data && teamsData.data.length > 0 && (
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {teamsData.data.length} team{teamsData.data.length !== 1 ? "s" : ""} · {teamsData.data.reduce((s, t) => s + (t.member_count ?? 0), 0)} members
+            </p>
+          )}
+        </div>
         <CreateTeamDialog orgId={currentOrg.id} />
       </div>
 
@@ -88,30 +105,41 @@ export default function TeamsPage() {
 }
 
 function TeamCard({ team, onSelect }: { team: Team; onSelect: () => void }) {
+  const totalActivity = (team.member_count ?? 0) + (team.domain_count ?? 0) + (team.active_inboxes ?? 0);
   return (
-    <Card className="cursor-pointer transition-colors hover:bg-muted/50" onClick={onSelect}>
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-2">
+    <Card className="cursor-pointer transition-all hover:shadow-md hover:border-primary/20 group" onClick={onSelect}>
+      <CardContent className="pt-4 pb-3 space-y-3">
+        {/* Team name + avatar */}
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-sm font-bold text-primary group-hover:bg-primary/20 transition-colors">
+            {team.name.charAt(0).toUpperCase()}
+          </div>
           <div className="min-w-0 flex-1">
-            <CardTitle className="text-sm truncate">{team.name}</CardTitle>
-            <CardDescription className="text-xs font-mono mt-0.5">{team.slug}</CardDescription>
+            <p className="text-sm font-semibold truncate group-hover:text-primary transition-colors">{team.name}</p>
+            <p className="text-[11px] text-muted-foreground font-mono">{team.slug}</p>
           </div>
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-          <span className="flex items-center gap-1" title="Members">
-            <Users className="h-3.5 w-3.5" /> {team.member_count ?? 0}
-          </span>
-          <span className="flex items-center gap-1" title="Domains">
-            <Globe className="h-3.5 w-3.5" /> {team.domain_count ?? 0}
-          </span>
-          <span className="flex items-center gap-1" title="Active inboxes">
-            <Inbox className="h-3.5 w-3.5" /> {team.active_inboxes ?? 0}
-          </span>
-          <span className="ml-auto text-xs">
-            {new Date(team.created_at).toLocaleDateString()}
-          </span>
+
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-2">
+          <div className="rounded-lg bg-muted/50 px-2.5 py-1.5 text-center">
+            <p className="text-sm font-semibold tabular-nums">{team.member_count ?? 0}</p>
+            <p className="text-[10px] text-muted-foreground">Members</p>
+          </div>
+          <div className="rounded-lg bg-muted/50 px-2.5 py-1.5 text-center">
+            <p className="text-sm font-semibold tabular-nums">{team.domain_count ?? 0}</p>
+            <p className="text-[10px] text-muted-foreground">Domains</p>
+          </div>
+          <div className="rounded-lg bg-muted/50 px-2.5 py-1.5 text-center">
+            <p className="text-sm font-semibold tabular-nums">{team.active_inboxes ?? 0}</p>
+            <p className="text-[10px] text-muted-foreground">Inboxes</p>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between pt-1 border-t text-xs text-muted-foreground">
+          <span>Created {new Date(team.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
+          <span className="text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity">View →</span>
         </div>
       </CardContent>
     </Card>
@@ -218,7 +246,10 @@ function TeamMembersTab({ orgId, teamId }: { orgId: string; teamId: string }) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-base">Members</CardTitle>
+        <div>
+          <CardTitle className="text-base">Members</CardTitle>
+          {data?.data && <p className="text-xs text-muted-foreground mt-0.5">{data.data.length} member{data.data.length !== 1 ? "s" : ""}</p>}
+        </div>
         <Dialog open={addOpen} onOpenChange={setAddOpen}>
           <DialogTrigger asChild>
             <Button size="sm" className="gap-1.5"><UserPlus className="h-3.5 w-3.5" /> Add Member</Button>
@@ -259,7 +290,14 @@ function TeamMembersTab({ orgId, teamId }: { orgId: string; teamId: string }) {
           <TableBody>
             {data?.data?.map((m) => (
               <TableRow key={m.id}>
-                <TableCell className="font-medium">{m.display_name || "—"}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                      {(m.display_name || m.email || "?").charAt(0).toUpperCase()}
+                    </div>
+                    <span className="font-medium">{m.display_name || "—"}</span>
+                  </div>
+                </TableCell>
                 <TableCell className="text-sm text-muted-foreground">{m.email || "—"}</TableCell>
                 <TableCell>
                   <Select value={m.role} onValueChange={(r) => changeRole.mutate({ uid: m.user_id, role: r })}>
@@ -320,7 +358,10 @@ function DomainAssignmentsTab({ orgId, teamId }: { orgId: string; teamId: string
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-base">Domain Assignments</CardTitle>
+        <div>
+          <CardTitle className="text-base">Domain Assignments</CardTitle>
+          {assignments?.data && <p className="text-xs text-muted-foreground mt-0.5">{assignments.data.length} domain{assignments.data.length !== 1 ? "s" : ""} assigned</p>}
+        </div>
         {available.length > 0 && (
           <Select onValueChange={(id) => assign.mutate(id)}>
             <SelectTrigger className="w-48 h-8"><SelectValue placeholder="Assign domain…" /></SelectTrigger>
