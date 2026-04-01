@@ -152,10 +152,15 @@ func (l *Listener) handleConn(ctx context.Context, conn net.Conn) {
 				sess.writef("501 5.5.4 Syntax: RCPT TO:<address>")
 				continue
 			}
+			// Limit recipients per message to prevent abuse
+			if len(sess.rcptTo) >= 100 {
+				sess.writef("452 4.5.3 Too many recipients")
+				continue
+			}
 			// Validate recipient against our router.
 			if _, err := l.router.CanAccept(ctx, to); err != nil {
 				slog.Debug("smtp rcpt rejected", "to", to, "reason", err)
-				sess.writef("550 5.1.1 <%s> Recipient rejected: %s", to, err.Error())
+				sess.writef("550 5.1.1 <%s> Recipient rejected", to)
 				continue
 			}
 			sess.rcptTo = append(sess.rcptTo, to)

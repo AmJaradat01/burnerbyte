@@ -25,6 +25,10 @@ func ValidatePassword(password string, cfg config.PasswordConfig) error {
 	if len(password) < cfg.MinLength {
 		return fmt.Errorf("password must be at least %d characters", cfg.MinLength)
 	}
+	// bcrypt silently truncates at 72 bytes — reject longer passwords
+	if len([]byte(password)) > 72 {
+		return fmt.Errorf("password must not exceed 72 bytes")
+	}
 
 	var hasUpper, hasLower, hasNumber, hasSpecial bool
 	for _, c := range password {
