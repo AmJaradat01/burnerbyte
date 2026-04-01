@@ -22,6 +22,7 @@ import (
 	"gitlab.com/burnerbyte/burnerbyte/internal/auth"
 	"gitlab.com/burnerbyte/burnerbyte/internal/auth/rbac"
 	"gitlab.com/burnerbyte/burnerbyte/internal/config"
+	appcrypto "gitlab.com/burnerbyte/burnerbyte/internal/crypto"
 	"gitlab.com/burnerbyte/burnerbyte/internal/database"
 	"gitlab.com/burnerbyte/burnerbyte/internal/handler"
 	"gitlab.com/burnerbyte/burnerbyte/internal/mailer"
@@ -89,6 +90,15 @@ func main() {
 	auditRepo := postgres.NewAuditRepo(pool)
 	analyticsRepo := postgres.NewAnalyticsRepo(pool)
 	sysConfigRepo := postgres.NewSystemConfigRepo(pool)
+	if cfg.Encryption.Key != "" {
+		enc, err := appcrypto.NewEncryptor(cfg.Encryption.Key)
+		if err != nil {
+			slog.Error("invalid encryption key", "error", err)
+			os.Exit(1)
+		}
+		sysConfigRepo.WithEncryptor(enc)
+		slog.Info("encryption enabled for sensitive config values")
+	}
 
 	// Load runtime configs from DB (overrides config.yaml/env for mailer + storage)
 	cfg.LoadFromDB(ctx, sysConfigRepo)
