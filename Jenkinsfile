@@ -55,6 +55,7 @@ pipeline {
                     mkdir -p dist
                     cp bin/api bin/smtpd dist/
                     cp -r migrations dist/
+                    cp config.yaml dist/
                     cp -r web/.next/standalone dist/frontend
                     cp -r web/.next/static dist/frontend/.next/static
                     [ -d web/public ] && cp -r web/public dist/frontend/public

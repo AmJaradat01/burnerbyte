@@ -20,6 +20,7 @@ done
 mkdir -p "$APP_DIR"
 cd "$APP_DIR"
 tar -xzf "$ARCHIVE"
+[ -f "$APP_DIR/config.yaml" ] && cp "$APP_DIR/config.yaml" /etc/burnerbyte/config.yaml
 chown -R burnerbyte:burnerbyte "$APP_DIR"
 # api and smtpd need to be executable by root (systemd runs them as root)
 chmod +x "$APP_DIR/api" "$APP_DIR/smtpd" 2>/dev/null || true
