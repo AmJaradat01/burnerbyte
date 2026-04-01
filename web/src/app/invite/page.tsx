@@ -171,53 +171,21 @@ export default function InvitePage() {
         </CardHeader>
 
         <CardContent className="space-y-4">
-          {/* SSO option */}
-          {ssoEnabled && (
-            <>
-              <Button className="w-full gap-2" onClick={handleSSO}>
-                <Shield className="h-4 w-4" /> Continue with {sso?.provider_label ?? "SSO"}
-              </Button>
-              {!enforceSSO && (
-                <div className="relative">
-                  <Separator />
-                  <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">or</span>
-                </div>
-              )}
-            </>
-          )}
-
-          {/* Password form (hidden when SSO enforced) */}
+          {/* Password form — default to registration (hidden when SSO enforced) */}
           {!enforceSSO && (
             <form onSubmit={handleSubmit} className="space-y-3">
-              {/* Toggle between login/register */}
-              {allowReg && (
-                <div className="flex rounded-lg border p-0.5 text-sm">
-                  <button type="button" onClick={() => setMode("register")}
-                    className={`flex-1 rounded-md py-1.5 text-center transition-colors ${mode === "register" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-                    New account
-                  </button>
-                  <button type="button" onClick={() => setMode("login")}
-                    className={`flex-1 rounded-md py-1.5 text-center transition-colors ${mode === "login" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-                    Existing account
-                  </button>
-                </div>
-              )}
-
-              {/* Email (read-only, from invite) */}
               <div className="space-y-1.5">
                 <Label className="text-xs">Email</Label>
                 <Input value={preview?.email ?? ""} disabled className="bg-muted font-mono text-sm" />
               </div>
 
-              {/* Display name (register only) */}
-              {mode === "register" && allowReg && (
+              {mode === "register" && (
                 <div className="space-y-1.5">
                   <Label className="text-xs">Display name</Label>
-                  <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} required autoComplete="name" placeholder="Your name" />
+                  <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} required autoComplete="name" placeholder="Your full name" />
                 </div>
               )}
 
-              {/* Password */}
               <div className="space-y-1.5">
                 <Label className="text-xs">Password</Label>
                 <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required
@@ -229,7 +197,35 @@ export default function InvitePage() {
                 {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                 {mode === "register" ? "Create account & join" : "Sign in & join"}
               </Button>
+
+              {mode === "register" ? (
+                <p className="text-center text-xs text-muted-foreground">
+                  Already have an account?{" "}
+                  <button type="button" onClick={() => setMode("login")} className="text-primary hover:underline font-medium">Sign in instead</button>
+                </p>
+              ) : (
+                allowReg && (
+                  <p className="text-center text-xs text-muted-foreground">
+                    Don&apos;t have an account?{" "}
+                    <button type="button" onClick={() => setMode("register")} className="text-primary hover:underline font-medium">Create one</button>
+                  </p>
+                )
+              )}
             </form>
+          )}
+
+          {ssoEnabled && (
+            <>
+              {!enforceSSO && (
+                <div className="relative">
+                  <Separator />
+                  <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">or</span>
+                </div>
+              )}
+              <Button className="w-full gap-2" variant={enforceSSO ? "default" : "outline"} onClick={handleSSO}>
+                <Shield className="h-4 w-4" /> Continue with {sso?.provider_label ?? "SSO"}
+              </Button>
+            </>
           )}
         </CardContent>
       </Card>
