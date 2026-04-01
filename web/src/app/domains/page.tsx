@@ -102,7 +102,7 @@ export default function DomainsPage() {
                   domain={d}
                   onVerify={() => verify.mutate(d.id)}
                   onDelete={() => remove.mutate(d.id)}
-                  verifying={verify.isPending}
+                  verifying={verify.isPending && verify.variables === d.id}
                 />
               ))}
             </div>

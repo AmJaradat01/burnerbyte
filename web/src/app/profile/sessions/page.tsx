@@ -27,7 +27,15 @@ export default function SessionsPage() {
 
   const revokeAll = useMutation({
     mutationFn: () => api.del("/auth/sessions"),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["sessions"] }); toast.success("All sessions revoked"); },
+    onSuccess: () => {
+      toast.success("All sessions revoked — signing out…");
+      // Current session is now invalid, force logout
+      setTimeout(() => {
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
+        window.location.href = "/login";
+      }, 1000);
+    },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
   });
 
