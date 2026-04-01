@@ -78,7 +78,7 @@ func (h *DomainAssignmentHandler) ListAssignments(w http.ResponseWriter, r *http
 		writeError(w, http.StatusBadRequest, "invalid team ID")
 		return
 	}
-	if checkTeamRole(w, r, orgID, teamID, rbac.OrgMember, rbac.TeamViewer) {
+	if checkTeamRole(w, r, orgID, teamID, rbac.OrgMember, rbac.TeamMember) {
 		return
 	}
 	page, perPage := parsePagination(r)
