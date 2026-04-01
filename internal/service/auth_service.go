@@ -496,9 +496,7 @@ func (s *AuthService) VerifyEmail(ctx context.Context, token string) error {
 	}
 	defer tx.Rollback(ctx)
 
-	emailVerifyRepoTx := &postgres.EmailVerificationRepo{}
-	*emailVerifyRepoTx = *s.emailVerifyRepo
-	emailVerifyRepoTx = postgres.NewEmailVerificationRepo(tx)
+	emailVerifyRepoTx := postgres.NewEmailVerificationRepo(tx)
 
 	vt, err := emailVerifyRepoTx.Consume(ctx, tokenHash)
 	if err != nil {
