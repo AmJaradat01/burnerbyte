@@ -49,3 +49,7 @@ redisdata/
 
 # Temporary
 tmp/
+
+# Config (contains secrets — use config.example.yaml as template)
+config.yaml
+config.yml

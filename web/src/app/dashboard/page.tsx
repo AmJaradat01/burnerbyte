@@ -8,8 +8,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/error-state";
 import type { AnalyticsStats, EmailsPerDay } from "@/types";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area } from "recharts";
+import dynamic from "next/dynamic";
 import { Activity, Globe, Inbox, Mail, TrendingUp, Users } from "lucide-react";
+
+const RechartsBarChart = dynamic(() => import("recharts").then((m) => m.BarChart), { ssr: false });
+const RechartsAreaChart = dynamic(() => import("recharts").then((m) => m.AreaChart), { ssr: false });
+const Bar = dynamic(() => import("recharts").then((m) => m.Bar), { ssr: false });
+const Area = dynamic(() => import("recharts").then((m) => m.Area), { ssr: false });
+const XAxis = dynamic(() => import("recharts").then((m) => m.XAxis), { ssr: false });
+const YAxis = dynamic(() => import("recharts").then((m) => m.YAxis), { ssr: false });
+const Tooltip = dynamic(() => import("recharts").then((m) => m.Tooltip), { ssr: false });
+const CartesianGrid = dynamic(() => import("recharts").then((m) => m.CartesianGrid), { ssr: false });
+const ResponsiveContainer = dynamic(() => import("recharts").then((m) => m.ResponsiveContainer), { ssr: false });
 
 export default function DashboardPage() {
   const org = useOrgStore((s) => s.currentOrg);
@@ -108,7 +118,7 @@ export default function DashboardPage() {
           <CardContent>
             {chart?.data && chart.data.length > 0 ? (
               <ResponsiveContainer width="100%" height={280}>
-                <AreaChart data={chart.data}>
+                <RechartsAreaChart data={chart.data}>
                   <defs>
                     <linearGradient id="emailGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.2} />
@@ -124,7 +134,7 @@ export default function DashboardPage() {
                     formatter={(v) => [`${Number(v).toLocaleString()}`, "Emails"]}
                   />
                   <Area type="monotone" dataKey="count" stroke="hsl(var(--primary))" strokeWidth={2} fill="url(#emailGradient)" />
-                </AreaChart>
+                </RechartsAreaChart>
               </ResponsiveContainer>
             ) : (
               <div className="flex items-center justify-center h-[280px] text-sm text-muted-foreground">No email data yet</div>
@@ -147,7 +157,7 @@ export default function DashboardPage() {
             </div>
             {chartWeek?.data && chartWeek.data.length > 0 ? (
               <ResponsiveContainer width="100%" height={140}>
-                <BarChart data={chartWeek.data}>
+                <RechartsBarChart data={chartWeek.data}>
                   <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={(v) => {
                     const d = new Date(v);
                     return d.toLocaleDateString(undefined, { weekday: "short" });
@@ -158,7 +168,7 @@ export default function DashboardPage() {
                     formatter={(v) => [`${Number(v).toLocaleString()}`, "Emails"]}
                   />
                   <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                </BarChart>
+                </RechartsBarChart>
               </ResponsiveContainer>
             ) : (
               <div className="flex items-center justify-center h-[140px] text-xs text-muted-foreground">No data</div>
