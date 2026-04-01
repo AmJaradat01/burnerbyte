@@ -19,14 +19,14 @@ export const useAuthStore = create<AuthState>((set) => ({
     const res = await api.post<{ user: User; tokens: TokenPair }>("/auth/login", { email, password });
     localStorage.setItem("access_token", res.tokens.access_token);
     localStorage.setItem("refresh_token", res.tokens.refresh_token);
-    set({ user: res.user });
+    set({ user: res.user, loading: false });
   },
 
   register: async (email, password, display_name) => {
     const res = await api.post<{ user: User; tokens: TokenPair }>("/auth/register", { email, password, display_name });
     localStorage.setItem("access_token", res.tokens.access_token);
     localStorage.setItem("refresh_token", res.tokens.refresh_token);
-    set({ user: res.user });
+    set({ user: res.user, loading: false });
   },
 
   logout: () => {
