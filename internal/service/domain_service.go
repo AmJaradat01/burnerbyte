@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
+	"strings"
 
 	"github.com/google/uuid"
 
@@ -12,6 +14,8 @@ import (
 	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
 	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
 )
+
+var domainNameRe = regexp.MustCompile(`^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$`)
 
 type DomainService struct {
 	domainRepo *postgres.DomainRepo
@@ -27,6 +31,15 @@ func (s *DomainService) AddDomain(ctx context.Context, orgID uuid.UUID, input do
 	if input.DomainName == "" {
 		return nil, fmt.Errorf("domain_name is required")
 	}
+	name := strings.ToLower(strings.TrimSpace(input.DomainName))
+	if !domainNameRe.MatchString(name) {
+		return nil, fmt.Errorf("invalid domain name format")
+	}
+	// Block localhost and private hostnames
+	if name == "localhost" || strings.HasSuffix(name, ".local") || strings.HasSuffix(name, ".internal") {
+		return nil, fmt.Errorf("cannot add private/internal domain")
+	}
+	input.DomainName = name
 
 	// Check org quota
 	org, err := s.orgRepo.GetByID(ctx, orgID)
