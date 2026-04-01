@@ -90,6 +90,34 @@ func (r *UserRepo) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
+func (r *UserRepo) ListAll(ctx context.Context, page, perPage int) ([]domain.User, int, error) {
+	var total int
+	err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM users`).Scan(&total)
+	if err != nil {
+		return nil, 0, fmt.Errorf("count users: %w", err)
+	}
+	offset := (page - 1) * perPage
+	rows, err := r.db.Query(ctx,
+		`SELECT id, email, display_name, avatar_url, password_hash, sso_provider, sso_subject,
+		        is_system_admin, email_verified, password_changed_at, created_at, updated_at
+		 FROM users ORDER BY created_at DESC LIMIT $1 OFFSET $2`, perPage, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("list users: %w", err)
+	}
+	defer rows.Close()
+	var users []domain.User
+	for rows.Next() {
+		var u domain.User
+		if err := rows.Scan(&u.ID, &u.Email, &u.DisplayName, &u.AvatarURL, &u.PasswordHash,
+			&u.SSOProvider, &u.SSOSubject, &u.IsSystemAdmin, &u.EmailVerified,
+			&u.PasswordChangedAt, &u.CreatedAt, &u.UpdatedAt); err != nil {
+			return nil, 0, err
+		}
+		users = append(users, u)
+	}
+	return users, total, nil
+}
+
 func (r *UserRepo) scanOne(ctx context.Context, query string, args ...any) (*domain.User, error) {
 	var u domain.User
 	err := r.db.QueryRow(ctx, query, args...).Scan(
