@@ -20,7 +20,7 @@ import { Pagination } from "@/components/pagination";
 import { ErrorState } from "@/components/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Activity, AlertTriangle, Building2, Calendar, CheckCircle2, Clock, Database, Globe, HardDrive, Inbox, Info, Mail, Monitor, Palette, RefreshCw, Settings, Shield, Trash2, UserPlus, Users, XCircle } from "lucide-react";
-import type { Organization, Membership, Invite, OrgSettings, PaginatedResponse, SystemStats } from "@/types";
+import type { Organization, Membership, Invite, OrgSettings, PaginatedResponse, SystemStats, User } from "@/types";
 
 export default function SettingsPage() {
   const { currentOrg, fetchOrgs } = useOrgStore();
@@ -791,10 +791,11 @@ function UsersTab() {
   const currentUser = useAuthStore((s) => s.user);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<"all" | "verified" | "unverified" | "admin" | "sso">("all");
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["admin-users", page],
-    queryFn: () => api.get<PaginatedResponse<{ id: string; email: string; display_name: string; is_system_admin: boolean; email_verified: boolean; sso_provider?: string; created_at: string; updated_at: string }>>("/admin/users", { page: String(page), per_page: "20" }),
+    queryFn: () => api.get<PaginatedResponse<User>>("/admin/users", { page: String(page), per_page: "50" }),
   });
 
   const deleteUser = useMutation({
@@ -803,78 +804,282 @@ function UsersTab() {
     onError: (err) => toast.error(err instanceof Error ? err.message : "Failed to delete user"),
   });
 
-  const filtered = data?.data?.filter((u) =>
-    u.email.toLowerCase().includes(search.toLowerCase()) ||
-    u.display_name.toLowerCase().includes(search.toLowerCase())
-  );
+  const allUsers = data?.data ?? [];
+  const filtered = allUsers.filter((u) => {
+    const q = search.toLowerCase();
+    const matchesSearch = !q || u.email.toLowerCase().includes(q) || u.display_name.toLowerCase().includes(q) || u.id.toLowerCase().includes(q);
+    const matchesFilter =
+      filter === "all" ||
+      (filter === "verified" && u.email_verified) ||
+      (filter === "unverified" && !u.email_verified) ||
+      (filter === "admin" && u.is_system_admin) ||
+      (filter === "sso" && !!u.sso_provider);
+    return matchesSearch && matchesFilter;
+  });
+
+  const verifiedCount = allUsers.filter((u) => u.email_verified).length;
+  const adminCount = allUsers.filter((u) => u.is_system_admin).length;
+  const ssoCount = allUsers.filter((u) => u.sso_provider).length;
 
   if (isError) return <ErrorState message="Failed to load users" onRetry={() => refetch()} />;
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-3 gap-4">
-        <Card>
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className={`cursor-pointer transition-shadow hover:shadow-md ${filter === "all" ? "ring-2 ring-primary" : ""}`} onClick={() => setFilter("all")}>
           <CardContent className="pt-5 pb-4">
-            <p className="text-xs text-muted-foreground">Total Users</p>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-muted-foreground">Total Users</span>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </div>
             <p className="text-2xl font-bold">{data?.total ?? 0}</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className={`cursor-pointer transition-shadow hover:shadow-md ${filter === "verified" ? "ring-2 ring-primary" : ""}`} onClick={() => setFilter(filter === "verified" ? "all" : "verified")}>
           <CardContent className="pt-5 pb-4">
-            <p className="text-xs text-muted-foreground">Verified</p>
-            <p className="text-2xl font-bold">{data?.data?.filter((u) => u.email_verified).length ?? 0}</p>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-muted-foreground">Verified</span>
+              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+            </div>
+            <p className="text-2xl font-bold">{verifiedCount}</p>
+            <p className="text-[10px] text-muted-foreground">{allUsers.length ? Math.round((verifiedCount / allUsers.length) * 100) : 0}% of users</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className={`cursor-pointer transition-shadow hover:shadow-md ${filter === "admin" ? "ring-2 ring-primary" : ""}`} onClick={() => setFilter(filter === "admin" ? "all" : "admin")}>
           <CardContent className="pt-5 pb-4">
-            <p className="text-xs text-muted-foreground">System Admins</p>
-            <p className="text-2xl font-bold">{data?.data?.filter((u) => u.is_system_admin).length ?? 0}</p>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-muted-foreground">System Admins</span>
+              <Shield className="h-4 w-4 text-amber-500" />
+            </div>
+            <p className="text-2xl font-bold">{adminCount}</p>
+          </CardContent>
+        </Card>
+        <Card className={`cursor-pointer transition-shadow hover:shadow-md ${filter === "unverified" ? "ring-2 ring-primary" : ""}`} onClick={() => setFilter(filter === "unverified" ? "all" : "unverified")}>
+          <CardContent className="pt-5 pb-4">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-muted-foreground">Unverified</span>
+              <AlertTriangle className="h-4 w-4 text-orange-500" />
+            </div>
+            <p className="text-2xl font-bold">{allUsers.length - verifiedCount}</p>
           </CardContent>
         </Card>
       </div>
 
-      <Input placeholder="Search users…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />
+      {/* Search + filter bar */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2 flex-1 max-w-lg">
+          <Input placeholder="Search by name, email, or ID…" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
+          {(search || filter !== "all") && (
+            <Button variant="ghost" size="sm" className="shrink-0 text-xs" onClick={() => { setSearch(""); setFilter("all"); }}>
+              Clear
+            </Button>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {filter !== "all" && (
+            <Badge variant="secondary" className="gap-1 text-xs">
+              {filter} <button onClick={() => setFilter("all")} className="ml-1 hover:text-foreground">×</button>
+            </Badge>
+          )}
+          <p className="text-xs text-muted-foreground">{filtered.length} result{filtered.length !== 1 ? "s" : ""}</p>
+        </div>
+      </div>
 
+      {/* Table */}
       {isLoading ? (
-        <div className="grid gap-3 md:grid-cols-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 w-full rounded-lg" />)}</div>
+        <div className="space-y-2">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-12 w-full rounded" />)}</div>
       ) : (
-        <div className="grid gap-3 md:grid-cols-2">
-          {filtered?.map((u) => (
-            <Card key={u.id}>
-              <CardContent className="pt-5 pb-4">
-                <div className="flex items-start justify-between">
-                  <div className="min-w-0">
-                    <p className="font-medium truncate">{u.display_name}</p>
-                    <p className="text-sm text-muted-foreground font-mono truncate">{u.email}</p>
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      {u.is_system_admin && <Badge variant="default" className="text-[10px]">Admin</Badge>}
-                      <Badge variant={u.email_verified ? "default" : "outline"} className="text-[10px]">
-                        {u.email_verified ? <><CheckCircle2 className="h-3 w-3 mr-0.5" /> Verified</> : <><XCircle className="h-3 w-3 mr-0.5" /> Unverified</>}
-                      </Badge>
-                      {u.sso_provider && <Badge variant="outline" className="text-[10px]"><Shield className="h-3 w-3 mr-0.5" /> {u.sso_provider}</Badge>}
-                    </div>
-                    <p className="text-[10px] text-muted-foreground mt-2">
-                      <Calendar className="inline h-3 w-3 mr-0.5" /> Joined {new Date(u.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                  {u.id !== currentUser?.id && (
-                    <ConfirmDialog
-                      trigger={<Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>}
-                      title="Delete user?"
-                      description={`Permanently delete ${u.email}? This will remove all their data including org memberships, inboxes, and emails. This action cannot be undone.`}
-                      onConfirm={() => deleteUser.mutate(u.id)}
-                    />
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-          {filtered?.length === 0 && <p className="text-sm text-muted-foreground col-span-2 text-center py-8">No users found.</p>}
+        <div className="rounded-lg border overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/50">
+                  <th className="text-left font-medium text-xs text-muted-foreground px-4 py-3">User</th>
+                  <th className="text-left font-medium text-xs text-muted-foreground px-4 py-3 hidden md:table-cell">Status</th>
+                  <th className="text-left font-medium text-xs text-muted-foreground px-4 py-3 hidden lg:table-cell">Auth</th>
+                  <th className="text-left font-medium text-xs text-muted-foreground px-4 py-3 hidden lg:table-cell">Joined</th>
+                  <th className="text-right font-medium text-xs text-muted-foreground px-4 py-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((u) => {
+                  const isYou = u.id === currentUser?.id;
+                  return (
+                    <UserDetailDialog key={u.id} user={u} isYou={isYou}>
+                      <tr className="border-b last:border-0 hover:bg-muted/30 cursor-pointer transition-colors">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                              {(u.display_name || u.email).charAt(0).toUpperCase()}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <p className="font-medium truncate text-sm">{u.display_name || "—"}</p>
+                                {isYou && <Badge variant="outline" className="text-[10px] px-1 py-0">you</Badge>}
+                                {u.is_system_admin && <Badge variant="default" className="text-[10px] px-1 py-0">Admin</Badge>}
+                              </div>
+                              <p className="text-xs text-muted-foreground font-mono truncate">{u.email}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 hidden md:table-cell">
+                          <Badge variant={u.email_verified ? "default" : "outline"} className="text-[10px]">
+                            {u.email_verified ? <><CheckCircle2 className="h-3 w-3 mr-0.5" /> Verified</> : <><XCircle className="h-3 w-3 mr-0.5" /> Unverified</>}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3 hidden lg:table-cell">
+                          {u.sso_provider ? (
+                            <Badge variant="outline" className="text-[10px]"><Shield className="h-3 w-3 mr-0.5" /> {u.sso_provider}</Badge>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">Password</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 hidden lg:table-cell">
+                          <span className="text-xs text-muted-foreground">{new Date(u.created_at).toLocaleDateString()}</span>
+                        </td>
+                        <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                          {!isYou && (
+                            <ConfirmDialog
+                              trigger={<Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button>}
+                              title="Delete user?"
+                              description={`Permanently delete ${u.email}? This removes all their data including org memberships, inboxes, and emails. This cannot be undone.`}
+                              onConfirm={() => deleteUser.mutate(u.id)}
+                            />
+                          )}
+                        </td>
+                      </tr>
+                    </UserDetailDialog>
+                  );
+                })}
+                {filtered.length === 0 && (
+                  <tr><td colSpan={5} className="text-center py-12 text-sm text-muted-foreground">{search || filter !== "all" ? "No matching users" : "No users yet"}</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
       {data && data.total_pages > 1 && <Pagination page={page} totalPages={data.total_pages} onPageChange={setPage} />}
     </div>
+  );
+}
+
+function UserDetailDialog({ user: u, isYou, children }: { user: User; isYou: boolean; children: React.ReactNode }) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [displayName, setDisplayName] = useState(u.display_name);
+  const [isAdmin, setIsAdmin] = useState(u.is_system_admin);
+  const [verified, setVerified] = useState(u.email_verified);
+  const [saving, setSaving] = useState(false);
+
+  const dirty = displayName !== u.display_name || isAdmin !== u.is_system_admin || verified !== u.email_verified;
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await api.patch(`/admin/users/${u.id}`, {
+        display_name: displayName !== u.display_name ? displayName : undefined,
+        is_system_admin: isAdmin !== u.is_system_admin ? isAdmin : undefined,
+        email_verified: verified !== u.email_verified ? verified : undefined,
+      });
+      qc.invalidateQueries({ queryKey: ["admin-users"] });
+      toast.success("User updated");
+      setOpen(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Update failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => {
+      setOpen(v);
+      if (v) { setDisplayName(u.display_name); setIsAdmin(u.is_system_admin); setVerified(u.email_verified); }
+    }}>
+      <DialogTrigger asChild>{children}</DialogTrigger>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>User Details</DialogTitle>
+          <DialogDescription>View and manage this user account.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-5">
+          {/* Header */}
+          <div className="flex items-center gap-4">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-2xl font-bold text-primary">
+              {(u.display_name || u.email).charAt(0).toUpperCase()}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold text-lg truncate">{u.display_name || "—"}</p>
+              <p className="text-sm text-muted-foreground font-mono truncate">{u.email}</p>
+              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                {u.is_system_admin && <Badge variant="default" className="text-[10px]">System Admin</Badge>}
+                <Badge variant={u.email_verified ? "default" : "outline"} className="text-[10px]">
+                  {u.email_verified ? "Verified" : "Unverified"}
+                </Badge>
+                {u.sso_provider && <Badge variant="outline" className="text-[10px]">{u.sso_provider}</Badge>}
+                {isYou && <Badge variant="outline" className="text-[10px]">You</Badge>}
+              </div>
+            </div>
+          </div>
+
+          {/* Info grid */}
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="rounded-lg border p-3">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">User ID</p>
+              <p className="font-mono text-xs truncate">{u.id}</p>
+            </div>
+            <div className="rounded-lg border p-3">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Auth Method</p>
+              <p className="text-xs">{u.sso_provider ?? "Password"}</p>
+            </div>
+            <div className="rounded-lg border p-3">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Joined</p>
+              <p className="text-xs">{new Date(u.created_at).toLocaleString()}</p>
+            </div>
+            <div className="rounded-lg border p-3">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Last Updated</p>
+              <p className="text-xs">{new Date(u.updated_at).toLocaleString()}</p>
+            </div>
+          </div>
+
+          {/* Editable fields */}
+          <div className="space-y-4 border-t pt-4">
+            <div className="space-y-2">
+              <Label>Display Name</Label>
+              <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input value={u.email} disabled className="bg-muted font-mono text-sm" />
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Email Verified</Label>
+                <p className="text-xs text-muted-foreground">Manually verify or unverify this user&apos;s email.</p>
+              </div>
+              <Switch checked={verified} onCheckedChange={setVerified} />
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>System Admin</Label>
+                <p className="text-xs text-muted-foreground">Grant full platform administration privileges.</p>
+              </div>
+              <Switch checked={isAdmin} onCheckedChange={setIsAdmin} disabled={isYou} />
+            </div>
+          </div>
+
+          {/* Save */}
+          {dirty && (
+            <Button onClick={save} disabled={saving} className="w-full">
+              {saving ? "Saving…" : "Save Changes"}
+            </Button>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

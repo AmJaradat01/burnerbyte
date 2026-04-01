@@ -538,6 +538,29 @@ func (s *AuthService) DeleteUser(ctx context.Context, userID uuid.UUID) error {
 	return s.userRepo.Delete(ctx, userID)
 }
 
+func (s *AuthService) AdminUpdateUser(ctx context.Context, userID uuid.UUID, displayName, avatarURL *string, isSystemAdmin, emailVerified *bool) (*domain.User, error) {
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if displayName != nil {
+		user.DisplayName = *displayName
+	}
+	if avatarURL != nil {
+		user.AvatarURL = avatarURL
+	}
+	if isSystemAdmin != nil {
+		user.IsSystemAdmin = *isSystemAdmin
+	}
+	if emailVerified != nil {
+		user.EmailVerified = *emailVerified
+	}
+	if err := s.userRepo.Update(ctx, user); err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
 func (s *AuthService) createSession(ctx context.Context, repo *postgres.SessionRepo, user *domain.User, ip, userAgent string) (*domain.TokenPair, error) {
 	ip = stripPort(ip)
 	accessToken, err := s.tokens.GenerateAccessToken(user.ID, user.Email, user.IsSystemAdmin)
