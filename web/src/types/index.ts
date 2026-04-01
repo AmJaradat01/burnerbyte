@@ -96,6 +96,7 @@ export interface EmailSummary {
   id: string;
   from_address: string;
   subject?: string;
+  snippet: string;
   has_attachments: boolean;
   is_read: boolean;
   size_bytes: number;

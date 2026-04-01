@@ -105,7 +105,7 @@ func main() {
 	authSvc := service.NewAuthService(pool, userRepo, sessionRepo, resetRepo, orgRepo, tokenMgr, lockout, ml, cfg)
 	orgSvc := service.NewOrgService(pool, orgRepo, ml, cfg.Server.FrontendURL, cfg.Defaults.InviteExpiryTTL)
 	domainSvc := service.NewDomainService(domainRepo, orgRepo, cfg)
-	teamSvc := service.NewTeamService(pool, teamRepo, orgRepo, cfg)
+	teamSvc := service.NewTeamService(pool, teamRepo, orgRepo, userRepo, cfg)
 	assignmentSvc := service.NewDomainAssignmentService(assignmentRepo, domainRepo, orgRepo, cfg.Defaults)
 	redisInboxRepo := redisrepo.NewInboxRepo(rdb)
 	inboxSvc := service.NewInboxService(inboxRepo, redisInboxRepo, assignmentRepo, domainRepo, orgRepo, teamRepo, cfg)
