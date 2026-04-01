@@ -530,6 +530,14 @@ func (s *AuthService) ListAllOrgs(ctx context.Context, page, perPage int) ([]dom
 	return s.orgRepo.ListAll(ctx, page, perPage)
 }
 
+func (s *AuthService) ListAllUsers(ctx context.Context, page, perPage int) ([]domain.User, int, error) {
+	return s.userRepo.ListAll(ctx, page, perPage)
+}
+
+func (s *AuthService) DeleteUser(ctx context.Context, userID uuid.UUID) error {
+	return s.userRepo.Delete(ctx, userID)
+}
+
 func (s *AuthService) createSession(ctx context.Context, repo *postgres.SessionRepo, user *domain.User, ip, userAgent string) (*domain.TokenPair, error) {
 	ip = stripPort(ip)
 	accessToken, err := s.tokens.GenerateAccessToken(user.ID, user.Email, user.IsSystemAdmin)
