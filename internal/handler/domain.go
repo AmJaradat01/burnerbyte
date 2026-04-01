@@ -84,11 +84,13 @@ func (h *DomainHandler) ListDomains(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *DomainHandler) GetDomain(w http.ResponseWriter, r *http.Request) {
-	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
-	if orgID != uuid.Nil {
-		if checkOrgRole(w, r, orgID, rbac.OrgMember) {
-			return
-		}
+	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid org ID")
+		return
+	}
+	if checkOrgRole(w, r, orgID, rbac.OrgMember) {
+		return
 	}
 	id, err := uuid.Parse(chi.URLParam(r, "domainId"))
 	if err != nil {
@@ -113,11 +115,13 @@ func (h *DomainHandler) GetDomain(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *DomainHandler) UpdateDomain(w http.ResponseWriter, r *http.Request) {
-	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
-	if orgID != uuid.Nil {
-		if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
-			return
-		}
+	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid org ID")
+		return
+	}
+	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+		return
 	}
 	id, err := uuid.Parse(chi.URLParam(r, "domainId"))
 	if err != nil {
@@ -141,11 +145,13 @@ func (h *DomainHandler) UpdateDomain(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *DomainHandler) DeleteDomain(w http.ResponseWriter, r *http.Request) {
-	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
-	if orgID != uuid.Nil {
-		if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
-			return
-		}
+	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid org ID")
+		return
+	}
+	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+		return
 	}
 	id, err := uuid.Parse(chi.URLParam(r, "domainId"))
 	if err != nil {
@@ -163,11 +169,13 @@ func (h *DomainHandler) DeleteDomain(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *DomainHandler) VerifyDomain(w http.ResponseWriter, r *http.Request) {
-	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
-	if orgID != uuid.Nil {
-		if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
-			return
-		}
+	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid org ID")
+		return
+	}
+	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+		return
 	}
 	id, err := uuid.Parse(chi.URLParam(r, "domainId"))
 	if err != nil {

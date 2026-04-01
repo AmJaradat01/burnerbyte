@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 
 	"gitlab.com/burnerbyte/burnerbyte/internal/auth"
+	"gitlab.com/burnerbyte/burnerbyte/internal/auth/rbac"
 	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
 	"gitlab.com/burnerbyte/burnerbyte/internal/service"
 )
@@ -91,9 +92,17 @@ func (h *InboxHandler) ListMyInboxes(w http.ResponseWriter, r *http.Request) {
 
 func (h *InboxHandler) ListInboxes(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
+	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid org ID")
+		return
+	}
 	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid team ID")
+		return
+	}
+	if checkTeamRole(w, r, orgID, teamID, rbac.OrgMember, rbac.TeamMember) {
 		return
 	}
 	page, perPage := parsePagination(r)
