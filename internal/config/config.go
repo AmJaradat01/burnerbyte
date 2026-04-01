@@ -125,6 +125,7 @@ type PasswordConfig struct {
 
 type DefaultsConfig struct {
 	AttachmentsEnabled  bool          `mapstructure:"attachments_enabled"`
+	AllowRegistration   bool          `mapstructure:"allow_registration"`
 	DefaultInboxTTL     time.Duration `mapstructure:"default_inbox_ttl"`
 	MaxInboxTTL         time.Duration `mapstructure:"max_inbox_ttl"`
 	MaxAttachmentSizeMB int           `mapstructure:"max_attachment_size_mb"`
