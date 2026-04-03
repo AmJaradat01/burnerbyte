@@ -219,8 +219,12 @@ function QuickCreateCard() {
 
   if (noDomains) {
     return (
-      <div className="text-center py-8">
+      <div className="text-center py-12 space-y-3">
         <p className="text-sm text-muted-foreground">{t("noDomains")}</p>
+        <div className="flex justify-center gap-2">
+          <Link href="/domains"><Button variant="outline" size="sm">Add Domain</Button></Link>
+          <Link href="/onboarding"><Button size="sm">Run Setup Wizard</Button></Link>
+        </div>
       </div>
     );
   }
