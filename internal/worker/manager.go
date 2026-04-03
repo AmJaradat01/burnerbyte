@@ -28,6 +28,10 @@ func (m *Manager) Add(name string, interval time.Duration, fn func(ctx context.C
 func (m *Manager) Start(ctx context.Context) {
 	var wg sync.WaitGroup
 	for _, job := range m.jobs {
+		if job.Interval <= 0 {
+			slog.Error("worker has invalid interval, skipping", "name", job.Name)
+			continue
+		}
 		wg.Add(1)
 		go func(j Job) {
 			defer wg.Done()
