@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -26,8 +26,10 @@ const adminRoutes = [{ label: "Admin", path: "/admin" }];
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
+  const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -45,17 +47,45 @@ export function CommandPalette() {
     r.label.toLowerCase().includes(query.toLowerCase())
   );
 
+  // Reset selection when query changes
+  useEffect(() => { setSelectedIndex(0); }, [query]);
+
   const navigate = useCallback(
     (path: string) => {
       router.push(path);
       setOpen(false);
       setQuery("");
+      setSelectedIndex(0);
     },
     [router]
   );
 
+  // Clear query when dialog closes
+  const handleOpenChange = useCallback((v: boolean) => {
+    setOpen(v);
+    if (!v) { setQuery(""); setSelectedIndex(0); }
+  }, []);
+
+  // Scroll selected item into view
+  useEffect(() => {
+    const el = listRef.current?.children[selectedIndex] as HTMLElement | undefined;
+    el?.scrollIntoView({ block: "nearest" });
+  }, [selectedIndex]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSelectedIndex((i) => Math.min(i + 1, filtered.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSelectedIndex((i) => Math.max(i - 1, 0));
+    } else if (e.key === "Enter" && filtered.length > 0) {
+      navigate(filtered[selectedIndex].path);
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-md p-0">
         <DialogTitle className="sr-only">Command palette</DialogTitle>
         <Input
@@ -64,18 +94,17 @@ export function CommandPalette() {
           onChange={(e) => setQuery(e.target.value)}
           className="border-0 border-b rounded-none focus-visible:ring-0"
           autoFocus
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && filtered.length > 0) {
-              navigate(filtered[0].path);
-            }
-          }}
+          onKeyDown={handleKeyDown}
         />
-        <div className="max-h-64 overflow-auto">
-          {filtered.map((r) => (
+        <div className="max-h-64 overflow-auto" ref={listRef}>
+          {filtered.map((r, i) => (
             <button
               key={r.path}
               onClick={() => navigate(r.path)}
-              className="w-full text-left px-4 py-2 text-sm hover:bg-muted transition-colors"
+              onMouseEnter={() => setSelectedIndex(i)}
+              className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
+                i === selectedIndex ? "bg-primary/10 text-primary" : "hover:bg-muted"
+              }`}
             >
               {r.label}
             </button>
