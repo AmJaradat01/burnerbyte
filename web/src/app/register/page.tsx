@@ -60,24 +60,24 @@ export default function RegisterPage() {
           <CardDescription>Get started with BurnerByte</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pb-6">
             <div className="space-y-2">
               <Label htmlFor="name">Display name</Label>
-              <Input id="name" required value={displayName} onChange={(e) => setDisplayName(e.target.value)} autoComplete="name" />
+              <Input id="name" required value={displayName} onChange={(e) => setDisplayName(e.target.value)} autoComplete="name" placeholder="Your full name" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+              <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" placeholder="you@example.com" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
+              <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" placeholder="Min 8 characters" />
             </div>
-          </CardContent>
-          <CardFooter className="flex flex-col gap-4">
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full h-11" disabled={loading}>
               {loading ? "Creating account…" : "Create account"}
             </Button>
+          </CardContent>
+          <CardFooter className="justify-center pt-0">
             <Link href="/login" className="text-sm text-muted-foreground hover:underline">Already have an account? Sign in</Link>
           </CardFooter>
         </form>
