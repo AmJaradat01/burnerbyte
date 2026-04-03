@@ -58,7 +58,7 @@ func (h *DomainAssignmentHandler) AssignDomain(w http.ResponseWriter, r *http.Re
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	a, err := h.svc.AssignDomain(r.Context(), teamID, input, uc.UserID)
+	a, err := h.svc.AssignDomain(r.Context(), teamID, input, uc.UserID, orgID)
 	if err != nil {
 		status := http.StatusBadRequest
 		if err.Error() == "domain already assigned to this team" {

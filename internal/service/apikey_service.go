@@ -28,12 +28,13 @@ var validScopes = map[string]bool{
 
 func (s *APIKeyService) Generate(ctx context.Context, teamID, userID uuid.UUID, input domain.CreateAPIKeyInput) (*domain.APIKey, error) {
 	if input.Name == "" { return nil, fmt.Errorf("name is required") }
+	if len(input.Scopes) == 0 { return nil, fmt.Errorf("at least one scope is required") }
 	for _, sc := range input.Scopes {
 		if !validScopes[sc] { return nil, fmt.Errorf("invalid scope: %s", sc) }
 	}
 
 	raw := make([]byte, 32)
-	rand.Read(raw)
+	if _, err := rand.Read(raw); err != nil { return nil, fmt.Errorf("failed to generate key: %w", err) }
 	rawKey := "bb_" + hex.EncodeToString(raw)
 	hash := sha256.Sum256([]byte(rawKey))
 
@@ -41,6 +42,7 @@ func (s *APIKeyService) Generate(ctx context.Context, teamID, userID uuid.UUID, 
 	if input.ExpiresIn != nil {
 		d, err := time.ParseDuration(*input.ExpiresIn)
 		if err != nil { return nil, fmt.Errorf("invalid expires_in") }
+		if d <= 0 { return nil, fmt.Errorf("expires_in must be positive") }
 		t := time.Now().Add(d)
 		expiresAt = &t
 	}

@@ -165,7 +165,7 @@ export function EmailPreview({ email, onBack, onToggleRead, onDelete }: EmailPre
                 srcDoc={buildSandboxedHtml(email.body_html!)}
                 title="Email content"
                 className="w-full h-full min-h-[500px] border rounded-lg bg-white"
-                sandbox="allow-same-origin"
+                sandbox=""
               />
             </div>
           )}
