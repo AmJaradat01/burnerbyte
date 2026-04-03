@@ -5,7 +5,7 @@ description: PostgreSQL schema overview — tables, indexes, and triggers.
 
 ## Overview
 
-BurnerByte uses PostgreSQL 16 with 21 migration pairs managing 19 tables, 52+ indexes, and 7 triggers.
+BurnerByte uses PostgreSQL 16 with 24 migration pairs managing 22 tables, 52+ indexes, and 7 triggers.
 
 ## Core Tables
 
@@ -16,6 +16,7 @@ BurnerByte uses PostgreSQL 16 with 21 migration pairs managing 19 tables, 52+ in
 | `users` | User accounts with email, password hash, display name, avatar |
 | `sessions` | Active JWT refresh sessions with IP, user agent, expiry |
 | `password_reset_tokens` | Time-limited password reset tokens |
+| `email_verification_tokens` | Time-limited email verification tokens |
 
 ### Organization Hierarchy
 
@@ -52,6 +53,14 @@ BurnerByte uses PostgreSQL 16 with 21 migration pairs managing 19 tables, 52+ in
 | `invites` | Org invitations with token, email, role, expiry |
 | `setup_state` | One-time setup wizard completion state |
 | `system_configs` | Runtime config overrides (mailer, storage) |
+
+### RBAC
+
+| Table | Purpose |
+|---|---|
+| `roles` | Named roles with description and scope (platform, org, team) |
+| `permissions` | Individual permission definitions (e.g., `inboxes.create`) |
+| `role_permissions` | Role ↔ permission mapping |
 
 ## Migrations
 
