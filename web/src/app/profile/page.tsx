@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import Link from "next/link";
 import { KeyRound, LogOut, Monitor, Shield, Trash2 } from "lucide-react";
@@ -17,7 +18,7 @@ import { KeyRound, LogOut, Monitor, Shield, Trash2 } from "lucide-react";
 export default function ProfilePage() {
   const { user, fetchMe } = useAuthStore();
 
-  if (!user) return null;
+  if (!user) return <div className="mx-auto max-w-5xl space-y-8"><Skeleton className="h-8 w-48" /><Skeleton className="h-32 w-full" /></div>;
 
   const initials = user.display_name
     ? user.display_name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
@@ -110,7 +111,7 @@ function ProfileForm({ user, onSaved }: { user: NonNullable<ReturnType<typeof us
       await onSaved();
       toast.success("Profile updated");
     } catch (e: unknown) {
-      toast.error((e as Error).message);
+      toast.error(e instanceof Error ? e.message : "Failed");
     } finally {
       setSaving(false);
     }
@@ -162,7 +163,7 @@ function ChangePasswordForm() {
       toast.success("Password changed — signing you out");
       setTimeout(() => logout(), 1500);
     } catch (e: unknown) {
-      toast.error((e as Error).message);
+      toast.error(e instanceof Error ? e.message : "Failed");
       setChanging(false);
     }
   };

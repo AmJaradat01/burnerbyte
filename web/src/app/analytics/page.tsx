@@ -124,7 +124,7 @@ function OrgAnalytics({ orgId }: { orgId: string }) {
 
 function TeamAnalytics({ orgId, teamId }: { orgId: string; teamId: string }) {
   const [days, setDays] = useState("30");
-  const { data: stats, isLoading } = useQuery({
+  const { data: stats, isLoading, isError, refetch } = useQuery({
     queryKey: ["analytics-team", teamId],
     queryFn: () => api.get<TeamStats>(`/orgs/${orgId}/teams/${teamId}/analytics`),
   });
@@ -133,6 +133,7 @@ function TeamAnalytics({ orgId, teamId }: { orgId: string; teamId: string }) {
     queryFn: () => api.get<{ data: TimeSeriesPoint[] }>(`/orgs/${orgId}/teams/${teamId}/analytics/emails-per-day`, { days }),
   });
 
+  if (isError) return <ErrorState message="Failed to load team analytics" onRetry={() => refetch()} />;
   if (isLoading) return <StatsSkeleton count={4} />;
 
   return (

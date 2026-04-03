@@ -176,7 +176,7 @@ function WebhookCard({ webhook: w, expanded, onToggleExpand, onToggleActive, onD
 
 function DeliveryLogPanel({ orgId, teamId, webhookId }: { orgId: string; teamId: string; webhookId: string }) {
   const [logPage, setLogPage] = useState(1);
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["webhook-deliveries", webhookId, logPage],
     queryFn: () => api.get<PaginatedResponse<DeliveryLog>>(
       `/orgs/${orgId}/teams/${teamId}/webhooks/${webhookId}/deliveries`,
@@ -185,6 +185,7 @@ function DeliveryLogPanel({ orgId, teamId, webhookId }: { orgId: string; teamId:
   });
 
   if (isLoading) return <div className="py-4 text-sm text-muted-foreground">Loading deliveries…</div>;
+  if (isError) return <ErrorState message="Failed to load delivery logs" onRetry={() => refetch()} />;
   if (!data?.data?.length) return <div className="py-4 text-sm text-muted-foreground">No delivery logs yet.</div>;
 
   return (
