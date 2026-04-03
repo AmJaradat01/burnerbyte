@@ -3,15 +3,19 @@ package smtp
 import (
 	"context"
 	"log/slog"
+	"sync"
+	"sync/atomic"
+	"time"
 
 	"gitlab.com/burnerbyte/burnerbyte/internal/config"
 )
 
 // Server wraps the SMTP inbound processing pipeline.
 type Server struct {
-	cfg     config.SMTPConfig
-	handler *Handler
-	queue   chan *InboundEmail
+	cfg      config.SMTPConfig
+	handler  *Handler
+	queue    chan *InboundEmail
+	stopped  atomic.Bool
 }
 
 func NewServer(cfg config.SMTPConfig, handler *Handler) *Server {
@@ -26,17 +30,19 @@ func NewServer(cfg config.SMTPConfig, handler *Handler) *Server {
 	}
 }
 
-// Start begins the SMTP listener and worker pool.
-// In production this would use go-guerrilla; here we set up the processing pipeline.
 func (s *Server) Start(ctx context.Context) error {
 	workers := s.cfg.Workers
 	if workers <= 0 {
 		workers = 4
 	}
 
-	// Start worker pool
+	var wg sync.WaitGroup
 	for i := 0; i < workers; i++ {
-		go s.worker(ctx, i)
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			s.worker(ctx, id)
+		}(i)
 	}
 
 	slog.Info("smtp server started",
@@ -47,13 +53,18 @@ func (s *Server) Start(ctx context.Context) error {
 	)
 
 	<-ctx.Done()
+	s.stopped.Store(true) // Prevent new enqueues before closing channel
 	close(s.queue)
+	wg.Wait() // Wait for workers to drain
 	return nil
 }
 
 // Enqueue adds a parsed email to the processing queue.
-// Returns false if the queue is full (caller should return SMTP 451).
+// Returns false if the queue is full or the server is shutting down.
 func (s *Server) Enqueue(email *InboundEmail) bool {
+	if s.stopped.Load() {
+		return false
+	}
 	select {
 	case s.queue <- email:
 		return true
@@ -66,7 +77,14 @@ func (s *Server) Enqueue(email *InboundEmail) bool {
 func (s *Server) worker(ctx context.Context, id int) {
 	slog.Debug("smtp worker started", "worker_id", id)
 	for email := range s.queue {
-		if err := s.handler.Process(ctx, email); err != nil {
+		// Use a fresh context for draining — the parent ctx may be cancelled
+		processCtx := ctx
+		if ctx.Err() != nil {
+			var cancel context.CancelFunc
+			processCtx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+		}
+		if err := s.handler.Process(processCtx, email); err != nil {
 			slog.Error("smtp worker: failed to process email",
 				"worker_id", id, "to", email.To, "error", err)
 		}
