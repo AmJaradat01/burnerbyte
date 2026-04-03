@@ -103,26 +103,24 @@ export default function LoginPage() {
               </div>
             )}
             <form onSubmit={handleSubmit}>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 pb-6">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+                  <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" placeholder="you@example.com" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="password">Password</Label>
-                  <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
+                  <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" placeholder="••••••••" />
                 </div>
-              </CardContent>
-              <CardFooter className="flex flex-col gap-4">
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full h-11" disabled={loading}>
                   {loading ? "Signing in…" : "Sign in"}
                 </Button>
-                <div className="flex justify-between text-sm w-full">
-                  <Link href="/forgot-password" className="text-muted-foreground hover:underline">Forgot password?</Link>
-                  {(sso?.allow_registration ?? true) && (
-                    <Link href="/register" className="text-muted-foreground hover:underline">Create account</Link>
-                  )}
-                </div>
+              </CardContent>
+              <CardFooter className="flex justify-between text-sm pt-0">
+                <Link href="/forgot-password" className="text-muted-foreground hover:underline">Forgot password?</Link>
+                {(sso?.allow_registration ?? true) && (
+                  <Link href="/register" className="text-muted-foreground hover:underline">Create account</Link>
+                )}
               </CardFooter>
             </form>
           </>
