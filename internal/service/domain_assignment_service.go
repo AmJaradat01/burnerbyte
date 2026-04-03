@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -23,7 +24,7 @@ func NewDomainAssignmentService(assignmentRepo *postgres.DomainAssignmentRepo, d
 	return &DomainAssignmentService{assignmentRepo: assignmentRepo, domainRepo: domainRepo, orgRepo: orgRepo, defaults: defaults}
 }
 
-func (s *DomainAssignmentService) AssignDomain(ctx context.Context, teamID uuid.UUID, input domain.CreateAssignmentInput, assignedBy uuid.UUID) (*domain.DomainAssignment, error) {
+func (s *DomainAssignmentService) AssignDomain(ctx context.Context, teamID uuid.UUID, input domain.CreateAssignmentInput, assignedBy uuid.UUID, orgID uuid.UUID) (*domain.DomainAssignment, error) {
 	if input.AccessLevel != "full" && input.AccessLevel != "create_inbox" && input.AccessLevel != "read_only" {
 		return nil, fmt.Errorf("invalid access_level: %s", input.AccessLevel)
 	}
@@ -43,6 +44,9 @@ func (s *DomainAssignmentService) AssignDomain(ctx context.Context, teamID uuid.
 	}
 	if !d.MXVerified || !d.TXTVerified {
 		return nil, fmt.Errorf("domain must have both MX and TXT records verified before assignment")
+	}
+	if d.OrgID != orgID {
+		return nil, fmt.Errorf("domain does not belong to this organization")
 	}
 
 	a := &domain.DomainAssignment{
@@ -98,9 +102,16 @@ func (s *DomainAssignmentService) UpdateAssignment(ctx context.Context, teamID, 
 
 	if input.Settings != nil {
 		if input.Settings.AttachmentsEnabled != nil {
+			v := *input.Settings.AttachmentsEnabled
+			if v != "inherit" && v != "enabled" && v != "disabled" {
+				return nil, fmt.Errorf("invalid attachments_enabled: %s", v)
+			}
 			a.Settings.AttachmentsEnabled = input.Settings.AttachmentsEnabled
 		}
 		if input.Settings.MaxInboxTTL != nil {
+			if _, err := time.ParseDuration(*input.Settings.MaxInboxTTL); err != nil {
+				return nil, fmt.Errorf("invalid max_inbox_ttl duration")
+			}
 			a.Settings.MaxInboxTTL = input.Settings.MaxInboxTTL
 		}
 	}
