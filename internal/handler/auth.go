@@ -33,7 +33,7 @@ func (h *AuthHandler) PublicRoutes(r chi.Router, rl *middleware.RateLimiter) {
 	r.With(rl.LoginLimiter).Post("/auth/login", h.Login)
 	r.With(rl.LoginLimiter).Post("/auth/refresh", h.Refresh)
 	r.With(rl.ForgotPasswordLimiter).Post("/auth/forgot-password", h.ForgotPassword)
-	r.Post("/auth/reset-password", h.ResetPassword)
+	r.With(rl.LoginLimiter).Post("/auth/reset-password", h.ResetPassword)
 	r.Get("/auth/verify-email/{token}", h.VerifyEmail)
 	r.Get("/auth/sso/{provider}", h.SSORedirect)
 	r.Get("/auth/sso/{provider}/callback", h.SSOCallback)
