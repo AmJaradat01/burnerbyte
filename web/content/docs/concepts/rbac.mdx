@@ -1,11 +1,11 @@
 ---
 title: Roles & Permissions
-description: BurnerByte's 6-role RBAC system across org and team levels.
+description: BurnerByte's dynamic RBAC system with DB-backed roles and permissions.
 ---
 
 ## Role Hierarchy
 
-BurnerByte uses a two-level RBAC system with 3 org-level roles and 3 team-level roles.
+BurnerByte uses a two-level RBAC system with 3 org-level roles and 2 team-level roles. Roles and their permissions are stored in the database and can be managed via the admin API and Settings → Roles tab.
 
 ### Org Roles
 
@@ -19,26 +19,53 @@ BurnerByte uses a two-level RBAC system with 3 org-level roles and 3 team-level 
 
 | Role | Description |
 |---|---|
-| `lead` | Full control of team settings, members, domain assignments |
+| `lead` | Full control of team settings, members, domain assignments, webhooks, API keys |
 | `member` | Can create inboxes, view emails, manage own resources |
-| `viewer` | Read-only access to team inboxes and emails |
 
 ## Permission Matrix
 
-| Action | Owner | Admin | Member | Team Lead | Team Member | Team Viewer |
-|---|---|---|---|---|---|---|
-| Delete org | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Manage org settings | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Invite members | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Manage domains | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Create teams | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
-| View audit log | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Manage team members | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
-| Manage webhooks | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
-| Create inboxes | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ |
-| View emails | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
-| Delete emails | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ |
+| Action | Owner | Admin | Member | Team Lead | Team Member |
+|---|---|---|---|---|---|
+| Delete org | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Manage org settings | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Invite members | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Change member roles | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Manage domains | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Create teams | ✅ | ✅ | ❌ | ❌ | ❌ |
+| View audit log | ✅ | ✅ | ❌ | ❌ | ❌ |
+| View organization | ✅ | ✅ | ✅ | ❌ | ❌ |
+| Manage team settings | ❌ | ❌ | ❌ | ✅ | ❌ |
+| Manage team members | ❌ | ❌ | ❌ | ✅ | ❌ |
+| Manage webhooks | ❌ | ❌ | ❌ | ✅ | ❌ |
+| Manage API keys | ❌ | ❌ | ❌ | ✅ | ❌ |
+| Manage domain assignments | ❌ | ❌ | ❌ | ✅ | ❌ |
+| Create/manage inboxes | ❌ | ❌ | ❌ | ✅ | ✅ |
+| View emails | ❌ | ❌ | ❌ | ✅ | ✅ |
+
+## Dynamic Role Management
+
+Roles and permissions are stored in the `roles`, `permissions`, and `role_permissions` database tables. System admins can edit role labels, descriptions, and permission assignments via:
+
+- **UI**: Settings → Roles tab → click Edit on any role
+- **API**: `PATCH /admin/roles/{roleId}` with `{ label, description, permissions: ["key1", "key2"] }`
+
+### Permission Keys
+
+Org permissions: `org.settings.manage`, `org.delete`, `org.members.invite`, `org.members.remove`, `org.members.role`, `org.domains.manage`, `org.teams.manage`, `org.audit.view`, `org.view`
+
+Team permissions: `team.settings.manage`, `team.members.manage`, `team.webhooks.manage`, `team.apikeys.manage`, `team.domains.manage`, `team.inboxes.manage`, `team.emails.view`
 
 ## System Admin
 
-The `is_system_admin` flag on the user record grants access to the `/admin` routes (system stats, org listing, health checks). This is set during the initial setup wizard for the platform owner.
+The `is_system_admin` flag on the user record grants access to all `/admin` routes including:
+- System stats and health checks
+- User management (list, edit, delete platform users)
+- Platform settings (registration, email verification, password policy, lockout)
+- SSO configuration
+- Role and permission management
+
+This flag is set during the initial setup wizard for the platform owner.
+
+## Encryption at Rest
+
+Sensitive configuration values (SSO client secrets, SMTP passwords) are encrypted with AES-256-GCM before storage in the `system_configs` database table. To enable, set the `encryption.key` config value to a 64-character hex string (32 bytes). Generate with: `openssl rand -hex 32`.
