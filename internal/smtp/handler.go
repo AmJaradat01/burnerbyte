@@ -110,12 +110,18 @@ func (h *Handler) Process(ctx context.Context, email *InboundEmail) error {
 
 	var inbox *domain.Inbox
 	if inboxID != "" {
-		id, _ := uuid.Parse(inboxID)
-		inbox, err = h.inboxRepoPG.GetByID(ctx, id)
+		id, err := uuid.Parse(inboxID)
 		if err != nil {
-			return fmt.Errorf("inbox lookup by ID: %w", err)
+			slog.Warn("corrupt inbox ID in redis, falling back to PG lookup", "raw", inboxID)
+			inboxID = "" // Force PG fallback
+		} else {
+			inbox, err = h.inboxRepoPG.GetByID(ctx, id)
+			if err != nil {
+				return fmt.Errorf("inbox lookup by ID: %w", err)
+			}
 		}
-	} else {
+	}
+	if inboxID == "" {
 		// Fallback to PG
 		inbox, err = h.inboxRepoPG.GetByFullAddress(ctx, toAddr)
 		if err != nil {
