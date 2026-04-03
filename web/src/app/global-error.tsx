@@ -1,15 +1,18 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (
     <html>
       <body>
-        <div className="flex min-h-screen flex-col items-center justify-center gap-4">
-          <h2 className="text-2xl font-bold">Something went wrong</h2>
-          <p className="text-muted-foreground">{error.message}</p>
-          <Button onClick={reset}>Try again</Button>
+        <div style={{ display: "flex", minHeight: "100vh", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "16px", fontFamily: "system-ui, sans-serif" }}>
+          <h2 style={{ fontSize: "24px", fontWeight: "bold" }}>Something went wrong</h2>
+          <p style={{ color: "#666" }}>{error.message}</p>
+          <button
+            onClick={reset}
+            style={{ padding: "8px 16px", borderRadius: "6px", border: "1px solid #ccc", cursor: "pointer", fontSize: "14px" }}
+          >
+            Try again
+          </button>
         </div>
       </body>
     </html>
