@@ -152,7 +152,11 @@ func OptionalAuth(tm *TokenManager) func(http.Handler) http.Handler {
 				return
 			}
 
-			userID, _ := uuid.Parse(claims.Subject)
+			userID, err := uuid.Parse(claims.Subject)
+			if err != nil {
+				next.ServeHTTP(w, r) // Invalid subject — treat as unauthenticated
+				return
+			}
 			ctx := context.WithValue(r.Context(), UserContextKey, &UserContext{
 				UserID:        userID,
 				Email:         claims.Email,
