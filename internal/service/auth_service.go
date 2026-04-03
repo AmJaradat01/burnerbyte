@@ -65,6 +65,7 @@ func NewAuthService(
 }
 
 func (s *AuthService) Register(ctx context.Context, input domain.CreateUserInput) (*domain.User, *domain.TokenPair, error) {
+	input.Email = strings.ToLower(strings.TrimSpace(input.Email))
 	if _, err := mail.ParseAddress(input.Email); err != nil {
 		return nil, nil, fmt.Errorf("invalid email format")
 	}
@@ -139,6 +140,7 @@ func (s *AuthService) Register(ctx context.Context, input domain.CreateUserInput
 
 func (s *AuthService) Login(ctx context.Context, input domain.LoginInput, ip, userAgent string) (*domain.User, *domain.TokenPair, error) {
 	ip = stripPort(ip)
+	input.Email = strings.ToLower(strings.TrimSpace(input.Email))
 	user, err := s.userRepo.GetByEmail(ctx, input.Email)
 	if err != nil {
 		if errors.Is(err, postgres.ErrNotFound) {
@@ -439,10 +441,11 @@ func (s *AuthService) SSOLogin(ctx context.Context, email, displayName, provider
 	isNew := false
 	user, err := s.userRepo.GetBySSO(ctx, provider, subject)
 	if err != nil {
-		user, err = s.userRepo.GetByEmail(ctx, email)
+		user, err = s.userRepo.GetByEmail(ctx, strings.ToLower(email))
 		if err != nil {
+			// New user — create with SSO identity
 			user = &domain.User{
-				ID: uuid.New(), Email: email, DisplayName: displayName,
+				ID: uuid.New(), Email: strings.ToLower(email), DisplayName: displayName,
 				SSOProvider: &provider, SSOSubject: &subject,
 				IsSystemAdmin: false, EmailVerified: true,
 				PasswordChangedAt: func() *time.Time { t := time.Now(); return &t }(),
@@ -452,6 +455,11 @@ func (s *AuthService) SSOLogin(ctx context.Context, email, displayName, provider
 			}
 			isNew = true
 		} else {
+			// Existing user found by email — only link SSO if they don't have a password
+			// (prevents account takeover via SSO email claim)
+			if user.PasswordHash != nil {
+				return nil, nil, fmt.Errorf("an account with this email already exists — please sign in with your password first, then link SSO from your profile")
+			}
 			user.SSOProvider = &provider
 			user.SSOSubject = &subject
 			user.EmailVerified = true
