@@ -41,65 +41,56 @@ export function NotificationCenter() {
   const [open, setOpen] = useState(false);
   const unread = notifications.filter((n) => !n.read).length;
 
-  const connect = useCallback(() => {
-    if (!user) return;
-    const token = localStorage.getItem("access_token");
-    if (!token) return;
-
-    const ws = new WebSocket(`${WS_BASE}/notifications?token=${token}`);
-    wsRef.current = ws;
-
-    ws.onmessage = (e) => {
-      try {
-        const data = JSON.parse(e.data);
-        const type = data.type || "info";
-        let title = "Notification";
-        let message = "";
-
-        if (type === "email.received") {
-          title = "New Email";
-          message = data.data?.subject
-            ? `From ${data.data.from}: ${data.data.subject}`
-            : `New email from ${data.data?.from || "unknown"}`;
-        } else if (type === "inbox.created") {
-          title = "Inbox Created";
-          message = data.data?.full_address || "A new inbox was created";
-        } else if (type === "inbox.expired") {
-          title = "Inbox Expired";
-          message = data.data?.full_address || "An inbox has expired";
-        } else {
-          title = type.replace(/\./g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
-          message = data.data?.message || JSON.stringify(data.data || {}).slice(0, 100);
-        }
-
-        const notif: Notification = {
-          id: crypto.randomUUID(),
-          type,
-          title,
-          message,
-          timestamp: new Date().toISOString(),
-          read: false,
-        };
-        setNotifications((prev) => [notif, ...prev].slice(0, 100));
-      } catch {}
-    };
-
-    ws.onclose = () => {
-      wsRef.current = null;
-      // Auto-reconnect after 5s
-      reconnectRef.current = setTimeout(connect, 5000);
-    };
-
-    ws.onerror = () => ws.close();
-  }, [user]);
-
   useEffect(() => {
-    connect();
+    if (!user) return;
+    let disposed = false;
+
+    function doConnect() {
+      if (disposed) return;
+      const token = localStorage.getItem("access_token");
+      if (!token) return;
+      const ws = new WebSocket(`${WS_BASE}/notifications?token=${token}`);
+      wsRef.current = ws;
+
+      ws.onmessage = (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          const type = data.type || "info";
+          let title = "Notification";
+          let message = "";
+          if (type === "email.received") {
+            title = "New Email";
+            message = data.data?.subject ? `From ${data.data.from}: ${data.data.subject}` : `New email from ${data.data?.from || "unknown"}`;
+          } else if (type === "inbox.created") {
+            title = "Inbox Created";
+            message = data.data?.full_address || "A new inbox was created";
+          } else if (type === "inbox.expired") {
+            title = "Inbox Expired";
+            message = data.data?.full_address || "An inbox has expired";
+          } else {
+            title = type.replace(/\./g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
+            message = data.data?.message || JSON.stringify(data.data || {}).slice(0, 100);
+          }
+          const notif: Notification = { id: crypto.randomUUID(), type, title, message, timestamp: new Date().toISOString(), read: false };
+          setNotifications((prev) => [notif, ...prev].slice(0, 100));
+        } catch {}
+      };
+      ws.onclose = () => {
+        wsRef.current = null;
+        if (disposed) return;
+        reconnectRef.current = setTimeout(doConnect, 5000);
+      };
+      ws.onerror = () => ws.close();
+    }
+
+    doConnect();
     return () => {
-      wsRef.current?.close();
+      disposed = true;
       if (reconnectRef.current) clearTimeout(reconnectRef.current);
+      wsRef.current?.close();
+      wsRef.current = null;
     };
-  }, [connect]);
+  }, [user]);
 
   const markAllRead = useCallback(() => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
