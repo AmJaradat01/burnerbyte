@@ -23,6 +23,7 @@ type UserContext struct {
 	UserID        uuid.UUID
 	Email         string
 	IsSystemAdmin bool
+	APIKeyScopes  []string // non-nil only for API key auth
 }
 
 // APIKeyRepo is the minimal interface for API key validation.
@@ -83,7 +84,8 @@ func Middleware(tm *TokenManager, userRepo UserRepo, apikeyRepo APIKeyRepo) func
 				ctx := context.WithValue(r.Context(), UserContextKey, &UserContext{
 					UserID:        user.ID,
 					Email:         user.Email,
-					IsSystemAdmin: user.IsSystemAdmin,
+					IsSystemAdmin: false, // API keys never grant system admin
+					APIKeyScopes:  key.Scopes,
 				})
 				next.ServeHTTP(w, r.WithContext(ctx))
 				return
@@ -175,6 +177,25 @@ func RequireSystemAdmin(next http.Handler) http.Handler {
 func GetUser(ctx context.Context) *UserContext {
 	uc, _ := ctx.Value(UserContextKey).(*UserContext)
 	return uc
+}
+
+// HasScope checks if the user context has the required scope.
+// Returns true for JWT-authenticated users (no scope restrictions).
+// Returns false for API key users missing the required scope.
+func HasScope(ctx context.Context, scope string) bool {
+	uc := GetUser(ctx)
+	if uc == nil {
+		return false
+	}
+	if uc.APIKeyScopes == nil {
+		return true // JWT auth — no scope restrictions
+	}
+	for _, s := range uc.APIKeyScopes {
+		if s == scope {
+			return true
+		}
+	}
+	return false
 }
 
 // writeJSON is a minimal helper to avoid importing handler package.

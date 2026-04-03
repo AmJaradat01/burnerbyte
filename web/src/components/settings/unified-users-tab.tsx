@@ -18,7 +18,7 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ErrorState } from "@/components/error-state";
 import { Pagination } from "@/components/pagination";
 import { useRoles } from "@/hooks/use-roles";
-import { AlertTriangle, Calendar, CheckCircle2, Clock, RefreshCw, Shield, Trash2, UserPlus, Users, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock, RefreshCw, Shield, Trash2, UserPlus, Users, XCircle } from "lucide-react";
 import type { User, Membership, Invite, PaginatedResponse } from "@/types";
 
 const ROLE_COLORS: Record<string, string> = {
