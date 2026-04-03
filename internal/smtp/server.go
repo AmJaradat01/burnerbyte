@@ -77,16 +77,19 @@ func (s *Server) Enqueue(email *InboundEmail) bool {
 func (s *Server) worker(ctx context.Context, id int) {
 	slog.Debug("smtp worker started", "worker_id", id)
 	for email := range s.queue {
-		// Use a fresh context for draining — the parent ctx may be cancelled
-		processCtx := ctx
-		if ctx.Err() != nil {
-			var cancel context.CancelFunc
-			processCtx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
-			defer cancel()
-		}
-		if err := s.handler.Process(processCtx, email); err != nil {
-			slog.Error("smtp worker: failed to process email",
-				"worker_id", id, "to", email.To, "error", err)
-		}
+		s.processOne(ctx, id, email)
+	}
+}
+
+func (s *Server) processOne(ctx context.Context, id int, email *InboundEmail) {
+	processCtx := ctx
+	if ctx.Err() != nil {
+		var cancel context.CancelFunc
+		processCtx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel() // Now correctly scoped to this function call
+	}
+	if err := s.handler.Process(processCtx, email); err != nil {
+		slog.Error("smtp worker: failed to process email",
+			"worker_id", id, "to", email.To, "error", err)
 	}
 }
