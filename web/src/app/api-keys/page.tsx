@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { api } from "@/lib/api";
 import { copyToClipboard } from "@/lib/clipboard";
 import { useOrgStore } from "@/stores/org-store";
@@ -60,7 +61,7 @@ export default function ApiKeysPage() {
     onSuccess: () => toast.success("API key revoked"),
   });
 
-  if (!currentTeam) return <p className="text-muted-foreground">Select a team to manage API keys.</p>;
+  if (!currentTeam) return <div className="text-center py-12 space-y-3"><p className="text-muted-foreground">Select a team to manage API keys.</p><Link href="/teams"><Button variant="outline" size="sm">Go to Teams</Button></Link></div>;
 
   return (
     <div className="space-y-6">
