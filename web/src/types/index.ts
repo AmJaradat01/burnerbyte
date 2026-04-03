@@ -60,6 +60,7 @@ export interface Domain {
   verification_record?: string;
   mx_target?: string;
   dns_last_checked_at?: string;
+  settings?: { attachments_enabled?: string };
   created_at: string;
   active_inboxes: number;
   team_count: number;
