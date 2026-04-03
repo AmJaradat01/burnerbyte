@@ -22,6 +22,7 @@ import (
 type Dispatcher struct {
 	webhookRepo *postgres.WebhookRepo
 	client      *http.Client
+	timeout     time.Duration
 	maxRetries  int
 }
 
@@ -35,6 +36,7 @@ func NewDispatcher(webhookRepo *postgres.WebhookRepo, timeout time.Duration, max
 	return &Dispatcher{
 		webhookRepo: webhookRepo,
 		client:      &http.Client{Timeout: timeout},
+		timeout:     timeout,
 		maxRetries:  maxRetries,
 	}
 }
@@ -54,14 +56,23 @@ func (d *Dispatcher) Dispatch(ctx context.Context, teamID uuid.UUID, event strin
 	}
 
 	payload := EventPayload{Event: event, Timestamp: time.Now(), Data: data}
-	body, _ := json.Marshal(payload)
+	body, err := json.Marshal(payload)
+	if err != nil {
+		slog.Error("webhook: failed to marshal payload", "event", event, "error", err)
+		return
+	}
 
 	for _, wh := range webhooks {
-		go d.deliver(ctx, wh, event, body)
+		go d.deliver(wh, event, body)
 	}
 }
 
-func (d *Dispatcher) deliver(ctx context.Context, wh domain.Webhook, event string, body []byte) {
+func (d *Dispatcher) deliver(wh domain.Webhook, event string, body []byte) {
+	// Use background context — webhook delivery is fire-and-forget,
+	// must not be cancelled when the parent HTTP/SMTP request completes
+	ctx, cancel := context.WithTimeout(context.Background(), d.timeout*time.Duration(d.maxRetries+1))
+	defer cancel()
+
 	idempotencyKey := fmt.Sprintf("%s:%s", uuid.New(), wh.ID)
 	backoffs := []time.Duration{0, 1 * time.Second, 5 * time.Second, 25 * time.Second}
 
@@ -71,11 +82,19 @@ func (d *Dispatcher) deliver(ctx context.Context, wh domain.Webhook, event strin
 			if idx >= len(backoffs) {
 				idx = len(backoffs) - 1
 			}
-			time.Sleep(backoffs[idx])
+			select {
+			case <-time.After(backoffs[idx]):
+			case <-ctx.Done():
+				return
+			}
 		}
 
 		start := time.Now()
-		req, _ := http.NewRequestWithContext(ctx, "POST", wh.URL, bytes.NewReader(body))
+		req, err := http.NewRequestWithContext(ctx, "POST", wh.URL, bytes.NewReader(body))
+		if err != nil {
+			slog.Error("webhook: failed to create request", "url", wh.URL, "error", err)
+			return
+		}
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-BurnerByte-Signature", sign(body, wh.Secret))
 		req.Header.Set("X-BurnerByte-Event", event)
