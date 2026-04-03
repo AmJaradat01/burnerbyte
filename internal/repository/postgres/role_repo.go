@@ -118,3 +118,16 @@ func (r *RoleRepo) SetRolePermissions(ctx context.Context, roleID uuid.UUID, per
 	}
 	return nil
 }
+
+func (r *RoleRepo) CreateRole(ctx context.Context, role *Role) error {
+	_, err := r.db.Exec(ctx,
+		`INSERT INTO roles (id, scope, value, label, description, rank, is_system) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		role.ID, role.Scope, role.Value, role.Label, role.Description, role.Rank, role.IsSystem)
+	return err
+}
+
+func (r *RoleRepo) DeleteRole(ctx context.Context, id uuid.UUID) error {
+	// Only allow deleting non-system roles
+	_, err := r.db.Exec(ctx, `DELETE FROM roles WHERE id = $1 AND is_system = FALSE`, id)
+	return err
+}

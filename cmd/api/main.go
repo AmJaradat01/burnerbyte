@@ -364,6 +364,60 @@ func main() {
 				json.NewEncoder(w).Encode(map[string]string{"message": "role updated"})
 			})
 
+			r.With(auth.RequireSystemAdmin).Post("/admin/roles", func(w http.ResponseWriter, r *http.Request) {
+				var input struct {
+					Scope       string   `json:"scope"`
+					Value       string   `json:"value"`
+					Label       string   `json:"label"`
+					Description string   `json:"description"`
+					Rank        int      `json:"rank"`
+					Permissions []string `json:"permissions"`
+				}
+				if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+					w.WriteHeader(http.StatusBadRequest)
+					json.NewEncoder(w).Encode(map[string]string{"error": "invalid request body"})
+					return
+				}
+				if input.Scope != "org" && input.Scope != "team" {
+					w.WriteHeader(http.StatusBadRequest)
+					json.NewEncoder(w).Encode(map[string]string{"error": "scope must be org or team"})
+					return
+				}
+				if input.Value == "" || input.Label == "" {
+					w.WriteHeader(http.StatusBadRequest)
+					json.NewEncoder(w).Encode(map[string]string{"error": "value and label are required"})
+					return
+				}
+				role := &postgres.Role{ID: uuid.New(), Scope: input.Scope, Value: input.Value, Label: input.Label, Description: input.Description, Rank: input.Rank, IsSystem: false}
+				if err := roleRepo.CreateRole(r.Context(), role); err != nil {
+					w.WriteHeader(http.StatusBadRequest)
+					json.NewEncoder(w).Encode(map[string]string{"error": "failed to create role (value may already exist)"})
+					return
+				}
+				if len(input.Permissions) > 0 {
+					_ = roleRepo.SetRolePermissions(r.Context(), role.ID, input.Permissions)
+				}
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusCreated)
+				json.NewEncoder(w).Encode(role)
+			})
+
+			r.With(auth.RequireSystemAdmin).Delete("/admin/roles/{roleId}", func(w http.ResponseWriter, r *http.Request) {
+				roleID, err := uuid.Parse(chi.URLParam(r, "roleId"))
+				if err != nil {
+					w.WriteHeader(http.StatusBadRequest)
+					json.NewEncoder(w).Encode(map[string]string{"error": "invalid role ID"})
+					return
+				}
+				if err := roleRepo.DeleteRole(r.Context(), roleID); err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					json.NewEncoder(w).Encode(map[string]string{"error": "failed to delete role"})
+					return
+				}
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(map[string]string{"message": "role deleted"})
+			})
+
 			// WebSocket
 			r.Get("/ws/inboxes/{inboxId}", wsHandler.InboxWS)
 			r.Get("/ws/notifications", notifWSHandler.NotificationsWS)
