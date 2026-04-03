@@ -10,6 +10,8 @@ import { copyToClipboard } from "@/lib/clipboard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/error-state";
 import { toast } from "sonner";
@@ -249,6 +251,9 @@ export default function DomainDetailPage() {
               </dl>
             </CardContent>
           </Card>
+
+          {/* Domain Settings */}
+          <DomainSettingsCard domain={domain} orgId={org!.id} />
         </>
       )}
     </div>
@@ -268,6 +273,54 @@ function QuickStat({ icon: Icon, label, value, accent }: { icon: typeof Globe; l
           <p className="text-lg font-bold tabular-nums">{typeof value === "number" ? value.toLocaleString() : value}</p>
           <p className="text-[11px] text-muted-foreground">{label}</p>
         </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function DomainSettingsCard({ domain: d, orgId }: { domain: Domain; orgId: string }) {
+  const qc = useQueryClient();
+  const [attachments, setAttachments] = useState(d.settings?.attachments_enabled ?? "inherit");
+  const [saving, setSaving] = useState(false);
+
+  const dirty = attachments !== (d.settings?.attachments_enabled ?? "inherit");
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await api.patch(`/orgs/${orgId}/domains/${d.id}`, { settings: { attachments_enabled: attachments } });
+      qc.invalidateQueries({ queryKey: ["domain", d.id] });
+      toast.success("Domain settings updated");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update settings");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Domain Settings</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label>Attachments</Label>
+          <Select value={attachments} onValueChange={setAttachments}>
+            <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="inherit">Inherit from org</SelectItem>
+              <SelectItem value="enabled">Enabled</SelectItem>
+              <SelectItem value="disabled">Disabled</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">Controls whether email attachments are stored for inboxes on this domain.</p>
+        </div>
+        {dirty && (
+          <Button onClick={save} disabled={saving} size="sm">
+            {saving ? "Saving…" : "Save Settings"}
+          </Button>
+        )}
       </CardContent>
     </Card>
   );
