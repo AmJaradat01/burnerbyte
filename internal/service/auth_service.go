@@ -344,6 +344,7 @@ func (s *AuthService) RevokeAllSessions(ctx context.Context, userID uuid.UUID) e
 }
 
 func (s *AuthService) ForgotPassword(ctx context.Context, input domain.ForgotPasswordInput) error {
+	input.Email = strings.ToLower(strings.TrimSpace(input.Email))
 	user, err := s.userRepo.GetByEmail(ctx, input.Email)
 	if err != nil {
 		return nil // Don't reveal whether email exists
