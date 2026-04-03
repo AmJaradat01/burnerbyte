@@ -15,6 +15,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"gitlab.com/burnerbyte/burnerbyte/internal/auth"
+	"gitlab.com/burnerbyte/burnerbyte/internal/auth/rbac"
 	"gitlab.com/burnerbyte/burnerbyte/internal/config"
 	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
 	"gitlab.com/burnerbyte/burnerbyte/internal/service"
@@ -28,7 +29,7 @@ type AdminHandler struct {
 	authSvc      *service.AuthService
 	sysConfig    *postgres.SystemConfigRepo
 	cfg          *config.Config
-	cfgMu        sync.Mutex
+	cfgMu        sync.RWMutex
 	pool         *pgxpool.Pool
 	rdb          *redis.Client
 	s3           *minio.Client
@@ -166,8 +167,9 @@ func (h *AdminHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AdminHandler) GetSSOConfig(w http.ResponseWriter, r *http.Request) {
-	// Return current SSO config (mask secret)
+	h.cfgMu.RLock()
 	masked := h.cfg.SSO
+	h.cfgMu.RUnlock()
 	if masked.ClientSecret != "" {
 		masked.ClientSecret = "••••••••"
 	}
@@ -187,7 +189,8 @@ type PlatformSettings struct {
 }
 
 func (h *AdminHandler) GetPlatformSettings(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, PlatformSettings{
+	h.cfgMu.RLock()
+	ps := PlatformSettings{
 		AllowRegistration:    h.cfg.Defaults.AllowRegistration,
 		EmailVerification:    h.cfg.EmailVerification.Enabled,
 		PasswordMinLength:    h.cfg.Password.MinLength,
@@ -197,7 +200,9 @@ func (h *AdminHandler) GetPlatformSettings(w http.ResponseWriter, r *http.Reques
 		PasswordRequireSpec:  h.cfg.Password.RequireSpecial,
 		LockoutMaxAttempts:   h.cfg.Lockout.MaxAttempts,
 		LockoutDurationMins:  int(h.cfg.Lockout.Duration.Minutes()),
-	})
+	}
+	h.cfgMu.RUnlock()
+	writeJSON(w, http.StatusOK, ps)
 }
 
 func (h *AdminHandler) UpdatePlatformSettings(w http.ResponseWriter, r *http.Request) {
@@ -246,6 +251,16 @@ func (h *AdminHandler) UpdateSSOConfig(w http.ResponseWriter, r *http.Request) {
 		input.ClientSecret = h.cfg.SSO.ClientSecret
 	}
 	h.cfgMu.Unlock()
+	// Validate default org role if set
+	if input.DefaultOrgRole != "" && !rbac.ValidOrgRole(input.DefaultOrgRole) {
+		writeError(w, http.StatusBadRequest, "invalid default_org_role")
+		return
+	}
+	// Cap auto-provision role to member or admin (never owner)
+	if input.DefaultOrgRole == rbac.OrgOwner {
+		writeError(w, http.StatusBadRequest, "default_org_role cannot be owner")
+		return
+	}
 	if err := h.sysConfig.Set(r.Context(), "sso", input); err != nil {
 		slog.Error("failed to save SSO config", "error", err)
 		writeError(w, http.StatusInternalServerError, "failed to save SSO config")
