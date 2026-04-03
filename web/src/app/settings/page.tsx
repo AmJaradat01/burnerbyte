@@ -43,14 +43,12 @@ export default function SettingsPage() {
           <TabsTrigger value="users" className="gap-1.5"><Users className="h-3.5 w-3.5" /> Users</TabsTrigger>
           {isAdmin && <TabsTrigger value="roles" className="gap-1.5"><Shield className="h-3.5 w-3.5" /> Roles</TabsTrigger>}
           {isAdmin && <TabsTrigger value="overview" className="gap-1.5"><Activity className="h-3.5 w-3.5" /> System</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="orgs" className="gap-1.5"><Building2 className="h-3.5 w-3.5" /> Organizations</TabsTrigger>}
           {isAdmin && <TabsTrigger value="health" className="gap-1.5"><Monitor className="h-3.5 w-3.5" /> Health</TabsTrigger>}
         </TabsList>
         <TabsContent value="general"><GeneralTab org={currentOrg} onSaved={fetchOrgs} /></TabsContent>
         <TabsContent value="users"><UnifiedUsersTab orgId={currentOrg.id} /></TabsContent>
         {isAdmin && <TabsContent value="roles"><RolesTab /></TabsContent>}
         {isAdmin && <TabsContent value="overview"><OverviewTab /></TabsContent>}
-        {isAdmin && <TabsContent value="orgs"><OrgsTab /></TabsContent>}
         {isAdmin && <TabsContent value="health"><HealthTab /></TabsContent>}
       </Tabs>
     </div>
@@ -572,116 +570,16 @@ function PlatformSettingsCard() {
   );
 }
 
-function OrgsTab() {
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["admin-orgs"],
-    queryFn: () => api.get<PaginatedResponse<Organization>>("/admin/orgs", { page: "1", per_page: "1" }),
-  });
-
-  const org = data?.data?.[0];
-  const [name, setName] = useState("");
-  const [logoUrl, setLogoUrl] = useState("");
-  const [saving, setSaving] = useState(false);
-
-  // Sync form state when org loads or refreshes
-  useEffect(() => {
-    if (org) { setName(org.name); setLogoUrl(org.logo_url ?? ""); }
-  }, [org]);
-
-  const dirty = org ? (name !== org.name || logoUrl !== (org.logo_url ?? "")) : false;
-
-  const save = async () => {
-    if (!org) return;
-    setSaving(true);
-    try {
-      await api.patch(`/orgs/${org.id}`, { name, logo_url: logoUrl || undefined });
-      toast.success("Organization updated");
-      refetch();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Update failed");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  if (isError) return <ErrorState message="Failed to load organization" onRetry={() => refetch()} />;
-  if (isLoading || !org) return <div className="space-y-4"><Skeleton className="h-40 w-full" /><Skeleton className="h-40 w-full" /></div>;
-
-  return (
-    <div className="grid gap-6 md:grid-cols-2">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Organization Details</CardTitle>
-          <CardDescription>View and update your organization info.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-4 pb-2">
-            {logoUrl ? (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img src={logoUrl} alt="" className="h-14 w-14 rounded-lg border object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-            ) : (
-              <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-primary/10 text-xl font-bold text-primary">
-                {name.charAt(0).toUpperCase()}
-              </div>
-            )}
-            <div>
-              <p className="font-semibold">{name}</p>
-              <p className="text-xs text-muted-foreground font-mono">{org.slug}</p>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label>Name</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label>Slug</Label>
-            <Input value={org.slug} disabled className="bg-muted font-mono" />
-          </div>
-          <div className="space-y-2">
-            <Label>Logo URL</Label>
-            <Input value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="https://..." />
-          </div>
-          {dirty && (
-            <Button onClick={save} disabled={saving} className="w-full">
-              {saving ? "Saving…" : "Update Organization"}
-            </Button>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2"><Info className="h-4 w-4" /> Metadata</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {[
-            { label: "ID", value: org.id, mono: true },
-            { label: "Created", value: new Date(org.created_at).toLocaleString() },
-            { label: "Updated", value: new Date(org.updated_at).toLocaleString() },
-            { label: "Default TTL", value: org.settings.default_inbox_ttl || "System default" },
-            { label: "Max TTL", value: org.settings.max_inbox_ttl || "System default" },
-            { label: "Attachments", value: (org.settings.attachments_enabled ?? true) ? "Enabled" : "Disabled" },
-            { label: "SSO", value: org.settings.enforce_sso ? "Enforced" : "Optional" },
-          ].map((row) => (
-            <div key={row.label} className="flex items-center justify-between py-1.5 border-b last:border-0">
-              <span className="text-sm text-muted-foreground">{row.label}</span>
-              <span className={`text-sm font-medium ${row.mono ? "font-mono text-xs" : ""}`}>{row.value}</span>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
+const SERVICE_ICONS: Record<string, typeof Database> = {
+  postgres: Database,
+  redis: Database,
+  minio: HardDrive,
+};
 
 interface HealthResponse {
-  services?: Record<string, { status: string; latency: string }>;
-  uptime?: string;
-  // Legacy flat format fallback
-  [key: string]: unknown;
+  services: Record<string, { status: string; latency: string }>;
+  uptime: string;
 }
-
-const SERVICE_ICONS: Record<string, typeof Database> = { postgres: Database, redis: HardDrive, minio: Globe };
 
 function HealthTab() {
   const { data, isLoading, isError, refetch } = useQuery({
