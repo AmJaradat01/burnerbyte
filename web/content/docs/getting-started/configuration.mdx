@@ -85,6 +85,12 @@ Mailer config can be overridden at runtime via the setup wizard. Values are stor
 | `minio.bucket` | `BB_MINIO_BUCKET` | Bucket name |
 | `minio.use_ssl` | `BB_MINIO_USE_SSL` | Enable SSL |
 
+## Encryption
+
+| Key | Env Var | Default | Description |
+|---|---|---|---|
+| `encryption.key` | `BB_ENCRYPTION_KEY` | — | **Required.** 32-byte hex-encoded key for encrypting sensitive data (SSO secrets, etc.) |
+
 ## SSO / OIDC
 
 | Key | Env Var | Description |
@@ -93,6 +99,12 @@ Mailer config can be overridden at runtime via the setup wizard. Values are stor
 | `sso.client_id` | `BB_SSO_CLIENT_ID` | OAuth client ID |
 | `sso.client_secret` | `BB_SSO_CLIENT_SECRET` | OAuth client secret |
 | `sso.redirect_url` | `BB_SSO_REDIRECT_URL` | Callback URL |
+| `sso.tenant_id` | `BB_SSO_TENANT_ID` | OIDC tenant/realm identifier |
+| `sso.issuer_url` | `BB_SSO_ISSUER_URL` | OIDC issuer URL for discovery |
+| `sso.auto_provision` | `BB_SSO_AUTO_PROVISION` | Auto-create users on first SSO login |
+| `sso.default_org_role` | `BB_SSO_DEFAULT_ORG_ROLE` | Default org role for SSO-provisioned users |
+| `sso.default_team_role` | `BB_SSO_DEFAULT_TEAM_ROLE` | Default team role for SSO-provisioned users |
+| `sso.allowed_domains` | `BB_SSO_ALLOWED_DOMAINS` | Comma-separated allowed email domains |
 
 ## Rate Limiting
 
@@ -126,6 +138,8 @@ Mailer config can be overridden at runtime via the setup wizard. Values are stor
 | Key | Env Var | Default | Description |
 |---|---|---|---|
 | `defaults.attachments_enabled` | `BB_DEFAULTS_ATTACHMENTS_ENABLED` | `true` | Global attachment toggle |
+| `defaults.allow_registration` | `BB_DEFAULTS_ALLOW_REGISTRATION` | `true` | Allow new user registration |
+| `defaults.enforce_sso` | `BB_DEFAULTS_ENFORCE_SSO` | `false` | Enforce SSO for all users |
 | `defaults.default_inbox_ttl` | `BB_DEFAULTS_DEFAULT_INBOX_TTL` | `10m` | Default inbox lifetime |
 | `defaults.max_inbox_ttl` | `BB_DEFAULTS_MAX_INBOX_TTL` | `24h` | Maximum inbox lifetime |
 | `defaults.max_attachment_size_mb` | `BB_DEFAULTS_MAX_ATTACHMENT_SIZE_MB` | `25` | Max attachment size |
