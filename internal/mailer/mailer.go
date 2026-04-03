@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"log/slog"
 	"net/smtp"
+	"sync"
 	"time"
 
 	"gitlab.com/burnerbyte/burnerbyte/internal/config"
@@ -17,6 +18,7 @@ import (
 var templateFS embed.FS
 
 type Mailer struct {
+	mu        sync.RWMutex
 	cfg       config.MailerConfig
 	templates *template.Template
 }
@@ -29,8 +31,14 @@ func New(cfg config.MailerConfig) (*Mailer, error) {
 	return &Mailer{cfg: cfg, templates: tmpl}, nil
 }
 
+func (m *Mailer) getConfig() config.MailerConfig {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.cfg
+}
+
 func (m *Mailer) isConfigured() bool {
-	return m.cfg.Host != ""
+	return m.getConfig().Host != ""
 }
 
 func (m *Mailer) Send(to, subject, templateName string, data any) error {
@@ -39,40 +47,48 @@ func (m *Mailer) Send(to, subject, templateName string, data any) error {
 		return fmt.Errorf("execute template %s: %w", templateName, err)
 	}
 
-	if !m.isConfigured() {
+	cfg := m.getConfig()
+	if cfg.Host == "" {
 		slog.Info("mailer not configured, logging email",
 			"to", to, "subject", subject, "body_preview", truncate(body.String(), 200))
 		return nil
 	}
 
-	msg := fmt.Sprintf("From: %s\r\nTo: %s\r\nSubject: %s\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n%s",
-		m.cfg.From, to, subject, body.String())
+	// RFC 5322 compliant headers including Date and Message-ID
+	msgID := fmt.Sprintf("<%d.%s@burnerbyte>", time.Now().UnixNano(), to)
+	msg := fmt.Sprintf("From: %s\r\nTo: %s\r\nSubject: %s\r\nDate: %s\r\nMessage-ID: %s\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n%s",
+		cfg.From, to, subject, time.Now().Format(time.RFC1123Z), msgID, body.String())
 
-	addr := fmt.Sprintf("%s:%d", m.cfg.Host, m.cfg.Port)
+	addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
 
 	var auth smtp.Auth
-	if m.cfg.Username != "" {
-		auth = smtp.PlainAuth("", m.cfg.Username, m.cfg.Password, m.cfg.Host)
+	if cfg.Username != "" {
+		auth = smtp.PlainAuth("", cfg.Username, cfg.Password, cfg.Host)
 	}
 
-	if m.cfg.TLS {
-		return m.sendTLS(addr, auth, to, []byte(msg))
+	if cfg.TLS {
+		return m.sendTLS(addr, auth, cfg.From, to, []byte(msg))
 	}
 
-	return smtp.SendMail(addr, auth, m.cfg.From, []string{to}, []byte(msg))
+	return smtp.SendMail(addr, auth, cfg.From, []string{to}, []byte(msg))
 }
 
-func (m *Mailer) sendTLS(addr string, auth smtp.Auth, to string, msg []byte) error {
-	conn, err := tls.Dial("tcp", addr, &tls.Config{ServerName: m.cfg.Host})
+func (m *Mailer) sendTLS(addr string, auth smtp.Auth, from, to string, msg []byte) error {
+	cfg := m.getConfig()
+	conn, err := tls.Dial("tcp", addr, &tls.Config{ServerName: cfg.Host})
 	if err != nil {
 		return fmt.Errorf("tls dial: %w", err)
 	}
 
-	client, err := smtp.NewClient(conn, m.cfg.Host)
+	client, err := smtp.NewClient(conn, cfg.Host)
 	if err != nil {
+		conn.Close() // Prevent TLS connection leak
 		return fmt.Errorf("smtp client: %w", err)
 	}
-	defer client.Close()
+	defer func() {
+		client.Quit() // Send QUIT before closing per SMTP protocol
+		client.Close()
+	}()
 
 	if auth != nil {
 		if err := client.Auth(auth); err != nil {
@@ -80,7 +96,7 @@ func (m *Mailer) sendTLS(addr string, auth smtp.Auth, to string, msg []byte) err
 		}
 	}
 
-	if err := client.Mail(m.cfg.From); err != nil {
+	if err := client.Mail(from); err != nil {
 		return err
 	}
 	if err := client.Rcpt(to); err != nil {
@@ -125,5 +141,7 @@ func HumanDuration(d time.Duration) string {
 }
 
 func (m *Mailer) Reconfigure(cfg config.MailerConfig) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.cfg = cfg
 }
