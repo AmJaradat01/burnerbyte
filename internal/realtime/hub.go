@@ -14,8 +14,13 @@ type Message struct {
 }
 
 type Client struct {
-	InboxID uuid.UUID
-	Send    chan []byte
+	InboxID  uuid.UUID
+	Send     chan []byte
+	closeOnce sync.Once
+}
+
+func (c *Client) Close() {
+	c.closeOnce.Do(func() { close(c.Send) })
 }
 
 type Hub struct {
@@ -46,7 +51,7 @@ func (h *Hub) Unregister(client *Client) {
 			delete(h.clients, client.InboxID)
 		}
 	}
-	close(client.Send)
+	client.Close() // Safe: sync.Once prevents double-close panic
 }
 
 func (h *Hub) Broadcast(inboxID uuid.UUID, msg interface{}) {
@@ -56,8 +61,7 @@ func (h *Hub) Broadcast(inboxID uuid.UUID, msg interface{}) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
-	clients := h.clients[inboxID]
-	for client := range clients {
+	for client := range h.clients[inboxID] {
 		select {
 		case client.Send <- data:
 		default:
@@ -71,7 +75,7 @@ func (h *Hub) CloseAll() {
 	defer h.mu.Unlock()
 	for _, clients := range h.clients {
 		for client := range clients {
-			close(client.Send)
+			client.Close() // Safe: sync.Once prevents double-close
 		}
 	}
 	h.clients = make(map[uuid.UUID]map[*Client]bool)
