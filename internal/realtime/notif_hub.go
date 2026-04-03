@@ -9,8 +9,13 @@ import (
 )
 
 type NotifClient struct {
-	UserID uuid.UUID
-	Send   chan []byte
+	UserID    uuid.UUID
+	Send      chan []byte
+	closeOnce sync.Once
+}
+
+func (c *NotifClient) Close() {
+	c.closeOnce.Do(func() { close(c.Send) })
 }
 
 type NotifHub struct {
@@ -41,14 +46,12 @@ func (h *NotifHub) Unregister(c *NotifClient) {
 			delete(h.clients, c.UserID)
 		}
 	}
-	close(c.Send)
+	c.Close() // Safe: sync.Once prevents double-close panic
 }
 
 func (h *NotifHub) Notify(userID uuid.UUID, msg Message) {
 	data, err := json.Marshal(msg)
-	if err != nil {
-		return
-	}
+	if err != nil { return }
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	for c := range h.clients[userID] {
@@ -64,7 +67,7 @@ func (h *NotifHub) CloseAll() {
 	defer h.mu.Unlock()
 	for _, clients := range h.clients {
 		for c := range clients {
-			close(c.Send)
+			c.Close() // Safe: sync.Once prevents double-close
 		}
 	}
 	h.clients = make(map[uuid.UUID]map[*NotifClient]bool)
