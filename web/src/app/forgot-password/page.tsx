@@ -35,7 +35,8 @@ export default function ForgotPasswordPage() {
             <CardTitle>Check your email</CardTitle>
             <CardDescription>If an account exists for {email}, we sent a password reset link.</CardDescription>
           </CardHeader>
-          <CardFooter>
+          <CardFooter className="flex gap-4">
+            <Button variant="outline" onClick={() => setSent(false)}>Try again</Button>
             <Link href="/login" className="text-sm text-muted-foreground hover:underline">Back to sign in</Link>
           </CardFooter>
         </Card>
