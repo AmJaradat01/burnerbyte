@@ -14,6 +14,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
@@ -204,12 +205,19 @@ func main() {
 		authHandler.PublicRoutes(r, rateLimiter)
 		r.Get("/invites/{token}/preview", orgHandler.PreviewInvite)
 
-		// Roles (public, no auth needed — just returns role definitions)
+		// Roles (public — returns role definitions from DB)
+		roleRepo := postgres.NewRoleRepo(pool)
 		r.Get("/roles", func(w http.ResponseWriter, r *http.Request) {
+			orgRoles, _ := roleRepo.ListRoles(r.Context(), "org")
+			teamRoles, _ := roleRepo.ListRoles(r.Context(), "team")
+			orgPerms, _ := roleRepo.ListPermissions(r.Context(), "org")
+			teamPerms, _ := roleRepo.ListPermissions(r.Context(), "team")
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]any{
-				"org_roles":  rbac.OrgRoles(),
-				"team_roles": rbac.TeamRoles(),
+				"org_roles":        orgRoles,
+				"team_roles":       teamRoles,
+				"org_permissions":  orgPerms,
+				"team_permissions": teamPerms,
 			})
 		})
 
@@ -319,6 +327,42 @@ func main() {
 			r.With(auth.RequireSystemAdmin).Put("/admin/platform", adminHandler.UpdatePlatformSettings)
 			r.With(auth.RequireSystemAdmin).Get("/admin/sso", adminHandler.GetSSOConfig)
 			r.With(auth.RequireSystemAdmin).Put("/admin/sso", adminHandler.UpdateSSOConfig)
+
+			// Role management (admin only)
+			r.With(auth.RequireSystemAdmin).Patch("/admin/roles/{roleId}", func(w http.ResponseWriter, r *http.Request) {
+				roleID, err := uuid.Parse(chi.URLParam(r, "roleId"))
+				if err != nil {
+					w.WriteHeader(http.StatusBadRequest)
+					json.NewEncoder(w).Encode(map[string]string{"error": "invalid role ID"})
+					return
+				}
+				var input struct {
+					Label       string   `json:"label"`
+					Description string   `json:"description"`
+					Permissions []string `json:"permissions"`
+				}
+				if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+					w.WriteHeader(http.StatusBadRequest)
+					json.NewEncoder(w).Encode(map[string]string{"error": "invalid request body"})
+					return
+				}
+				if input.Label != "" || input.Description != "" {
+					if err := roleRepo.UpdateRole(r.Context(), roleID, input.Label, input.Description); err != nil {
+						w.WriteHeader(http.StatusInternalServerError)
+						json.NewEncoder(w).Encode(map[string]string{"error": "failed to update role"})
+						return
+					}
+				}
+				if input.Permissions != nil {
+					if err := roleRepo.SetRolePermissions(r.Context(), roleID, input.Permissions); err != nil {
+						w.WriteHeader(http.StatusInternalServerError)
+						json.NewEncoder(w).Encode(map[string]string{"error": "failed to update permissions"})
+						return
+					}
+				}
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(map[string]string{"message": "role updated"})
+			})
 
 			// WebSocket
 			r.Get("/ws/inboxes/{inboxId}", wsHandler.InboxWS)
