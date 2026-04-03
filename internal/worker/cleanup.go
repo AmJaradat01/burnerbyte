@@ -38,9 +38,8 @@ func CleanupJob(inboxRepo *postgres.InboxRepo, emailRepo *postgres.EmailRepo, at
 
 		inboxes, err := inboxRepo.DeleteExpired(ctx)
 		if err != nil {
-			return err
-		}
-		if inboxes > 0 {
+			slog.Error("cleanup: failed to delete expired inboxes", "error", err)
+		} else if inboxes > 0 {
 			slog.Info("cleanup: expired inboxes deleted", "count", inboxes)
 		}
 
