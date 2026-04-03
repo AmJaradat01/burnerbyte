@@ -82,6 +82,7 @@ func (h *NotifWSHandler) NotificationsWS(w http.ResponseWriter, r *http.Request)
 	}()
 
 	// Reader (just handles pong/close)
+	conn.SetReadLimit(512)
 	conn.SetReadDeadline(time.Now().Add(wsPongWait))
 	conn.SetPongHandler(func(string) error {
 		conn.SetReadDeadline(time.Now().Add(wsPongWait))
