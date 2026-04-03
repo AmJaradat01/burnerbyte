@@ -31,7 +31,8 @@ interface DomainAssignment {
 }
 
 export default function TeamsPage() {
-  const { currentOrg, currentTeam, setCurrentTeam } = useOrgStore();
+  const { currentOrg } = useOrgStore();
+  const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
 
   const { data: teamsData, isLoading } = useQuery({
     queryKey: ["teams", currentOrg?.id],
@@ -42,24 +43,24 @@ export default function TeamsPage() {
   if (!currentOrg) return <p className="text-muted-foreground">Select an organization first.</p>;
 
   // Team detail view
-  if (currentTeam) {
+  if (selectedTeam) {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => setCurrentTeam(null as unknown as Team)} className="gap-1.5">
+          <Button variant="ghost" size="sm" onClick={() => setSelectedTeam(null)} className="gap-1.5">
             <ArrowLeft className="h-4 w-4" /> Teams
           </Button>
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-sm font-bold text-primary">
-            {currentTeam.name.charAt(0).toUpperCase()}
+            {selectedTeam.name.charAt(0).toUpperCase()}
           </div>
           <div>
-            <h1 className="text-xl font-bold">{currentTeam.name}</h1>
-            <p className="text-xs text-muted-foreground font-mono">{currentTeam.slug}</p>
+            <h1 className="text-xl font-bold">{selectedTeam.name}</h1>
+            <p className="text-xs text-muted-foreground font-mono">{selectedTeam.slug}</p>
           </div>
           <div className="flex items-center gap-2 ml-auto text-xs text-muted-foreground">
-            <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {currentTeam.member_count}</span>
-            <span className="flex items-center gap-1"><Globe className="h-3 w-3" /> {currentTeam.domain_count}</span>
-            <span className="flex items-center gap-1"><Inbox className="h-3 w-3" /> {currentTeam.active_inboxes}</span>
+            <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {selectedTeam.member_count}</span>
+            <span className="flex items-center gap-1"><Globe className="h-3 w-3" /> {selectedTeam.domain_count}</span>
+            <span className="flex items-center gap-1"><Inbox className="h-3 w-3" /> {selectedTeam.active_inboxes}</span>
           </div>
         </div>
         <Tabs defaultValue="members">
@@ -68,9 +69,9 @@ export default function TeamsPage() {
             <TabsTrigger value="domains" className="gap-1.5"><Globe className="h-3.5 w-3.5" /> Domains</TabsTrigger>
             <TabsTrigger value="settings" className="gap-1.5"><Settings className="h-3.5 w-3.5" /> Settings</TabsTrigger>
           </TabsList>
-          <TabsContent value="members"><TeamMembersTab orgId={currentOrg.id} teamId={currentTeam.id} /></TabsContent>
-          <TabsContent value="domains"><DomainAssignmentsTab orgId={currentOrg.id} teamId={currentTeam.id} /></TabsContent>
-          <TabsContent value="settings"><TeamSettingsTab orgId={currentOrg.id} team={currentTeam} /></TabsContent>
+          <TabsContent value="members"><TeamMembersTab orgId={currentOrg.id} teamId={selectedTeam.id} /></TabsContent>
+          <TabsContent value="domains"><DomainAssignmentsTab orgId={currentOrg.id} teamId={selectedTeam.id} /></TabsContent>
+          <TabsContent value="settings"><TeamSettingsTab orgId={currentOrg.id} team={selectedTeam} onDeleted={() => setSelectedTeam(null)} /></TabsContent>
         </Tabs>
       </div>
     );
@@ -97,7 +98,7 @@ export default function TeamsPage() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {teamsData.data.map((t) => (
-              <TeamCard key={t.id} team={t} onSelect={() => setCurrentTeam(t)} />
+              <TeamCard key={t.id} team={t} onSelect={() => setSelectedTeam(t)} />
             ))}
           </div>
         )
@@ -483,11 +484,11 @@ function DomainAssignmentsTab({ orgId, teamId }: { orgId: string; teamId: string
   );
 }
 
-function TeamSettingsTab({ orgId, team }: { orgId: string; team: Team }) {
+function TeamSettingsTab({ orgId, team, onDeleted }: { orgId: string; team: Team; onDeleted: () => void }) {
   const [name, setName] = useState(team.name);
   const [saving, setSaving] = useState(false);
   const qc = useQueryClient();
-  const { fetchTeams, setCurrentTeam } = useOrgStore();
+  const { fetchTeams } = useOrgStore();
 
   const dirty = name !== team.name;
 
@@ -511,7 +512,7 @@ function TeamSettingsTab({ orgId, team }: { orgId: string; team: Team }) {
       await api.del(`/orgs/${orgId}/teams/${team.id}`);
       qc.invalidateQueries({ queryKey: ["teams"] });
       fetchTeams(orgId);
-      setCurrentTeam(null as unknown as Team);
+      onDeleted();
       toast.success("Team deleted");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed");
