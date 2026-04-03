@@ -31,6 +31,10 @@ func InitWebhookDispatch(d webhookDispatcher) { WebhookDispatch = d }
 
 // checkOrgRole returns true if the RBAC check fails (and writes the error response).
 func checkOrgRole(w http.ResponseWriter, r *http.Request, orgID uuid.UUID, minRole string) bool {
+	if RBAC == nil {
+		writeError(w, http.StatusInternalServerError, "RBAC not initialized")
+		return true
+	}
 	if err := RBAC.RequireOrgRole(r, orgID, minRole); err != nil {
 		writeError(w, http.StatusForbidden, err.Error())
 		return true
@@ -40,6 +44,10 @@ func checkOrgRole(w http.ResponseWriter, r *http.Request, orgID uuid.UUID, minRo
 
 // checkTeamRole returns true if the RBAC check fails (and writes the error response).
 func checkTeamRole(w http.ResponseWriter, r *http.Request, orgID, teamID uuid.UUID, minOrgFallback, minTeamRole string) bool {
+	if RBAC == nil {
+		writeError(w, http.StatusInternalServerError, "RBAC not initialized")
+		return true
+	}
 	if err := RBAC.RequireTeamRole(r, orgID, teamID, minOrgFallback, minTeamRole); err != nil {
 		writeError(w, http.StatusForbidden, err.Error())
 		return true
