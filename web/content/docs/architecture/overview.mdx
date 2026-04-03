@@ -41,7 +41,7 @@ The SMTP server accepts connections, validates the recipient domain against the 
 | RBAC | `internal/auth/rbac` | Role-based access control |
 | Handlers | `internal/handler` | 17 HTTP handler files |
 | Services | `internal/service` | 13 business logic services |
-| Repositories | `internal/repository` | 15 PostgreSQL + 1 Redis repo |
+| Repositories | `internal/repository` | 17 PostgreSQL + 1 Redis repo |
 | SMTP | `internal/smtp` | Server, router, handler, listener |
 | Workers | `internal/worker` | 5 background jobs |
 | Realtime | `internal/realtime` | WebSocket hubs for inbox + notifications |
@@ -53,7 +53,7 @@ The SMTP server accepts connections, validates the recipient domain against the 
 
 ## Database
 
-19 tables across 21 migration pairs. Key tables: `users`, `organizations`, `org_memberships`, `teams`, `team_memberships`, `domains`, `domain_assignments`, `inboxes`, `emails`, `attachments`, `webhooks`, `webhook_delivery_logs`, `api_keys`, `audit_logs`, `invites`, `sessions`, `setup_state`, `password_reset_tokens`, `system_configs`.
+22 tables across 24 migration pairs. Key tables: `users`, `organizations`, `org_memberships`, `teams`, `team_memberships`, `domains`, `domain_assignments`, `inboxes`, `emails`, `attachments`, `webhooks`, `webhook_delivery_logs`, `api_keys`, `audit_logs`, `invites`, `sessions`, `setup_state`, `password_reset_tokens`, `system_configs`, `email_verification_tokens`, `roles`, `permissions`, `role_permissions`.
 
 52+ indexes and 7 triggers handle cascading deletes, automatic timestamps, and data integrity.
 
