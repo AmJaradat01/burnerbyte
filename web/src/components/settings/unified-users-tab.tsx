@@ -246,7 +246,7 @@ export function UnifiedUsersTab({ orgId }: { orgId: string }) {
                   );
                 })}
                 {filtered.length === 0 && (
-                  <tr><td colSpan={6} className="text-center py-12 text-sm text-muted-foreground">{search || filter !== "all" ? "No matching users" : "No users yet"}</td></tr>
+                  <tr><td colSpan={6} className="text-center py-12 text-sm font-medium text-muted-foreground">{search || filter !== "all" ? "No matching users" : "No users yet"}</td></tr>
                 )}
               </tbody>
             </table>

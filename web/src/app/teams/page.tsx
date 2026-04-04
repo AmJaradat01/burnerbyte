@@ -54,7 +54,7 @@ export default function TeamsPage() {
             {selectedTeam.name.charAt(0).toUpperCase()}
           </div>
           <div>
-            <h1 className="text-2xl font-bold">{selectedTeam.name}</h1>
+            <h1 className="text-3xl font-bold tracking-tight">{selectedTeam.name}</h1>
             <p className="text-xs text-muted-foreground font-mono">{selectedTeam.slug}</p>
           </div>
           <div className="flex items-center gap-2 ml-auto text-xs text-muted-foreground">
@@ -82,7 +82,7 @@ export default function TeamsPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Teams</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Teams</h1>
           {teamsData?.data && teamsData.data.length > 0 && (
             <p className="text-sm text-muted-foreground mt-0.5">
               {teamsData.data.length} team{teamsData.data.length !== 1 ? "s" : ""} · {teamsData.data.reduce((s, t) => s + (t.member_count ?? 0), 0)} members
@@ -175,8 +175,8 @@ function MiniStat({ icon: Icon, label, value, accent }: { icon: typeof Users; la
     <Card>
       <CardContent className="pt-5 pb-4">
         <div className="flex items-center justify-between mb-3">
-          <span className="text-sm text-muted-foreground">{label}</span>
-          <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${accent}`}>
+          <span className="text-sm font-medium text-muted-foreground">{label}</span>
+          <div className={`h-8 w-8 rounded-lg flex items-center justify-center shadow-sm shrink-0 ${accent}`}>
             <Icon className="h-4 w-4" />
           </div>
         </div>
@@ -282,9 +282,9 @@ function TeamMembersTab({ orgId, teamId }: { orgId: string; teamId: string }) {
     <div className="space-y-4">
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
-        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Total</span><div className="h-8 w-8 rounded-lg flex items-center justify-center bg-blue-100 dark:bg-blue-900/30"><Users className="h-4 w-4 text-blue-600 dark:text-blue-400" /></div></div><p className="text-2xl font-bold tabular-nums">{members.length}</p></CardContent></Card>
-        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Leads</span><div className="h-8 w-8 rounded-lg flex items-center justify-center bg-emerald-100 dark:bg-emerald-900/30"><CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /></div></div><p className="text-2xl font-bold tabular-nums">{leadCount}</p></CardContent></Card>
-        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Members</span><div className="h-8 w-8 rounded-lg flex items-center justify-center bg-amber-100 dark:bg-amber-900/30"><Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" /></div></div><p className="text-2xl font-bold tabular-nums">{members.length - leadCount}</p></CardContent></Card>
+        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Total</span><div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-blue-100 dark:bg-blue-900/30"><Users className="h-4 w-4 text-blue-600 dark:text-blue-400" /></div></div><p className="text-2xl font-bold tabular-nums">{members.length}</p></CardContent></Card>
+        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Leads</span><div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-emerald-100 dark:bg-emerald-900/30"><CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /></div></div><p className="text-2xl font-bold tabular-nums">{leadCount}</p></CardContent></Card>
+        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Members</span><div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-amber-100 dark:bg-amber-900/30"><Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" /></div></div><p className="text-2xl font-bold tabular-nums">{members.length - leadCount}</p></CardContent></Card>
       </div>
 
       {/* Search + Add */}
@@ -441,9 +441,9 @@ function DomainAssignmentsTab({ orgId, teamId }: { orgId: string; teamId: string
     <div className="space-y-4">
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
-        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Assigned</span><div className="h-8 w-8 rounded-lg flex items-center justify-center bg-violet-100 dark:bg-violet-900/30"><Globe className="h-4 w-4 text-violet-600 dark:text-violet-400" /></div></div><p className="text-2xl font-bold tabular-nums">{assignmentList.length}</p></CardContent></Card>
-        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Available</span><div className="h-8 w-8 rounded-lg flex items-center justify-center bg-emerald-100 dark:bg-emerald-900/30"><CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /></div></div><p className="text-2xl font-bold tabular-nums">{available.length}</p></CardContent></Card>
-        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Org Domains</span><div className="h-8 w-8 rounded-lg flex items-center justify-center bg-amber-100 dark:bg-amber-900/30"><Users className="h-4 w-4 text-amber-600 dark:text-amber-400" /></div></div><p className="text-2xl font-bold tabular-nums">{domains?.data?.length ?? 0}</p></CardContent></Card>
+        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Assigned</span><div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-violet-100 dark:bg-violet-900/30"><Globe className="h-4 w-4 text-violet-600 dark:text-violet-400" /></div></div><p className="text-2xl font-bold tabular-nums">{assignmentList.length}</p></CardContent></Card>
+        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Available</span><div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-emerald-100 dark:bg-emerald-900/30"><CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /></div></div><p className="text-2xl font-bold tabular-nums">{available.length}</p></CardContent></Card>
+        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Org Domains</span><div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-amber-100 dark:bg-amber-900/30"><Users className="h-4 w-4 text-amber-600 dark:text-amber-400" /></div></div><p className="text-2xl font-bold tabular-nums">{domains?.data?.length ?? 0}</p></CardContent></Card>
       </div>
 
       {/* Assign button */}
