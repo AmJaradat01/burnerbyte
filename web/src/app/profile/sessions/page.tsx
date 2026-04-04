@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Monitor, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { ErrorState } from "@/components/error-state";
+import { EmptyState } from "@/components/empty-state";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import type { Session } from "@/types";
 
@@ -88,6 +89,8 @@ export default function SessionsPage() {
         <CardContent>
           {isLoading ? (
             <div className="space-y-2">{[1,2,3].map(i => <Skeleton key={i} className="h-10 w-full" />)}</div>
+          ) : (!sessions || sessions.length === 0) ? (
+            <EmptyState icon="🖥️" title="No active sessions" description="No active sessions found." />
           ) : (
             <Table>
               <TableHeader>
@@ -123,9 +126,6 @@ export default function SessionsPage() {
                   </TableRow>
                   );
                 })}
-                {(!sessions || sessions.length === 0) && (
-                  <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">No active sessions</TableCell></TableRow>
-                )}
               </TableBody>
             </Table>
           )}
