@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -140,9 +141,11 @@ func (r *AnalyticsRepo) GetOrgEmailsPerDay(ctx context.Context, orgID uuid.UUID,
 	var points []domain.TimeSeriesPoint
 	for rows.Next() {
 		var p domain.TimeSeriesPoint
-		if err := rows.Scan(&p.Date, &p.Count); err != nil {
+		var date time.Time
+		if err := rows.Scan(&date, &p.Count); err != nil {
 			return nil, err
 		}
+		p.Date = date.Format("2006-01-02")
 		points = append(points, p)
 	}
 	if err := rows.Err(); err != nil {
@@ -167,9 +170,11 @@ func (r *AnalyticsRepo) GetTeamEmailsPerDay(ctx context.Context, teamID uuid.UUI
 	var points []domain.TimeSeriesPoint
 	for rows.Next() {
 		var p domain.TimeSeriesPoint
-		if err := rows.Scan(&p.Date, &p.Count); err != nil {
+		var date time.Time
+		if err := rows.Scan(&date, &p.Count); err != nil {
 			return nil, err
 		}
+		p.Date = date.Format("2006-01-02")
 		points = append(points, p)
 	}
 	if err := rows.Err(); err != nil {
