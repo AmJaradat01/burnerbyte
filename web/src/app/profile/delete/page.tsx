@@ -44,7 +44,10 @@ export default function DeleteAccountPage() {
           <Button variant="ghost" size="sm" className="gap-1.5"><ArrowLeft className="h-4 w-4" /> Back to Profile</Button>
         </Link>
       </div>
-      <h1 className="text-2xl font-bold text-destructive">Delete Account</h1>
+      <div>
+        <h1 className="text-2xl font-bold">Delete Account</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">Permanently delete your account and all associated data.</p>
+      </div>
 
       <Card>
         <CardHeader>
