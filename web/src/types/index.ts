@@ -44,7 +44,7 @@ export interface Team {
   org_id: string;
   name: string;
   slug: string;
-  settings: Record<string, unknown>;
+  settings?: { attachments_enabled?: string; max_inbox_ttl?: string };
   created_at: string;
   member_count: number;
   domain_count: number;
