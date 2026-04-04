@@ -149,14 +149,15 @@ export default function DomainDetailPage() {
       {domain && (
         <>
           {/* Quick stats */}
-          <div className="grid grid-cols-3 gap-3">
-            <QuickStat icon={Inbox} label="Active Inboxes" value={domain.active_inboxes ?? 0} accent="text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400" />
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <QuickStat icon={Inbox} label="Active Inboxes" value={domain.active_inboxes ?? 0} accent="text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400" />
+            <QuickStat icon={Globe} label="Total Inboxes" value={domain.total_inboxes ?? 0} accent="text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400" />
             <QuickStat icon={Users} label="Teams" value={domain.team_count ?? 0} accent="text-violet-600 bg-violet-100 dark:bg-violet-900/30 dark:text-violet-400" />
             <QuickStat icon={Shield} label="DNS Status" value={allVerified ? "✓ OK" : `${[domain.mx_verified, domain.txt_verified].filter(Boolean).length}/2`} accent={allVerified ? "text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400" : "text-amber-600 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400"} />
           </div>
 
           {/* Two-column layout */}
-          <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+          <div className="grid gap-6 lg:grid-cols-2">
             {/* Left column — DNS */}
             <div className="space-y-6">
               {/* DNS Records */}
