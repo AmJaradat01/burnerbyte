@@ -114,7 +114,7 @@ export default function DomainDetailPage() {
   const allVerified = domain?.mx_verified && domain?.txt_verified;
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Link href="/domains" className="flex h-8 w-8 items-center justify-center rounded-lg border bg-card hover:bg-accent transition-colors">
@@ -155,8 +155,12 @@ export default function DomainDetailPage() {
             <QuickStat icon={Shield} label="DNS Status" value={allVerified ? "✓ OK" : `${[domain.mx_verified, domain.txt_verified].filter(Boolean).length}/2`} accent={allVerified ? "text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400" : "text-amber-600 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400"} />
           </div>
 
-          {/* DNS Records */}
-          <Card>
+          {/* Two-column layout */}
+          <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+            {/* Left column — DNS */}
+            <div className="space-y-6">
+              {/* DNS Records */}
+              <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
                 <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-blue-100 dark:bg-blue-900/30">
@@ -217,6 +221,11 @@ export default function DomainDetailPage() {
             </CardContent>
           </Card>
 
+              {/* Domain Settings — below DNS on left */}
+            </div>
+
+            {/* Right column — sidebar cards */}
+            <div className="space-y-6">
           {/* Assigned Teams */}
           <Card>
             <CardHeader className="pb-3">
@@ -275,8 +284,9 @@ export default function DomainDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Domain Settings */}
-          <DomainSettingsCard domain={domain} orgId={org!.id} />
+              <DomainSettingsCard domain={domain} orgId={org!.id} />
+            </div>
+          </div>
         </>
       )}
     </div>
