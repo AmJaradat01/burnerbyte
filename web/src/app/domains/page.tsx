@@ -18,7 +18,7 @@ import { Pagination } from "@/components/pagination";
 import { ErrorState } from "@/components/error-state";
 import { EmptyState } from "@/components/empty-state";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { Check, CheckCircle2, Circle, Copy, ExternalLink, Globe, Inbox, Plus, RefreshCw, Search, Shield, Trash2, Users } from "lucide-react";
+import { Check, CheckCircle2, Circle, Copy, Globe, Inbox, Plus, RefreshCw, Search, Shield, Trash2, Users } from "lucide-react";
 import type { Domain, PaginatedResponse } from "@/types";
 
 export default function DomainsPage() {
@@ -150,65 +150,78 @@ function DomainCard({ domain: d, onVerify, onDelete, verifying }: { domain: Doma
 
   return (
     <Card className={`group hover:shadow-md transition-all ${fullyVerified ? "hover:border-emerald-200 dark:hover:border-emerald-800" : "hover:border-amber-200 dark:hover:border-amber-800 border-dashed"}`}>
-      <CardContent className="pt-4 pb-3 space-y-3">
-        {/* Domain name + status */}
-        <div className="flex items-start justify-between gap-2">
+      {/* Header with icon + domain name */}
+      <CardContent className="pt-5 pb-0">
+        <div className="flex items-start gap-3">
+          <div className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${fullyVerified ? "bg-emerald-100 dark:bg-emerald-900/30" : "bg-amber-100 dark:bg-amber-900/30"}`}>
+            <Globe className={`h-5 w-5 ${fullyVerified ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`} />
+          </div>
           <div className="min-w-0 flex-1">
-            <Link href={`/domains/${d.id}`} className="flex items-center gap-1.5 group/link">
-              <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
-              <span className="font-mono text-sm font-semibold truncate group-hover/link:text-primary transition-colors">{d.domain_name}</span>
-              <ExternalLink className="h-3 w-3 text-muted-foreground opacity-0 group-hover/link:opacity-100 transition-opacity shrink-0" />
+            <Link href={`/domains/${d.id}`} className="group/link">
+              <span className="font-semibold text-sm truncate block group-hover/link:text-primary transition-colors">{d.domain_name}</span>
             </Link>
-            <p className="text-[11px] text-muted-foreground mt-0.5 pl-[22px]">
+            <p className="text-[11px] text-muted-foreground mt-0.5">
               Added {new Date(d.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
             </p>
           </div>
           {fullyVerified ? (
-            <Badge className="shrink-0 gap-1 bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800">
-              <CheckCircle2 className="h-3 w-3" /> Verified
+            <Badge className="shrink-0 gap-1 text-[10px] bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800">
+              <CheckCircle2 className="h-2.5 w-2.5" /> Verified
             </Badge>
           ) : (
-            <Badge variant="secondary" className="shrink-0 gap-1">
-              <Circle className="h-3 w-3" /> Pending
+            <Badge className="shrink-0 gap-1 text-[10px] bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800">
+              <Circle className="h-2.5 w-2.5" /> Pending
             </Badge>
           )}
         </div>
+      </CardContent>
 
-        {/* DNS verification status */}
-        <div className="flex items-center gap-3 pl-[22px]">
+      {/* DNS chips + stats */}
+      <CardContent className="pt-3 pb-0">
+        <div className="flex items-center gap-2 mb-3">
           <DnsChip verified={d.mx_verified} label="MX" />
           <DnsChip verified={d.txt_verified} label="TXT" />
-        </div>
-
-        {/* Verification record hint */}
-        {!d.txt_verified && d.verification_record && (
-          <button onClick={copyRecord} className="w-full rounded-lg border border-dashed bg-muted/30 px-3 py-2 text-left text-[11px] font-mono break-all hover:bg-muted/60 transition-colors group/copy">
-            <span className="text-muted-foreground">TXT → </span>
-            <span className="text-foreground/80">{d.verification_record}</span>
-            {copied
-              ? <Check className="inline-block ml-1.5 h-3 w-3 text-green-500" />
-              : <Copy className="inline-block ml-1.5 h-3 w-3 text-muted-foreground opacity-0 group-hover/copy:opacity-100 transition-opacity" />
-            }
-          </button>
-        )}
-
-        {/* Stats */}
-        <div className="flex items-center gap-4 text-xs text-muted-foreground pl-[22px]">
-          <span className="flex items-center gap-1">
-            <Inbox className="h-3 w-3" /> {d.active_inboxes ?? 0} inbox{(d.active_inboxes ?? 0) !== 1 ? "es" : ""}
-          </span>
-          <span className="flex items-center gap-1">
-            <Users className="h-3 w-3" /> {d.team_count ?? 0} team{(d.team_count ?? 0) !== 1 ? "s" : ""}
-          </span>
           {d.dns_last_checked_at && (
-            <span className="ml-auto text-[10px]" title={new Date(d.dns_last_checked_at).toLocaleString()}>
-              Checked {timeAgo(d.dns_last_checked_at)}
+            <span className="ml-auto text-[10px] text-muted-foreground" title={new Date(d.dns_last_checked_at).toLocaleString()}>
+              {timeAgo(d.dns_last_checked_at)}
             </span>
           )}
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center gap-1.5 pt-1 border-t">
+        {/* Stats row */}
+        <div className="grid grid-cols-3 gap-2 rounded-lg bg-muted/40 p-2.5">
+          <div className="text-center">
+            <p className="text-lg font-bold tabular-nums">{d.active_inboxes ?? 0}</p>
+            <p className="text-[10px] text-muted-foreground">Active</p>
+          </div>
+          <div className="text-center border-x border-border/50">
+            <p className="text-lg font-bold tabular-nums">{d.inboxes_created_count ?? 0}</p>
+            <p className="text-[10px] text-muted-foreground">Created</p>
+          </div>
+          <div className="text-center">
+            <p className="text-lg font-bold tabular-nums">{d.team_count ?? 0}</p>
+            <p className="text-[10px] text-muted-foreground">Teams</p>
+          </div>
+        </div>
+      </CardContent>
+
+      {/* TXT record hint for pending */}
+      {!d.txt_verified && d.verification_record && (
+        <CardContent className="pt-3 pb-0">
+          <button onClick={copyRecord} className="w-full rounded-lg border border-dashed bg-muted/30 px-3 py-2 text-left text-[11px] font-mono break-all hover:bg-muted/60 transition-colors group/copy">
+            <span className="text-muted-foreground">TXT → </span>
+            <span className="text-foreground/80">{d.verification_record}</span>
+            {copied
+              ? <Check className="inline-block ml-1.5 h-3 w-3 text-emerald-500" />
+              : <Copy className="inline-block ml-1.5 h-3 w-3 text-muted-foreground opacity-0 group-hover/copy:opacity-100 transition-opacity" />
+            }
+          </button>
+        </CardContent>
+      )}
+
+      {/* Actions */}
+      <CardContent className="pt-3 pb-4">
+        <div className="flex items-center gap-1.5">
           {!fullyVerified && (
             <Button variant="outline" size="sm" className="gap-1.5 flex-1 h-8 text-xs" onClick={onVerify} disabled={verifying}>
               <RefreshCw className={`h-3 w-3 ${verifying ? "animate-spin" : ""}`} /> Verify DNS
