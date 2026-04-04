@@ -19,7 +19,7 @@ import { Pagination } from "@/components/pagination";
 import { ErrorState } from "@/components/error-state";
 import { EmptyState } from "@/components/empty-state";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { AlertTriangle, Clock, Copy, Key, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock, Copy, Key, Plus, Trash2 } from "lucide-react";
 import type { APIKey, PaginatedResponse } from "@/types";
 
 const ALL_SCOPES = ["inbox:create", "inbox:read", "email:read", "email:delete"];
@@ -75,6 +75,26 @@ export default function ApiKeysPage() {
         <CreateApiKeyDialog orgId={currentOrg!.id} teamId={currentTeam.id} />
       </div>
 
+      {data?.data && data.data.length > 0 && (
+        <div className="grid gap-4 sm:grid-cols-3">
+          {[
+            { label: "Total", value: data.total, icon: Key, bg: "bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400" },
+            { label: "Active", value: data.data.filter(k => !k.expires_at || new Date(k.expires_at) >= new Date()).length, icon: CheckCircle2, bg: "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400" },
+            { label: "Expired", value: data.data.filter(k => k.expires_at && new Date(k.expires_at) < new Date()).length, icon: Clock, bg: "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400" },
+          ].map((s) => (
+            <Card key={s.label}>
+              <CardContent className="pt-5 pb-4">
+                <div className="flex justify-between mb-3">
+                  <span className="text-sm text-muted-foreground">{s.label}</span>
+                  <div className={`flex items-center justify-center h-8 w-8 rounded-lg ${s.bg}`}><s.icon className="h-4 w-4" /></div>
+                </div>
+                <p className="text-2xl font-bold tabular-nums">{s.value}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
       {isError ? <ErrorState message="Failed to load API keys" onRetry={() => refetch()} /> :
       isLoading ? <ApiKeyListSkeleton /> : (
       <>
@@ -99,12 +119,13 @@ function ApiKeyCard({ apiKey: k, onRevoke }: { apiKey: APIKey; onRevoke: () => v
   const copyPrefix = () => { copyToClipboard(k.key_prefix); toast.success("Prefix copied"); };
 
   return (
-    <Card className={`hover:shadow-md transition-all ${isExpired ? "opacity-60" : ""}`}>
+    <Card className={`hover:shadow-md transition-all ${isExpired ? "border-dashed opacity-60" : ""}`}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
+          <div className="flex items-start gap-3 min-w-0 flex-1">
+            <div className={`flex items-center justify-center h-10 w-10 rounded-lg shrink-0 ${isExpired ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400" : "bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400"}`}><Key className="h-5 w-5" /></div>
+            <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <Key className="h-4 w-4 text-muted-foreground shrink-0" />
               <CardTitle className="text-sm truncate">{k.name}</CardTitle>
               {isExpired && <Badge variant="destructive" className="gap-1 shrink-0"><AlertTriangle className="h-3 w-3" /> Expired</Badge>}
             </div>
@@ -112,6 +133,7 @@ function ApiKeyCard({ apiKey: k, onRevoke }: { apiKey: APIKey; onRevoke: () => v
               {k.key_prefix}•••
               <Copy className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
             </button>
+            </div>
           </div>
           <ConfirmDialog
             trigger={<Button variant="ghost" size="sm" className="text-destructive hover:text-destructive shrink-0"><Trash2 className="h-4 w-4" /></Button>}
