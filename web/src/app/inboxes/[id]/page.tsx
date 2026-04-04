@@ -112,16 +112,6 @@ export default function InboxDetailPage() {
     enabled: !!selectedEmailId,
   });
 
-  useEffect(() => {
-    if (selectedEmail && !selectedEmail.is_read) {
-      api.patch(`/emails/${selectedEmail.id}`, { is_read: true }).then(() => {
-        qc.invalidateQueries({ queryKey: ["emails", id] });
-        qc.invalidateQueries({ queryKey: ["email", selectedEmailId] });
-      }).catch(() => {});
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedEmail?.id, selectedEmail?.is_read]);
-
   const extend = useMutation({
     mutationFn: () => api.post(`/inboxes/${id}/extend`, {}),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["inbox", id] }); toast.success("Inbox renewed"); },
