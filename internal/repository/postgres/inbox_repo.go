@@ -88,7 +88,7 @@ func (r *InboxRepo) listByUser(ctx context.Context, userID uuid.UUID, status str
 
 	var total int
 	err := r.db.QueryRow(ctx,
-		`SELECT COUNT(*) FROM inboxes WHERE created_by = $1`+statusFilter, userID).Scan(&total)
+		`SELECT COUNT(*) FROM inboxes i JOIN domains d ON i.domain_id = d.id WHERE i.created_by = $1`+statusFilter, userID).Scan(&total)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -202,7 +202,7 @@ func (r *InboxRepo) Deactivate(ctx context.Context, id uuid.UUID) error {
 func (r *InboxRepo) CountActiveByDomain(ctx context.Context, domainID uuid.UUID) (int, error) {
 	var count int
 	err := r.db.QueryRow(ctx,
-		`SELECT COUNT(*) FROM inboxes WHERE domain_id = $1 AND is_active = TRUE`, domainID).Scan(&count)
+		`SELECT COUNT(*) FROM inboxes WHERE domain_id = $1 AND is_active = TRUE AND expires_at > NOW()`, domainID).Scan(&count)
 	return count, err
 }
 
