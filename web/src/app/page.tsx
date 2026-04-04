@@ -77,11 +77,17 @@ function HomePage() {
 
   // Live refresh via WebSocket
   useEffect(() => {
-    const token = localStorage.getItem("access_token");
-    if (!token) return;
-    const ws = new WebSocket(`${WS_BASE}/notifications?token=${token}`);
-    ws.onmessage = () => { qc.invalidateQueries({ queryKey: ["home-inboxes"] }); };
-    return () => { ws.close(); };
+    let disposed = false;
+    let ws: WebSocket | null = null;
+    const connect = () => {
+      const token = localStorage.getItem("access_token");
+      if (!token || disposed) return;
+      ws = new WebSocket(`${WS_BASE}/notifications?token=${token}`);
+      ws.onmessage = () => { qc.invalidateQueries({ queryKey: ["home-inboxes"] }); };
+      ws.onclose = () => { if (!disposed) setTimeout(connect, 5000); };
+    };
+    connect();
+    return () => { disposed = true; ws?.close(); };
   }, [qc]);
 
   const extend = useMutation({
