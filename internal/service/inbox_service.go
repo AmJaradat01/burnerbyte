@@ -132,6 +132,11 @@ func (s *InboxService) CreateInbox(ctx context.Context, teamID, domainID, userID
 		return nil, err
 	}
 
+	// Increment all-time inbox counter on domain
+	if err := s.domainRepo.IncrementInboxCount(ctx, domainID); err != nil {
+		slog.Error("failed to increment domain inbox counter", "domain_id", domainID, "error", err)
+	}
+
 	// Store in Redis for SMTP lookups
 	if err := s.redisInboxRepo.Set(ctx, fullAddress, inbox.ID.String(), ttl); err != nil {
 		slog.Error("redis: failed to cache new inbox", "address", fullAddress, "error", err)
