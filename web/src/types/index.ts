@@ -63,7 +63,7 @@ export interface Domain {
   settings?: { attachments_enabled?: string };
   created_at: string;
   active_inboxes: number;
-  total_inboxes: number;
+  inboxes_created_count: number;
   team_count: number;
 }
 
