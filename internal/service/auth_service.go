@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"gitlab.com/burnerbyte/burnerbyte/internal/auth"
@@ -180,11 +181,13 @@ func (s *AuthService) Login(ctx context.Context, input domain.LoginInput, ip, us
 
 	// Check enforce_sso: if any of user's orgs enforce SSO, reject password login
 	var enforced bool
-	_ = s.pool.QueryRow(ctx,
+	if err := s.pool.QueryRow(ctx,
 		`SELECT EXISTS(
 			SELECT 1 FROM organizations o JOIN org_memberships m ON m.org_id = o.id
 			WHERE m.user_id = $1 AND (o.settings->>'enforce_sso')::boolean = true
-		)`, user.ID).Scan(&enforced)
+		)`, user.ID).Scan(&enforced); err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil, fmt.Errorf("failed to check SSO enforcement: %w", err)
+	}
 	if enforced {
 		return nil, nil, fmt.Errorf("SSO login required for your organization")
 	}

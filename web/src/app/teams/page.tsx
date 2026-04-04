@@ -187,7 +187,7 @@ function CreateTeamDialog({ orgId }: { orgId: string }) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setName(""); }}>
       <DialogTrigger asChild>
         <Button className="gap-2"><Plus className="h-4 w-4" /> Create Team</Button>
       </DialogTrigger>
@@ -266,7 +266,7 @@ function TeamMembersTab({ orgId, teamId }: { orgId: string; teamId: string }) {
       {/* Search + Add */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {members.length > 3 && <Input placeholder="Search members…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />}
-        <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <Dialog open={addOpen} onOpenChange={(v) => { setAddOpen(v); if (!v) { setMemberEmail(""); setRole("member"); } }}>
           <DialogTrigger asChild>
             <Button size="sm" className="gap-1.5"><UserPlus className="h-3.5 w-3.5" /> Add Member</Button>
           </DialogTrigger>
@@ -406,7 +406,7 @@ function DomainAssignmentsTab({ orgId, teamId }: { orgId: string; teamId: string
       {/* Assign button */}
       <div className="flex justify-end">
         {available.length > 0 && (
-          <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
+          <Dialog open={assignOpen} onOpenChange={(v) => { setAssignOpen(v); if (!v) setSelectedDomain(""); }}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-1.5"><Plus className="h-3.5 w-3.5" /> Assign Domain</Button>
             </DialogTrigger>

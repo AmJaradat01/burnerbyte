@@ -86,14 +86,20 @@ export default function OnboardingPage() {
   // Step 4: Done
   const finish = async () => {
     setBusy(true);
-    localStorage.setItem("bb_onboarding_done", "true");
-    await fetchOrgs();
-    if (org) setCurrentOrg(org);
-    if (org) {
-      await fetchTeams(org.id);
-      if (team) setCurrentTeam(team);
+    try {
+      localStorage.setItem("bb_onboarding_done", "true");
+      await fetchOrgs();
+      if (org) setCurrentOrg(org);
+      if (org) {
+        await fetchTeams(org.id);
+        if (team) setCurrentTeam(team);
+      }
+      router.push("/dashboard");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to complete onboarding");
+    } finally {
+      setBusy(false);
     }
-    router.push("/dashboard");
   };
 
   const skip = () => {
