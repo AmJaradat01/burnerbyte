@@ -30,7 +30,7 @@ func (r *AuditRepo) Create(ctx context.Context, e *domain.AuditEntry) error {
 }
 
 func (r *AuditRepo) List(ctx context.Context, orgID uuid.UUID, filter domain.AuditFilter, page, perPage int) ([]domain.AuditEntry, int, error) {
-	query := `SELECT a.id, a.org_id, a.actor_id, COALESCE(u.email,''), a.action, a.resource_type, a.resource_id, a.metadata, a.ip_address::text, a.created_at FROM audit_logs a LEFT JOIN users u ON a.actor_id = u.id WHERE a.org_id = $1`
+	query := `SELECT a.id, a.org_id, a.actor_id, COALESCE(u.email,''), a.action, a.resource_type, a.resource_id, a.metadata, host(a.ip_address), a.created_at FROM audit_logs a LEFT JOIN users u ON a.actor_id = u.id WHERE a.org_id = $1`
 	countQuery := `SELECT COUNT(*) FROM audit_logs a WHERE a.org_id = $1`
 	args := []any{orgID}
 	idx := 2
