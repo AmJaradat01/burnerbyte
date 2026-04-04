@@ -22,9 +22,9 @@ import { AlertTriangle, CheckCircle2, Clock, RefreshCw, Shield, Trash2, UserPlus
 import type { User, Membership, Invite, PaginatedResponse } from "@/types";
 
 const ROLE_COLORS: Record<string, string> = {
-  owner: "bg-amber-100 text-amber-700 border-amber-200",
-  admin: "bg-blue-100 text-blue-700 border-blue-200",
-  member: "bg-gray-100 text-gray-700 border-gray-200",
+  owner: "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800",
+  admin: "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800",
+  member: "bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800/30 dark:text-gray-400 dark:border-gray-700",
 };
 
 function timeAgo(date: string) {
