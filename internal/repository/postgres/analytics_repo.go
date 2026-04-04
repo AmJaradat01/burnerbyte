@@ -56,6 +56,28 @@ func (r *AnalyticsRepo) GetOrgStats(ctx context.Context, orgID uuid.UUID) (*doma
 		return nil, err
 	}
 
+	rows, err := r.db.Query(ctx,
+		`SELECT SPLIT_PART(e.from_address, '@', 2) AS sender_domain, COUNT(*) AS cnt
+		 FROM emails e JOIN inboxes i ON e.inbox_id = i.id
+		 JOIN domain_assignments da ON i.domain_assignment_id = da.id
+		 JOIN domains d ON da.domain_id = d.id
+		 WHERE d.org_id = $1 AND e.from_address LIKE '%@%'
+		 GROUP BY sender_domain ORDER BY cnt DESC LIMIT 5`, orgID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var sd domain.SenderDomain
+		if err := rows.Scan(&sd.Domain, &sd.Count); err != nil {
+			return nil, err
+		}
+		stats.TopSenderDomains = append(stats.TopSenderDomains, sd)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
 	return stats, nil
 }
 
@@ -118,8 +140,13 @@ func (r *AnalyticsRepo) GetOrgEmailsPerDay(ctx context.Context, orgID uuid.UUID,
 	var points []domain.TimeSeriesPoint
 	for rows.Next() {
 		var p domain.TimeSeriesPoint
-		_ = rows.Scan(&p.Date, &p.Count)
+		if err := rows.Scan(&p.Date, &p.Count); err != nil {
+			return nil, err
+		}
 		points = append(points, p)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 	return points, nil
 }
@@ -140,8 +167,13 @@ func (r *AnalyticsRepo) GetTeamEmailsPerDay(ctx context.Context, teamID uuid.UUI
 	var points []domain.TimeSeriesPoint
 	for rows.Next() {
 		var p domain.TimeSeriesPoint
-		_ = rows.Scan(&p.Date, &p.Count)
+		if err := rows.Scan(&p.Date, &p.Count); err != nil {
+			return nil, err
+		}
 		points = append(points, p)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 	return points, nil
 }
