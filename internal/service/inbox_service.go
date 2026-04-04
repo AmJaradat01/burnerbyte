@@ -143,6 +143,7 @@ func (s *InboxService) CreateInbox(ctx context.Context, teamID, domainID, userID
 	}
 
 	inbox.DomainName = dom.DomainName
+	inbox.OrgID = org.ID
 	inbox.TeamID = teamID
 	return inbox, nil
 }
