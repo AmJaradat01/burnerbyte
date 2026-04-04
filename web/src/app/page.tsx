@@ -106,7 +106,7 @@ function HomePage() {
     <div className="space-y-8">
       {/* Greeting */}
       <div>
-        <h1 className="text-2xl font-bold">{greeting}, {user?.display_name?.split(" ")[0] || "there"} 👋</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{greeting}, {user?.display_name?.split(" ")[0] || "there"} 👋</h1>
         <p className="text-sm text-muted-foreground mt-1">{t("quickCreateDesc")}</p>
       </div>
 
@@ -118,7 +118,7 @@ function HomePage() {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">{t("recentInboxes")}</h2>
           {data && data.total > 0 && (
-            <p className="text-sm text-muted-foreground">{data.total} active</p>
+            <p className="text-sm font-medium text-muted-foreground">{data.total} active</p>
           )}
         </div>
 
@@ -226,7 +226,7 @@ function QuickCreateCard() {
   if (noDomains) {
     return (
       <div className="text-center py-12 space-y-3">
-        <p className="text-sm text-muted-foreground">{t("noDomains")}</p>
+        <p className="text-sm font-medium text-muted-foreground">{t("noDomains")}</p>
         <div className="flex justify-center gap-2">
           <Link href="/domains"><Button variant="outline" size="sm">Add Domain</Button></Link>
           <Link href="/onboarding"><Button size="sm">Run Setup Wizard</Button></Link>
@@ -533,7 +533,7 @@ function LandingPage() {
         </section>
         <section className="mx-auto max-w-5xl px-6 pb-28">
           <div className="text-center mb-12">
-            <h2 className="text-2xl font-bold">{t("everythingYouNeed")}</h2>
+            <h2 className="text-3xl font-bold tracking-tight">{t("everythingYouNeed")}</h2>
             <p className="mt-2 text-muted-foreground">{t("builtFor")}</p>
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -551,7 +551,7 @@ function LandingPage() {
         </section>
         <section className="border-t bg-muted/30">
           <div className="mx-auto max-w-3xl px-6 py-20 text-center">
-            <h2 className="text-2xl font-bold">{t("readyToStart")}</h2>
+            <h2 className="text-3xl font-bold tracking-tight">{t("readyToStart")}</h2>
             <p className="mt-3 text-muted-foreground">{t("deployInMinutes")}</p>
             <Link href="/register" className="mt-6 inline-block rounded-lg bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity">{t("createAccount")}</Link>
           </div>
