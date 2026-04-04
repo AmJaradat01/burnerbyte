@@ -67,7 +67,7 @@ export default function ApiKeysPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">API Keys</h1>
+          <h1 className="text-3xl font-bold tracking-tight">API Keys</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             {data?.data?.length ? `${data.total ?? data.data.length} key${(data.total ?? data.data.length) !== 1 ? "s" : ""}` : "Manage programmatic access to your team's resources."}
           </p>
@@ -85,7 +85,7 @@ export default function ApiKeysPage() {
             <Card key={s.label}>
               <CardContent className="pt-5 pb-4">
                 <div className="flex justify-between mb-3">
-                  <span className="text-sm text-muted-foreground">{s.label}</span>
+                  <span className="text-sm font-medium text-muted-foreground">{s.label}</span>
                   <div className={`flex items-center justify-center h-8 w-8 rounded-lg ${s.bg}`}><s.icon className="h-4 w-4" /></div>
                 </div>
                 <p className="text-2xl font-bold tabular-nums">{s.value}</p>

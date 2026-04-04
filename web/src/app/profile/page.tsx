@@ -40,7 +40,7 @@ export default function ProfilePage() {
   return (
     <div className="mx-auto max-w-5xl space-y-8">
       <div>
-        <h1 className="text-2xl font-bold">Profile</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Profile</h1>
         <p className="text-sm text-muted-foreground mt-0.5">Manage your account settings and preferences.</p>
       </div>
 
@@ -56,7 +56,7 @@ export default function ProfilePage() {
               <p className="truncate text-lg font-semibold">{user.display_name || "Unnamed"}</p>
               {user.is_system_admin && <Badge variant="secondary">Admin</Badge>}
             </div>
-            <p className="truncate text-sm text-muted-foreground">{user.email}</p>
+            <p className="truncate text-sm font-medium text-muted-foreground">{user.email}</p>
             <div className="mt-1 flex flex-wrap gap-2">
               {user.email_verified ? (
                 <Badge variant="outline" className="text-green-600 border-green-600">Email verified</Badge>

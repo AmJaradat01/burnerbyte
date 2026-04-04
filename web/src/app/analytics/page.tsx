@@ -40,7 +40,7 @@ export default function AnalyticsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Analytics</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Analytics</h1>
         <p className="text-sm text-muted-foreground mt-0.5">Usage metrics and trends for your organization.</p>
       </div>
       <Tabs defaultValue="org">
@@ -177,8 +177,8 @@ function StatCard({ icon: Icon, label, value, subtitle, color = "blue" }: { icon
     <Card>
       <CardContent className="pt-5 pb-4">
         <div className="flex items-center justify-between mb-3">
-          <span className="text-sm text-muted-foreground">{label}</span>
-          <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${c.bg}`}>
+          <span className="text-sm font-medium text-muted-foreground">{label}</span>
+          <div className={`h-8 w-8 rounded-lg flex items-center justify-center shadow-sm ${c.bg}`}>
             <Icon className={`h-4 w-4 ${c.text}`} />
           </div>
         </div>
