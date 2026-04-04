@@ -77,6 +77,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	auditRecord(r, uuid.Nil, "user.registered", "user", user.ID, nil)
 	writeJSON(w, http.StatusCreated, map[string]any{
 		"user":   user,
 		"tokens": tokens,
@@ -107,6 +108,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	auditRecord(r, uuid.Nil, "user.login", "user", user.ID, nil)
 	writeJSON(w, http.StatusOK, map[string]any{
 		"user":   user,
 		"tokens": tokens,
@@ -153,6 +155,7 @@ func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	auditRecord(r, uuid.Nil, "user.password_reset", "user", uuid.Nil, nil)
 	writeJSON(w, http.StatusOK, map[string]string{"message": "password reset successful"})
 }
 
@@ -213,6 +216,7 @@ func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	auditRecord(r, uuid.Nil, "user.password_changed", "user", uc.UserID, nil)
 	writeJSON(w, http.StatusOK, map[string]string{"message": "password changed"})
 }
 
@@ -229,6 +233,7 @@ func (h *AuthHandler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	auditRecord(r, uuid.Nil, "user.account_deleted", "user", uc.UserID, nil)
 	writeJSON(w, http.StatusOK, map[string]string{"message": "account deleted"})
 }
 

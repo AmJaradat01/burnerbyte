@@ -2,6 +2,7 @@
 
 import { useAuthStore } from "@/stores/auth-store";
 import { useOrgStore } from "@/stores/org-store";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { Sidebar } from "./sidebar";
@@ -133,8 +134,25 @@ export function AppShell({ children }: { children: ReactNode }) {
   // Setup not completed — minimal layout
   if (!setupCompleted) return <main className="min-h-screen">{children}</main>;
 
-  // Public/landing pages for unauthenticated users
-  if ((isPublic || isLanding) && !user) return <main className="min-h-screen bg-mesh">{children}</main>;
+  // Landing page — has its own header/footer
+  if (isLanding && !user) return <main className="min-h-screen bg-mesh">{children}</main>;
+
+  // Auth/public pages for unauthenticated users — shared header & footer
+  if (isPublic && !user) return (
+    <div className="flex flex-col min-h-screen bg-mesh">
+      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
+        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
+          <Link href="/" className="text-lg font-bold">🔥 BurnerByte</Link>
+          <nav className="flex items-center gap-4 text-sm">
+            <Link href="/login" className="text-muted-foreground hover:text-foreground">Sign In</Link>
+            <Link href="/register" className="text-muted-foreground hover:text-foreground">Get Started</Link>
+          </nav>
+        </div>
+      </header>
+      <main className="flex-1">{children}</main>
+      <footer className="border-t py-6 text-center text-xs text-muted-foreground">© {new Date().getFullYear()} BurnerByte</footer>
+    </div>
+  );
 
   // Authenticated user on public pages (onboarding, invite, docs) — minimal layout
   if (isPublic) return <main className="min-h-screen">{children}</main>;
