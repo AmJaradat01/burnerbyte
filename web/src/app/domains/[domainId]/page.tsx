@@ -14,8 +14,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/error-state";
+import { EmptyState } from "@/components/empty-state";
 import { toast } from "sonner";
-import { ArrowLeft, Check, CheckCircle2, Circle, Clock, Copy, Globe, Inbox, RefreshCw, Shield, Users } from "lucide-react";
+import { ArrowLeft, Check, CheckCircle2, Circle, Clock, Copy, FileText, Globe, Inbox, Info, RefreshCw, Settings2, Shield, Users } from "lucide-react";
 import type { Domain, DomainAssignment, Team } from "@/types";
 
 /* ── Copy helper ── */
@@ -24,11 +25,11 @@ function CopyValue({ label, value }: { label: string; value: string }) {
   const [copied, setCopied] = useState(false);
   const copy = () => { copyToClipboard(value); setCopied(true); toast.success("Copied"); setTimeout(() => setCopied(false), 2000); };
   return (
-    <div className="grid grid-cols-[72px_1fr] gap-2 items-center">
-      <span className="text-xs text-muted-foreground font-medium">{label}</span>
-      <button onClick={copy} className="flex items-center gap-2 rounded-lg bg-muted/50 border px-3 py-1.5 font-mono text-sm break-all text-left hover:bg-muted transition-colors group">
-        <span className="flex-1">{value}</span>
-        {copied ? <Check className="h-3.5 w-3.5 text-green-500 shrink-0" /> : <Copy className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />}
+    <div className="flex items-center gap-3">
+      <span className="text-xs text-muted-foreground font-medium w-16 shrink-0">{label}</span>
+      <button onClick={copy} className="flex items-center gap-2 rounded-lg bg-muted/50 border px-3 py-1.5 font-mono text-sm break-all text-left hover:bg-muted transition-colors group flex-1 min-w-0">
+        <span className="flex-1 truncate">{value}</span>
+        {copied ? <Check className="h-3.5 w-3.5 text-emerald-500 shrink-0" /> : <Copy className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />}
       </button>
     </div>
   );
@@ -36,27 +37,28 @@ function CopyValue({ label, value }: { label: string; value: string }) {
 
 /* ── DNS record section ── */
 
-function DnsRecordSection({ title, description, verified, records }: {
-  title: string; description: string; verified: boolean; records: { label: string; value: string }[];
+function DnsRecordSection({ title, icon: Icon, description, verified, records }: {
+  title: string; icon: typeof Globe; description: string; verified: boolean; records: { label: string; value: string }[];
 }) {
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold">{title}</span>
-          {verified ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 px-2 py-0.5 text-[11px] font-medium">
-              <CheckCircle2 className="h-3 w-3" /> Verified
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-2 py-0.5 text-[11px] font-medium">
-              <Circle className="h-3 w-3" /> Pending
-            </span>
-          )}
+      <div className="flex items-center gap-2">
+        <div className={`h-7 w-7 rounded-md flex items-center justify-center shrink-0 ${verified ? "bg-emerald-100 dark:bg-emerald-900/30" : "bg-amber-100 dark:bg-amber-900/30"}`}>
+          <Icon className={`h-3.5 w-3.5 ${verified ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`} />
         </div>
+        <span className="text-sm font-semibold">{title}</span>
+        {verified ? (
+          <Badge className="gap-1 text-[10px] bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800">
+            <CheckCircle2 className="h-2.5 w-2.5" /> Verified
+          </Badge>
+        ) : (
+          <Badge className="gap-1 text-[10px] bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800">
+            <Circle className="h-2.5 w-2.5" /> Pending
+          </Badge>
+        )}
       </div>
-      <p className="text-xs text-muted-foreground">{description}</p>
-      <div className="space-y-1.5">
+      <p className="text-xs text-muted-foreground pl-9">{description}</p>
+      <div className="space-y-1.5 pl-9">
         {records.map((r) => <CopyValue key={r.label} label={r.label} value={r.value} />)}
       </div>
     </div>
@@ -115,22 +117,31 @@ export default function DomainDetailPage() {
     <div className="max-w-3xl space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Link href="/domains" className="text-muted-foreground hover:text-foreground transition-colors">
+        <Link href="/domains" className="flex h-8 w-8 items-center justify-center rounded-lg border bg-card hover:bg-accent transition-colors">
           <ArrowLeft className="h-4 w-4" />
         </Link>
-        {isLoading ? <Skeleton className="h-8 w-48" /> : (
+        {isLoading ? (
+          <div className="flex items-center gap-3"><Skeleton className="h-7 w-48" /><Skeleton className="h-5 w-20 rounded-full" /></div>
+        ) : (
           <>
-            <Globe className="h-5 w-5 text-muted-foreground" />
-            <h1 className="text-2xl font-bold">{domain?.domain_name}</h1>
-            {allVerified ? (
-              <Badge className="gap-1 bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800">
-                <CheckCircle2 className="h-3 w-3" /> Verified
-              </Badge>
-            ) : (
-              <Badge variant="secondary" className="gap-1">
-                <Clock className="h-3 w-3" /> Setup Required
-              </Badge>
-            )}
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-bold">{domain?.domain_name}</h1>
+                {allVerified ? (
+                  <Badge className="gap-1 bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800">
+                    <CheckCircle2 className="h-3 w-3" /> Verified
+                  </Badge>
+                ) : (
+                  <Badge className="gap-1 bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800">
+                    <Clock className="h-3 w-3" /> Setup Required
+                  </Badge>
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Added {new Date(domain?.created_at ?? "").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                {domain?.dns_last_checked_at && <> · Last checked {new Date(domain.dns_last_checked_at).toLocaleTimeString()}</>}
+              </p>
+            </div>
           </>
         )}
       </div>
@@ -147,14 +158,20 @@ export default function DomainDetailPage() {
           {/* DNS Records */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">DNS Configuration</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Add these records to your DNS provider for <strong className="font-mono">{domain.domain_name}</strong>
-              </p>
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-blue-100 dark:bg-blue-900/30">
+                  <Globe className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <CardTitle className="text-base">DNS Configuration</CardTitle>
+                  <p className="text-xs text-muted-foreground mt-0.5">Add these records to your DNS provider</p>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="space-y-6">
               <DnsRecordSection
                 title="MX Record"
+                icon={Inbox}
                 description={`Routes incoming email for ${domain.domain_name} to your mail server`}
                 verified={domain.mx_verified}
                 records={[
@@ -169,6 +186,7 @@ export default function DomainDetailPage() {
 
               <DnsRecordSection
                 title="TXT Record"
+                icon={FileText}
                 description="Verifies domain ownership"
                 verified={domain.txt_verified}
                 records={[
@@ -178,7 +196,7 @@ export default function DomainDetailPage() {
                 ]}
               />
 
-              <div className="border-t" />
+              <div className="border-t pt-1" />
 
               {/* Verify action */}
               <div className="flex items-center gap-3 flex-wrap">
@@ -195,11 +213,6 @@ export default function DomainDetailPage() {
                     Auto-checking every 30s
                   </span>
                 )}
-                {domain.dns_last_checked_at && (
-                  <span className="text-xs text-muted-foreground">
-                    Last checked: {new Date(domain.dns_last_checked_at).toLocaleTimeString()}
-                  </span>
-                )}
               </div>
             </CardContent>
           </Card>
@@ -207,30 +220,38 @@ export default function DomainDetailPage() {
           {/* Assigned Teams */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Assigned Teams</CardTitle>
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-violet-100 dark:bg-violet-900/30">
+                  <Users className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                </div>
+                <div>
+                  <CardTitle className="text-base">Assigned Teams</CardTitle>
+                  <p className="text-xs text-muted-foreground mt-0.5">{teamAssignments.data?.length ?? 0} team{(teamAssignments.data?.length ?? 0) !== 1 ? "s" : ""} using this domain</p>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               {teamAssignments.isLoading ? (
-                <div className="space-y-2">{[1, 2].map(i => <Skeleton key={i} className="h-10 w-full" />)}</div>
+                <div className="space-y-2">{[1, 2].map(i => <Skeleton key={i} className="h-12 w-full rounded-lg" />)}</div>
               ) : teamAssignments.data && teamAssignments.data.length > 0 ? (
                 <div className="space-y-2">
                   {teamAssignments.data.map(({ team, assignment }) => (
-                    <div key={team.id} className="flex items-center justify-between rounded-lg border px-3 py-2.5">
+                    <Link key={team.id} href="/teams" className="flex items-center justify-between rounded-lg border px-3 py-2.5 hover:bg-accent/50 transition-colors group">
                       <div className="flex items-center gap-2.5">
                         <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
                           {team.name.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <p className="text-sm font-medium">{team.name}</p>
+                          <p className="text-sm font-medium group-hover:text-primary transition-colors">{team.name}</p>
                           <p className="text-[11px] text-muted-foreground">{team.member_count} member{team.member_count !== 1 ? "s" : ""}</p>
                         </div>
                       </div>
-                      <Badge variant="outline" className="text-[11px]">{assignment.access_level}</Badge>
-                    </div>
+                      <Badge variant="outline" className="text-[10px]">{assignment.access_level}</Badge>
+                    </Link>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground py-2">Not assigned to any teams yet. Go to Teams → Domains to assign.</p>
+                <EmptyState icon="👥" title="No teams assigned" description="Assign this domain to a team to start creating inboxes." />
               )}
             </CardContent>
           </Card>
@@ -238,17 +259,19 @@ export default function DomainDetailPage() {
           {/* Details */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Details</CardTitle>
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-slate-100 dark:bg-slate-900/30">
+                  <Info className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                </div>
+                <CardTitle className="text-base">Details</CardTitle>
+              </div>
             </CardHeader>
             <CardContent>
-              <dl className="grid grid-cols-[100px_1fr] gap-y-2 gap-x-3 text-sm">
-                <dt className="text-muted-foreground">Domain ID</dt>
-                <dd className="font-mono text-xs truncate">{domain.id}</dd>
-                <dt className="text-muted-foreground">Created</dt>
-                <dd>{new Date(domain.created_at).toLocaleDateString(undefined, { weekday: "short", year: "numeric", month: "short", day: "numeric" })}</dd>
-                <dt className="text-muted-foreground">MX Target</dt>
-                <dd className="font-mono text-xs">{domain.mx_target || "—"}</dd>
-              </dl>
+              <div className="grid gap-3">
+                <DetailRow label="Domain ID" value={domain.id} mono />
+                <DetailRow label="Created" value={new Date(domain.created_at).toLocaleDateString(undefined, { weekday: "short", year: "numeric", month: "short", day: "numeric" })} />
+                <DetailRow label="MX Target" value={domain.mx_target || "—"} mono />
+              </div>
             </CardContent>
           </Card>
 
@@ -256,6 +279,17 @@ export default function DomainDetailPage() {
           <DomainSettingsCard domain={domain} orgId={org!.id} />
         </>
       )}
+    </div>
+  );
+}
+
+/* ── Detail row ── */
+
+function DetailRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="flex items-center justify-between py-2 border-b last:border-0">
+      <span className="text-sm text-muted-foreground">{label}</span>
+      <span className={`text-sm ${mono ? "font-mono text-xs" : ""} truncate max-w-[60%] text-right`}>{value}</span>
     </div>
   );
 }
@@ -277,6 +311,8 @@ function QuickStat({ icon: Icon, label, value, accent }: { icon: typeof Globe; l
     </Card>
   );
 }
+
+/* ── Domain Settings ── */
 
 function DomainSettingsCard({ domain: d, orgId }: { domain: Domain; orgId: string }) {
   const qc = useQueryClient();
@@ -301,7 +337,15 @@ function DomainSettingsCard({ domain: d, orgId }: { domain: Domain; orgId: strin
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-base">Domain Settings</CardTitle>
+        <div className="flex items-center gap-2">
+          <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-amber-100 dark:bg-amber-900/30">
+            <Settings2 className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+          </div>
+          <div>
+            <CardTitle className="text-base">Domain Settings</CardTitle>
+            <p className="text-xs text-muted-foreground mt-0.5">Configure behavior for this domain</p>
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
