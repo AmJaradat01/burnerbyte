@@ -96,13 +96,13 @@ export default function DomainDetailPage() {
     queryKey: ["domain-teams", org?.id, domainId],
     queryFn: async () => {
       const results: { team: Team; assignment: DomainAssignment }[] = [];
-      for (const team of teams) {
+      await Promise.all(teams.map(async (team) => {
         try {
-          const res = await api.get<{ data: DomainAssignment[] }>(`/orgs/${org!.id}/teams/${team.id}/domains`);
+          const res = await api.get<{ data: DomainAssignment[] }>(`/orgs/${org!.id}/teams/${team.id}/domains`, { per_page: "200" });
           const match = res.data?.find((a) => a.domain_id === domainId);
           if (match) results.push({ team, assignment: match });
-        } catch { /* skip */ }
-      }
+        } catch { /* team may not be accessible */ }
+      }));
       return results;
     },
     enabled: !!org && teams.length > 0,
@@ -336,7 +336,7 @@ function DomainSettingsCard({ domain: d, orgId }: { domain: Domain; orgId: strin
     setSaving(true);
     try {
       await api.patch(`/orgs/${orgId}/domains/${d.id}`, { settings: { attachments_enabled: attachments } });
-      qc.invalidateQueries({ queryKey: ["domain", d.id] });
+      qc.invalidateQueries({ queryKey: ["domain", orgId, d.id] });
       toast.success("Domain settings updated");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to update settings");

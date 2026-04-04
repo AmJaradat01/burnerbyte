@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -174,5 +175,7 @@ func (s *DomainService) TriggerVerify(ctx context.Context, orgID, id uuid.UUID) 
 
 	d.MXVerified = mx
 	d.TXTVerified = txt
+	now := time.Now()
+	d.DNSLastCheckedAt = &now
 	return d, nil
 }
