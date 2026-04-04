@@ -19,6 +19,28 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import type { EmailSummary, Email, Inbox, PaginatedResponse } from "@/types";
 
+/* ── Countdown Pill ── */
+
+function CountdownPill({ expiresAt }: { expiresAt: string }) {
+  const [colors, setColors] = useState("bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400");
+  useEffect(() => {
+    const update = () => {
+      const diff = new Date(expiresAt).getTime() - Date.now();
+      if (diff < 600000) setColors("bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400");
+      else if (diff < 1800000) setColors("bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400");
+      else setColors("bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400");
+    };
+    update();
+    const iv = setInterval(update, 10000);
+    return () => clearInterval(iv);
+  }, [expiresAt]);
+  return (
+    <span className={`h-6 w-6 rounded-md flex items-center justify-center ${colors}`}>
+      <Clock className="h-3 w-3" />
+    </span>
+  );
+}
+
 /* ── Countdown ── */
 
 function Countdown({ expiresAt }: { expiresAt: string }) {
@@ -219,9 +241,15 @@ export default function InboxDetailPage() {
                 )}
               </div>
               <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-                <span className="flex items-center gap-1"><Mail className="h-3 w-3" /> {totalEmails} emails</span>
+                <span className="flex items-center gap-1.5">
+                  <span className="h-6 w-6 rounded-md bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center"><Mail className="h-3 w-3 text-blue-600 dark:text-blue-400" /></span>
+                  {totalEmails} emails
+                </span>
                 {inbox?.is_active && inbox?.expires_at && (
-                  <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> <Countdown expiresAt={inbox.expires_at} /></span>
+                  <span className="flex items-center gap-1.5">
+                    <CountdownPill expiresAt={inbox.expires_at} />
+                    <Countdown expiresAt={inbox.expires_at} />
+                  </span>
                 )}
               </div>
             </div>
