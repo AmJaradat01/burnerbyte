@@ -39,7 +39,10 @@ export default function AnalyticsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Analytics</h1>
+      <div>
+        <h1 className="text-2xl font-bold">Analytics</h1>
+        <p className="text-sm text-muted-foreground">Usage metrics and trends for your organization.</p>
+      </div>
       <Tabs defaultValue="org">
         <TabsList>
           <TabsTrigger value="org">Organization</TabsTrigger>
@@ -71,12 +74,12 @@ function OrgAnalytics({ orgId }: { orgId: string }) {
       {stats && (
         <>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <StatCard icon={Mail} label="Total Emails" value={stats.total_emails} />
-            <StatCard icon={Inbox} label="Active Inboxes" value={stats.active_inboxes} subtitle={`${stats.total_inboxes ?? 0} total`} />
-            <StatCard icon={Globe} label="Domains" value={stats.total_domains} />
-            <StatCard icon={Building2} label="Teams" value={stats.total_teams} />
-            <StatCard icon={Users} label="Members" value={stats.total_members} />
-            <StatCard icon={HardDrive} label="Storage" value={formatBytes(stats.storage_used_bytes ?? 0)} />
+            <StatCard icon={Mail} label="Total Emails" value={stats.total_emails} color="blue" />
+            <StatCard icon={Inbox} label="Active Inboxes" value={stats.active_inboxes} subtitle={`${stats.total_inboxes ?? 0} total`} color="emerald" />
+            <StatCard icon={Globe} label="Domains" value={stats.total_domains} color="violet" />
+            <StatCard icon={Building2} label="Teams" value={stats.total_teams} color="amber" />
+            <StatCard icon={Users} label="Members" value={stats.total_members} color="orange" />
+            <StatCard icon={HardDrive} label="Storage" value={formatBytes(stats.storage_used_bytes ?? 0)} color="slate" />
           </div>
 
           {/* Top sender domains */}
@@ -140,9 +143,9 @@ function TeamAnalytics({ orgId, teamId }: { orgId: string; teamId: string }) {
     <div className="space-y-6">
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatCard icon={Mail} label="Total Emails" value={stats.total_emails} />
-          <StatCard icon={Inbox} label="Active Inboxes" value={stats.active_inboxes} subtitle={`${stats.total_inboxes ?? 0} total`} />
-          <StatCard icon={Users} label="Members" value={stats.total_members} />
+          <StatCard icon={Mail} label="Total Emails" value={stats.total_emails} color="blue" />
+          <StatCard icon={Inbox} label="Active Inboxes" value={stats.active_inboxes} subtitle={`${stats.total_inboxes ?? 0} total`} color="emerald" />
+          <StatCard icon={Users} label="Members" value={stats.total_members} color="orange" />
         </div>
       )}
       <div className="flex items-center justify-between">
@@ -154,13 +157,25 @@ function TeamAnalytics({ orgId, teamId }: { orgId: string; teamId: string }) {
   );
 }
 
-function StatCard({ icon: Icon, label, value, subtitle }: { icon: typeof Mail; label: string; value: number | string; subtitle?: string }) {
+const STAT_COLORS: Record<string, { bg: string; text: string }> = {
+  blue: { bg: "bg-blue-100 dark:bg-blue-900/30", text: "text-blue-600 dark:text-blue-400" },
+  emerald: { bg: "bg-emerald-100 dark:bg-emerald-900/30", text: "text-emerald-600 dark:text-emerald-400" },
+  violet: { bg: "bg-violet-100 dark:bg-violet-900/30", text: "text-violet-600 dark:text-violet-400" },
+  amber: { bg: "bg-amber-100 dark:bg-amber-900/30", text: "text-amber-600 dark:text-amber-400" },
+  orange: { bg: "bg-orange-100 dark:bg-orange-900/30", text: "text-orange-600 dark:text-orange-400" },
+  slate: { bg: "bg-slate-100 dark:bg-slate-900/30", text: "text-slate-600 dark:text-slate-400" },
+};
+
+function StatCard({ icon: Icon, label, value, subtitle, color = "blue" }: { icon: typeof Mail; label: string; value: number | string; subtitle?: string; color?: keyof typeof STAT_COLORS }) {
   const display = typeof value === "number" ? (value ?? 0).toLocaleString() : value;
+  const c = STAT_COLORS[color];
   return (
     <Card>
       <CardContent className="pt-6">
-        <div className="flex items-center gap-2 mb-1">
-          <Icon className="h-4 w-4 text-muted-foreground" />
+        <div className="flex items-center gap-3 mb-2">
+          <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${c.bg}`}>
+            <Icon className={`h-5 w-5 ${c.text}`} />
+          </div>
           <span className="text-sm text-muted-foreground">{label}</span>
         </div>
         <p className="text-2xl font-bold">{display}</p>
