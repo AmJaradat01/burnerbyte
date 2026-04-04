@@ -73,7 +73,9 @@ func Middleware(tm *TokenManager, userRepo UserRepo, apikeyRepo APIKeyRepo) func
 					writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "API key expired"})
 					return
 				}
-				_ = apikeyRepo.UpdateLastUsed(r.Context(), key.ID)
+				if err := apikeyRepo.UpdateLastUsed(r.Context(), key.ID); err != nil {
+					slog.Error("failed to update API key last_used", "error", err, "key_id", key.ID)
+				}
 
 				// Resolve the key creator as the user context
 				user, err := userRepo.GetByID(r.Context(), key.CreatedBy)
