@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ErrorState } from "@/components/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Activity, AlertTriangle, Building2, CheckCircle2, Database, Globe, HardDrive, Inbox, Mail, Monitor, Palette, Settings, Shield, Trash2, Users, XCircle } from "lucide-react";
+import { Activity, AlertTriangle, Building2, CheckCircle2, Database, Globe, HardDrive, Inbox, Mail, Monitor, Settings, Shield, Trash2, Users, XCircle } from "lucide-react";
 import { UnifiedUsersTab } from "@/components/settings/unified-users-tab";
 import { RolesTab } from "@/components/settings/roles-tab";
 import type { Organization, OrgSettings, SystemStats } from "@/types";
@@ -130,26 +130,7 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
             </CardContent>
           </Card>
 
-          {/* Branding */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base"><Palette className="h-4 w-4" /> Branding</CardTitle>
-              <CardDescription>Customize the look of your org.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Primary Color</Label>
-                <div className="flex gap-2">
-                  <Input value={settings.primary_color ?? ""} onChange={(e) => set("primary_color", e.target.value)} placeholder="#6366f1" className="flex-1" />
-                  <input type="color" value={settings.primary_color || "#6366f1"} onChange={(e) => set("primary_color", e.target.value)} className="h-9 w-9 rounded-md border cursor-pointer p-0.5" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Footer Text</Label>
-                <Input value={settings.footer_text ?? ""} onChange={(e) => set("footer_text", e.target.value)} placeholder="Powered by BurnerByte" />
-              </div>
-            </CardContent>
-          </Card>
+
         </div>
 
         <div className="space-y-6">

@@ -110,9 +110,7 @@ type SetupInput struct {
 
 	// Step 6: Branding (optional)
 	Branding *struct {
-		PrimaryColor *string `json:"primary_color,omitempty"`
-		FooterText   *string `json:"footer_text,omitempty"`
-		LogoURL      *string `json:"logo_url,omitempty"`
+		LogoURL *string `json:"logo_url,omitempty"`
 	} `json:"branding,omitempty"`
 
 	// Step 7: Invites (optional)
@@ -301,17 +299,9 @@ func (h *SetupHandler) Complete(w http.ResponseWriter, r *http.Request) {
 
 	// Step 6: Branding (optional)
 	if input.Branding != nil {
-		settings := org.Settings
-		if input.Branding.PrimaryColor != nil {
-			settings.PrimaryColor = input.Branding.PrimaryColor
-		}
-		if input.Branding.FooterText != nil {
-			settings.FooterText = input.Branding.FooterText
-		}
 		if input.Branding.LogoURL != nil {
 			org.LogoURL = input.Branding.LogoURL
 		}
-		org.Settings = settings
 		if err := orgRepoTx.Update(r.Context(), org); err != nil {
 			writeError(w, http.StatusInternalServerError, "failed to save branding")
 			return
