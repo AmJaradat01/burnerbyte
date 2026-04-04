@@ -76,11 +76,15 @@ export default function DashboardPage() {
           value={stats?.total_emails}
           loading={isLoading}
           accent="text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400"
-          footer={todayDelta !== 0 ? (
-            <span className={`flex items-center gap-1 text-xs ${todayDelta > 0 ? "text-green-600" : "text-muted-foreground"}`}>
-              <TrendingUp className="h-3 w-3" /> {todayDelta > 0 ? "+" : ""}{todayDelta} today
-            </span>
-          ) : undefined}
+          footer={(() => {
+            if (yesterdayCount > 0) {
+              const pct = Math.round((todayDelta / yesterdayCount) * 100);
+              const color = pct > 0 ? "text-emerald-600" : pct < 0 ? "text-red-600" : "text-muted-foreground";
+              return <span className={`flex items-center gap-1 text-xs ${color}`}><TrendingUp className="h-3 w-3" />{pct > 0 ? "+" : ""}{pct}% from yesterday</span>;
+            }
+            if (todayCount > 0) return <span className="flex items-center gap-1 text-xs text-emerald-600"><TrendingUp className="h-3 w-3" />+{todayCount} new</span>;
+            return <span className="text-xs text-muted-foreground">No change</span>;
+          })()}
         />
         <StatCard
           icon={Inbox}

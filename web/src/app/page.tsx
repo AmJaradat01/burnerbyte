@@ -540,7 +540,7 @@ function LandingPage() {
             {featureKeys.map((key, i) => {
               const { icon: Icon, bg, fg } = featureIcons[i];
               return (
-              <div key={key} className="group rounded-xl border p-6 transition-colors hover:border-primary/50 hover:bg-muted/30">
+              <div key={key} className="group rounded-xl border bg-background/60 backdrop-blur-sm p-6 transition-all hover:border-primary/50 hover:bg-background/80 hover:shadow-lg">
                 <div className={`h-10 w-10 rounded-lg flex items-center justify-center mb-3 ${bg}`}><Icon className={`h-5 w-5 ${fg}`} /></div>
                 <h3 className="font-semibold">{t(`features.${key}.title`)}</h3>
                 <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{t(`features.${key}.desc`)}</p>
