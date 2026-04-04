@@ -18,7 +18,7 @@ import { toast } from "sonner";
 import { EmptyState } from "@/components/empty-state";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { useRoles } from "@/hooks/use-roles";
-import { ArrowLeft, Globe, Inbox, Plus, Settings, Trash2, UserPlus, Users } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Clock, Globe, Inbox, Plus, Settings, Trash2, UserPlus, Users } from "lucide-react";
 import type { Team, Membership, Domain } from "@/types";
 
 interface DomainAssignment {
@@ -54,7 +54,7 @@ export default function TeamsPage() {
             {selectedTeam.name.charAt(0).toUpperCase()}
           </div>
           <div>
-            <h1 className="text-xl font-bold">{selectedTeam.name}</h1>
+            <h1 className="text-2xl font-bold">{selectedTeam.name}</h1>
             <p className="text-xs text-muted-foreground font-mono">{selectedTeam.slug}</p>
           </div>
           <div className="flex items-center gap-2 ml-auto text-xs text-muted-foreground">
@@ -258,9 +258,9 @@ function TeamMembersTab({ orgId, teamId }: { orgId: string; teamId: string }) {
     <div className="space-y-4">
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
-        <Card><CardContent className="pt-4 pb-3"><p className="text-xs text-muted-foreground">Total</p><p className="text-xl font-bold">{members.length}</p></CardContent></Card>
-        <Card><CardContent className="pt-4 pb-3"><p className="text-xs text-muted-foreground">Leads</p><p className="text-xl font-bold">{leadCount}</p></CardContent></Card>
-        <Card><CardContent className="pt-4 pb-3"><p className="text-xs text-muted-foreground">Members</p><p className="text-xl font-bold">{members.length - leadCount}</p></CardContent></Card>
+        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Total</span><div className="h-8 w-8 rounded-lg flex items-center justify-center bg-blue-100 dark:bg-blue-900/30"><Users className="h-4 w-4 text-blue-600 dark:text-blue-400" /></div></div><p className="text-2xl font-bold tabular-nums">{members.length}</p></CardContent></Card>
+        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Active</span><div className="h-8 w-8 rounded-lg flex items-center justify-center bg-emerald-100 dark:bg-emerald-900/30"><CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /></div></div><p className="text-2xl font-bold tabular-nums">{leadCount}</p></CardContent></Card>
+        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Pending</span><div className="h-8 w-8 rounded-lg flex items-center justify-center bg-amber-100 dark:bg-amber-900/30"><Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" /></div></div><p className="text-2xl font-bold tabular-nums">{members.length - leadCount}</p></CardContent></Card>
       </div>
 
       {/* Search + Add */}
@@ -398,9 +398,9 @@ function DomainAssignmentsTab({ orgId, teamId }: { orgId: string; teamId: string
     <div className="space-y-4">
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
-        <Card><CardContent className="pt-4 pb-3"><p className="text-xs text-muted-foreground">Assigned</p><p className="text-xl font-bold">{assignmentList.length}</p></CardContent></Card>
-        <Card><CardContent className="pt-4 pb-3"><p className="text-xs text-muted-foreground">Available</p><p className="text-xl font-bold">{available.length}</p></CardContent></Card>
-        <Card><CardContent className="pt-4 pb-3"><p className="text-xs text-muted-foreground">Total Org Domains</p><p className="text-xl font-bold">{domains?.data?.length ?? 0}</p></CardContent></Card>
+        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Total</span><div className="h-8 w-8 rounded-lg flex items-center justify-center bg-violet-100 dark:bg-violet-900/30"><Globe className="h-4 w-4 text-violet-600 dark:text-violet-400" /></div></div><p className="text-2xl font-bold tabular-nums">{assignmentList.length}</p></CardContent></Card>
+        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Active</span><div className="h-8 w-8 rounded-lg flex items-center justify-center bg-emerald-100 dark:bg-emerald-900/30"><CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /></div></div><p className="text-2xl font-bold tabular-nums">{available.length}</p></CardContent></Card>
+        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Teams</span><div className="h-8 w-8 rounded-lg flex items-center justify-center bg-amber-100 dark:bg-amber-900/30"><Users className="h-4 w-4 text-amber-600 dark:text-amber-400" /></div></div><p className="text-2xl font-bold tabular-nums">{domains?.data?.length ?? 0}</p></CardContent></Card>
       </div>
 
       {/* Assign button */}
