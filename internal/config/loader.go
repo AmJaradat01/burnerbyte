@@ -33,15 +33,18 @@ func (c *Config) LoadFromDB(ctx context.Context, repo SystemConfigLoader) {
 	}
 
 	var platform struct {
-		AllowRegistration    bool `json:"allow_registration"`
-		EmailVerification    bool `json:"email_verification"`
-		PasswordMinLength    int  `json:"password_min_length"`
-		PasswordRequireUpper bool `json:"password_require_upper"`
-		PasswordRequireLower bool `json:"password_require_lower"`
-		PasswordRequireNum   bool `json:"password_require_number"`
-		PasswordRequireSpec  bool `json:"password_require_special"`
-		LockoutMaxAttempts   int  `json:"lockout_max_attempts"`
-		LockoutDurationMins  int  `json:"lockout_duration_mins"`
+		AllowRegistration    bool   `json:"allow_registration"`
+		EmailVerification    bool   `json:"email_verification"`
+		PasswordMinLength    int    `json:"password_min_length"`
+		PasswordRequireUpper bool   `json:"password_require_upper"`
+		PasswordRequireLower bool   `json:"password_require_lower"`
+		PasswordRequireNum   bool   `json:"password_require_number"`
+		PasswordRequireSpec  bool   `json:"password_require_special"`
+		LockoutMaxAttempts   int    `json:"lockout_max_attempts"`
+		LockoutDurationMins  int    `json:"lockout_duration_mins"`
+		Timezone             string `json:"timezone"`
+		DateFormat           string `json:"date_format"`
+		TimeFormat           string `json:"time_format"`
 	}
 	if err := repo.Get(ctx, "platform", &platform); err == nil {
 		c.Defaults.AllowRegistration = platform.AllowRegistration
@@ -59,6 +62,9 @@ func (c *Config) LoadFromDB(ctx context.Context, repo SystemConfigLoader) {
 		if platform.LockoutDurationMins > 0 {
 			c.Lockout.Duration = time.Duration(platform.LockoutDurationMins) * time.Minute
 		}
+		c.Defaults.Timezone = platform.Timezone
+		c.Defaults.DateFormat = platform.DateFormat
+		c.Defaults.TimeFormat = platform.TimeFormat
 		slog.Info("loaded platform config from database")
 	}
 }

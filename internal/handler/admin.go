@@ -179,19 +179,25 @@ func (h *AdminHandler) GetSSOConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 type PlatformSettings struct {
-	AllowRegistration    bool `json:"allow_registration"`
-	EmailVerification    bool `json:"email_verification"`
-	PasswordMinLength    int  `json:"password_min_length"`
-	PasswordRequireUpper bool `json:"password_require_upper"`
-	PasswordRequireLower bool `json:"password_require_lower"`
-	PasswordRequireNum   bool `json:"password_require_number"`
-	PasswordRequireSpec  bool `json:"password_require_special"`
-	LockoutMaxAttempts   int  `json:"lockout_max_attempts"`
-	LockoutDurationMins  int  `json:"lockout_duration_mins"`
+	AllowRegistration    bool   `json:"allow_registration"`
+	EmailVerification    bool   `json:"email_verification"`
+	PasswordMinLength    int    `json:"password_min_length"`
+	PasswordRequireUpper bool   `json:"password_require_upper"`
+	PasswordRequireLower bool   `json:"password_require_lower"`
+	PasswordRequireNum   bool   `json:"password_require_number"`
+	PasswordRequireSpec  bool   `json:"password_require_special"`
+	LockoutMaxAttempts   int    `json:"lockout_max_attempts"`
+	LockoutDurationMins  int    `json:"lockout_duration_mins"`
+	Timezone             string `json:"timezone"`
+	DateFormat           string `json:"date_format"`
+	TimeFormat           string `json:"time_format"`
 }
 
 func (h *AdminHandler) GetPlatformSettings(w http.ResponseWriter, r *http.Request) {
 	h.cfgMu.RLock()
+	tz := h.cfg.Defaults.Timezone
+	df := h.cfg.Defaults.DateFormat
+	tf := h.cfg.Defaults.TimeFormat
 	ps := PlatformSettings{
 		AllowRegistration:    h.cfg.Defaults.AllowRegistration,
 		EmailVerification:    h.cfg.EmailVerification.Enabled,
@@ -204,6 +210,12 @@ func (h *AdminHandler) GetPlatformSettings(w http.ResponseWriter, r *http.Reques
 		LockoutDurationMins:  int(h.cfg.Lockout.Duration.Minutes()),
 	}
 	h.cfgMu.RUnlock()
+	if tz == "" { tz = "UTC" }
+	if df == "" { df = "YYYY-MM-DD" }
+	if tf == "" { tf = "24h" }
+	ps.Timezone = tz
+	ps.DateFormat = df
+	ps.TimeFormat = tf
 	writeJSON(w, http.StatusOK, ps)
 }
 
@@ -237,6 +249,9 @@ func (h *AdminHandler) UpdatePlatformSettings(w http.ResponseWriter, r *http.Req
 	h.cfg.Password.RequireSpecial = input.PasswordRequireSpec
 	h.cfg.Lockout.MaxAttempts = input.LockoutMaxAttempts
 	h.cfg.Lockout.Duration = time.Duration(input.LockoutDurationMins) * time.Minute
+	h.cfg.Defaults.Timezone = input.Timezone
+	h.cfg.Defaults.DateFormat = input.DateFormat
+	h.cfg.Defaults.TimeFormat = input.TimeFormat
 	h.cfgMu.Unlock()
 	auditRecord(r, uuid.Nil, "admin.platform_settings_updated", "platform", uuid.Nil, map[string]any{"allow_registration": input.AllowRegistration, "email_verification": input.EmailVerification, "password_min_length": input.PasswordMinLength, "lockout_max_attempts": input.LockoutMaxAttempts, "lockout_duration_mins": input.LockoutDurationMins})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "platform settings updated"})

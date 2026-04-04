@@ -147,6 +147,9 @@ type DefaultsConfig struct {
 	WebhookMaxRetries   int           `mapstructure:"webhook_max_retries"`
 	AnalyticsCacheTTL   time.Duration `mapstructure:"analytics_cache_ttl"`
 	AnalyticsDefaultDays int          `mapstructure:"analytics_default_days"`
+	Timezone             string        `mapstructure:"timezone"`
+	DateFormat           string        `mapstructure:"date_format"`
+	TimeFormat           string        `mapstructure:"time_format"`
 }
 
 type EmailVerificationConfig struct {
