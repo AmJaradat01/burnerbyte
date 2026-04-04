@@ -42,9 +42,9 @@ const RESOURCE_ICONS: Record<string, typeof User> = {
 };
 
 function exportCSV(entries: AuditEntry[]) {
-  const header = "Time,Actor,Action,Resource Type,Resource ID,IP Address";
+  const header = "Time,Actor,Action,Resource Type,Resource ID,IP Address,Details";
   const rows = entries.map((e) =>
-    [new Date(e.created_at).toISOString(), e.actor_email || e.actor_id, e.action, e.resource_type, e.resource_id, e.ip_address || ""]
+    [new Date(e.created_at).toISOString(), e.actor_email || e.actor_id, e.action, e.resource_type, e.resource_id, e.ip_address || "", e.metadata ? JSON.stringify(e.metadata) : ""]
       .map((v) => `"${(v ?? "").replace(/"/g, '""')}"`)
       .join(",")
   );
@@ -235,13 +235,20 @@ function AuditRow({ entry: e }: { entry: AuditEntry }) {
         {expanded && (
           <div className="mt-3 pt-3 border-t grid gap-2 text-xs sm:grid-cols-2">
             <div><span className="text-muted-foreground">Actor: </span>{e.actor_email || e.actor_id}</div>
-            <div><span className="text-muted-foreground">Resource ID: </span><span className="font-mono">{e.resource_id}</span></div>
-            <div><span className="text-muted-foreground">IP: </span>{e.ip_address || "—"}</div>
+            <div><span className="text-muted-foreground">Resource ID: </span><span className="font-mono text-[11px]">{e.resource_id}</span></div>
+            <div><span className="text-muted-foreground">IP: </span><span className="font-mono">{e.ip_address || "—"}</span></div>
             <div><span className="text-muted-foreground">Time: </span>{new Date(e.created_at).toLocaleString()}</div>
-            {e.metadata && Object.keys(e.metadata).length > 0 && (
-              <div className="sm:col-span-2">
-                <span className="text-muted-foreground">Metadata: </span>
-                <pre className="mt-1 rounded bg-muted p-2 text-xs overflow-auto">{JSON.stringify(e.metadata, null, 2)}</pre>
+            {e.metadata && typeof e.metadata === "object" && Object.keys(e.metadata).length > 0 && (
+              <div className="sm:col-span-2 mt-1">
+                <span className="text-muted-foreground block mb-1.5">Details:</span>
+                <div className="rounded-lg bg-muted/50 border divide-y">
+                  {Object.entries(e.metadata).map(([k, v]) => (
+                    <div key={k} className="flex items-center justify-between px-3 py-1.5">
+                      <span className="text-muted-foreground">{k.replace(/_/g, " ")}</span>
+                      <span className="font-mono text-[11px] text-right max-w-[60%] truncate">{typeof v === "boolean" ? (v ? "Yes" : "No") : String(v ?? "—")}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
