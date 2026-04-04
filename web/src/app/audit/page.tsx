@@ -97,36 +97,36 @@ export default function AuditPage() {
 
       <div className="grid grid-cols-3 gap-4 mb-6">
         <Card>
-          <CardContent className="flex items-center gap-4 p-4">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
-              <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+          <CardContent className="pt-5 pb-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm text-muted-foreground">Total Entries</span>
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-blue-100 dark:bg-blue-900/30">
+                <Shield className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              </div>
             </div>
-            <div>
-              <p className="text-2xl font-bold">{data?.total ?? 0}</p>
-              <p className="text-xs text-muted-foreground">Total Entries</p>
-            </div>
+            <p className="text-2xl font-bold tabular-nums">{data?.total ?? 0}</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="flex items-center gap-4 p-4">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
-              <Activity className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+          <CardContent className="pt-5 pb-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm text-muted-foreground">Unique Actions</span>
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-emerald-100 dark:bg-emerald-900/30">
+                <Activity className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              </div>
             </div>
-            <div>
-              <p className="text-2xl font-bold">{new Set(data?.data?.map(e => e.action)).size ?? 0}</p>
-              <p className="text-xs text-muted-foreground">Unique Actions</p>
-            </div>
+            <p className="text-2xl font-bold tabular-nums">{new Set(data?.data?.map(e => e.action)).size ?? 0}</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="flex items-center gap-4 p-4">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/30">
-              <Users className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+          <CardContent className="pt-5 pb-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm text-muted-foreground">Unique Actors</span>
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-amber-100 dark:bg-amber-900/30">
+                <Users className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              </div>
             </div>
-            <div>
-              <p className="text-2xl font-bold">{new Set(data?.data?.map(e => e.actor_email)).size ?? 0}</p>
-              <p className="text-xs text-muted-foreground">Unique Actors</p>
-            </div>
+            <p className="text-2xl font-bold tabular-nums">{new Set(data?.data?.map(e => e.actor_email)).size ?? 0}</p>
           </CardContent>
         </Card>
       </div>
