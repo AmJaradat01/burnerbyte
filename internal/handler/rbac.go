@@ -56,8 +56,8 @@ func checkTeamRole(w http.ResponseWriter, r *http.Request, orgID, teamID uuid.UU
 }
 
 // auditRecord is a convenience wrapper for audit recording in handlers.
-func auditRecord(r *http.Request, orgID uuid.UUID, action, resourceType string, resourceID uuid.UUID) {
+func auditRecord(r *http.Request, orgID uuid.UUID, action, resourceType string, resourceID uuid.UUID, meta map[string]any) {
 	if Audit != nil {
-		Audit.RecordFromRequest(r, orgID, action, resourceType, resourceID, nil)
+		Audit.RecordFromRequest(r, orgID, action, resourceType, resourceID, meta)
 	}
 }
