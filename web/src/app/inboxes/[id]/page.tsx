@@ -16,6 +16,7 @@ import { InboxEmptyPreview } from "@/components/inbox/inbox-empty-preview";
 import {
   ArrowLeft, Check, Clock, Copy, Mail, MailOpen, CheckCheck, Timer, Trash2,
 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { EmailSummary, Email, Inbox, PaginatedResponse } from "@/types";
 
 /* ── Countdown ── */
@@ -197,14 +198,24 @@ export default function InboxDetailPage() {
             </Button>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h1 className="font-mono text-sm font-semibold truncate">{address || "Loading…"}</h1>
-                <button onClick={copyAddress} className="shrink-0 text-muted-foreground hover:text-foreground transition-colors">
-                  {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
-                </button>
-                {inbox && (
-                  <Badge variant={inbox.is_active ? "default" : "secondary"} className="shrink-0 text-[10px] px-1.5 py-0">
-                    {inbox.is_active ? "Active" : "Expired"}
-                  </Badge>
+                {address ? (
+                  <>
+                    <h1 className="font-mono text-sm font-semibold truncate">{address}</h1>
+                    <button onClick={copyAddress} className="shrink-0 text-muted-foreground hover:text-foreground transition-colors">
+                      {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
+                    </button>
+                    {inbox && (
+                      <Badge variant={inbox.is_active ? "default" : "secondary"} className="shrink-0 text-[10px] px-1.5 py-0">
+                        {inbox.is_active ? "Active" : "Expired"}
+                      </Badge>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <Skeleton className="h-6 w-48" />
+                    <Skeleton className="h-5 w-20" />
+                    <Skeleton className="h-5 w-32" />
+                  </>
                 )}
               </div>
               <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
