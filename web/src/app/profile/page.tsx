@@ -18,7 +18,18 @@ import { KeyRound, LogOut, Monitor, Shield, Trash2 } from "lucide-react";
 export default function ProfilePage() {
   const { user, fetchMe } = useAuthStore();
 
-  if (!user) return <div className="mx-auto max-w-5xl space-y-8"><Skeleton className="h-8 w-48" /><Skeleton className="h-32 w-full" /></div>;
+  if (!user) return (
+    <div className="mx-auto max-w-5xl space-y-8">
+      <div className="flex items-center gap-4">
+        <Skeleton className="h-16 w-16 rounded-full" />
+        <div className="space-y-2"><Skeleton className="h-6 w-40" /><Skeleton className="h-4 w-56" /></div>
+      </div>
+      <div className="grid gap-6 md:grid-cols-2">
+        <Skeleton className="h-48 w-full rounded-xl" />
+        <Skeleton className="h-48 w-full rounded-xl" />
+      </div>
+    </div>
+  );
 
   const initials = user.display_name
     ? user.display_name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
