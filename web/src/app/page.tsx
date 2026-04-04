@@ -18,7 +18,7 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EmptyState } from "@/components/empty-state";
 import { ErrorState } from "@/components/error-state";
 import { Pagination } from "@/components/pagination";
-import { Check, ChevronDown, Clock, Copy, ExternalLink, Mail, MailOpen, RefreshCw, Timer, Trash2, Zap } from "lucide-react";
+import { Check, ChevronDown, Clock, Copy, ExternalLink, Mail, RefreshCw, Timer, Trash2, Zap } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { WS_BASE } from "@/lib/api";
 import { copyToClipboard } from "@/lib/clipboard";
