@@ -44,6 +44,7 @@ export function UnifiedUsersTab({ orgId }: { orgId: string }) {
   const isAdmin = currentUser?.is_system_admin ?? false;
   const { orgRoles } = useRoles();
   const [page, setPage] = useState(1);
+  const [membersPage, setMembersPage] = useState(1);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "members" | "non-members" | "unverified" | "admin">("all");
 
@@ -55,8 +56,8 @@ export function UnifiedUsersTab({ orgId }: { orgId: string }) {
   });
 
   const { data: membersData, isLoading: membersLoading, isError: membersError, refetch: refetchMembers } = useQuery({
-    queryKey: ["org-members", orgId, 1],
-    queryFn: () => api.get<{ data: Membership[]; total: number }>(`/orgs/${orgId}/members`, { page: "1", per_page: "200" }),
+    queryKey: ["org-members", orgId, membersPage],
+    queryFn: () => api.get<{ data: Membership[]; total: number; total_pages?: number }>(`/orgs/${orgId}/members`, { page: String(membersPage), per_page: "100" }),
   });
 
   const { data: invitesData } = useQuery({
@@ -246,6 +247,7 @@ export function UnifiedUsersTab({ orgId }: { orgId: string }) {
       )}
 
       {isAdmin && usersData && usersData.total_pages > 1 && <Pagination page={page} totalPages={usersData.total_pages} onPageChange={setPage} />}
+      {!isAdmin && membersData && (membersData.total_pages ?? Math.ceil((membersData.total ?? 0) / 100)) > 1 && <Pagination page={membersPage} totalPages={membersData.total_pages ?? Math.ceil((membersData.total ?? 0) / 100)} onPageChange={setMembersPage} />}
 
       {/* Pending Invites */}
       {pendingInvites.length > 0 && (
