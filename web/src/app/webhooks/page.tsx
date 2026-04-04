@@ -118,7 +118,7 @@ export default function WebhooksPage() {
 function WebhookStatusIndicator({ webhook: w }: { webhook: Webhook }) {
   if (!w.active) return <Badge variant="secondary">Disabled</Badge>;
   if (w.failure_count > 0) return <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3" /> {w.failure_count} failures</Badge>;
-  if (w.last_status && w.last_status >= 200 && w.last_status < 300) return <Badge className="gap-1 bg-green-100 text-green-700 border-green-200"><CheckCircle2 className="h-3 w-3" /> Healthy</Badge>;
+  if (w.last_status && w.last_status >= 200 && w.last_status < 300) return <Badge className="gap-1 bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800"><CheckCircle2 className="h-3 w-3" /> Healthy</Badge>;
   return <Badge variant="outline">No deliveries</Badge>;
 }
 
