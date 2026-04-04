@@ -9,7 +9,6 @@ type OrgStats struct {
 	TotalMembers     int64            `json:"total_members"`
 	StorageUsedBytes int64            `json:"storage_used_bytes"`
 	TopSenderDomains []SenderDomain   `json:"top_sender_domains"`
-	EmailsPerDay     []TimeSeriesPoint `json:"emails_per_day"`
 }
 
 type TeamStats struct {
@@ -17,7 +16,6 @@ type TeamStats struct {
 	TotalInboxes  int64             `json:"total_inboxes"`
 	ActiveInboxes int64             `json:"active_inboxes"`
 	TotalMembers  int64             `json:"total_members"`
-	EmailsPerDay  []TimeSeriesPoint `json:"emails_per_day"`
 }
 
 type SenderDomain struct {
