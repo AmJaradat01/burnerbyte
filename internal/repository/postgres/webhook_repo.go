@@ -101,7 +101,7 @@ func (r *WebhookRepo) ListActiveByTeamAndEvent(ctx context.Context, teamID uuid.
 func (r *WebhookRepo) Update(ctx context.Context, w *domain.Webhook) error {
 	events, _ := json.Marshal(w.Events)
 	_, err := r.db.Exec(ctx,
-		`UPDATE webhooks SET url=$1, events=$2, active=$3 WHERE id=$4`,
+		`UPDATE webhooks SET url=$1, events=$2, active=$3, updated_at=NOW() WHERE id=$4`,
 		w.URL, events, w.Active, w.ID)
 	return err
 }
