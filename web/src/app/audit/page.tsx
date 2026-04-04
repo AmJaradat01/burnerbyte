@@ -112,7 +112,7 @@ export default function AuditPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Audit Log</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Audit Log</h1>
           <p className="text-sm text-muted-foreground mt-0.5">{data?.total ?? 0} entries{hasFilters ? " (filtered)" : ""}</p>
         </div>
         <Button variant="outline" size="sm" className="gap-1.5" onClick={exportAll} disabled={!data?.data?.length || exporting}>
@@ -125,7 +125,7 @@ export default function AuditPage() {
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-muted-foreground">Total Entries</span>
-              <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-blue-100 dark:bg-blue-900/30">
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-blue-100 dark:bg-blue-900/30">
                 <Shield className="h-4 w-4 text-blue-600 dark:text-blue-400" />
               </div>
             </div>
@@ -136,7 +136,7 @@ export default function AuditPage() {
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-muted-foreground">Actions (page)</span>
-              <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-emerald-100 dark:bg-emerald-900/30">
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-emerald-100 dark:bg-emerald-900/30">
                 <Activity className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
               </div>
             </div>
@@ -147,7 +147,7 @@ export default function AuditPage() {
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-muted-foreground">Actors (page)</span>
-              <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-amber-100 dark:bg-amber-900/30">
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-amber-100 dark:bg-amber-900/30">
                 <Users className="h-4 w-4 text-amber-600 dark:text-amber-400" />
               </div>
             </div>
@@ -213,7 +213,7 @@ function AuditRow({ entry: e }: { entry: AuditEntry }) {
   const colorCls = getActionColor(e.action);
 
   return (
-    <Card className="cursor-pointer hover:shadow-sm transition-all" onClick={() => setExpanded(!expanded)}>
+    <Card className="cursor-pointer hover:shadow-sm transition-all duration-200" onClick={() => setExpanded(!expanded)}>
       <CardContent className="py-3 px-4">
         <div className="flex items-center gap-3">
           <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center shrink-0">

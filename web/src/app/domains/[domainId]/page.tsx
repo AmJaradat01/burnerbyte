@@ -126,7 +126,7 @@ export default function DomainDetailPage() {
           <>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold">{domain?.domain_name}</h1>
+                <h1 className="text-3xl font-bold tracking-tight">{domain?.domain_name}</h1>
                 {allVerified ? (
                   <Badge className="gap-1 bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800">
                     <CheckCircle2 className="h-3 w-3" /> Verified
@@ -164,7 +164,7 @@ export default function DomainDetailPage() {
               <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-blue-100 dark:bg-blue-900/30">
+                <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-blue-100 dark:bg-blue-900/30">
                   <Globe className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
@@ -231,7 +231,7 @@ export default function DomainDetailPage() {
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-violet-100 dark:bg-violet-900/30">
+                <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-violet-100 dark:bg-violet-900/30">
                   <Users className="h-4 w-4 text-violet-600 dark:text-violet-400" />
                 </div>
                 <div>
@@ -270,7 +270,7 @@ export default function DomainDetailPage() {
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-slate-100 dark:bg-slate-900/30">
+                <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-slate-100 dark:bg-slate-900/30">
                   <Info className="h-4 w-4 text-slate-600 dark:text-slate-400" />
                 </div>
                 <CardTitle className="text-base">Details</CardTitle>
@@ -299,7 +299,7 @@ export default function DomainDetailPage() {
 function DetailRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div className="flex items-center justify-between py-2 border-b last:border-0">
-      <span className="text-sm text-muted-foreground">{label}</span>
+      <span className="text-sm font-medium text-muted-foreground">{label}</span>
       <span className={`text-sm ${mono ? "font-mono text-xs" : ""} truncate max-w-[60%] text-right`}>{value}</span>
     </div>
   );
@@ -312,8 +312,8 @@ function QuickStat({ icon: Icon, label, value, accent }: { icon: typeof Globe; l
     <Card>
       <CardContent className="pt-5 pb-4">
         <div className="flex items-center justify-between mb-3">
-          <span className="text-sm text-muted-foreground">{label}</span>
-          <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${accent}`}>
+          <span className="text-sm font-medium text-muted-foreground">{label}</span>
+          <div className={`h-8 w-8 rounded-lg flex items-center justify-center shadow-sm shrink-0 ${accent}`}>
             <Icon className="h-4 w-4" />
           </div>
         </div>
@@ -349,7 +349,7 @@ function DomainSettingsCard({ domain: d, orgId }: { domain: Domain; orgId: strin
     <Card>
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-amber-100 dark:bg-amber-900/30">
+          <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-amber-100 dark:bg-amber-900/30">
             <Settings2 className="h-4 w-4 text-amber-600 dark:text-amber-400" />
           </div>
           <div>

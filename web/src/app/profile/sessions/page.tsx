@@ -48,7 +48,7 @@ export default function SessionsPage() {
     <div className="max-w-3xl space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Active Sessions</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Active Sessions</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Manage your active sessions across devices.</p>
         </div>
         <ConfirmDialog
@@ -64,7 +64,7 @@ export default function SessionsPage() {
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-muted-foreground">Active Sessions</span>
-              <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-blue-100 dark:bg-blue-900/30">
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-blue-100 dark:bg-blue-900/30">
                 <Monitor className="h-4 w-4 text-blue-600 dark:text-blue-400" />
               </div>
             </div>
@@ -75,7 +75,7 @@ export default function SessionsPage() {
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-muted-foreground">Current Session</span>
-              <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-emerald-100 dark:bg-emerald-900/30">
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-emerald-100 dark:bg-emerald-900/30">
                 <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
               </div>
             </div>
