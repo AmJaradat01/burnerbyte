@@ -121,7 +121,7 @@ export default function DomainDetailPage() {
         {isLoading ? <Skeleton className="h-8 w-48" /> : (
           <>
             <Globe className="h-5 w-5 text-muted-foreground" />
-            <h1 className="text-2xl font-bold font-mono">{domain?.domain_name}</h1>
+            <h1 className="text-2xl font-bold">{domain?.domain_name}</h1>
             {allVerified ? (
               <Badge className="gap-1 bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800">
                 <CheckCircle2 className="h-3 w-3" /> Verified

@@ -302,17 +302,37 @@ function TeamMembersTab({ orgId, teamId }: { orgId: string; teamId: string }) {
         {isLoading ? (
           <div className="p-4 space-y-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/50">
-                <TableHead className="font-medium">Member</TableHead>
-                <TableHead className="font-medium">Role</TableHead>
-                <TableHead className="font-medium hidden sm:table-cell">Joined</TableHead>
-                <TableHead className="text-right font-medium">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((m) => (
+          <>
+              {filtered.length === 0 && !search && (
+                <EmptyState icon="👥" title="No members yet" description="Invite team members to collaborate." />
+              )}
+              {filtered.length === 0 && search && (
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="font-medium">Member</TableHead>
+                      <TableHead className="font-medium">Role</TableHead>
+                      <TableHead className="font-medium hidden sm:table-cell">Joined</TableHead>
+                      <TableHead className="text-right font-medium">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow><TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-12">No matching members</TableCell></TableRow>
+                  </TableBody>
+                </Table>
+              )}
+              {filtered.length > 0 && (
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="font-medium">Member</TableHead>
+                      <TableHead className="font-medium">Role</TableHead>
+                      <TableHead className="font-medium hidden sm:table-cell">Joined</TableHead>
+                      <TableHead className="text-right font-medium">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.map((m) => (
                 <TableRow key={m.id} className="hover:bg-muted/30">
                   <TableCell>
                     <div className="flex items-center gap-3">
@@ -346,11 +366,10 @@ function TeamMembersTab({ orgId, teamId }: { orgId: string; teamId: string }) {
                   </TableCell>
                 </TableRow>
               ))}
-              {filtered.length === 0 && (
-                <TableRow><TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-12">{search ? "No matching members" : "No members yet"}</TableCell></TableRow>
+                  </TableBody>
+                </Table>
               )}
-            </TableBody>
-          </Table>
+          </>
         )}
       </div>
     </div>
@@ -439,6 +458,9 @@ function DomainAssignmentsTab({ orgId, teamId }: { orgId: string; teamId: string
         {isLoading ? (
           <div className="p-4 space-y-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
         ) : (
+          assignmentList.length === 0 ? (
+            <EmptyState icon="🌐" title="No domains assigned" description="Assign domains to this team to start receiving emails." />
+          ) : (
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50">
@@ -473,11 +495,9 @@ function DomainAssignmentsTab({ orgId, teamId }: { orgId: string; teamId: string
                   </TableCell>
                 </TableRow>
               ))}
-              {assignmentList.length === 0 && (
-                <TableRow><TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-12">No domains assigned yet</TableCell></TableRow>
-              )}
             </TableBody>
           </Table>
+          )
         )}
       </div>
     </div>
