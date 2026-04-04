@@ -44,13 +44,13 @@ func (r *DomainRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Domain,
 	var settings []byte
 	err := r.db.QueryRow(ctx,
 		`SELECT d.id, d.org_id, d.domain_name, d.mx_verified, d.txt_verified, d.dns_last_checked_at, d.settings, d.created_at, d.updated_at,
+		        d.inboxes_created_count,
 		        (SELECT COUNT(*) FROM inboxes i WHERE i.domain_id = d.id AND i.is_active = TRUE),
-		        (SELECT COUNT(*) FROM inboxes i WHERE i.domain_id = d.id),
 		        (SELECT COUNT(DISTINCT da.team_id) FROM domain_assignments da WHERE da.domain_id = d.id)
 		 FROM domains d WHERE d.id = $1`, id).Scan(
 		&d.ID, &d.OrgID, &d.DomainName, &d.MXVerified, &d.TXTVerified,
 		&d.DNSLastCheckedAt, &settings, &d.CreatedAt, &d.UpdatedAt,
-		&d.ActiveInboxes, &d.TotalInboxes, &d.TeamCount)
+		&d.InboxesCreatedCount, &d.ActiveInboxes, &d.TeamCount)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNotFound
@@ -77,8 +77,8 @@ func (r *DomainRepo) ListByOrg(ctx context.Context, orgID uuid.UUID, page, perPa
 	offset := (page - 1) * perPage
 	rows, err := r.db.Query(ctx,
 		`SELECT d.id, d.org_id, d.domain_name, d.mx_verified, d.txt_verified, d.dns_last_checked_at, d.settings, d.created_at, d.updated_at,
+		        d.inboxes_created_count,
 		        (SELECT COUNT(*) FROM inboxes i WHERE i.domain_id = d.id AND i.is_active = TRUE),
-		        (SELECT COUNT(*) FROM inboxes i WHERE i.domain_id = d.id),
 		        (SELECT COUNT(DISTINCT da.team_id) FROM domain_assignments da WHERE da.domain_id = d.id)
 		 FROM domains d WHERE d.org_id = $1 ORDER BY d.domain_name LIMIT $2 OFFSET $3`, orgID, perPage, offset)
 	if err != nil {
@@ -91,7 +91,7 @@ func (r *DomainRepo) ListByOrg(ctx context.Context, orgID uuid.UUID, page, perPa
 		var d domain.Domain
 		var settings []byte
 		err := rows.Scan(&d.ID, &d.OrgID, &d.DomainName, &d.MXVerified, &d.TXTVerified,
-			&d.DNSLastCheckedAt, &settings, &d.CreatedAt, &d.UpdatedAt, &d.ActiveInboxes, &d.TotalInboxes, &d.TeamCount)
+			&d.DNSLastCheckedAt, &settings, &d.CreatedAt, &d.UpdatedAt, &d.InboxesCreatedCount, &d.ActiveInboxes, &d.TeamCount)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -160,6 +160,11 @@ func (r *DomainRepo) listAllInternal(ctx context.Context, limit, offset int) ([]
 		domains = append(domains, *d)
 	}
 	return domains, nil
+}
+
+func (r *DomainRepo) IncrementInboxCount(ctx context.Context, domainID uuid.UUID) error {
+	_, err := r.db.Exec(ctx, `UPDATE domains SET inboxes_created_count = inboxes_created_count + 1 WHERE id = $1`, domainID)
+	return err
 }
 
 func (r *DomainRepo) Delete(ctx context.Context, id uuid.UUID) error {
