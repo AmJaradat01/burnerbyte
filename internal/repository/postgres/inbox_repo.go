@@ -116,6 +116,9 @@ func (r *InboxRepo) listByUser(ctx context.Context, userID uuid.UUID, status str
 		}
 		inboxes = append(inboxes, i)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
 	return inboxes, total, nil
 }
 
@@ -175,6 +178,9 @@ func (r *InboxRepo) listByTeam(ctx context.Context, teamID, userID uuid.UUID, st
 		}
 		inboxes = append(inboxes, i)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
 	return inboxes, total, nil
 }
 
@@ -215,6 +221,9 @@ func (r *InboxRepo) ListActiveAddressesByDomain(ctx context.Context, domainID uu
 		if err := rows.Scan(&addr); err != nil { return nil, err }
 		addresses = append(addresses, addr)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 	return addresses, nil
 }
 
@@ -244,6 +253,9 @@ func (r *InboxRepo) ListActive(ctx context.Context) ([]domain.Inbox, error) {
 			return nil, err
 		}
 		inboxes = append(inboxes, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 	return inboxes, nil
 }

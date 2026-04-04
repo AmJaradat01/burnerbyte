@@ -76,7 +76,9 @@ func (s *TeamService) CreateTeam(ctx context.Context, orgID uuid.UUID, input dom
 	if err := teamRepoTx.Create(ctx, team); err != nil {
 		if errors.Is(err, postgres.ErrConflict) {
 			b := make([]byte, 3)
-			rand.Read(b)
+			if _, err := rand.Read(b); err != nil {
+				return nil, fmt.Errorf("generate slug: %w", err)
+			}
 			team.Slug = slug + "-" + hex.EncodeToString(b)
 			if err := teamRepoTx.Create(ctx, team); err != nil {
 				return nil, err
