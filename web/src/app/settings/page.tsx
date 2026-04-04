@@ -22,11 +22,13 @@ import { RolesTab } from "@/components/settings/roles-tab";
 import type { Organization, OrgSettings, SystemStats } from "@/types";
 
 export default function SettingsPage() {
-  const { currentOrg, fetchOrgs } = useOrgStore();
+  const { currentOrg, currentRole, fetchOrgs } = useOrgStore();
   const user = useAuthStore((s) => s.user);
+  const isAdmin = currentRole === "owner" || currentRole === "admin" || user?.is_system_admin;
+  if (!isAdmin) return <div className="flex items-center justify-center min-h-[50vh]"><p className="text-muted-foreground">You don&apos;t have permission to access settings.</p></div>;
   if (!currentOrg) return <p className="text-muted-foreground">Select an organization first.</p>;
 
-  const isAdmin = user?.is_system_admin ?? false;
+  const isSysAdmin = user?.is_system_admin ?? false;
 
   return (
     <div className="space-y-6">
@@ -38,15 +40,15 @@ export default function SettingsPage() {
         <TabsList className="flex-wrap">
           <TabsTrigger value="general" className="gap-1.5"><Settings className="h-3.5 w-3.5" /> General</TabsTrigger>
           <TabsTrigger value="users" className="gap-1.5"><Users className="h-3.5 w-3.5" /> Users</TabsTrigger>
-          {isAdmin && <TabsTrigger value="roles" className="gap-1.5"><Shield className="h-3.5 w-3.5" /> Roles</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="overview" className="gap-1.5"><Activity className="h-3.5 w-3.5" /> System</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="health" className="gap-1.5"><Monitor className="h-3.5 w-3.5" /> Health</TabsTrigger>}
+          {isSysAdmin && <TabsTrigger value="roles" className="gap-1.5"><Shield className="h-3.5 w-3.5" /> Roles</TabsTrigger>}
+          {isSysAdmin && <TabsTrigger value="overview" className="gap-1.5"><Activity className="h-3.5 w-3.5" /> System</TabsTrigger>}
+          {isSysAdmin && <TabsTrigger value="health" className="gap-1.5"><Monitor className="h-3.5 w-3.5" /> Health</TabsTrigger>}
         </TabsList>
         <TabsContent value="general"><GeneralTab org={currentOrg} onSaved={fetchOrgs} /></TabsContent>
         <TabsContent value="users"><UnifiedUsersTab orgId={currentOrg.id} /></TabsContent>
-        {isAdmin && <TabsContent value="roles"><RolesTab /></TabsContent>}
-        {isAdmin && <TabsContent value="overview"><OverviewTab /></TabsContent>}
-        {isAdmin && <TabsContent value="health"><HealthTab /></TabsContent>}
+        {isSysAdmin && <TabsContent value="roles"><RolesTab /></TabsContent>}
+        {isSysAdmin && <TabsContent value="overview"><OverviewTab /></TabsContent>}
+        {isSysAdmin && <TabsContent value="health"><HealthTab /></TabsContent>}
       </Tabs>
     </div>
   );

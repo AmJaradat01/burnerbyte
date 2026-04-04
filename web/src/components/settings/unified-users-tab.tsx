@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth-store";
+import { useOrgStore } from "@/stores/org-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,7 +42,10 @@ type MergedUser = User & { org_role?: string; membership_id?: string; member_cre
 export function UnifiedUsersTab({ orgId }: { orgId: string }) {
   const qc = useQueryClient();
   const currentUser = useAuthStore((s) => s.user);
+  const { currentRole } = useOrgStore();
   const isAdmin = currentUser?.is_system_admin ?? false;
+  const canManageMembers = currentRole === "owner" || isAdmin;
+  const canInvite = currentRole === "owner" || currentRole === "admin" || isAdmin;
   const { orgRoles } = useRoles();
   const [page, setPage] = useState(1);
   const [membersPage, setMembersPage] = useState(1);
@@ -146,7 +150,7 @@ export function UnifiedUsersTab({ orgId }: { orgId: string }) {
             <Badge variant="secondary" className="gap-1 text-xs">{filter} <button onClick={() => setFilter("all")} className="ml-1 hover:text-foreground">×</button></Badge>
           )}
           <span className="text-xs text-muted-foreground">{filtered.length} result{filtered.length !== 1 ? "s" : ""}</span>
-          <InviteDialog orgId={orgId} />
+          {canInvite && <InviteDialog orgId={orgId} />}
         </div>
       </div>
 
@@ -190,12 +194,16 @@ export function UnifiedUsersTab({ orgId }: { orgId: string }) {
                         </td>
                         <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                           {u.org_role ? (
-                            <Select value={u.org_role} onValueChange={(role) => changeRole.mutate({ userId: u.id, role })}>
-                              <SelectTrigger className="h-7 w-24 text-xs"><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                {orgRoles.map((r) => <SelectItem key={r.value} value={r.value} className="capitalize">{r.label}</SelectItem>)}
-                              </SelectContent>
-                            </Select>
+                            canManageMembers ? (
+                              <Select value={u.org_role} onValueChange={(role) => changeRole.mutate({ userId: u.id, role })}>
+                                <SelectTrigger className="h-7 w-24 text-xs"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  {orgRoles.map((r) => <SelectItem key={r.value} value={r.value} className="capitalize">{r.label}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <Badge variant="outline" className={`capitalize text-xs ${ROLE_COLORS[u.org_role] ?? ""}`}>{u.org_role}</Badge>
+                            )
                           ) : (
                             <span className="text-xs text-muted-foreground italic">Not a member</span>
                           )}
@@ -215,7 +223,7 @@ export function UnifiedUsersTab({ orgId }: { orgId: string }) {
                         </td>
                         <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-end gap-1">
-                            {!isYou && u.org_role && (
+                            {!isYou && u.org_role && canInvite && (
                               <ConfirmDialog
                                 trigger={<Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-orange-500" title="Remove from org"><XCircle className="h-3.5 w-3.5" /></Button>}
                                 title="Remove from organization?"
