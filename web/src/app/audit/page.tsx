@@ -16,7 +16,7 @@ import { ErrorState } from "@/components/error-state";
 import { EmptyState } from "@/components/empty-state";
 import { toast } from "sonner";
 import { timeAgo } from "@/lib/time";
-import { Download, Globe, Inbox, Key, Shield, User, Webhook } from "lucide-react";
+import { Activity, Download, Globe, Inbox, Key, Shield, User, Users, Webhook } from "lucide-react";
 import type { AuditEntry, PaginatedResponse } from "@/types";
 
 const RESOURCE_TYPES = ["user", "org", "team", "domain", "domain_assignment", "inbox", "email", "webhook", "api_key"];
@@ -93,6 +93,42 @@ export default function AuditPage() {
         <Button variant="outline" size="sm" className="gap-1.5" onClick={() => data?.data && exportCSV(data.data)} disabled={!data?.data?.length}>
           <Download className="h-3.5 w-3.5" /> Export CSV
         </Button>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <Card>
+          <CardContent className="flex items-center gap-4 p-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
+              <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{data?.total ?? 0}</p>
+              <p className="text-xs text-muted-foreground">Total Entries</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-4 p-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
+              <Activity className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{new Set(data?.data?.map(e => e.action)).size ?? 0}</p>
+              <p className="text-xs text-muted-foreground">Unique Actions</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-4 p-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/30">
+              <Users className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{new Set(data?.data?.map(e => e.actor_email)).size ?? 0}</p>
+              <p className="text-xs text-muted-foreground">Unique Actors</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Filters */}
