@@ -18,7 +18,7 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EmptyState } from "@/components/empty-state";
 import { ErrorState } from "@/components/error-state";
 import { Pagination } from "@/components/pagination";
-import { Check, ChevronDown, Clock, Copy, ExternalLink, Mail, RefreshCw, Timer, Trash2, Zap } from "lucide-react";
+import { Check, ChevronDown, Clock, Copy, ExternalLink, Key, Link as LinkIcon, Mail, RefreshCw, Server, Timer, Trash2, Users, Zap } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { WS_BASE } from "@/lib/api";
 import { copyToClipboard } from "@/lib/clipboard";
@@ -379,20 +379,26 @@ function InboxCard({ inbox, onExtend, onDelete }: { inbox: Inbox; onExtend: () =
   const addr = inbox.full_address || inbox.address;
   const [localPart, domainPart] = addr.split("@");
   const hasUnread = (inbox.unread_count ?? 0) > 0;
+  const expiringSoon = inbox.is_active && (new Date(inbox.expires_at).getTime() - Date.now()) < 30 * 60 * 1000;
 
   return (
     <Card
-      className={`transition-all hover:shadow-md hover:border-primary/30 cursor-pointer group ${!inbox.is_active ? "opacity-60" : ""}`}
+      className={`transition-all hover:shadow-md hover:border-primary/30 cursor-pointer group ${!inbox.is_active ? "opacity-60" : ""} ${expiringSoon ? "border-dashed border-amber-200 dark:border-amber-800" : ""}`}
       onClick={() => router.push(`/inboxes/${inbox.id}`)}
     >
       <CardContent className="pt-4 pb-3 space-y-2.5">
         {/* Address */}
         <div className="flex items-start justify-between gap-2">
-          <p className="font-mono text-sm font-medium truncate group-hover:text-primary transition-colors">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="h-10 w-10 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center shrink-0">
+              <Mail className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+            </div>
+            <p className="font-mono text-sm font-medium truncate group-hover:text-primary transition-colors">
             <span>{localPart}</span>
             <span className="text-muted-foreground">@</span>
             <span className="text-primary/80">{domainPart}</span>
-          </p>
+            </p>
+          </div>
           {hasUnread && (
             <Badge className="shrink-0 text-[10px] px-1.5 py-0 animate-in fade-in">{inbox.unread_count}</Badge>
           )}
@@ -479,7 +485,14 @@ function InboxGridSkeleton() {
 /* ── Public landing page ── */
 
 const featureKeys = ["inboxes", "multiTeam", "realTime", "webhooks", "apiKeys", "selfHosted"] as const;
-const featureIcons = ["📬", "👥", "⚡", "🔗", "🔑", "🏠"];
+const featureIcons = [
+  { icon: Mail, bg: "bg-orange-100 dark:bg-orange-900/30", fg: "text-orange-600 dark:text-orange-400" },
+  { icon: Users, bg: "bg-blue-100 dark:bg-blue-900/30", fg: "text-blue-600 dark:text-blue-400" },
+  { icon: Zap, bg: "bg-amber-100 dark:bg-amber-900/30", fg: "text-amber-600 dark:text-amber-400" },
+  { icon: LinkIcon, bg: "bg-violet-100 dark:bg-violet-900/30", fg: "text-violet-600 dark:text-violet-400" },
+  { icon: Key, bg: "bg-emerald-100 dark:bg-emerald-900/30", fg: "text-emerald-600 dark:text-emerald-400" },
+  { icon: Server, bg: "bg-rose-100 dark:bg-rose-900/30", fg: "text-rose-600 dark:text-rose-400" },
+];
 
 function LandingPage() {
   const t = useTranslations("landing");
@@ -518,13 +531,16 @@ function LandingPage() {
             <p className="mt-2 text-muted-foreground">{t("builtFor")}</p>
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {featureKeys.map((key, i) => (
+            {featureKeys.map((key, i) => {
+              const { icon: Icon, bg, fg } = featureIcons[i];
+              return (
               <div key={key} className="group rounded-xl border p-6 transition-colors hover:border-primary/50 hover:bg-muted/30">
-                <span className="text-3xl mb-3 block">{featureIcons[i]}</span>
+                <div className={`h-10 w-10 rounded-lg flex items-center justify-center mb-3 ${bg}`}><Icon className={`h-5 w-5 ${fg}`} /></div>
                 <h3 className="font-semibold">{t(`features.${key}.title`)}</h3>
                 <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{t(`features.${key}.desc`)}</p>
               </div>
-            ))}
+              );
+            })}
           </div>
         </section>
         <section className="border-t bg-muted/30">
