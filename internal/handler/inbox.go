@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -77,7 +78,7 @@ func (h *InboxHandler) CreateInboxFlat(w http.ResponseWriter, r *http.Request) {
 			"inbox_id": inbox.ID, "address": inbox.Address, "domain_assignment_id": assignmentID,
 		})
 	}
-	auditRecord(r, inbox.OrgID, "inbox.created", "inbox", inbox.ID, map[string]any{"address": inbox.FullAddress, "expires_at": inbox.ExpiresAt.String()})
+	auditRecord(r, inbox.OrgID, "inbox.created", "inbox", inbox.ID, map[string]any{"address": inbox.FullAddress, "expires_at": inbox.ExpiresAt.Format(time.RFC3339)})
 	writeJSON(w, http.StatusCreated, inbox)
 }
 
@@ -155,7 +156,7 @@ func (h *InboxHandler) ExtendTTL(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	auditRecord(r, inbox.OrgID, "inbox.extended", "inbox", id, map[string]any{"address": inbox.FullAddress, "new_expires_at": inbox.ExpiresAt.String()})
+	auditRecord(r, inbox.OrgID, "inbox.extended", "inbox", id, map[string]any{"address": inbox.FullAddress, "new_expires_at": inbox.ExpiresAt.Format(time.RFC3339)})
 	writeJSON(w, http.StatusOK, inbox)
 }
 
