@@ -47,31 +47,33 @@ func (r *UserRepo) Create(ctx context.Context, u *domain.User) error {
 func (r *UserRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.User, error) {
 	return r.scanOne(ctx,
 		`SELECT id, email, display_name, avatar_url, password_hash, sso_provider, sso_subject,
-		        is_system_admin, email_verified, password_changed_at, created_at, updated_at
+		        is_system_admin, email_verified, password_changed_at, timezone, date_format, time_format, created_at, updated_at
 		 FROM users WHERE id = $1`, id)
 }
 
 func (r *UserRepo) GetByEmail(ctx context.Context, email string) (*domain.User, error) {
 	return r.scanOne(ctx,
 		`SELECT id, email, display_name, avatar_url, password_hash, sso_provider, sso_subject,
-		        is_system_admin, email_verified, password_changed_at, created_at, updated_at
+		        is_system_admin, email_verified, password_changed_at, timezone, date_format, time_format, created_at, updated_at
 		 FROM users WHERE email = $1`, email)
 }
 
 func (r *UserRepo) GetBySSO(ctx context.Context, provider, subject string) (*domain.User, error) {
 	return r.scanOne(ctx,
 		`SELECT id, email, display_name, avatar_url, password_hash, sso_provider, sso_subject,
-		        is_system_admin, email_verified, password_changed_at, created_at, updated_at
+		        is_system_admin, email_verified, password_changed_at, timezone, date_format, time_format, created_at, updated_at
 		 FROM users WHERE sso_provider = $1 AND sso_subject = $2`, provider, subject)
 }
 
 func (r *UserRepo) Update(ctx context.Context, u *domain.User) error {
 	_, err := r.db.Exec(ctx,
 		`UPDATE users SET email=$1, display_name=$2, avatar_url=$3, password_hash=$4,
-		 sso_provider=$5, sso_subject=$6, is_system_admin=$7, email_verified=$8, password_changed_at=$9
-		 WHERE id=$10`,
+		 sso_provider=$5, sso_subject=$6, is_system_admin=$7, email_verified=$8, password_changed_at=$9,
+		 timezone=$10, date_format=$11, time_format=$12
+		 WHERE id=$13`,
 		u.Email, u.DisplayName, u.AvatarURL, u.PasswordHash,
-		u.SSOProvider, u.SSOSubject, u.IsSystemAdmin, u.EmailVerified, u.PasswordChangedAt, u.ID,
+		u.SSOProvider, u.SSOSubject, u.IsSystemAdmin, u.EmailVerified, u.PasswordChangedAt,
+		u.Timezone, u.DateFormat, u.TimeFormat, u.ID,
 	)
 	if err != nil {
 		if isUniqueViolation(err) {
@@ -123,7 +125,7 @@ func (r *UserRepo) scanOne(ctx context.Context, query string, args ...any) (*dom
 	err := r.db.QueryRow(ctx, query, args...).Scan(
 		&u.ID, &u.Email, &u.DisplayName, &u.AvatarURL, &u.PasswordHash,
 		&u.SSOProvider, &u.SSOSubject, &u.IsSystemAdmin, &u.EmailVerified,
-		&u.PasswordChangedAt, &u.CreatedAt, &u.UpdatedAt,
+		&u.PasswordChangedAt, &u.Timezone, &u.DateFormat, &u.TimeFormat, &u.CreatedAt, &u.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

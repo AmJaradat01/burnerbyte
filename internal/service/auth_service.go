@@ -279,6 +279,15 @@ func (s *AuthService) UpdateProfile(ctx context.Context, userID uuid.UUID, input
 	if input.AvatarURL != nil {
 		user.AvatarURL = input.AvatarURL
 	}
+	if input.Timezone != nil {
+		user.Timezone = input.Timezone
+	}
+	if input.DateFormat != nil {
+		user.DateFormat = input.DateFormat
+	}
+	if input.TimeFormat != nil {
+		user.TimeFormat = input.TimeFormat
+	}
 
 	if err := s.userRepo.Update(ctx, user); err != nil {
 		return nil, err

@@ -490,6 +490,7 @@ function PlatformSettingsCard() {
       password_min_length: number; password_require_upper: boolean; password_require_lower: boolean;
       password_require_number: boolean; password_require_special: boolean;
       lockout_max_attempts: number; lockout_duration_mins: number;
+      timezone: string; date_format: string; time_format: string;
     }>("/admin/platform"),
   });
   const qc = useQueryClient();
@@ -498,6 +499,7 @@ function PlatformSettingsCard() {
     password_min_length: 8, password_require_upper: true, password_require_lower: true,
     password_require_number: true, password_require_special: true,
     lockout_max_attempts: 5, lockout_duration_mins: 15,
+    timezone: "UTC", date_format: "YYYY-MM-DD", time_format: "24h",
   });
   const [saving, setSaving] = useState(false);
 
@@ -569,6 +571,45 @@ function PlatformSettingsCard() {
             <div className="space-y-1">
               <Label className="text-xs">Lockout duration (min)</Label>
               <Input type="number" min={1} max={1440} value={form.lockout_duration_mins} onChange={(e) => set("lockout_duration_mins", Number(e.target.value) || 15)} className="h-8" />
+            </div>
+          </div>
+        </div>
+
+        {/* Date & Time */}
+        <div className="space-y-3">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Date & Time Defaults</p>
+          <div className="space-y-1">
+            <Label className="text-xs">Timezone</Label>
+            <Select value={form.timezone} onValueChange={(v) => set("timezone", v)}>
+              <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {["UTC","America/New_York","America/Chicago","America/Denver","America/Los_Angeles","Europe/London","Europe/Berlin","Europe/Paris","Asia/Amman","Asia/Dubai","Asia/Tokyo","Asia/Shanghai","Australia/Sydney"].map((t) => (
+                  <SelectItem key={t} value={t}>{t.replace(/_/g, " ")}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Date Format</Label>
+              <Select value={form.date_format} onValueChange={(v) => set("date_format", v)}>
+                <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="YYYY-MM-DD">YYYY-MM-DD</SelectItem>
+                  <SelectItem value="DD/MM/YYYY">DD/MM/YYYY</SelectItem>
+                  <SelectItem value="MM/DD/YYYY">MM/DD/YYYY</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Time Format</Label>
+              <Select value={form.time_format} onValueChange={(v) => set("time_format", v)}>
+                <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="24h">24-hour</SelectItem>
+                  <SelectItem value="12h">12-hour</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
