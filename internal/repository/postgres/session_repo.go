@@ -63,6 +63,9 @@ func (r *SessionRepo) ListByUser(ctx context.Context, userID uuid.UUID) ([]domai
 		}
 		sessions = append(sessions, s)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate sessions: %w", err)
+	}
 	return sessions, nil
 }
 
