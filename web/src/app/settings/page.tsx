@@ -242,7 +242,7 @@ function SSOCard() {
   const [form, setForm] = useState({
     provider: "", client_id: "", client_secret: "", redirect_url: "",
     tenant_id: "", issuer_url: "",
-    auto_provision: false, default_org_role: "member", allowed_domains: "",
+    auto_provision: false, default_org_role: "member", default_team_role: "member", allowed_domains: "",
   });
   const [saving, setSaving] = useState(false);
   const [syncKey, setSyncKey] = useState("");
@@ -258,6 +258,7 @@ function SSOCard() {
       issuer_url: data!.issuer_url || "",
       auto_provision: data!.auto_provision ?? false,
       default_org_role: data!.default_org_role || "member",
+      default_team_role: data!.default_team_role || "member",
       allowed_domains: data!.allowed_domains || "",
     });
     setSyncKey(dataKey);
@@ -274,6 +275,7 @@ function SSOCard() {
     form.issuer_url !== (data?.issuer_url || "") ||
     form.auto_provision !== (data?.auto_provision ?? false) ||
     form.default_org_role !== (data?.default_org_role || "member") ||
+    form.default_team_role !== (data?.default_team_role || "member") ||
     form.allowed_domains !== (data?.allowed_domains || "")
   );
 
@@ -372,6 +374,16 @@ function SSOCard() {
                 </Select>
               </div>
               <div className="space-y-1">
+                <Label className="text-xs">Default Team Role</Label>
+                <Select value={form.default_team_role} onValueChange={(v) => set("default_team_role", v)}>
+                  <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="member">Member</SelectItem>
+                    <SelectItem value="lead">Lead</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1 col-span-2">
                 <Label className="text-xs">Allowed Email Domains</Label>
                 <Input value={form.allowed_domains} onChange={(e) => set("allowed_domains", e.target.value)} placeholder="company.com, corp.com" className="h-8 text-xs" />
               </div>
