@@ -91,6 +91,7 @@ func (h *AdminHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to delete user")
 		return
 	}
+	auditRecord(r, uuid.Nil, "admin.user_deleted", "user", userID, nil)
 	writeJSON(w, http.StatusOK, map[string]string{"message": "user deleted"})
 }
 
@@ -163,6 +164,7 @@ func (h *AdminHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to update user")
 		return
 	}
+	auditRecord(r, uuid.Nil, "admin.user_updated", "user", userID, nil)
 	writeJSON(w, http.StatusOK, user)
 }
 
@@ -236,6 +238,7 @@ func (h *AdminHandler) UpdatePlatformSettings(w http.ResponseWriter, r *http.Req
 	h.cfg.Lockout.MaxAttempts = input.LockoutMaxAttempts
 	h.cfg.Lockout.Duration = time.Duration(input.LockoutDurationMins) * time.Minute
 	h.cfgMu.Unlock()
+	auditRecord(r, uuid.Nil, "admin.platform_settings_updated", "platform", uuid.Nil, nil)
 	writeJSON(w, http.StatusOK, map[string]string{"message": "platform settings updated"})
 }
 
@@ -269,5 +272,6 @@ func (h *AdminHandler) UpdateSSOConfig(w http.ResponseWriter, r *http.Request) {
 	h.cfgMu.Lock()
 	h.cfg.SSO = input
 	h.cfgMu.Unlock()
+	auditRecord(r, uuid.Nil, "admin.sso_config_updated", "sso", uuid.Nil, nil)
 	writeJSON(w, http.StatusOK, map[string]string{"message": "SSO config updated"})
 }

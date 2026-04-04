@@ -59,7 +59,7 @@ func (h *DomainHandler) CreateDomain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auditRecord(r, orgID, "domain.created", "domain", d.ID)
+	auditRecord(r, orgID, "domain.created", "domain", d.ID, map[string]any{"domain": input.DomainName})
 	writeJSON(w, http.StatusCreated, d)
 }
 
@@ -164,7 +164,7 @@ func (h *DomainHandler) DeleteDomain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auditRecord(r, orgID, "domain.deleted", "domain", id)
+	auditRecord(r, orgID, "domain.deleted", "domain", id, nil)
 	writeJSON(w, http.StatusOK, map[string]string{"message": "domain deleted"})
 }
 
@@ -189,6 +189,6 @@ func (h *DomainHandler) VerifyDomain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auditRecord(r, orgID, "domain.verified", "domain", id)
+	auditRecord(r, orgID, "domain.verified", "domain", id, nil)
 	writeJSON(w, http.StatusOK, d)
 }
