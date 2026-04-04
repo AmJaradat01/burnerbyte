@@ -79,6 +79,9 @@ func (r *EmailRepo) ListByInbox(ctx context.Context, inboxID uuid.UUID, page, pe
 		}
 		emails = append(emails, e)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
 	return emails, total, nil
 }
 
@@ -110,6 +113,9 @@ func (r *EmailRepo) Search(ctx context.Context, inboxID uuid.UUID, query string,
 			return nil, 0, err
 		}
 		emails = append(emails, e)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
 	}
 	return emails, total, nil
 }
@@ -153,6 +159,9 @@ func (r *EmailRepo) DeleteExpiredReturningIDs(ctx context.Context) ([]uuid.UUID,
 			return nil, err
 		}
 		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 	return ids, nil
 }

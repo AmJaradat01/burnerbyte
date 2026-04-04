@@ -31,7 +31,7 @@ export const useOrgStore = create<OrgState>((set) => ({
 
   fetchRole: async (orgId, userId) => {
     try {
-      const res = await api.get<{ data: Membership[] }>(`/orgs/${orgId}/members`, { page: "1", per_page: "100" });
+      const res = await api.get<{ data: Membership[] }>(`/orgs/${orgId}/members`, { page: "1", per_page: "10000" });
       const me = res.data?.find((m) => m.user_id === userId);
       set({ currentRole: me?.role ?? "member" });
     } catch {
@@ -42,7 +42,10 @@ export const useOrgStore = create<OrgState>((set) => ({
   fetchTeams: async (orgId) => {
     const res = await api.get<{ data: Team[] }>(`/orgs/${orgId}/teams`);
     const teams = res.data ?? [];
-    set((state) => ({ teams, currentTeam: state.currentTeam ?? teams[0] ?? null }));
+    set((state) => {
+      if (state.currentOrg?.id !== orgId) return state;
+      return { teams, currentTeam: state.currentTeam ?? teams[0] ?? null };
+    });
   },
 
   setCurrentTeam: (team) => set({ currentTeam: team }),
