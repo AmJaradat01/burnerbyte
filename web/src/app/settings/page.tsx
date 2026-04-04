@@ -32,7 +32,7 @@ export default function SettingsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Settings</h1>
-        <p className="text-sm text-muted-foreground mt-1">Manage your organization, members, and system configuration.</p>
+        <p className="text-sm text-muted-foreground mt-0.5">Manage your organization, members, and system configuration.</p>
       </div>
       <Tabs defaultValue="general">
         <TabsList className="flex-wrap">
@@ -452,7 +452,7 @@ function OverviewTab() {
           <Card key={s.label}>
             <CardContent className="pt-5 pb-4">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-medium text-muted-foreground">{s.label}</span>
+                <span className="text-sm text-muted-foreground">{s.label}</span>
                 <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${s.accent}`}>
                   <s.icon className="h-4 w-4" />
                 </div>

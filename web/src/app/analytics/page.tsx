@@ -41,7 +41,7 @@ export default function AnalyticsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Analytics</h1>
-        <p className="text-sm text-muted-foreground">Usage metrics and trends for your organization.</p>
+        <p className="text-sm text-muted-foreground mt-0.5">Usage metrics and trends for your organization.</p>
       </div>
       <Tabs defaultValue="org">
         <TabsList>
@@ -171,14 +171,14 @@ function StatCard({ icon: Icon, label, value, subtitle, color = "blue" }: { icon
   const c = STAT_COLORS[color];
   return (
     <Card>
-      <CardContent className="pt-6">
-        <div className="flex items-center gap-3 mb-2">
-          <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${c.bg}`}>
-            <Icon className={`h-5 w-5 ${c.text}`} />
-          </div>
+      <CardContent className="pt-5 pb-4">
+        <div className="flex items-center justify-between mb-3">
           <span className="text-sm text-muted-foreground">{label}</span>
+          <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${c.bg}`}>
+            <Icon className={`h-4 w-4 ${c.text}`} />
+          </div>
         </div>
-        <p className="text-2xl font-bold">{display}</p>
+        <p className="text-2xl font-bold tabular-nums">{display}</p>
         {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
       </CardContent>
     </Card>
