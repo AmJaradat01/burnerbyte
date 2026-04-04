@@ -68,7 +68,7 @@ func (h *OrgHandler) CreateOrg(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auditRecord(r, org.ID, "org.created", "org", org.ID)
+	auditRecord(r, org.ID, "org.created", "org", org.ID, nil)
 	writeJSON(w, http.StatusCreated, org)
 }
 
@@ -130,7 +130,7 @@ func (h *OrgHandler) UpdateOrg(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auditRecord(r, orgID, "org.updated", "org", orgID)
+	auditRecord(r, orgID, "org.updated", "org", orgID, nil)
 	writeJSON(w, http.StatusOK, org)
 }
 
@@ -149,7 +149,7 @@ func (h *OrgHandler) DeleteOrg(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auditRecord(r, orgID, "org.deleted", "org", orgID)
+	auditRecord(r, orgID, "org.deleted", "org", orgID, nil)
 	writeJSON(w, http.StatusOK, map[string]string{"message": "org deleted"})
 }
 
@@ -194,7 +194,7 @@ func (h *OrgHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auditRecord(r, orgID, "org.settings.updated", "org", orgID)
+	auditRecord(r, orgID, "org.settings.updated", "org", orgID, nil)
 	writeJSON(w, http.StatusOK, org.Settings)
 }
 
@@ -221,7 +221,7 @@ func (h *OrgHandler) InviteMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auditRecord(r, orgID, "member.invited", "org", orgID)
+	auditRecord(r, orgID, "member.invited", "org", orgID, map[string]any{"email": input.Email, "role": input.OrgRole})
 	writeJSON(w, http.StatusCreated, invite)
 }
 
@@ -271,7 +271,7 @@ func (h *OrgHandler) ChangeRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auditRecord(r, orgID, "member.role_changed", "org", userID)
+	auditRecord(r, orgID, "member.role_changed", "org", userID, map[string]any{"new_role": input.Role})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "role updated"})
 }
 
@@ -295,7 +295,7 @@ func (h *OrgHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auditRecord(r, orgID, "member.removed", "org", userID)
+	auditRecord(r, orgID, "member.removed", "org", userID, nil)
 	writeJSON(w, http.StatusOK, map[string]string{"message": "member removed"})
 }
 
@@ -317,6 +317,7 @@ func (h *OrgHandler) RevokeInvite(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	auditRecord(r, orgID, "invite.revoked", "invite", inviteID, nil)
 	writeJSON(w, http.StatusOK, map[string]string{"message": "invite revoked"})
 }
 
@@ -335,6 +336,7 @@ func (h *OrgHandler) AcceptInvite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	auditRecord(r, uuid.Nil, "invite.accepted", "invite", uc.UserID, nil)
 	writeJSON(w, http.StatusOK, map[string]string{"message": "invite accepted"})
 }
 
