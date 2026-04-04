@@ -12,17 +12,14 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ConfirmDialog } from "@/components/confirm-dialog";
-import { Pagination } from "@/components/pagination";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ErrorState } from "@/components/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Activity, AlertTriangle, Building2, Calendar, CheckCircle2, Clock, Database, Globe, HardDrive, Inbox, Info, Mail, Monitor, Palette, RefreshCw, Settings, Shield, Trash2, UserPlus, Users, XCircle } from "lucide-react";
+import { Activity, AlertTriangle, Building2, CheckCircle2, Database, Globe, HardDrive, Inbox, Mail, Monitor, Palette, Settings, Shield, Trash2, Users, XCircle } from "lucide-react";
 import { UnifiedUsersTab } from "@/components/settings/unified-users-tab";
 import { RolesTab } from "@/components/settings/roles-tab";
-import type { Organization, Membership, Invite, OrgSettings, PaginatedResponse, SystemStats, User } from "@/types";
+import type { Organization, OrgSettings, SystemStats } from "@/types";
 
 export default function SettingsPage() {
   const { currentOrg, fetchOrgs } = useOrgStore();

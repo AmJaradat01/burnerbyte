@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"regexp"
 	"time"
 
@@ -132,7 +133,9 @@ func (s *InboxService) CreateInbox(ctx context.Context, teamID, domainID, userID
 	}
 
 	// Store in Redis for SMTP lookups
-	_ = s.redisInboxRepo.Set(ctx, fullAddress, inbox.ID.String(), ttl)
+	if err := s.redisInboxRepo.Set(ctx, fullAddress, inbox.ID.String(), ttl); err != nil {
+		slog.Error("redis: failed to cache new inbox", "address", fullAddress, "error", err)
+	}
 
 	inbox.DomainName = dom.DomainName
 	inbox.TeamID = teamID
@@ -196,7 +199,9 @@ func (s *InboxService) ExtendTTL(ctx context.Context, id, userID uuid.UUID, exte
 
 	// Update Redis TTL
 	remaining := time.Until(newExpiry)
-	_ = s.redisInboxRepo.Set(ctx, inbox.FullAddress, inbox.ID.String(), remaining)
+	if err := s.redisInboxRepo.Set(ctx, inbox.FullAddress, inbox.ID.String(), remaining); err != nil {
+		slog.Error("redis: failed to update inbox TTL", "address", inbox.FullAddress, "error", err)
+	}
 
 	inbox.ExpiresAt = newExpiry
 	return inbox, nil
@@ -215,7 +220,9 @@ func (s *InboxService) DeleteInbox(ctx context.Context, id, userID uuid.UUID) er
 		return err
 	}
 
-	_ = s.redisInboxRepo.Delete(ctx, inbox.FullAddress)
+	if err := s.redisInboxRepo.Delete(ctx, inbox.FullAddress); err != nil {
+		slog.Error("redis: failed to delete inbox cache", "address", inbox.FullAddress, "error", err)
+	}
 	return nil
 }
 
