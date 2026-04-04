@@ -20,7 +20,7 @@ import { Pagination } from "@/components/pagination";
 import { ErrorState } from "@/components/error-state";
 import { EmptyState } from "@/components/empty-state";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Clock, Copy, ExternalLink, Pencil, Plus, Trash2, XCircle } from "lucide-react";
+import { AlertCircle, AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Clock, Copy, ExternalLink, Globe, Link2, Pencil, Plus, Trash2, XCircle } from "lucide-react";
 import type { Webhook, PaginatedResponse } from "@/types";
 
 interface DeliveryLog {
@@ -87,6 +87,26 @@ export default function WebhooksPage() {
         <CreateWebhookDialog orgId={currentOrg!.id} teamId={currentTeam.id} />
       </div>
 
+      {data?.data && data.data.length > 0 && (
+        <div className="grid gap-4 sm:grid-cols-3">
+          {[
+            { label: "Total", value: data.total, icon: Globe, bg: "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" },
+            { label: "Active", value: data.data.filter(w => w.active).length, icon: CheckCircle2, bg: "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400" },
+            { label: "Failing", value: data.data.filter(w => w.failure_count > 0).length, icon: AlertCircle, bg: "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400" },
+          ].map((s) => (
+            <Card key={s.label}>
+              <CardContent className="pt-5 pb-4">
+                <div className="flex justify-between mb-3">
+                  <span className="text-sm text-muted-foreground">{s.label}</span>
+                  <div className={`flex items-center justify-center h-8 w-8 rounded-lg ${s.bg}`}><s.icon className="h-4 w-4" /></div>
+                </div>
+                <p className="text-2xl font-bold tabular-nums">{s.value}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
       {isError ? <ErrorState message="Failed to load webhooks" onRetry={() => refetch()} /> :
       isLoading ? <WebhookListSkeleton /> : (
       <>
@@ -125,11 +145,23 @@ function WebhookStatusIndicator({ webhook: w }: { webhook: Webhook }) {
 function WebhookCard({ webhook: w, expanded, onToggleExpand, onToggleActive, onDelete, orgId, teamId }: {
   webhook: Webhook; expanded: boolean; onToggleExpand: () => void; onToggleActive: (v: boolean) => void; onDelete: () => void; orgId: string; teamId: string;
 }) {
+  const isHealthy = w.active && w.last_status && w.last_status >= 200 && w.last_status < 300;
+  const isFailing = w.failure_count > 0;
+  const pillColor = !w.active
+    ? "bg-muted text-muted-foreground"
+    : isFailing
+      ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"
+      : isHealthy
+        ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
+        : "bg-muted text-muted-foreground";
+
   return (
-    <Card className="hover:shadow-md transition-all">
+    <Card className={`hover:shadow-md transition-all ${!w.active ? "border-dashed opacity-70" : ""}`}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1 space-y-1">
+          <div className="flex items-start gap-3 min-w-0 flex-1 space-y-1">
+            <div className={`flex items-center justify-center h-10 w-10 rounded-lg shrink-0 ${pillColor}`}><Link2 className="h-5 w-5" /></div>
+            <div className="min-w-0 flex-1 space-y-1">
             <div className="flex items-center gap-2">
               <CardTitle className="text-sm font-mono truncate">{w.url}</CardTitle>
               <ExternalLink className="h-3 w-3 shrink-0 text-muted-foreground" />
@@ -137,6 +169,7 @@ function WebhookCard({ webhook: w, expanded, onToggleExpand, onToggleActive, onD
             <div className="flex flex-wrap items-center gap-2">
               <WebhookStatusIndicator webhook={w} />
               {w.events?.map((e) => <Badge key={e} variant="outline" className="text-xs">{e}</Badge>)}
+            </div>
             </div>
           </div>
           <div className="flex items-center gap-3 shrink-0">
