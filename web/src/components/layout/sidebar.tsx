@@ -59,7 +59,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
   return (
     <aside className={cn(
-      "flex h-screen flex-col border-r bg-background/95 transition-all duration-200",
+      "flex h-screen flex-col border-r bg-background/95 backdrop-blur-xl transition-all duration-200",
       collapsed ? "w-[60px]" : "w-60"
     )}>
       {/* Logo + collapse toggle */}
