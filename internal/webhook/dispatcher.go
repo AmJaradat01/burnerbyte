@@ -115,7 +115,9 @@ func (d *Dispatcher) deliver(wh domain.Webhook, event string, body []byte) {
 
 		if err != nil {
 			log.Success = false
-			d.webhookRepo.LogDelivery(ctx, log)
+			if err := d.webhookRepo.LogDelivery(ctx, log); err != nil {
+				slog.Error("webhook: failed to log delivery", "webhook_id", wh.ID, "error", err)
+			}
 			continue
 		}
 
@@ -127,16 +129,22 @@ func (d *Dispatcher) deliver(wh domain.Webhook, event string, body []byte) {
 		log.ResponseBody = &respBodyStr
 		log.Success = resp.StatusCode >= 200 && resp.StatusCode < 300
 
-		d.webhookRepo.LogDelivery(ctx, log)
+		if err := d.webhookRepo.LogDelivery(ctx, log); err != nil {
+			slog.Error("webhook: failed to log delivery", "webhook_id", wh.ID, "error", err)
+		}
 
 		if log.Success {
-			d.webhookRepo.UpdateDeliveryStatus(ctx, wh.ID, resp.StatusCode, 0)
+			if err := d.webhookRepo.UpdateDeliveryStatus(ctx, wh.ID, resp.StatusCode, 0); err != nil {
+				slog.Error("webhook: failed to update delivery status", "webhook_id", wh.ID, "error", err)
+			}
 			return
 		}
 	}
 
 	// All retries failed
-	d.webhookRepo.UpdateDeliveryStatus(ctx, wh.ID, 0, wh.FailureCount+1)
+	if err := d.webhookRepo.UpdateDeliveryStatus(ctx, wh.ID, 0, wh.FailureCount+1); err != nil {
+		slog.Error("webhook: failed to update delivery status", "webhook_id", wh.ID, "error", err)
+	}
 	slog.Warn("webhook delivery failed after retries", "webhook_id", wh.ID, "event", event)
 }
 
