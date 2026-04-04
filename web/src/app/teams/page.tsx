@@ -92,6 +92,14 @@ export default function TeamsPage() {
         <CreateTeamDialog orgId={currentOrg.id} />
       </div>
 
+      {teamsData?.data && teamsData.data.length > 0 && (
+        <div className="grid grid-cols-3 gap-3">
+          <MiniStat icon={Users} label="Total Teams" value={teamsData.data.length} accent="text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400" />
+          <MiniStat icon={Users} label="Total Members" value={teamsData.data.reduce((s, t) => s + (t.member_count ?? 0), 0)} accent="text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400" />
+          <MiniStat icon={Inbox} label="Total Inboxes" value={teamsData.data.reduce((s, t) => s + (t.active_inboxes ?? 0), 0)} accent="text-violet-600 bg-violet-100 dark:bg-violet-900/30 dark:text-violet-400" />
+        </div>
+      )}
+
       {isLoading ? <TeamGridSkeleton /> : (
         (!teamsData?.data || teamsData.data.length === 0) ? (
           <EmptyState icon="👥" title="No teams yet" description="Create a team to organize your domains and inboxes." />
@@ -159,6 +167,22 @@ function TeamGridSkeleton() {
         </Card>
       ))}
     </div>
+  );
+}
+
+function MiniStat({ icon: Icon, label, value, accent }: { icon: typeof Users; label: string; value: number; accent: string }) {
+  return (
+    <Card>
+      <CardContent className="pt-5 pb-4">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-sm text-muted-foreground">{label}</span>
+          <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${accent}`}>
+            <Icon className="h-4 w-4" />
+          </div>
+        </div>
+        <p className="text-2xl font-bold tabular-nums">{value}</p>
+      </CardContent>
+    </Card>
   );
 }
 
