@@ -35,8 +35,6 @@ export interface OrgSettings {
   max_teams?: number;
   max_inboxes_per_domain?: number;
   enforce_sso?: boolean;
-  primary_color?: string;
-  footer_text?: string;
 }
 
 export interface Team {
