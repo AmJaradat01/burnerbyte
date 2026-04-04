@@ -30,6 +30,10 @@ func (h *EmailHandler) Routes(r chi.Router) {
 
 func (h *EmailHandler) ListEmails(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
+	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "email:read") {
+		writeError(w, http.StatusForbidden, "insufficient scope")
+		return
+	}
 	inboxID, err := uuid.Parse(chi.URLParam(r, "inboxId"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid inbox ID")
@@ -58,6 +62,10 @@ func (h *EmailHandler) ListEmails(w http.ResponseWriter, r *http.Request) {
 
 func (h *EmailHandler) GetEmail(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
+	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "email:read") {
+		writeError(w, http.StatusForbidden, "insufficient scope")
+		return
+	}
 	id, err := uuid.Parse(chi.URLParam(r, "emailId"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid email ID")
@@ -113,6 +121,10 @@ func (h *EmailHandler) MarkReadUnread(w http.ResponseWriter, r *http.Request) {
 
 func (h *EmailHandler) DeleteEmail(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
+	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "email:delete") {
+		writeError(w, http.StatusForbidden, "insufficient scope")
+		return
+	}
 	id, err := uuid.Parse(chi.URLParam(r, "emailId"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid email ID")

@@ -69,7 +69,7 @@ export default function ApiKeysPage() {
         <div>
           <h1 className="text-2xl font-bold">API Keys</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {data?.data?.length ? `${data.data.length} key${data.data.length !== 1 ? "s" : ""}` : "Manage programmatic access to your team's resources."}
+            {data?.data?.length ? `${data.total ?? data.data.length} key${(data.total ?? data.data.length) !== 1 ? "s" : ""}` : "Manage programmatic access to your team's resources."}
           </p>
         </div>
         <CreateApiKeyDialog orgId={currentOrg!.id} teamId={currentTeam.id} />

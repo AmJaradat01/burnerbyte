@@ -42,6 +42,10 @@ func (h *InboxHandler) Routes(r chi.Router) {
 
 func (h *InboxHandler) CreateInboxFlat(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
+	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "inbox:write") {
+		writeError(w, http.StatusForbidden, "insufficient scope")
+		return
+	}
 	var input struct {
 		DomainAssignmentID string `json:"domain_assignment_id"`
 		Alias              string `json:"alias,omitempty"`
@@ -157,6 +161,10 @@ func (h *InboxHandler) ExtendTTL(w http.ResponseWriter, r *http.Request) {
 
 func (h *InboxHandler) DeleteInbox(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
+	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "inbox:write") {
+		writeError(w, http.StatusForbidden, "insufficient scope")
+		return
+	}
 	id, err := uuid.Parse(chi.URLParam(r, "inboxId"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid inbox ID")
