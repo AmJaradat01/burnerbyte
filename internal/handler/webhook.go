@@ -78,7 +78,7 @@ func (h *WebhookHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	wh, err := h.svc.Update(r.Context(), teamID, id, input)
 	if err != nil { writeError(w, http.StatusBadRequest, err.Error()); return }
-	auditRecord(r, orgID, "webhook.updated", "webhook", id, nil)
+	auditRecord(r, orgID, "webhook.updated", "webhook", id, map[string]any{"url": input.URL, "events": input.Events, "active": input.Active})
 	writeJSON(w, http.StatusOK, wh)
 }
 
@@ -95,7 +95,7 @@ func (h *WebhookHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	if err := h.svc.Delete(r.Context(), teamID, id); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed"); return
 	}
-	auditRecord(r, orgID, "webhook.deleted", "webhook", id, nil)
+	auditRecord(r, orgID, "webhook.deleted", "webhook", id, map[string]any{"webhook_id": id.String()})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "webhook deleted"})
 }
 

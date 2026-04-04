@@ -68,7 +68,7 @@ func (h *OrgHandler) CreateOrg(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auditRecord(r, org.ID, "org.created", "org", org.ID, nil)
+	auditRecord(r, org.ID, "org.created", "org", org.ID, map[string]any{"name": org.Name})
 	writeJSON(w, http.StatusCreated, org)
 }
 
@@ -130,7 +130,7 @@ func (h *OrgHandler) UpdateOrg(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auditRecord(r, orgID, "org.updated", "org", orgID, nil)
+	auditRecord(r, orgID, "org.updated", "org", orgID, map[string]any{"name": input.Name, "logo_url": input.LogoURL})
 	writeJSON(w, http.StatusOK, org)
 }
 
@@ -149,7 +149,7 @@ func (h *OrgHandler) DeleteOrg(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auditRecord(r, orgID, "org.deleted", "org", orgID, nil)
+	auditRecord(r, orgID, "org.deleted", "org", orgID, map[string]any{"org_id": orgID.String()})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "org deleted"})
 }
 
@@ -194,7 +194,7 @@ func (h *OrgHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auditRecord(r, orgID, "org.settings.updated", "org", orgID, nil)
+	auditRecord(r, orgID, "org.settings.updated", "org", orgID, map[string]any{"enforce_sso": settings.EnforceSSO, "default_inbox_ttl": settings.DefaultInboxTTL, "max_inbox_ttl": settings.MaxInboxTTL, "attachments_enabled": settings.AttachmentsEnabled})
 	writeJSON(w, http.StatusOK, org.Settings)
 }
 
@@ -295,7 +295,7 @@ func (h *OrgHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auditRecord(r, orgID, "member.removed", "org", userID, nil)
+	auditRecord(r, orgID, "member.removed", "org", userID, map[string]any{"user_id": userID.String()})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "member removed"})
 }
 
@@ -317,7 +317,7 @@ func (h *OrgHandler) RevokeInvite(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	auditRecord(r, orgID, "invite.revoked", "invite", inviteID, nil)
+	auditRecord(r, orgID, "invite.revoked", "invite", inviteID, map[string]any{"invite_id": inviteID.String()})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "invite revoked"})
 }
 
@@ -336,7 +336,7 @@ func (h *OrgHandler) AcceptInvite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auditRecord(r, uuid.Nil, "invite.accepted", "invite", uc.UserID, nil)
+	auditRecord(r, uuid.Nil, "invite.accepted", "invite", uc.UserID, map[string]any{"email": uc.Email})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "invite accepted"})
 }
 
