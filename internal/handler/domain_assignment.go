@@ -67,7 +67,7 @@ func (h *DomainAssignmentHandler) AssignDomain(w http.ResponseWriter, r *http.Re
 		writeError(w, status, err.Error())
 		return
 	}
-	auditRecord(r, orgID, "domain.assigned", "domain_assignment", a.ID, nil)
+	auditRecord(r, orgID, "domain.assigned", "domain_assignment", a.ID, map[string]any{"domain_id": a.DomainID.String(), "team_id": teamID.String()})
 	writeJSON(w, http.StatusCreated, a)
 }
 
@@ -137,6 +137,6 @@ func (h *DomainAssignmentHandler) Unassign(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	auditRecord(r, orgID, "domain.unassigned", "domain_assignment", domainID, nil)
+	auditRecord(r, orgID, "domain.unassigned", "domain_assignment", domainID, map[string]any{"domain_id": domainID.String(), "team_id": teamID.String()})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "domain unassigned"})
 }
