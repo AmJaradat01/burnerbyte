@@ -58,7 +58,7 @@ export default function DomainsPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Domains</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Domains</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             {totalDomains > 0 ? `${totalDomains} domain${totalDomains !== 1 ? "s" : ""} · ${verifiedCount} verified · ${pendingCount} pending` : "Manage your email domains"}
           </p>
@@ -122,8 +122,8 @@ function MiniStat({ icon: Icon, label, value, accent }: { icon: typeof Globe; la
     <Card>
       <CardContent className="pt-5 pb-4">
         <div className="flex items-center justify-between mb-3">
-          <span className="text-sm text-muted-foreground">{label}</span>
-          <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${accent}`}>
+          <span className="text-sm font-medium text-muted-foreground">{label}</span>
+          <div className={`h-8 w-8 rounded-lg flex items-center justify-center shadow-sm shrink-0 ${accent}`}>
             <Icon className="h-4 w-4" />
           </div>
         </div>

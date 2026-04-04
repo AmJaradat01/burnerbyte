@@ -64,7 +64,7 @@ export default function DashboardPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold">{greeting}, {user?.display_name?.split(" ")[0] || "there"}</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{greeting}, {user?.display_name?.split(" ")[0] || "there"}</h1>
         <p className="text-muted-foreground text-sm mt-0.5">Here&apos;s what&apos;s happening with {org.name}</p>
       </div>
 
@@ -143,7 +143,7 @@ export default function DashboardPage() {
                 </RechartsAreaChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex items-center justify-center h-[280px] text-sm text-muted-foreground">{chartError ? "Failed to load chart data" : "No email data yet"}</div>
+              <div className="flex items-center justify-center h-[280px] text-sm font-medium text-muted-foreground">{chartError ? "Failed to load chart data" : "No email data yet"}</div>
             )}
           </CardContent>
         </Card>
@@ -210,8 +210,8 @@ function StatCard({ icon: Icon, label, value, loading, accent, footer }: {
     <Card>
       <CardContent className="pt-5 pb-4">
         <div className="flex items-center justify-between mb-3">
-          <span className="text-sm text-muted-foreground">{label}</span>
-          <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${accent}`}>
+          <span className="text-sm font-medium text-muted-foreground">{label}</span>
+          <div className={`h-8 w-8 rounded-lg flex items-center justify-center shadow-sm ${accent}`}>
             <Icon className="h-4 w-4" />
           </div>
         </div>
