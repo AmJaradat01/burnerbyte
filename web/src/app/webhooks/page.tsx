@@ -20,7 +20,7 @@ import { Pagination } from "@/components/pagination";
 import { ErrorState } from "@/components/error-state";
 import { EmptyState } from "@/components/empty-state";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Clock, Copy, ExternalLink, Plus, Trash2, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Clock, Copy, ExternalLink, Pencil, Plus, Trash2, XCircle } from "lucide-react";
 import type { Webhook, PaginatedResponse } from "@/types";
 
 interface DeliveryLog {
@@ -81,7 +81,7 @@ export default function WebhooksPage() {
         <div>
           <h1 className="text-2xl font-bold">Webhooks</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {data?.data?.length ? `${data.data.length} webhook${data.data.length !== 1 ? "s" : ""} · ${data.data.filter(w => w.active).length} active` : "Receive HTTP callbacks when events occur in your team."}
+            {data?.data?.length ? `${data.total ?? data.data.length} webhook${(data.total ?? data.data.length) !== 1 ? "s" : ""} · ${data.data.filter(w => w.active).length} active` : "Receive HTTP callbacks when events occur in your team."}
           </p>
         </div>
         <CreateWebhookDialog orgId={currentOrg!.id} teamId={currentTeam.id} />
@@ -141,6 +141,7 @@ function WebhookCard({ webhook: w, expanded, onToggleExpand, onToggleActive, onD
           </div>
           <div className="flex items-center gap-3 shrink-0">
             <Switch checked={w.active} onCheckedChange={onToggleActive} aria-label="Toggle webhook" />
+            <EditWebhookDialog orgId={orgId} teamId={teamId} webhook={w} />
             <ConfirmDialog
               trigger={<Button variant="ghost" size="sm" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>}
               title="Delete webhook?"
@@ -315,6 +316,66 @@ function CreateWebhookDialog({ orgId, teamId }: { orgId: string; teamId: string 
             </Button>
           </div>
         )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditWebhookDialog({ orgId, teamId, webhook }: { orgId: string; teamId: string; webhook: Webhook }) {
+  const [url, setUrl] = useState(webhook.url);
+  const [events, setEvents] = useState<string[]>(webhook.events ?? []);
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const qc = useQueryClient();
+
+  const toggleEvent = (event: string) =>
+    setEvents((prev) => prev.includes(event) ? prev.filter((e) => e !== event) : [...prev, event]);
+
+  const save = async () => {
+    if (!url || events.length === 0) return;
+    setSaving(true);
+    try {
+      await api.patch(`/orgs/${orgId}/teams/${teamId}/webhooks/${webhook.id}`, { url, events });
+      qc.invalidateQueries({ queryKey: ["webhooks"] });
+      toast.success("Webhook updated");
+      setOpen(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update webhook");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (v) { setUrl(webhook.url); setEvents(webhook.events ?? []); } }}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="sm"><Pencil className="h-4 w-4" /></Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit webhook</DialogTitle>
+          <DialogDescription>Update the endpoint URL or subscribed events.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Endpoint URL</Label>
+            <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://example.com/webhook" type="url" />
+          </div>
+          <div className="space-y-2">
+            <Label>Events</Label>
+            <div className="flex flex-wrap gap-2">
+              {ALL_EVENTS.map((e) => (
+                <Badge key={e} variant={events.includes(e) ? "default" : "outline"} className="cursor-pointer select-none" onClick={() => toggleEvent(e)}>
+                  {e}
+                </Badge>
+              ))}
+            </div>
+            {events.length === 0 && <p className="text-xs text-destructive">Select at least one event</p>}
+          </div>
+          <Button onClick={save} className="w-full" disabled={!url || events.length === 0 || saving}>
+            {saving ? "Saving…" : "Save"}
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );
