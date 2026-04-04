@@ -19,6 +19,7 @@ type Domain struct {
 	UpdatedAt          time.Time      `json:"updated_at"`
 	// Joined counts
 	ActiveInboxes int `json:"active_inboxes"`
+	TotalInboxes  int `json:"total_inboxes"`
 	TeamCount     int `json:"team_count"`
 }
 

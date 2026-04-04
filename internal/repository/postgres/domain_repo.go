@@ -40,9 +40,25 @@ func (r *DomainRepo) Create(ctx context.Context, d *domain.Domain) error {
 }
 
 func (r *DomainRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Domain, error) {
-	return r.scanOne(ctx,
-		`SELECT id, org_id, domain_name, mx_verified, txt_verified, dns_last_checked_at, settings, created_at, updated_at
-		 FROM domains WHERE id = $1`, id)
+	var d domain.Domain
+	var settings []byte
+	err := r.db.QueryRow(ctx,
+		`SELECT d.id, d.org_id, d.domain_name, d.mx_verified, d.txt_verified, d.dns_last_checked_at, d.settings, d.created_at, d.updated_at,
+		        (SELECT COUNT(*) FROM inboxes i WHERE i.domain_id = d.id AND i.is_active = TRUE),
+		        (SELECT COUNT(*) FROM inboxes i WHERE i.domain_id = d.id),
+		        (SELECT COUNT(DISTINCT da.team_id) FROM domain_assignments da WHERE da.domain_id = d.id)
+		 FROM domains d WHERE d.id = $1`, id).Scan(
+		&d.ID, &d.OrgID, &d.DomainName, &d.MXVerified, &d.TXTVerified,
+		&d.DNSLastCheckedAt, &settings, &d.CreatedAt, &d.UpdatedAt,
+		&d.ActiveInboxes, &d.TotalInboxes, &d.TeamCount)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	_ = json.Unmarshal(settings, &d.Settings)
+	return &d, nil
 }
 
 func (r *DomainRepo) GetByName(ctx context.Context, name string) (*domain.Domain, error) {
@@ -62,6 +78,7 @@ func (r *DomainRepo) ListByOrg(ctx context.Context, orgID uuid.UUID, page, perPa
 	rows, err := r.db.Query(ctx,
 		`SELECT d.id, d.org_id, d.domain_name, d.mx_verified, d.txt_verified, d.dns_last_checked_at, d.settings, d.created_at, d.updated_at,
 		        (SELECT COUNT(*) FROM inboxes i WHERE i.domain_id = d.id AND i.is_active = TRUE),
+		        (SELECT COUNT(*) FROM inboxes i WHERE i.domain_id = d.id),
 		        (SELECT COUNT(DISTINCT da.team_id) FROM domain_assignments da WHERE da.domain_id = d.id)
 		 FROM domains d WHERE d.org_id = $1 ORDER BY d.domain_name LIMIT $2 OFFSET $3`, orgID, perPage, offset)
 	if err != nil {
@@ -74,7 +91,7 @@ func (r *DomainRepo) ListByOrg(ctx context.Context, orgID uuid.UUID, page, perPa
 		var d domain.Domain
 		var settings []byte
 		err := rows.Scan(&d.ID, &d.OrgID, &d.DomainName, &d.MXVerified, &d.TXTVerified,
-			&d.DNSLastCheckedAt, &settings, &d.CreatedAt, &d.UpdatedAt, &d.ActiveInboxes, &d.TeamCount)
+			&d.DNSLastCheckedAt, &settings, &d.CreatedAt, &d.UpdatedAt, &d.ActiveInboxes, &d.TotalInboxes, &d.TeamCount)
 		if err != nil {
 			return nil, 0, err
 		}
