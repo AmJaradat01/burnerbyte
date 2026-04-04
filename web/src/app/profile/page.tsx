@@ -29,6 +29,7 @@ export default function ProfilePage() {
   return (
     <div className="mx-auto max-w-5xl space-y-8">
       <h1 className="text-2xl font-bold">Profile</h1>
+      <p className="text-sm text-muted-foreground mt-0.5">Manage your account settings and preferences.</p>
 
       {/* Identity banner */}
       <Card>
