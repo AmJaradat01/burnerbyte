@@ -61,7 +61,7 @@ function OrgAnalytics({ orgId }: { orgId: string }) {
     queryKey: ["analytics-org", orgId],
     queryFn: () => api.get<OrgStats>(`/orgs/${orgId}/analytics`),
   });
-  const { data: timeSeries } = useQuery({
+  const { data: timeSeries, isError: tsError, isLoading: tsLoading } = useQuery({
     queryKey: ["analytics-org-ts", orgId, days],
     queryFn: () => api.get<{ data: TimeSeriesPoint[] }>(`/orgs/${orgId}/analytics/emails-per-day`, { days }),
   });
@@ -120,6 +120,8 @@ function OrgAnalytics({ orgId }: { orgId: string }) {
         <h2 className="text-base font-semibold">Emails per Day</h2>
         <DateRangeSelector value={days} onChange={setDays} />
       </div>
+      {tsError && <ErrorState message="Failed to load email trends" />}
+      {tsLoading && <Skeleton className="h-[300px] w-full rounded-xl" />}
       {timeSeries?.data && <EmailChart data={timeSeries.data} />}
     </div>
   );
@@ -131,7 +133,7 @@ function TeamAnalytics({ orgId, teamId }: { orgId: string; teamId: string }) {
     queryKey: ["analytics-team", teamId],
     queryFn: () => api.get<TeamStats>(`/orgs/${orgId}/teams/${teamId}/analytics`),
   });
-  const { data: timeSeries } = useQuery({
+  const { data: timeSeries, isError: tsError, isLoading: tsLoading } = useQuery({
     queryKey: ["analytics-team-ts", teamId, days],
     queryFn: () => api.get<{ data: TimeSeriesPoint[] }>(`/orgs/${orgId}/teams/${teamId}/analytics/emails-per-day`, { days }),
   });
@@ -152,6 +154,8 @@ function TeamAnalytics({ orgId, teamId }: { orgId: string; teamId: string }) {
         <h2 className="text-base font-semibold">Emails per Day</h2>
         <DateRangeSelector value={days} onChange={setDays} />
       </div>
+      {tsError && <ErrorState message="Failed to load email trends" />}
+      {tsLoading && <Skeleton className="h-[300px] w-full rounded-xl" />}
       {timeSeries?.data && <EmailChart data={timeSeries.data} />}
     </div>
   );
@@ -217,7 +221,7 @@ function EmailChart({ data }: { data: TimeSeriesPoint[] }) {
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
             <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(v) => v.slice(5)} />
             <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-            <Tooltip labelFormatter={(v) => `Date: ${v}`} formatter={(v) => [`${Number(v).toLocaleString()}`, "Emails"]} />
+            <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--popover))', border: '1px solid hsl(var(--border))', color: 'hsl(var(--popover-foreground))' }} labelFormatter={(v) => `Date: ${v}`} formatter={(v) => [`${Number(v).toLocaleString()}`, "Emails"]} />
             <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
