@@ -18,6 +18,7 @@ type Inbox struct {
 	CreatedAt          time.Time `json:"created_at"`
 	// Joined
 	DomainName   string    `json:"domain_name,omitempty"`
+	OrgID        uuid.UUID `json:"org_id,omitempty"`
 	TeamID       uuid.UUID `json:"team_id,omitempty"`
 	EmailCount   int       `json:"email_count"`
 	UnreadCount  int       `json:"unread_count"`
