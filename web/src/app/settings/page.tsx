@@ -304,7 +304,7 @@ function SSOCard() {
             <CardDescription>Configure single sign-on for your organization.</CardDescription>
           </div>
           {configured
-            ? <Badge className="bg-green-100 text-green-700 border-green-200">Configured</Badge>
+            ? <Badge className="bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800">Configured</Badge>
             : <Badge variant="secondary">Not configured</Badge>
           }
         </div>
@@ -610,7 +610,7 @@ function HealthTab() {
         <div className="flex items-center gap-4 text-sm">
           <div className="flex items-center gap-2">
             {allHealthy
-              ? <Badge className="gap-1 bg-green-100 text-green-700 border-green-200"><CheckCircle2 className="h-3 w-3" /> All systems operational</Badge>
+              ? <Badge className="gap-1 bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800"><CheckCircle2 className="h-3 w-3" /> All systems operational</Badge>
               : <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3" /> Degraded</Badge>
             }
           </div>
@@ -632,8 +632,8 @@ function HealthTab() {
                 <CardContent className="pt-6">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                      <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${ok ? "bg-green-100" : "bg-red-100"}`}>
-                        <Icon className={`h-5 w-5 ${ok ? "text-green-600" : "text-red-600"}`} />
+                      <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${ok ? "bg-green-100 dark:bg-green-900/30" : "bg-red-100 dark:bg-red-900/30"}`}>
+                        <Icon className={`h-5 w-5 ${ok ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`} />
                       </div>
                       <div>
                         <p className="font-medium capitalize">{name}</p>

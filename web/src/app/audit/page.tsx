@@ -22,11 +22,11 @@ import type { AuditEntry, PaginatedResponse } from "@/types";
 const RESOURCE_TYPES = ["user", "org", "team", "domain", "domain_assignment", "inbox", "email", "webhook", "api_key"];
 
 const ACTION_COLORS: Record<string, string> = {
-  created: "bg-green-100 text-green-700 border-green-200",
-  updated: "bg-blue-100 text-blue-700 border-blue-200",
-  deleted: "bg-red-100 text-red-700 border-red-200",
-  revoked: "bg-red-100 text-red-700 border-red-200",
-  verified: "bg-green-100 text-green-700 border-green-200",
+  created: "bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800",
+  updated: "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800",
+  deleted: "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800",
+  revoked: "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800",
+  verified: "bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800",
 };
 
 function getActionColor(action: string): string {
