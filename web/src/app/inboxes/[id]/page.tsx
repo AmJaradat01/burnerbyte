@@ -205,43 +205,50 @@ export default function InboxDetailPage() {
       <div className="shrink-0 border-b bg-background px-4 py-3">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <Button variant="ghost" size="sm" className="shrink-0 h-8 w-8 p-0" onClick={() => router.push("/")}>
+            <Button variant="outline" size="sm" className="shrink-0 h-8 w-8 p-0" onClick={() => router.push("/")}>
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                {address ? (
-                  <>
-                    <h1 className="font-mono text-sm font-semibold truncate">{address}</h1>
-                    <button onClick={copyAddress} className="shrink-0 text-muted-foreground hover:text-foreground transition-colors">
-                      {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
-                    </button>
-                    {inbox && (
-                      <Badge variant={inbox.is_active ? "default" : "secondary"} className="shrink-0 text-[10px] px-1.5 py-0">
-                        {inbox.is_active ? "Active" : "Expired"}
-                      </Badge>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <Skeleton className="h-6 w-48" />
-                    <Skeleton className="h-5 w-20" />
-                    <Skeleton className="h-5 w-32" />
-                  </>
-                )}
-              </div>
-              <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-                <span className="flex items-center gap-1.5">
-                  <span className="h-6 w-6 rounded-md bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center"><Mail className="h-3 w-3 text-blue-600 dark:text-blue-400" /></span>
-                  {totalEmails} emails
-                </span>
-                {inbox?.is_active && inbox?.expires_at && (
-                  <span className="flex items-center gap-1.5">
-                    <CountdownPill expiresAt={inbox.expires_at} />
-                    <Countdown expiresAt={inbox.expires_at} />
-                  </span>
-                )}
-              </div>
+              {address ? (
+                <>
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center shrink-0">
+                      <Mail className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h1 className="font-mono text-sm font-semibold truncate">{address}</h1>
+                        <button onClick={copyAddress} className="shrink-0 text-muted-foreground hover:text-foreground transition-colors">
+                          {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-3 mt-0.5">
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <span className="h-5 w-5 rounded-md bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center"><MailOpen className="h-2.5 w-2.5 text-blue-600 dark:text-blue-400" /></span>
+                          {totalEmails} emails
+                        </span>
+                        {inbox?.is_active && inbox?.expires_at && (
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <CountdownPill expiresAt={inbox.expires_at} />
+                            <Countdown expiresAt={inbox.expires_at} />
+                          </span>
+                        )}
+                        <Badge variant={inbox?.is_active ? "default" : "secondary"} className="text-[10px] px-1.5 py-0">
+                          {inbox?.is_active ? "Active" : "Expired"}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-8 w-8 rounded-lg" />
+                  <div className="space-y-1.5">
+                    <Skeleton className="h-5 w-48" />
+                    <Skeleton className="h-4 w-32" />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
