@@ -11,9 +11,12 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import Link from "next/link";
-import { KeyRound, LogOut, Monitor, Shield, Trash2 } from "lucide-react";
+import { Clock, KeyRound, LogOut, Monitor, Shield, Trash2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useDateFormat } from "@/hooks/use-date-format";
 
 export default function ProfilePage() {
   const { user, fetchMe } = useAuthStore();
@@ -77,6 +80,8 @@ export default function ProfilePage() {
         {/* Left column */}
         <div className="space-y-6">
           <ProfileForm user={user} onSaved={fetchMe} />
+
+          <DateTimePreferencesCard />
 
           {/* Quick links */}
           <Card>
@@ -208,6 +213,90 @@ function ChangePasswordForm() {
         </div>
         <Button onClick={handleChange} disabled={changing || !valid}>
           {changing ? "Changing…" : "Change Password"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+const TIMEZONES = [
+  "UTC", "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles",
+  "Europe/London", "Europe/Berlin", "Europe/Paris",
+  "Asia/Amman", "Asia/Dubai", "Asia/Tokyo", "Asia/Shanghai",
+  "Australia/Sydney",
+];
+
+function DateTimePreferencesCard() {
+  const { settings } = useDateFormat();
+  const qc = useQueryClient();
+  const [tz, setTz] = useState("");
+  const [dateFmt, setDateFmt] = useState("");
+  const [timeFmt, setTimeFmt] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [synced, setSynced] = useState("");
+
+  const key = settings ? `${settings.timezone}-${settings.date_format}-${settings.time_format}` : "";
+  if (key && key !== synced) {
+    setTz(settings!.timezone);
+    setDateFmt(settings!.date_format);
+    setTimeFmt(settings!.time_format);
+    setSynced(key);
+  }
+
+  const dirty = synced && (tz !== settings?.timezone || dateFmt !== settings?.date_format || timeFmt !== settings?.time_format);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await api.patch("/auth/me", { timezone: tz, date_format: dateFmt, time_format: timeFmt });
+      qc.invalidateQueries({ queryKey: ["datetime-settings"] });
+      toast.success("Date & time preferences saved");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base"><Clock className="h-4 w-4" /> Date & Time Preferences</CardTitle>
+        <CardDescription>Choose your timezone and display formats.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label>Timezone</Label>
+          <Select value={tz} onValueChange={setTz}>
+            <SelectTrigger><SelectValue placeholder="Select timezone" /></SelectTrigger>
+            <SelectContent>
+              {TIMEZONES.map((t) => <SelectItem key={t} value={t}>{t.replace(/_/g, " ")}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Date Format</Label>
+          <Select value={dateFmt} onValueChange={setDateFmt}>
+            <SelectTrigger><SelectValue placeholder="Select format" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="YYYY-MM-DD">YYYY-MM-DD</SelectItem>
+              <SelectItem value="DD/MM/YYYY">DD/MM/YYYY</SelectItem>
+              <SelectItem value="MM/DD/YYYY">MM/DD/YYYY</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Time Format</Label>
+          <Select value={timeFmt} onValueChange={setTimeFmt}>
+            <SelectTrigger><SelectValue placeholder="Select format" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="24h">24-hour</SelectItem>
+              <SelectItem value="12h">12-hour</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <Button onClick={save} disabled={saving || !dirty}>
+          {saving ? "Saving…" : "Save Preferences"}
         </Button>
       </CardContent>
     </Card>

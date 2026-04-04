@@ -48,6 +48,7 @@ func (h *AuthHandler) AuthenticatedRoutes(r chi.Router) {
 	r.Get("/auth/sessions", h.ListSessions)
 	r.Delete("/auth/sessions/{sessionId}", h.RevokeSession)
 	r.Delete("/auth/sessions", h.RevokeAllSessions)
+	r.Get("/auth/datetime-settings", h.GetDateTimeSettings)
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
@@ -198,6 +199,29 @@ func (h *AuthHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, user)
+}
+
+func (h *AuthHandler) GetDateTimeSettings(w http.ResponseWriter, r *http.Request) {
+	uc := auth.GetUser(r.Context())
+	user, err := h.svc.GetMe(r.Context(), uc.UserID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load user")
+		return
+	}
+	tz := h.cfg.Defaults.Timezone
+	if tz == "" { tz = "UTC" }
+	df := h.cfg.Defaults.DateFormat
+	if df == "" { df = "YYYY-MM-DD" }
+	tf := h.cfg.Defaults.TimeFormat
+	if tf == "" { tf = "24h" }
+	if user.Timezone != nil && *user.Timezone != "" { tz = *user.Timezone }
+	if user.DateFormat != nil && *user.DateFormat != "" { df = *user.DateFormat }
+	if user.TimeFormat != nil && *user.TimeFormat != "" { tf = *user.TimeFormat }
+	writeJSON(w, http.StatusOK, map[string]string{
+		"timezone":    tz,
+		"date_format": df,
+		"time_format": tf,
+	})
 }
 
 func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {

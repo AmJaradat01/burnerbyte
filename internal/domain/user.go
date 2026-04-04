@@ -17,6 +17,9 @@ type User struct {
 	IsSystemAdmin     bool       `json:"is_system_admin"`
 	EmailVerified     bool       `json:"email_verified"`
 	PasswordChangedAt *time.Time `json:"-"`
+	Timezone          *string    `json:"timezone,omitempty"`
+	DateFormat        *string    `json:"date_format,omitempty"`
+	TimeFormat        *string    `json:"time_format,omitempty"`
 	CreatedAt         time.Time  `json:"created_at"`
 	UpdatedAt         time.Time  `json:"updated_at"`
 }
@@ -59,6 +62,9 @@ type ChangePasswordInput struct {
 type UpdateProfileInput struct {
 	DisplayName *string `json:"display_name,omitempty"`
 	AvatarURL   *string `json:"avatar_url,omitempty"`
+	Timezone    *string `json:"timezone,omitempty"`
+	DateFormat  *string `json:"date_format,omitempty"`
+	TimeFormat  *string `json:"time_format,omitempty"`
 }
 
 type DeleteAccountInput struct {
