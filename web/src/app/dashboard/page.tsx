@@ -38,13 +38,13 @@ export default function DashboardPage() {
     enabled: !!org,
   });
 
-  const { data: chart } = useQuery({
+  const { data: chart, isError: chartError } = useQuery({
     queryKey: ["org-emails-per-day", org?.id],
     queryFn: () => api.get<{ data: EmailsPerDay[] }>(`/orgs/${org!.id}/analytics/emails-per-day`, { days: "30" }),
     enabled: !!org,
   });
 
-  const { data: chartWeek } = useQuery({
+  const { data: chartWeek, isError: weekError } = useQuery({
     queryKey: ["org-emails-week", org?.id],
     queryFn: () => api.get<{ data: EmailsPerDay[] }>(`/orgs/${org!.id}/analytics/emails-per-day`, { days: "7" }),
     enabled: !!org,
@@ -54,8 +54,10 @@ export default function DashboardPage() {
   if (isError) return <ErrorState message="Failed to load dashboard" onRetry={() => refetch()} />;
 
   const weekTotal = chartWeek?.data?.reduce((sum, d) => sum + d.count, 0) ?? 0;
-  const todayCount = chartWeek?.data?.at(-1)?.count ?? 0;
-  const yesterdayCount = chartWeek?.data?.at(-2)?.count ?? 0;
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const yesterdayStr = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  const todayCount = chartWeek?.data?.find((d) => d.date.startsWith(todayStr))?.count ?? 0;
+  const yesterdayCount = chartWeek?.data?.find((d) => d.date.startsWith(yesterdayStr))?.count ?? 0;
   const todayDelta = todayCount - yesterdayCount;
 
   return (
@@ -137,7 +139,7 @@ export default function DashboardPage() {
                 </RechartsAreaChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex items-center justify-center h-[280px] text-sm text-muted-foreground">No email data yet</div>
+              <div className="flex items-center justify-center h-[280px] text-sm text-muted-foreground">{chartError ? "Failed to load chart data" : "No email data yet"}</div>
             )}
           </CardContent>
         </Card>
