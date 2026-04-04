@@ -36,7 +36,7 @@ export default function TeamsPage() {
 
   const { data: teamsData, isLoading } = useQuery({
     queryKey: ["teams", currentOrg?.id],
-    queryFn: () => api.get<{ data: Team[] }>(`/orgs/${currentOrg!.id}/teams`),
+    queryFn: () => api.get<{ data: Team[] }>(`/orgs/${currentOrg!.id}/teams`, { per_page: "200" }),
     enabled: !!currentOrg,
   });
 
@@ -220,7 +220,7 @@ function TeamMembersTab({ orgId, teamId }: { orgId: string; teamId: string }) {
 
   const { data, isLoading } = useQuery({
     queryKey: ["team-members", teamId],
-    queryFn: () => api.get<{ data: Membership[] }>(`/orgs/${orgId}/teams/${teamId}/members`),
+    queryFn: () => api.get<{ data: Membership[] }>(`/orgs/${orgId}/teams/${teamId}/members`, { per_page: "200" }),
   });
 
   const addMember = useMutation({
@@ -238,13 +238,13 @@ function TeamMembersTab({ orgId, teamId }: { orgId: string; teamId: string }) {
   const changeRole = useMutation({
     mutationFn: ({ uid, role }: { uid: string; role: string }) =>
       api.patch(`/orgs/${orgId}/teams/${teamId}/members/${uid}`, { role }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["team-members", teamId] }); toast.success("Role updated"); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["team-members", teamId] }); qc.invalidateQueries({ queryKey: ["teams"] }); toast.success("Role updated"); },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
   });
 
   const removeMember = useMutation({
     mutationFn: (uid: string) => api.del(`/orgs/${orgId}/teams/${teamId}/members/${uid}`),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["team-members", teamId] }); toast.success("Member removed"); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["team-members", teamId] }); qc.invalidateQueries({ queryKey: ["teams"] }); toast.success("Member removed"); },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
   });
 
@@ -259,8 +259,8 @@ function TeamMembersTab({ orgId, teamId }: { orgId: string; teamId: string }) {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
         <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Total</span><div className="h-8 w-8 rounded-lg flex items-center justify-center bg-blue-100 dark:bg-blue-900/30"><Users className="h-4 w-4 text-blue-600 dark:text-blue-400" /></div></div><p className="text-2xl font-bold tabular-nums">{members.length}</p></CardContent></Card>
-        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Active</span><div className="h-8 w-8 rounded-lg flex items-center justify-center bg-emerald-100 dark:bg-emerald-900/30"><CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /></div></div><p className="text-2xl font-bold tabular-nums">{leadCount}</p></CardContent></Card>
-        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Pending</span><div className="h-8 w-8 rounded-lg flex items-center justify-center bg-amber-100 dark:bg-amber-900/30"><Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" /></div></div><p className="text-2xl font-bold tabular-nums">{members.length - leadCount}</p></CardContent></Card>
+        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Leads</span><div className="h-8 w-8 rounded-lg flex items-center justify-center bg-emerald-100 dark:bg-emerald-900/30"><CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /></div></div><p className="text-2xl font-bold tabular-nums">{leadCount}</p></CardContent></Card>
+        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Members</span><div className="h-8 w-8 rounded-lg flex items-center justify-center bg-amber-100 dark:bg-amber-900/30"><Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" /></div></div><p className="text-2xl font-bold tabular-nums">{members.length - leadCount}</p></CardContent></Card>
       </div>
 
       {/* Search + Add */}
@@ -383,12 +383,12 @@ function DomainAssignmentsTab({ orgId, teamId }: { orgId: string; teamId: string
 
   const { data: assignments, isLoading } = useQuery({
     queryKey: ["domain-assignments", teamId],
-    queryFn: () => api.get<{ data: DomainAssignment[] }>(`/orgs/${orgId}/teams/${teamId}/domains`),
+    queryFn: () => api.get<{ data: DomainAssignment[] }>(`/orgs/${orgId}/teams/${teamId}/domains`, { per_page: "200" }),
   });
 
   const { data: domains } = useQuery({
     queryKey: ["domains", orgId],
-    queryFn: () => api.get<{ data: Domain[] }>(`/orgs/${orgId}/domains`),
+    queryFn: () => api.get<{ data: Domain[] }>(`/orgs/${orgId}/domains`, { per_page: "200" }),
   });
 
   const assign = useMutation({
@@ -404,8 +404,8 @@ function DomainAssignmentsTab({ orgId, teamId }: { orgId: string; teamId: string
   });
 
   const unassign = useMutation({
-    mutationFn: (assignmentId: string) => api.del(`/orgs/${orgId}/teams/${teamId}/domains/${assignmentId}`),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["domain-assignments", teamId] }); toast.success("Domain unassigned"); },
+    mutationFn: (domainId: string) => api.del(`/orgs/${orgId}/teams/${teamId}/domains/${domainId}`),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["domain-assignments", teamId] }); qc.invalidateQueries({ queryKey: ["teams"] }); toast.success("Domain unassigned"); },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
   });
 
@@ -417,9 +417,9 @@ function DomainAssignmentsTab({ orgId, teamId }: { orgId: string; teamId: string
     <div className="space-y-4">
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
-        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Total</span><div className="h-8 w-8 rounded-lg flex items-center justify-center bg-violet-100 dark:bg-violet-900/30"><Globe className="h-4 w-4 text-violet-600 dark:text-violet-400" /></div></div><p className="text-2xl font-bold tabular-nums">{assignmentList.length}</p></CardContent></Card>
-        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Active</span><div className="h-8 w-8 rounded-lg flex items-center justify-center bg-emerald-100 dark:bg-emerald-900/30"><CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /></div></div><p className="text-2xl font-bold tabular-nums">{available.length}</p></CardContent></Card>
-        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Teams</span><div className="h-8 w-8 rounded-lg flex items-center justify-center bg-amber-100 dark:bg-amber-900/30"><Users className="h-4 w-4 text-amber-600 dark:text-amber-400" /></div></div><p className="text-2xl font-bold tabular-nums">{domains?.data?.length ?? 0}</p></CardContent></Card>
+        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Assigned</span><div className="h-8 w-8 rounded-lg flex items-center justify-center bg-violet-100 dark:bg-violet-900/30"><Globe className="h-4 w-4 text-violet-600 dark:text-violet-400" /></div></div><p className="text-2xl font-bold tabular-nums">{assignmentList.length}</p></CardContent></Card>
+        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Available</span><div className="h-8 w-8 rounded-lg flex items-center justify-center bg-emerald-100 dark:bg-emerald-900/30"><CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /></div></div><p className="text-2xl font-bold tabular-nums">{available.length}</p></CardContent></Card>
+        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Org Domains</span><div className="h-8 w-8 rounded-lg flex items-center justify-center bg-amber-100 dark:bg-amber-900/30"><Users className="h-4 w-4 text-amber-600 dark:text-amber-400" /></div></div><p className="text-2xl font-bold tabular-nums">{domains?.data?.length ?? 0}</p></CardContent></Card>
       </div>
 
       {/* Assign button */}
@@ -490,7 +490,7 @@ function DomainAssignmentsTab({ orgId, teamId }: { orgId: string; teamId: string
                       trigger={<Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button>}
                       title="Unassign domain?"
                       description={`${a.domain_name || "This domain"} will be removed from this team. Existing inboxes will stop receiving mail.`}
-                      onConfirm={() => unassign.mutate(a.id)}
+                      onConfirm={() => unassign.mutate(a.domain_id)}
                     />
                   </TableCell>
                 </TableRow>
@@ -506,17 +506,22 @@ function DomainAssignmentsTab({ orgId, teamId }: { orgId: string; teamId: string
 
 function TeamSettingsTab({ orgId, team, onDeleted }: { orgId: string; team: Team; onDeleted: () => void }) {
   const [name, setName] = useState(team.name);
+  const [attachments, setAttachments] = useState(team.settings?.attachments_enabled ?? "inherit");
+  const [maxTTL, setMaxTTL] = useState(team.settings?.max_inbox_ttl ?? "");
   const [saving, setSaving] = useState(false);
   const qc = useQueryClient();
   const { fetchTeams } = useOrgStore();
 
-  const dirty = name !== team.name;
+  const dirty = name !== team.name || attachments !== (team.settings?.attachments_enabled ?? "inherit") || maxTTL !== (team.settings?.max_inbox_ttl ?? "");
 
   const save = async () => {
     if (!name.trim()) { toast.error("Name is required"); return; }
     setSaving(true);
     try {
-      await api.patch(`/orgs/${orgId}/teams/${team.id}`, { name: name.trim() });
+      await api.patch(`/orgs/${orgId}/teams/${team.id}`, {
+        name: name.trim(),
+        settings: { attachments_enabled: attachments, max_inbox_ttl: maxTTL || null },
+      });
       qc.invalidateQueries({ queryKey: ["teams"] });
       fetchTeams(orgId);
       toast.success("Team updated");
@@ -554,6 +559,21 @@ function TeamSettingsTab({ orgId, team, onDeleted }: { orgId: string; team: Team
           <div className="space-y-2">
             <Label>Slug</Label>
             <Input value={team.slug} disabled className="bg-muted font-mono" />
+          </div>
+          <div className="space-y-2">
+            <Label>Attachments</Label>
+            <Select value={attachments} onValueChange={setAttachments}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="inherit">Inherit from org</SelectItem>
+                <SelectItem value="enabled">Enabled</SelectItem>
+                <SelectItem value="disabled">Disabled</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Max Inbox TTL</Label>
+            <Input value={maxTTL} onChange={(e) => setMaxTTL(e.target.value)} placeholder="e.g. 24h, 72h (empty = inherit)" />
           </div>
           <Button onClick={save} disabled={saving || !dirty}>
             {saving ? "Saving…" : "Save Changes"}
