@@ -31,7 +31,11 @@ func (h *AnalyticsHandler) Routes(r chi.Router) {
 }
 
 func (h *AnalyticsHandler) OrgAnalytics(w http.ResponseWriter, r *http.Request) {
-	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
+	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid org id")
+		return
+	}
 	if checkOrgRole(w, r, orgID, rbac.OrgMember) {
 		return
 	}
@@ -44,7 +48,11 @@ func (h *AnalyticsHandler) OrgAnalytics(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *AnalyticsHandler) OrgEmailsPerDay(w http.ResponseWriter, r *http.Request) {
-	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
+	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid org id")
+		return
+	}
 	if checkOrgRole(w, r, orgID, rbac.OrgMember) {
 		return
 	}
@@ -61,8 +69,16 @@ func (h *AnalyticsHandler) OrgEmailsPerDay(w http.ResponseWriter, r *http.Reques
 }
 
 func (h *AnalyticsHandler) TeamAnalytics(w http.ResponseWriter, r *http.Request) {
-	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
-	teamID, _ := uuid.Parse(chi.URLParam(r, "teamId"))
+	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid org id")
+		return
+	}
+	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid team id")
+		return
+	}
 	if checkTeamRole(w, r, orgID, teamID, rbac.OrgMember, rbac.TeamMember) {
 		return
 	}
@@ -75,8 +91,16 @@ func (h *AnalyticsHandler) TeamAnalytics(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *AnalyticsHandler) TeamEmailsPerDay(w http.ResponseWriter, r *http.Request) {
-	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
-	teamID, _ := uuid.Parse(chi.URLParam(r, "teamId"))
+	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid org id")
+		return
+	}
+	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid team id")
+		return
+	}
 	if checkTeamRole(w, r, orgID, teamID, rbac.OrgMember, rbac.TeamMember) {
 		return
 	}
