@@ -132,16 +132,6 @@ func (h *SetupHandler) Status(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *SetupHandler) Complete(w http.ResponseWriter, r *http.Request) {
-	completed, err := h.isSetupCompleted(r.Context())
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to check setup status")
-		return
-	}
-	if completed {
-		writeError(w, http.StatusConflict, "setup already completed")
-		return
-	}
-
 	var input SetupInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -179,6 +169,17 @@ func (h *SetupHandler) Complete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer tx.Rollback(r.Context())
+
+	// Check setup inside transaction with row lock to prevent TOCTOU race
+	var completed bool
+	if err := tx.QueryRow(r.Context(), "SELECT completed FROM setup_state WHERE id = TRUE FOR UPDATE").Scan(&completed); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to check setup status")
+		return
+	}
+	if completed {
+		writeError(w, http.StatusConflict, "setup already completed")
+		return
+	}
 
 	userRepoTx := h.userRepo.WithTx(tx)
 	orgRepoTx := h.orgRepo.WithTx(tx)
