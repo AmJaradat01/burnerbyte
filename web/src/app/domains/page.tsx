@@ -289,7 +289,7 @@ function AddDomainDialog({ orgId }: { orgId: string }) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setDomain(""); }}>
       <DialogTrigger asChild>
         <Button className="gap-2"><Plus className="h-4 w-4" /> Add Domain</Button>
       </DialogTrigger>
