@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Monitor, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { ErrorState } from "@/components/error-state";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -54,6 +55,31 @@ export default function SessionsPage() {
         />
       </div>
 
+      <div className="grid grid-cols-2 gap-4">
+        <Card>
+          <CardContent className="flex items-center gap-3 pt-6">
+            <div className="rounded-full bg-blue-100 p-2 dark:bg-blue-900/30">
+              <Monitor className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Active Sessions</p>
+              <p className="text-2xl font-bold">{sessions?.length ?? 0}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-3 pt-6">
+            <div className="rounded-full bg-emerald-100 p-2 dark:bg-emerald-900/30">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Current Session</p>
+              <p className="text-2xl font-bold">Active</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       <Card>
         <CardHeader><CardTitle>Sessions</CardTitle></CardHeader>
         <CardContent>
@@ -77,11 +103,11 @@ export default function SessionsPage() {
                     new Date(a.last_used_at) > new Date(b.last_used_at) ? a : b
                   ).id;
                   return (
-                  <TableRow key={s.id} className={isCurrent ? "bg-primary/5" : ""}>
+                  <TableRow key={s.id} className={isCurrent ? "bg-emerald-50 dark:bg-emerald-900/10 border-l-2 border-l-emerald-500" : ""}>
                     <TableCell className="font-mono text-sm">
                       <div className="flex items-center gap-2">
                         {s.ip_address ?? "—"}
-                        {isCurrent && <Badge variant="outline" className="text-[10px] px-1">Current</Badge>}
+                        {isCurrent && <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800 text-[10px] px-1">Current</Badge>}
                       </div>
                     </TableCell>
                     <TableCell className="max-w-[200px] truncate text-sm">{s.user_agent ?? "—"}</TableCell>
