@@ -76,7 +76,7 @@ export default function DomainsPage() {
       )}
 
       {/* Search */}
-      {totalDomains > 3 && (
+      {totalDomains > 0 && (
         <div className="relative max-w-sm">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Filter domains…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
@@ -149,7 +149,7 @@ function DomainCard({ domain: d, onVerify, onDelete, verifying }: { domain: Doma
   };
 
   return (
-    <Card className="group hover:shadow-md hover:border-primary/20 transition-all">
+    <Card className={`group hover:shadow-md transition-all ${fullyVerified ? "hover:border-emerald-200 dark:hover:border-emerald-800" : "hover:border-amber-200 dark:hover:border-amber-800 border-dashed"}`}>
       <CardContent className="pt-4 pb-3 space-y-3">
         {/* Domain name + status */}
         <div className="flex items-start justify-between gap-2">
@@ -200,6 +200,11 @@ function DomainCard({ domain: d, onVerify, onDelete, verifying }: { domain: Doma
           <span className="flex items-center gap-1">
             <Users className="h-3 w-3" /> {d.team_count ?? 0} team{(d.team_count ?? 0) !== 1 ? "s" : ""}
           </span>
+          {d.dns_last_checked_at && (
+            <span className="ml-auto text-[10px]" title={new Date(d.dns_last_checked_at).toLocaleString()}>
+              Checked {timeAgo(d.dns_last_checked_at)}
+            </span>
+          )}
         </div>
 
         {/* Actions */}
@@ -231,6 +236,14 @@ function DomainCard({ domain: d, onVerify, onDelete, verifying }: { domain: Doma
 }
 
 /* ── DNS chip ── */
+
+function timeAgo(date: string) {
+  const s = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
+  if (s < 60) return "just now";
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
+}
 
 function DnsChip({ verified, label }: { verified: boolean; label: string }) {
   return (
