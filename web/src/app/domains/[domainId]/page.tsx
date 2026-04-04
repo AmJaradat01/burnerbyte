@@ -265,14 +265,14 @@ export default function DomainDetailPage() {
 function QuickStat({ icon: Icon, label, value, accent }: { icon: typeof Globe; label: string; value: number | string; accent: string }) {
   return (
     <Card>
-      <CardContent className="flex items-center gap-3 py-3 px-4">
-        <div className={`h-9 w-9 rounded-lg flex items-center justify-center shrink-0 ${accent}`}>
-          <Icon className="h-4 w-4" />
+      <CardContent className="pt-5 pb-4">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-sm text-muted-foreground">{label}</span>
+          <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${accent}`}>
+            <Icon className="h-4 w-4" />
+          </div>
         </div>
-        <div>
-          <p className="text-lg font-bold tabular-nums">{typeof value === "number" ? value.toLocaleString() : value}</p>
-          <p className="text-[11px] text-muted-foreground">{label}</p>
-        </div>
+        <p className="text-2xl font-bold tabular-nums">{typeof value === "number" ? value.toLocaleString() : value}</p>
       </CardContent>
     </Card>
   );
