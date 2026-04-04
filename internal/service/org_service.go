@@ -179,6 +179,12 @@ func (s *OrgService) UpdateSettings(ctx context.Context, orgID uuid.UUID, settin
 	if settings.EnforceSSO != nil {
 		org.Settings.EnforceSSO = settings.EnforceSSO
 	}
+	if settings.PrimaryColor != nil {
+		org.Settings.PrimaryColor = settings.PrimaryColor
+	}
+	if settings.FooterText != nil {
+		org.Settings.FooterText = settings.FooterText
+	}
 
 	if err := s.orgRepo.Update(ctx, org); err != nil {
 		return nil, err
