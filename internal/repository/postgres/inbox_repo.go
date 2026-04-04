@@ -43,10 +43,10 @@ func (r *InboxRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Inbox, e
 	var i domain.Inbox
 	err := r.db.QueryRow(ctx,
 		`SELECT i.id, i.domain_assignment_id, i.domain_id, i.created_by, i.address, i.full_address,
-		        (i.is_active AND i.expires_at > NOW()), i.expires_at, i.created_at, d.domain_name
+		        (i.is_active AND i.expires_at > NOW()), i.expires_at, i.created_at, d.domain_name, d.org_id
 		 FROM inboxes i JOIN domains d ON i.domain_id = d.id WHERE i.id = $1`, id).
 		Scan(&i.ID, &i.DomainAssignmentID, &i.DomainID, &i.CreatedBy, &i.Address, &i.FullAddress,
-			&i.IsActive, &i.ExpiresAt, &i.CreatedAt, &i.DomainName)
+			&i.IsActive, &i.ExpiresAt, &i.CreatedAt, &i.DomainName, &i.OrgID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNotFound

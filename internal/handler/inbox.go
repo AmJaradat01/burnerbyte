@@ -77,7 +77,7 @@ func (h *InboxHandler) CreateInboxFlat(w http.ResponseWriter, r *http.Request) {
 			"inbox_id": inbox.ID, "address": inbox.Address, "domain_assignment_id": assignmentID,
 		})
 	}
-	auditRecord(r, uuid.Nil, "inbox.created", "inbox", inbox.ID, nil)
+	auditRecord(r, inbox.OrgID, "inbox.created", "inbox", inbox.ID, nil)
 	writeJSON(w, http.StatusCreated, inbox)
 }
 
@@ -155,7 +155,7 @@ func (h *InboxHandler) ExtendTTL(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	auditRecord(r, uuid.Nil, "inbox.extended", "inbox", id, nil)
+	auditRecord(r, inbox.OrgID, "inbox.extended", "inbox", id, nil)
 	writeJSON(w, http.StatusOK, inbox)
 }
 
@@ -170,10 +170,15 @@ func (h *InboxHandler) DeleteInbox(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid inbox ID")
 		return
 	}
+	inbox, err := h.svc.GetInbox(r.Context(), id, uc.UserID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	if err := h.svc.DeleteInbox(r.Context(), id, uc.UserID); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	auditRecord(r, uuid.Nil, "inbox.deleted", "inbox", id, nil)
+	auditRecord(r, inbox.OrgID, "inbox.deleted", "inbox", id, nil)
 	writeJSON(w, http.StatusOK, map[string]string{"message": "inbox deleted"})
 }

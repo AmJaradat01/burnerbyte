@@ -65,6 +65,7 @@ export default function AuditPage() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(1);
+  const [exporting, setExporting] = useState(false);
 
   const params: Record<string, string> = { page: String(page), per_page: "50" };
   if (action) params.action = action;
@@ -81,6 +82,30 @@ export default function AuditPage() {
   const clearFilters = () => { setAction(""); setResource(""); setDateFrom(""); setDateTo(""); setPage(1); };
   const hasFilters = action || resource || dateFrom || dateTo;
 
+  const exportAll = async () => {
+    if (!currentOrg) return;
+    setExporting(true);
+    try {
+      const filterParams: Record<string, string> = {};
+      if (action) filterParams.action = action;
+      if (resource) filterParams.resource_type = resource;
+      if (dateFrom) filterParams.date_from = new Date(dateFrom).toISOString();
+      if (dateTo) filterParams.date_to = new Date(dateTo + "T23:59:59").toISOString();
+
+      const first = await api.get<PaginatedResponse<AuditEntry>>(`/orgs/${currentOrg.id}/audit`, { ...filterParams, page: "1", per_page: "100" });
+      let all = first.data ?? [];
+      for (let p = 2; p <= (first.total_pages ?? 1); p++) {
+        const res = await api.get<PaginatedResponse<AuditEntry>>(`/orgs/${currentOrg.id}/audit`, { ...filterParams, page: String(p), per_page: "100" });
+        all = all.concat(res.data ?? []);
+      }
+      exportCSV(all);
+    } catch {
+      toast.error("Failed to export audit log");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   if (!currentOrg) return <p className="text-muted-foreground">Select an organization first.</p>;
 
   return (
@@ -90,8 +115,8 @@ export default function AuditPage() {
           <h1 className="text-2xl font-bold">Audit Log</h1>
           <p className="text-sm text-muted-foreground mt-0.5">{data?.total ?? 0} entries{hasFilters ? " (filtered)" : ""}</p>
         </div>
-        <Button variant="outline" size="sm" className="gap-1.5" onClick={() => data?.data && exportCSV(data.data)} disabled={!data?.data?.length}>
-          <Download className="h-3.5 w-3.5" /> Export CSV
+        <Button variant="outline" size="sm" className="gap-1.5" onClick={exportAll} disabled={!data?.data?.length || exporting}>
+          <Download className="h-3.5 w-3.5" /> {exporting ? "Exporting…" : "Export CSV"}
         </Button>
       </div>
 
@@ -110,7 +135,7 @@ export default function AuditPage() {
         <Card>
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-muted-foreground">Unique Actions</span>
+              <span className="text-sm text-muted-foreground">Actions (page)</span>
               <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-emerald-100 dark:bg-emerald-900/30">
                 <Activity className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
               </div>
@@ -121,7 +146,7 @@ export default function AuditPage() {
         <Card>
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-muted-foreground">Unique Actors</span>
+              <span className="text-sm text-muted-foreground">Actors (page)</span>
               <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-amber-100 dark:bg-amber-900/30">
                 <Users className="h-4 w-4 text-amber-600 dark:text-amber-400" />
               </div>
