@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth-store";
 import { useOrgStore } from "@/stores/org-store";
@@ -16,22 +16,28 @@ export function useOrgBootstrap() {
   const pathname = usePathname();
   const router = useRouter();
   const { orgs, currentOrg, fetchOrgs, setCurrentOrg, fetchTeams, fetchRole } = useOrgStore();
-  const orgsFetched = useRef(false);
+  const [orgsLoaded, setOrgsLoaded] = useState(false);
   const fetchingOrgs = useRef(false);
+  const prevPathname = useRef(pathname);
 
-  // Fetch orgs once when user is available
+  // Fetch orgs once when user is available, and re-fetch when leaving /invite
   useEffect(() => {
     if (!user || fetchingOrgs.current) return;
+
+    const leftInvite = prevPathname.current.startsWith("/invite") && !pathname.startsWith("/invite");
+    prevPathname.current = pathname;
+
+    if (orgsLoaded && !leftInvite) return;
+
     fetchingOrgs.current = true;
+    setOrgsLoaded(false);
     fetchOrgs()
-      .then(() => { orgsFetched.current = true; })
-      .catch(() => { orgsFetched.current = true; })
-      .finally(() => { fetchingOrgs.current = false; });
-  }, [user, fetchOrgs]);
+      .finally(() => { fetchingOrgs.current = false; setOrgsLoaded(true); });
+  }, [user, fetchOrgs, pathname, orgsLoaded]);
 
   // Redirect to onboarding if user has no orgs and hasn't dismissed it
   useEffect(() => {
-    if (!orgsFetched.current || !user) return;
+    if (!orgsLoaded || !user) return;
 
     // Don't redirect if on a path that should be left alone
     const shouldSkip = ONBOARDING_SKIP_PATHS.some((p) => pathname.startsWith(p));
@@ -40,7 +46,7 @@ export function useOrgBootstrap() {
     if (orgs.length === 0 && localStorage.getItem("bb_onboarding_done") !== "true") {
       router.replace("/onboarding");
     }
-  }, [orgs, user, pathname, router]);
+  }, [orgs, orgsLoaded, user, pathname, router]);
 
   // Auto-select first org
   useEffect(() => {
