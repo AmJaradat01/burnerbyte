@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { copyToClipboard } from "@/lib/clipboard";
@@ -17,7 +17,12 @@ const STEPS = ["Organization", "Domain", "Team", "Inbox", "Done"];
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { fetchOrgs, setCurrentOrg, fetchTeams, setCurrentTeam } = useOrgStore();
+  const { currentOrg, fetchOrgs, setCurrentOrg, fetchTeams, setCurrentTeam } = useOrgStore();
+
+  // Skip onboarding if user already belongs to an org
+  useEffect(() => {
+    if (currentOrg) router.replace("/dashboard");
+  }, [currentOrg, router]);
   const [step, setStep] = useState(0);
   const [busy, setBusy] = useState(false);
   const [org, setOrg] = useState<Organization | null>(null);

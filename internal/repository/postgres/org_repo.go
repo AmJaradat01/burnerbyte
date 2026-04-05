@@ -126,6 +126,12 @@ func (r *OrgRepo) ListByUser(ctx context.Context, userID uuid.UUID, page, perPag
 	return orgs, total, nil
 }
 
+func (r *OrgRepo) Count(ctx context.Context) (int, error) {
+	var count int
+	err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM organizations`).Scan(&count)
+	return count, err
+}
+
 // ── Membership CRUD ──
 
 func (r *OrgRepo) CreateMembership(ctx context.Context, m *domain.OrgMembership) error {
