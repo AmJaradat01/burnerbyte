@@ -48,6 +48,15 @@ func generateSlug(name string) string {
 }
 
 func (s *OrgService) CreateOrg(ctx context.Context, input domain.CreateOrgInput, creatorID uuid.UUID) (*domain.Organization, error) {
+	// Single-org enforcement
+	count, err := s.orgRepo.Count(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("check existing orgs: %w", err)
+	}
+	if count > 0 {
+		return nil, fmt.Errorf("organization already exists")
+	}
+
 	if input.Name == "" {
 		return nil, fmt.Errorf("name is required")
 	}
