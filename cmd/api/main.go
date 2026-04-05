@@ -234,7 +234,7 @@ func main() {
 			authHandler.AuthenticatedRoutes(r)
 
 			// Orgs
-			r.Post("/orgs", orgHandler.CreateOrg)
+			r.With(auth.RequireSystemAdmin).Post("/orgs", orgHandler.CreateOrg)
 			r.Get("/orgs", orgHandler.ListOrgs)
 			r.Get("/orgs/{orgId}", orgHandler.GetOrg)
 			r.Patch("/orgs/{orgId}", orgHandler.UpdateOrg)
