@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { copyToClipboard } from "@/lib/clipboard";
 import { useOrgStore } from "@/stores/org-store";
+import { useAuthStore } from "@/stores/auth-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +19,7 @@ const STEPS = ["Organization", "Domain", "Team", "Inbox", "Done"];
 export default function OnboardingPage() {
   const router = useRouter();
   const { currentOrg, fetchOrgs, setCurrentOrg, fetchTeams, setCurrentTeam } = useOrgStore();
+  const user = useAuthStore((s) => s.user);
 
   // Skip onboarding if user already belongs to an org
   useEffect(() => {
@@ -128,16 +130,29 @@ export default function OnboardingPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {step === 0 && (
-            <>
-              <div className="space-y-2">
-                <Label>Organization name</Label>
-                <Input value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="My Company" autoFocus onKeyDown={(e) => e.key === "Enter" && orgName && createOrg()} />
+            user?.is_system_admin ? (
+              <>
+                <div className="space-y-2">
+                  <Label>Organization name</Label>
+                  <Input value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="My Company" autoFocus onKeyDown={(e) => e.key === "Enter" && orgName && createOrg()} />
+                </div>
+                <div className="flex justify-between">
+                  <Button variant="ghost" onClick={skip} disabled={busy}>Skip setup</Button>
+                  <Button onClick={createOrg} disabled={!orgName || busy}>{busy ? "Creating…" : "Create org →"}</Button>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-6 space-y-3">
+                <div className="text-4xl">📬</div>
+                <h3 className="text-lg font-semibold">Waiting for an invitation</h3>
+                <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                  Ask your organization admin to send you an invite. Once accepted, you&apos;ll be redirected automatically.
+                </p>
+                <Button variant="outline" size="sm" onClick={() => { fetchOrgs(); toast.info("Checking…"); }}>
+                  Check again
+                </Button>
               </div>
-              <div className="flex justify-between">
-                <Button variant="ghost" onClick={skip} disabled={busy}>Skip setup</Button>
-                <Button onClick={createOrg} disabled={!orgName || busy}>{busy ? "Creating…" : "Create org →"}</Button>
-              </div>
-            </>
+            )
           )}
 
           {step === 1 && (
