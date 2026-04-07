@@ -121,13 +121,17 @@ export function NotificationCenter() {
   }, [qc]);
 
   const dismiss = useCallback((id: string) => {
-    qc.setQueryData<Notification[]>(["notifications"], (prev) =>
-      prev?.filter((n) => n.id !== id) ?? []
-    );
+    api.del(`/notifications/${id}`).then(() => {
+      qc.setQueryData<Notification[]>(["notifications"], (prev) =>
+        prev?.filter((n) => n.id !== id) ?? []
+      );
+    });
   }, [qc]);
 
   const clearAll = useCallback(() => {
-    qc.setQueryData<Notification[]>(["notifications"], []);
+    api.del("/notifications").then(() => {
+      qc.setQueryData<Notification[]>(["notifications"], []);
+    });
   }, [qc]);
 
   return (
