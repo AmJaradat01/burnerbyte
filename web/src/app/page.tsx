@@ -20,7 +20,6 @@ import { ErrorState } from "@/components/error-state";
 import { Pagination } from "@/components/pagination";
 import { Check, ChevronDown, Clock, Copy, ExternalLink, Key, Link as LinkIcon, Mail, RefreshCw, Server, Timer, Trash2, Users, Zap } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { WS_BASE } from "@/lib/api";
 import { copyToClipboard } from "@/lib/clipboard";
 import type { Inbox, PaginatedResponse, DomainAssignment } from "@/types";
 
@@ -73,22 +72,8 @@ function HomePage() {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["home-inboxes", page],
     queryFn: () => api.get<PaginatedResponse<Inbox>>(`/inboxes`, { page: String(page), per_page: "12", status: "active" }),
+    refetchOnWindowFocus: true,
   });
-
-  // Live refresh via WebSocket
-  useEffect(() => {
-    let disposed = false;
-    let ws: WebSocket | null = null;
-    const connect = () => {
-      const token = localStorage.getItem("access_token");
-      if (!token || disposed) return;
-      ws = new WebSocket(`${WS_BASE}/notifications?token=${token}`);
-      ws.onmessage = () => { qc.invalidateQueries({ queryKey: ["home-inboxes"] }); };
-      ws.onclose = () => { if (!disposed) setTimeout(connect, 5000); };
-    };
-    connect();
-    return () => { disposed = true; ws?.close(); };
-  }, [qc]);
 
   const extend = useMutation({
     mutationFn: (id: string) => api.post(`/inboxes/${id}/extend`, {}),
