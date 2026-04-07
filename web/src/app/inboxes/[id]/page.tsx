@@ -139,7 +139,7 @@ export default function InboxDetailPage() {
 
   const deleteInbox = useMutation({
     mutationFn: () => api.del(`/inboxes/${id}`),
-    onSuccess: () => { toast.success("Inbox deleted"); router.push("/"); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["notifications"] }); toast.success("Inbox deleted"); router.push("/"); },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
   });
 
