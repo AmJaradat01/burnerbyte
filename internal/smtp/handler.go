@@ -44,6 +44,7 @@ type Handler struct {
 	webhookDispatcher WebhookDispatcher
 	hub               RealtimeHub
 	notifHub          NotifHub
+	publisher         *realtime.Publisher
 	attachmentStorer  AttachmentStorer
 	settingsChecker   SettingsChecker
 }
@@ -84,6 +85,7 @@ func NewHandler(
 	notifHub NotifHub,
 	attachmentStorer AttachmentStorer,
 	settingsChecker SettingsChecker,
+	publisher *realtime.Publisher,
 ) *Handler {
 	return &Handler{
 		inboxRepoPG:       inboxRepoPG,
@@ -93,6 +95,7 @@ func NewHandler(
 		webhookDispatcher: webhookDispatcher,
 		hub:               hub,
 		notifHub:          notifHub,
+		publisher:         publisher,
 		attachmentStorer:  attachmentStorer,
 		settingsChecker:   settingsChecker,
 	}
@@ -191,22 +194,27 @@ func (h *Handler) Process(ctx context.Context, email *InboundEmail) error {
 	}
 
 	// Broadcast to WebSocket
-	if h.hub != nil {
-		h.hub.Broadcast(inbox.ID, realtime.Message{
+	if h.publisher != nil {
+		h.publisher.PublishInboxEvent(ctx, inbox.ID, inbox.CreatedBy, realtime.Message{
 			Type: "email.received",
 			Data: e,
 		})
-	}
-
-	// Push user notification
-	if h.notifHub != nil {
-		h.notifHub.Notify(inbox.CreatedBy, realtime.Message{
-			Type: "email.received",
-			Data: map[string]any{
-				"inbox_id": inbox.ID, "email_id": e.ID,
-				"from": email.From, "subject": email.Subject,
-			},
-		})
+	} else {
+		if h.hub != nil {
+			h.hub.Broadcast(inbox.ID, realtime.Message{
+				Type: "email.received",
+				Data: e,
+			})
+		}
+		if h.notifHub != nil {
+			h.notifHub.Notify(inbox.CreatedBy, realtime.Message{
+				Type: "email.received",
+				Data: map[string]any{
+					"inbox_id": inbox.ID, "email_id": e.ID,
+					"from": email.From, "subject": email.Subject,
+				},
+			})
+		}
 	}
 
 	slog.Info("email stored", "email_id", e.ID, "inbox", toAddr, "from", email.From)
