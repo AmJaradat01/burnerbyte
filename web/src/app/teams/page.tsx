@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { api } from "@/lib/api";
 import { useOrgStore } from "@/stores/org-store";
+import { useAuthStore } from "@/stores/auth-store";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,7 +32,8 @@ interface DomainAssignment {
 }
 
 export default function TeamsPage() {
-  const { currentOrg } = useOrgStore();
+  const { currentOrg, currentRole } = useOrgStore();
+  const { user } = useAuthStore();
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
 
   const { data: teamsData, isLoading } = useQuery({
@@ -41,6 +43,9 @@ export default function TeamsPage() {
   });
 
   if (!currentOrg) return <p className="text-muted-foreground">Select an organization first.</p>;
+
+  const isAdmin = currentRole === "owner" || currentRole === "admin" || user?.is_system_admin;
+  if (!isAdmin) return <div className="flex items-center justify-center min-h-[50vh]"><p className="text-muted-foreground">You don&apos;t have permission to access this page.</p></div>;
 
   // Team detail view
   if (selectedTeam) {
