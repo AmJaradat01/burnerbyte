@@ -48,6 +48,9 @@ Two separate binaries scale independently:
 - Private inboxes — only the creator can access
 - Built-in documentation site at `/docs`
 - Command palette with keyboard shortcuts
+- Persistent notifications with real-time delivery via Redis pub/sub
+- Timezone and date-format user preferences
+- Single-org enforcement (4-layer protection)
 
 ## Quick Start
 
@@ -150,12 +153,12 @@ On first launch, navigate to `http://localhost:3000` — the setup wizard will g
 - **Backend**: Go 1.25, Chi, pgxpool, go-redis, MinIO
 - **Frontend**: Next.js 16, shadcn/ui, Tailwind CSS, Zustand, TanStack Query, Recharts
 - **Docs**: Fumadocs (MDX, full-text search)
-- **Infrastructure**: PostgreSQL 16, Redis 7, MinIO, Docker
+- **Infrastructure**: PostgreSQL 16 (28 migrations, 28 tables), Redis 7, MinIO, Docker
 - **CI/CD**: GitLab CI (lint, build, test, Docker registry)
 
 ## Database
 
-21 migrations, 52+ indexes, 7 triggers. Tables: users, organizations, org_memberships, teams, team_memberships, domains, domain_assignments, inboxes, emails, attachments, webhooks, webhook_delivery_logs, api_keys, audit_logs, invites, sessions, setup_state, password_reset_tokens, system_configs.
+28 migrations, 52+ indexes, 7 triggers. 28 tables: users, organizations, org_memberships, teams, team_memberships, domains, domain_assignments, inboxes, emails, attachments, webhooks, webhook_delivery_logs, api_keys, audit_logs, invites, sessions, setup_state, password_reset_tokens, system_configs, roles, permissions, role_permissions, user_preferences, notifications, notification_subscriptions, email_domain_stats, org_settings, user_settings.
 
 ## Documentation
 
