@@ -319,6 +319,13 @@ func (h *AuthHandler) SSOStatus(w http.ResponseWriter, r *http.Request) {
 			resp["enforce_sso"] = true
 		}
 	}
+	resp["password_policy"] = map[string]any{
+		"min_length":        h.cfg.Password.MinLength,
+		"require_uppercase": h.cfg.Password.RequireUppercase,
+		"require_lowercase": h.cfg.Password.RequireLowercase,
+		"require_number":    h.cfg.Password.RequireNumber,
+		"require_special":   h.cfg.Password.RequireSpecial,
+	}
 	writeJSON(w, http.StatusOK, resp)
 }
 
