@@ -5,6 +5,7 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { copyToClipboard } from "@/lib/clipboard";
 import { useOrgStore } from "@/stores/org-store";
+import { useAuthStore } from "@/stores/auth-store";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +23,8 @@ import { Check, CheckCircle2, Circle, Copy, Globe, Inbox, Plus, RefreshCw, Searc
 import type { Domain, PaginatedResponse } from "@/types";
 
 export default function DomainsPage() {
-  const { currentOrg } = useOrgStore();
+  const { currentOrg, currentRole } = useOrgStore();
+  const { user } = useAuthStore();
   const qc = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -46,6 +48,9 @@ export default function DomainsPage() {
   });
 
   if (!currentOrg) return <p className="text-muted-foreground">Select an organization first.</p>;
+
+  const isAdmin = currentRole === "owner" || currentRole === "admin" || user?.is_system_admin;
+  if (!isAdmin) return <div className="flex items-center justify-center min-h-[50vh]"><p className="text-muted-foreground">You don&apos;t have permission to access this page.</p></div>;
 
   const domains = data?.data ?? [];
   const filtered = search ? domains.filter((d) => d.domain_name.toLowerCase().includes(search.toLowerCase())) : domains;
