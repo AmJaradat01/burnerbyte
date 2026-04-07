@@ -20,7 +20,7 @@ import { Pagination } from "@/components/pagination";
 import { ErrorState } from "@/components/error-state";
 import { EmptyState } from "@/components/empty-state";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { AlertTriangle, Check, CheckCircle2, Circle, Copy, Globe, Inbox, Info, Plus, RefreshCw, Search, Shield, Trash2, Users } from "lucide-react";
+import { AlertTriangle, Check, CheckCircle2, Circle, Copy, Globe, Inbox, Plus, RefreshCw, Search, Shield, Trash2, Users } from "lucide-react";
 import type { Domain, PaginatedResponse } from "@/types";
 
 type StatusFilter = "all" | "verified" | "pending";
@@ -452,10 +452,15 @@ function sanitizeDomain(input: string): string {
 
 function validateDomain(input: string): string | null {
   if (!input) return null;
-  if (/\s/.test(input)) return "Domain cannot contain spaces";
-  if (/\//.test(input)) return "Domain cannot contain slashes";
-  if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*\.[a-z]{2,}$/.test(input))
-    return "Enter a valid domain (e.g. example.com)";
+  if (input.length > 253) return "Domain too long (max 253 characters)";
+  if (!input.includes(".")) return "Domain must contain at least one dot";
+  const labels = input.split(".");
+  const tld = labels[labels.length - 1];
+  if (!/^[a-z]{2,}$/.test(tld)) return "Invalid TLD — must be at least 2 letters";
+  for (const label of labels) {
+    if (label.length === 0 || label.length > 63) return "Each label must be 1–63 characters";
+    if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(label)) return "Labels must be alphanumeric (hyphens allowed, not at start/end)";
+  }
   return null;
 }
 
@@ -492,8 +497,15 @@ function AddDomainDialog({ orgId }: { orgId: string }) {
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add a domain</DialogTitle>
-          <DialogDescription>Enter the domain you want to receive emails on. You&apos;ll need to add DNS records to verify ownership.</DialogDescription>
+          <div className="flex items-center gap-2">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+              <Globe className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <DialogTitle>Add a domain</DialogTitle>
+              <DialogDescription>Enter the domain you want to receive emails on. You&apos;ll need to add DNS records to verify ownership.</DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
@@ -508,17 +520,6 @@ function AddDomainDialog({ orgId }: { orgId: string }) {
               <p className="text-xs text-muted-foreground">Will be added as: <span className="font-mono">{domain}</span></p>
             )}
             {error && <p className="text-xs text-destructive">{error}</p>}
-          </div>
-
-          {/* DNS preview info box */}
-          <div className="rounded-lg border bg-muted/40 p-3 space-y-1.5">
-            <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-              <Info className="h-3.5 w-3.5" /> After adding, configure these DNS records:
-            </div>
-            <div className="text-xs font-mono space-y-0.5 pl-5 text-muted-foreground">
-              <p>MX &nbsp;→ mail.burnerbyte.com (priority 10)</p>
-              <p>TXT → Will be generated after adding</p>
-            </div>
           </div>
 
           <Button onClick={handleAdd} className="w-full" disabled={!isValid || adding}>
