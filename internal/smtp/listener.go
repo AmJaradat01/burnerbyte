@@ -177,7 +177,13 @@ func (l *Listener) handleConn(ctx context.Context, conn net.Conn) {
 			}
 			sess.writef("354 Start mail input; end with <CRLF>.<CRLF>")
 
+			// Total deadline for the entire DATA phase to prevent slow-loris.
+			conn.SetDeadline(time.Now().Add(5 * time.Minute)) //nolint:errcheck
+
 			data, err := sess.readData()
+
+			// Reset deadline after DATA completes.
+			conn.SetDeadline(time.Time{}) //nolint:errcheck
 			if err != nil {
 				slog.Error("smtp data read error", "error", err, "remote", remoteAddr)
 				sess.writef("451 4.3.0 Error reading message data")
@@ -221,9 +227,6 @@ func (l *Listener) handleConn(ctx context.Context, conn net.Conn) {
 func (s *smtpSession) readData() ([]byte, error) {
 	var buf bytes.Buffer
 	for {
-		// Extend deadline for each line during DATA transfer.
-		s.conn.SetReadDeadline(time.Now().Add(3 * time.Minute)) //nolint:errcheck
-
 		line, err := s.reader.ReadString('\n')
 		if err != nil {
 			return nil, err
