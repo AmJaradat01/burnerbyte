@@ -182,7 +182,7 @@ export default function RegisterPage() {
   if (sso && !sso.allow_registration) return null;
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-[calc(100vh-8rem)]">
       <BrandingPanel />
 
       <div className="flex flex-1 items-center justify-center bg-gradient-to-b from-muted/50 to-background p-6">
