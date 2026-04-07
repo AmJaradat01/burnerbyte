@@ -92,7 +92,7 @@ func main() {
 	go func() {
 		if err := listener.ListenAndServe(ctx, cfg.SMTP.Listen); err != nil {
 			slog.Error("smtp listener error", "error", err)
-			os.Exit(1)
+			cancel()
 		}
 	}()
 
@@ -104,12 +104,15 @@ func main() {
 		"queue_size", cfg.SMTP.QueueSize,
 	)
 
-	// Wait for shutdown signal.
+	// Wait for shutdown signal or context cancellation.
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, syscall.SIGINT, syscall.SIGTERM)
-	<-done
+	select {
+	case <-done:
+	case <-ctx.Done():
+	}
 
 	slog.Info("smtpd shutting down")
-	cancel() // Cancels ctx, which stops the listener and worker pool.
+	cancel()
 	slog.Info("smtpd stopped")
 }
