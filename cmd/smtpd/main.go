@@ -9,6 +9,7 @@ import (
 
 	"gitlab.com/burnerbyte/burnerbyte/internal/config"
 	"gitlab.com/burnerbyte/burnerbyte/internal/database"
+	"gitlab.com/burnerbyte/burnerbyte/internal/realtime"
 	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
 	redisrepo "gitlab.com/burnerbyte/burnerbyte/internal/repository/redis"
 	"gitlab.com/burnerbyte/burnerbyte/internal/service"
@@ -77,9 +78,10 @@ func main() {
 	settingsResolver := service.NewSettingsResolver(assignmentRepo, domainRepo, orgRepo, cfg.Defaults)
 
 	// SMTP components
+	publisher := realtime.NewPublisher(rdb)
 	router := smtp.NewRouter(domainRepo, inboxRepoRedis, inboxRepoPG)
 	dispatcher := webhook.NewDispatcher(webhookRepo, cfg.Defaults.WebhookTimeout, cfg.Defaults.WebhookMaxRetries)
-	handler := smtp.NewHandler(inboxRepoPG, inboxRepoRedis, emailRepo, assignmentRepo, dispatcher, nil, nil, attachmentSvc, settingsResolver)
+	handler := smtp.NewHandler(inboxRepoPG, inboxRepoRedis, emailRepo, assignmentRepo, dispatcher, nil, nil, attachmentSvc, settingsResolver, publisher)
 	server := smtp.NewServer(cfg.SMTP, handler)
 	listener := smtp.NewListener(server, router)
 

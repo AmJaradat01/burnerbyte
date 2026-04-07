@@ -142,6 +142,7 @@ func main() {
 	// WebSocket hubs
 	hub := realtime.NewHub()
 	notifHub := realtime.NewNotifHub()
+	realtime.Subscribe(ctx, rdb, hub, notifHub)
 
 	// Handlers
 	ssoMgr := auth.NewSSOManager(cfg)
