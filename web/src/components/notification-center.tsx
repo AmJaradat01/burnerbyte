@@ -188,7 +188,9 @@ export function NotificationCenter() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className={`text-sm truncate ${!n.is_read ? "font-semibold" : "font-medium"}`}>{n.title}</p>
+                      <p className={`text-sm truncate ${!n.is_read ? "font-semibold" : "font-medium"}`}>
+                      {n.title === "email.received" ? "New email received" : n.title}
+                    </p>
                       {!n.is_read && <div className="h-2 w-2 rounded-full bg-primary shrink-0" />}
                     </div>
                     <p className="text-xs text-muted-foreground truncate mt-0.5">{n.message}</p>
