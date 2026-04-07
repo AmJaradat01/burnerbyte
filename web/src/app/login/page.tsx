@@ -10,7 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
+import { Shield, Zap, Clock, Eye, EyeOff } from "lucide-react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
 
@@ -24,7 +26,9 @@ interface SSOStatus {
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const login = useAuthStore((s) => s.login);
   const fetchMe = useAuthStore((s) => s.fetchMe);
@@ -37,8 +41,6 @@ export default function LoginPage() {
     staleTime: 60000,
   });
 
-  // Handle SSO callback tokens from URL fragment (hash)
-  // Tokens are passed as fragment to prevent logging by proxies/servers
   useEffect(() => {
     const hash = window.location.hash;
     if (!hash) return;
@@ -46,7 +48,6 @@ export default function LoginPage() {
     const accessToken = params.get("access_token");
     const refreshToken = params.get("refresh_token");
     if (accessToken && refreshToken) {
-      // Strip tokens from URL immediately to prevent exposure in history
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
       localStorage.setItem("access_token", accessToken);
       localStorage.setItem("refresh_token", refreshToken);
@@ -54,6 +55,16 @@ export default function LoginPage() {
       fetchMe().then(() => router.replace(redirect));
     }
   }, [searchParams, fetchMe, router]);
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  const validateEmail = () => {
+    if (email && !emailRegex.test(email)) {
+      setEmailError("Please enter a valid email address");
+    } else {
+      setEmailError("");
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,64 +85,122 @@ export default function LoginPage() {
   const ssoUrl = ssoEnabled ? `${API_BASE}/auth/sso/${sso!.provider}` : "";
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-muted/50 to-background">
-      <Card className="w-full max-w-md shadow-lg">
-        <CardHeader className="text-center">
-          <div className="text-3xl mb-2">🔥</div>
-          <CardTitle className="text-2xl">Sign in to BurnerByte</CardTitle>
-          <CardDescription>
-            {enforceSSO ? `Sign in with ${sso?.provider_label ?? "SSO"} to continue` : "Enter your credentials to continue"}
-          </CardDescription>
-        </CardHeader>
-
-        {ssoEnabled && (
-          <CardContent className={enforceSSO ? "" : "pb-0"}>
-            <a href={ssoUrl}>
-              <Button variant="outline" className="w-full gap-2 h-11" type="button">
-                Sign in with {sso?.provider_label ?? "SSO"}
-              </Button>
-            </a>
-          </CardContent>
-        )}
-
-        {!enforceSSO && (
-          <>
-            {ssoEnabled && (
-              <div className="relative px-6 py-3">
-                <div className="absolute inset-0 flex items-center px-6"><span className="w-full border-t" /></div>
-                <div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground">or</span></div>
+    <div className="flex min-h-screen">
+      {/* Left branding panel */}
+      <div className="hidden lg:flex lg:w-1/2 bg-primary text-primary-foreground flex-col justify-center px-16">
+        <div className="max-w-md mx-auto space-y-8">
+          <div>
+            <span className="text-5xl">🔥</span>
+            <h1 className="text-3xl font-bold mt-4">BurnerByte</h1>
+            <p className="text-lg text-primary-foreground/80 mt-2">Self-hosted temporary email</p>
+          </div>
+          <div className="space-y-4">
+            {[
+              { icon: Shield, text: "Privacy first" },
+              { icon: Zap, text: "Instant inboxes" },
+              { icon: Clock, text: "Auto-expiring" },
+            ].map(({ icon: Icon, text }) => (
+              <div key={text} className="flex items-center gap-3">
+                <Icon className="h-5 w-5 text-primary-foreground/70" />
+                <span className="text-primary-foreground/90">{text}</span>
               </div>
-            )}
-            <form onSubmit={handleSubmit}>
-              <CardContent className="space-y-4 pb-6">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" placeholder="you@example.com" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" placeholder="••••••••" />
-                </div>
-                <Button type="submit" className="w-full h-11" disabled={loading}>
-                  {loading ? "Signing in…" : "Sign in"}
-                </Button>
-              </CardContent>
-              <CardFooter className="flex justify-between text-sm pt-0">
-                <Link href="/forgot-password" className="text-muted-foreground hover:underline">Forgot password?</Link>
-                {(sso?.allow_registration ?? true) && (
-                  <Link href="/register" className="text-muted-foreground hover:underline">Create account</Link>
-                )}
-              </CardFooter>
-            </form>
-          </>
-        )}
+            ))}
+          </div>
+        </div>
+      </div>
 
-        {enforceSSO && (
-          <CardFooter className="justify-center">
-            <p className="text-xs text-muted-foreground">Your organization requires SSO authentication</p>
-          </CardFooter>
-        )}
-      </Card>
+      {/* Right form panel */}
+      <div className="flex flex-1 items-center justify-center bg-gradient-to-b from-muted/50 to-background p-6">
+        <Card className="w-full max-w-md shadow-xl">
+          <CardHeader className="text-center">
+            <div className="text-3xl mb-2 lg:hidden">🔥</div>
+            <CardTitle className="text-2xl">Sign in to BurnerByte</CardTitle>
+            <CardDescription>
+              {enforceSSO ? `Sign in with ${sso?.provider_label ?? "SSO"} to continue` : "Enter your credentials to continue"}
+            </CardDescription>
+          </CardHeader>
+
+          {ssoEnabled && (
+            <CardContent className={enforceSSO ? "" : "pb-0"}>
+              <a href={ssoUrl}>
+                <Button variant="outline" className="w-full gap-2 h-11" type="button">
+                  Sign in with {sso?.provider_label ?? "SSO"}
+                </Button>
+              </a>
+            </CardContent>
+          )}
+
+          {!enforceSSO && (
+            <>
+              {ssoEnabled && (
+                <div className="relative px-6 py-3">
+                  <Separator />
+                  <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-3 text-xs uppercase text-muted-foreground">
+                    or
+                  </span>
+                </div>
+              )}
+              <form onSubmit={handleSubmit}>
+                <CardContent className="space-y-4 pb-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => { setEmail(e.target.value); if (emailError) setEmailError(""); }}
+                      onBlur={validateEmail}
+                      autoComplete="email"
+                      placeholder="you@example.com"
+                      className={emailError ? "border-red-500 focus-visible:ring-red-500" : ""}
+                    />
+                    {emailError && <p className="text-xs text-red-500">{emailError}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password</Label>
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        autoComplete="current-password"
+                        placeholder="••••••••"
+                        className="pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        aria-label={showPassword ? "Hide password" : "Show password"}
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+                  <Button type="submit" className="w-full h-11" disabled={loading}>
+                    {loading ? "Signing in…" : "Sign in"}
+                  </Button>
+                </CardContent>
+                <CardFooter className="flex justify-between text-sm pt-0">
+                  <Link href="/forgot-password" className="text-muted-foreground hover:underline">Forgot password?</Link>
+                  {(sso?.allow_registration ?? true) && (
+                    <Link href="/register" className="text-muted-foreground hover:underline">Create account</Link>
+                  )}
+                </CardFooter>
+              </form>
+            </>
+          )}
+
+          {enforceSSO && (
+            <CardFooter className="justify-center">
+              <p className="text-xs text-muted-foreground">Your organization requires SSO authentication</p>
+            </CardFooter>
+          )}
+        </Card>
+      </div>
     </div>
   );
 }
