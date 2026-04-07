@@ -461,6 +461,33 @@ func main() {
 				json.NewEncoder(w).Encode(map[string]string{"message": "ok"})
 			})
 
+			r.Delete("/notifications", func(w http.ResponseWriter, r *http.Request) {
+				uc := auth.GetUser(r.Context())
+				if err := notifRepo.DeleteAll(r.Context(), uc.UserID); err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					json.NewEncoder(w).Encode(map[string]string{"error": "failed"})
+					return
+				}
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(map[string]string{"message": "ok"})
+			})
+
+			r.Delete("/notifications/{notifId}", func(w http.ResponseWriter, r *http.Request) {
+				id, err := uuid.Parse(chi.URLParam(r, "notifId"))
+				if err != nil {
+					w.WriteHeader(http.StatusBadRequest)
+					json.NewEncoder(w).Encode(map[string]string{"error": "invalid id"})
+					return
+				}
+				if err := notifRepo.Delete(r.Context(), id); err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					json.NewEncoder(w).Encode(map[string]string{"error": "failed"})
+					return
+				}
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(map[string]string{"message": "ok"})
+			})
+
 			// WebSocket
 			r.Get("/ws/inboxes/{inboxId}", wsHandler.InboxWS)
 			r.Get("/ws/notifications", notifWSHandler.NotificationsWS)
