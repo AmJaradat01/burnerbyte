@@ -40,7 +40,7 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-[calc(100vh-8rem)]">
       {/* Left branding panel */}
       <div className="hidden lg:flex lg:w-2/5 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex-col justify-center px-12 py-12 relative overflow-hidden">
         <div className="absolute inset-0 opacity-[0.05]" style={{ backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.8) 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
@@ -99,11 +99,11 @@ export default function ForgotPasswordPage() {
                   />
                   {emailError && <p className="text-xs text-red-500">{emailError}</p>}
                 </div>
-              </CardContent>
-              <CardFooter className="flex flex-col gap-4">
                 <Button type="submit" className="w-full h-11" disabled={loading}>
                   {loading ? "Sending…" : "Send reset link"}
                 </Button>
+              </CardContent>
+              <CardFooter className="justify-center pt-0">
                 <Link href="/login" className="text-sm text-muted-foreground hover:underline">Back to sign in</Link>
               </CardFooter>
             </form>
