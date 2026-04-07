@@ -40,8 +40,13 @@ func (p *Publisher) PublishInboxEvent(ctx context.Context, inboxID, userID uuid.
 	}
 }
 
+// NotificationPersister is the interface the bridge needs to persist notifications.
+type NotificationPersister interface {
+	Create(ctx context.Context, userID uuid.UUID, typ, title, message string) error
+}
+
 // Subscribe — used by API server to receive events and forward to hubs.
-func Subscribe(ctx context.Context, rdb *redis.Client, hub *Hub, notifHub *NotifHub) {
+func Subscribe(ctx context.Context, rdb *redis.Client, hub *Hub, notifHub *NotifHub, notifRepo NotificationPersister) {
 	sub := rdb.Subscribe(ctx, ChannelInbox)
 	ch := sub.Channel()
 	go func() {
@@ -57,6 +62,20 @@ func Subscribe(ctx context.Context, rdb *redis.Client, hub *Hub, notifHub *Notif
 			}
 			if notifHub != nil {
 				notifHub.Notify(evt.UserID, evt.Message)
+			}
+			if notifRepo != nil {
+				title := evt.Message.Type
+				var body string
+				if m, ok := evt.Message.Data.(map[string]interface{}); ok {
+					if s, ok := m["subject"].(string); ok {
+						body = s
+					} else if s, ok := m["full_address"].(string); ok {
+						body = s
+					}
+				}
+				if err := notifRepo.Create(ctx, evt.UserID, evt.Message.Type, title, body); err != nil {
+					slog.Error("failed to persist notification", "error", err)
+				}
 			}
 		}
 	}()
