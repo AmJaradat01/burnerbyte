@@ -83,7 +83,7 @@ function HomePage() {
 
   const remove = useMutation({
     mutationFn: (id: string) => api.del(`/inboxes/${id}`),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["home-inboxes"] }); toast.success(t("inboxDeleted")); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["home-inboxes"] }); qc.invalidateQueries({ queryKey: ["notifications"] }); toast.success(t("inboxDeleted")); },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
   });
 
