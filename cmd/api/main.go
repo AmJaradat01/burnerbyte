@@ -142,7 +142,8 @@ func main() {
 	// WebSocket hubs
 	hub := realtime.NewHub()
 	notifHub := realtime.NewNotifHub()
-	realtime.Subscribe(ctx, rdb, hub, notifHub)
+	notifRepo := postgres.NewNotificationRepo(pool)
+	realtime.Subscribe(ctx, rdb, hub, notifHub, notifRepo)
 
 	// Handlers
 	ssoMgr := auth.NewSSOManager(cfg)
@@ -417,6 +418,47 @@ func main() {
 				}
 				w.Header().Set("Content-Type", "application/json")
 				json.NewEncoder(w).Encode(map[string]string{"message": "role deleted"})
+			})
+
+			// Notifications
+			r.Get("/notifications", func(w http.ResponseWriter, r *http.Request) {
+				uc := r.Context().Value(auth.UserContextKey).(*auth.UserContext)
+				list, err := notifRepo.ListByUser(r.Context(), uc.UserID, 50)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					json.NewEncoder(w).Encode(map[string]string{"error": "failed to list notifications"})
+					return
+				}
+				if list == nil {
+					list = []postgres.Notification{}
+				}
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(list)
+			})
+			r.Post("/notifications/mark-all-read", func(w http.ResponseWriter, r *http.Request) {
+				uc := r.Context().Value(auth.UserContextKey).(*auth.UserContext)
+				if err := notifRepo.MarkAllRead(r.Context(), uc.UserID); err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					json.NewEncoder(w).Encode(map[string]string{"error": "failed to mark all read"})
+					return
+				}
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(map[string]string{"message": "ok"})
+			})
+			r.Patch("/notifications/{notifId}/read", func(w http.ResponseWriter, r *http.Request) {
+				id, err := uuid.Parse(chi.URLParam(r, "notifId"))
+				if err != nil {
+					w.WriteHeader(http.StatusBadRequest)
+					json.NewEncoder(w).Encode(map[string]string{"error": "invalid notification ID"})
+					return
+				}
+				if err := notifRepo.MarkRead(r.Context(), id); err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					json.NewEncoder(w).Encode(map[string]string{"error": "failed to mark read"})
+					return
+				}
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(map[string]string{"message": "ok"})
 			})
 
 			// WebSocket
