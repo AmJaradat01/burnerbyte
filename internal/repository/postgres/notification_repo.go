@@ -28,10 +28,10 @@ func NewNotificationRepo(db database.DBTX) *NotificationRepo {
 	return &NotificationRepo{db: db}
 }
 
-func (r *NotificationRepo) Create(ctx context.Context, userID uuid.UUID, typ, title, message string) error {
+func (r *NotificationRepo) Create(ctx context.Context, userID uuid.UUID, typ, title, message string, inboxID *uuid.UUID) error {
 	_, err := r.db.Exec(ctx,
-		`INSERT INTO notifications (user_id, type, title, message) VALUES ($1,$2,$3,$4)`,
-		userID, typ, title, message)
+		`INSERT INTO notifications (user_id, type, title, message, inbox_id) VALUES ($1,$2,$3,$4,$5)`,
+		userID, typ, title, message, inboxID)
 	if err != nil {
 		return fmt.Errorf("create notification: %w", err)
 	}

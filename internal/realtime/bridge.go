@@ -42,7 +42,7 @@ func (p *Publisher) PublishInboxEvent(ctx context.Context, inboxID, userID uuid.
 
 // NotificationPersister is the interface the bridge needs to persist notifications.
 type NotificationPersister interface {
-	Create(ctx context.Context, userID uuid.UUID, typ, title, message string) error
+	Create(ctx context.Context, userID uuid.UUID, typ, title, message string, inboxID *uuid.UUID) error
 }
 
 // Subscribe — used by API server to receive events and forward to hubs.
@@ -83,7 +83,8 @@ func Subscribe(ctx context.Context, rdb *redis.Client, hub *Hub, notifHub *Notif
 						body = s
 					}
 				}
-				if err := notifRepo.Create(ctx, evt.UserID, evt.Message.Type, title, body); err != nil {
+				inboxID := &evt.InboxID
+				if err := notifRepo.Create(ctx, evt.UserID, evt.Message.Type, title, body, inboxID); err != nil {
 					slog.Error("failed to persist notification", "error", err)
 				}
 			}
