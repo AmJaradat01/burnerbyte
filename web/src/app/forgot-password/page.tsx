@@ -10,12 +10,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { toast } from "sonner";
 import { Shield, Zap, Clock } from "lucide-react";
 
-const features = [
-  { icon: Shield, title: "Privacy First", desc: "Your data stays on your server. No third-party access." },
-  { icon: Zap, title: "Instant Inboxes", desc: "Create disposable emails in seconds. Auto-expire when done." },
-  { icon: Clock, title: "Full Control", desc: "Self-hosted with custom domains, teams, and RBAC." },
-];
-
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState("");
@@ -48,40 +42,24 @@ export default function ForgotPasswordPage() {
   return (
     <div className="flex min-h-screen">
       {/* Left branding panel */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex-col justify-between px-16 py-16 relative overflow-hidden">
-        <div
-          className="absolute inset-0 opacity-[0.07]"
-          style={{
-            backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.8) 1px, transparent 1px)",
-            backgroundSize: "24px 24px",
-          }}
-        />
-        <div className="relative z-10 max-w-md mx-auto flex flex-col justify-center flex-1">
-          <div className="mb-12">
-            <span className="text-5xl">🔥</span>
-            <h1 className="text-3xl font-bold mt-4">BurnerByte</h1>
-            <p className="text-lg text-white/70 mt-2">Self-hosted temporary email</p>
+      <div className="hidden lg:flex lg:w-2/5 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex-col justify-center px-12 py-12 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-[0.05]" style={{ backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.8) 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
+        <div className="relative z-10 space-y-8">
+          <div>
+            <span className="text-4xl">🔥</span>
+            <h1 className="text-2xl font-bold mt-3">BurnerByte</h1>
+            <p className="text-sm text-white/60 mt-1">Self-hosted temporary email</p>
           </div>
-          <div className="space-y-4">
-            {features.map(({ icon: Icon, title, desc }) => (
-              <div
-                key={title}
-                className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm p-4 flex items-start gap-4"
-              >
-                <div className="rounded-lg bg-white/10 p-2 shrink-0">
-                  <Icon className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <p className="font-medium text-white text-sm">{title}</p>
-                  <p className="text-white/70 text-sm mt-0.5">{desc}</p>
-                </div>
+          <div className="space-y-3">
+            {[{ icon: Shield, title: "Privacy First", desc: "Your data stays on your server. No third-party access." }, { icon: Zap, title: "Instant Inboxes", desc: "Create disposable emails in seconds. Auto-expire when done." }, { icon: Clock, title: "Full Control", desc: "Self-hosted with custom domains, teams, and RBAC." }].map(({ icon: Icon, title, desc }) => (
+              <div key={title} className="flex items-start gap-3">
+                <div className="rounded-md bg-white/10 p-1.5 shrink-0 mt-0.5"><Icon className="h-4 w-4 text-white/80" /></div>
+                <div><p className="font-medium text-white text-sm">{title}</p><p className="text-white/50 text-xs mt-0.5 leading-relaxed">{desc}</p></div>
               </div>
             ))}
           </div>
+          <p className="text-white/30 text-xs pt-4 border-t border-white/10">Trusted by teams who value privacy</p>
         </div>
-        <p className="relative z-10 text-white/40 text-sm text-center">
-          Trusted by teams who value privacy
-        </p>
       </div>
 
       {/* Right form panel */}
