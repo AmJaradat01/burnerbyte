@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import {
-  ArrowLeft, Code, Download, Eye, EyeOff, FileText, Globe, Paperclip, Trash2,
+  ArrowLeft, Code, Download, FileText, Globe, Mail, MailOpen, Paperclip, Trash2,
 } from "lucide-react";
 import type { Email, Attachment } from "@/types";
 
@@ -106,11 +106,13 @@ export function EmailPreview({ email, onBack, onToggleRead, onDelete }: EmailPre
           {/* Actions */}
           <div className="flex items-center gap-1 shrink-0 pt-1">
             <Button
-              variant="ghost" size="sm" className="h-8 w-8 p-0"
-              title={email.is_read ? "Mark unread" : "Mark read"}
+              variant={email.is_read ? "ghost" : "outline"} size="sm"
+              className={`h-8 gap-1.5 text-xs px-2.5 ${!email.is_read ? "border-primary/30 text-primary" : ""}`}
+              title={email.is_read ? "Mark as unread" : "Mark as read"}
               onClick={onToggleRead}
             >
-              {email.is_read ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              {email.is_read ? <MailOpen className="h-4 w-4" /> : <Mail className="h-4 w-4" />}
+              <span className="hidden sm:inline">{email.is_read ? "Mark unread" : "Mark read"}</span>
             </Button>
             <ConfirmDialog
               trigger={
