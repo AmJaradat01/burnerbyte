@@ -24,6 +24,12 @@ interface SSOStatus {
   enforce_sso?: boolean;
 }
 
+const features = [
+  { icon: Shield, title: "Privacy First", desc: "Your data stays on your server. No third-party access." },
+  { icon: Zap, title: "Instant Inboxes", desc: "Create disposable emails in seconds. Auto-expire when done." },
+  { icon: Clock, title: "Full Control", desc: "Self-hosted with custom domains, teams, and RBAC." },
+];
+
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState("");
@@ -87,26 +93,40 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen">
       {/* Left branding panel */}
-      <div className="hidden lg:flex lg:w-1/2 bg-primary text-primary-foreground flex-col justify-center px-16">
-        <div className="max-w-md mx-auto space-y-8">
-          <div>
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex-col justify-between px-16 py-16 relative overflow-hidden">
+        <div
+          className="absolute inset-0 opacity-[0.07]"
+          style={{
+            backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.8) 1px, transparent 1px)",
+            backgroundSize: "24px 24px",
+          }}
+        />
+        <div className="relative z-10 max-w-md mx-auto flex flex-col justify-center flex-1">
+          <div className="mb-12">
             <span className="text-5xl">🔥</span>
             <h1 className="text-3xl font-bold mt-4">BurnerByte</h1>
-            <p className="text-lg text-primary-foreground/80 mt-2">Self-hosted temporary email</p>
+            <p className="text-lg text-white/70 mt-2">Self-hosted temporary email</p>
           </div>
           <div className="space-y-4">
-            {[
-              { icon: Shield, text: "Privacy first" },
-              { icon: Zap, text: "Instant inboxes" },
-              { icon: Clock, text: "Auto-expiring" },
-            ].map(({ icon: Icon, text }) => (
-              <div key={text} className="flex items-center gap-3">
-                <Icon className="h-5 w-5 text-primary-foreground/70" />
-                <span className="text-primary-foreground/90">{text}</span>
+            {features.map(({ icon: Icon, title, desc }) => (
+              <div
+                key={title}
+                className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm p-4 flex items-start gap-4"
+              >
+                <div className="rounded-lg bg-white/10 p-2 shrink-0">
+                  <Icon className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <p className="font-medium text-white text-sm">{title}</p>
+                  <p className="text-white/70 text-sm mt-0.5">{desc}</p>
+                </div>
               </div>
             ))}
           </div>
         </div>
+        <p className="relative z-10 text-white/40 text-sm text-center">
+          Trusted by teams who value privacy
+        </p>
       </div>
 
       {/* Right form panel */}
