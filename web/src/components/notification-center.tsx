@@ -68,8 +68,10 @@ export function NotificationCenter() {
           let title = "Notification";
           let message = "";
           if (type === "email.received") {
-            title = "New Email";
-            message = data.data?.subject ? `From ${data.data.from}: ${data.data.subject}` : `New email from ${data.data?.from || "unknown"}`;
+            title = "📬 New email";
+            const sender = data.data?.from_address || data.data?.to_address || "unknown";
+            const subj = data.data?.subject || "(no subject)";
+            message = `From: ${sender} — ${subj}`;
           } else if (type === "inbox.created") {
             title = "Inbox Created";
             message = data.data?.full_address || "A new inbox was created";
@@ -178,7 +180,7 @@ export function NotificationCenter() {
               return (
                 <div
                   key={n.id}
-                  className={`flex items-start gap-3 px-4 py-3 border-b last:border-0 transition-colors cursor-pointer hover:bg-muted/50 ${!n.is_read ? "bg-primary/5" : ""}`}
+                  className={`group flex items-start gap-3 px-4 py-3 border-b last:border-0 transition-colors cursor-pointer hover:bg-muted/50 ${!n.is_read ? "bg-primary/5" : ""}`}
                   onClick={() => markRead(n.id)}
                 >
                   <div className={`mt-0.5 shrink-0 ${cfg.color}`}>
