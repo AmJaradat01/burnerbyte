@@ -85,6 +85,11 @@ export function NotificationCenter() {
           toast(title, { description: message });
           // Refresh from server (includes the persisted notification)
           qc.invalidateQueries({ queryKey: ["notifications"] });
+          if (type === "email.received") {
+            qc.invalidateQueries({ queryKey: ["home-inboxes"] });
+            qc.invalidateQueries({ queryKey: ["emails"] });
+            qc.invalidateQueries({ queryKey: ["inbox"] });
+          }
         } catch {}
       };
       ws.onclose = () => {
