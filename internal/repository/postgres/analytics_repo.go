@@ -128,12 +128,16 @@ func (r *AnalyticsRepo) GetOrgEmailsPerDay(ctx context.Context, orgID uuid.UUID,
 	d := 30
 	if len(days) > 0 && days[0] > 0 { d = days[0] }
 	rows, err := r.db.Query(ctx,
-		`SELECT DATE(e.received_at) as d, COUNT(*) FROM emails e
-		 JOIN inboxes i ON e.inbox_id = i.id
-		 JOIN domain_assignments da ON i.domain_assignment_id = da.id
-		 JOIN domains dm ON da.domain_id = dm.id
-		 WHERE dm.org_id = $1 AND e.received_at > NOW() - make_interval(days => $2)
-		 GROUP BY d ORDER BY d`, orgID, d)
+		`SELECT d::date, COALESCE(sub.cnt, 0) FROM generate_series(
+		  (NOW() - make_interval(days => $2))::date, NOW()::date, '1 day'::interval
+		) d LEFT JOIN (
+		  SELECT DATE(e.received_at) as dt, COUNT(*) as cnt FROM emails e
+		  JOIN inboxes i ON e.inbox_id = i.id
+		  JOIN domain_assignments da ON i.domain_assignment_id = da.id
+		  JOIN domains dm ON da.domain_id = dm.id
+		  WHERE dm.org_id = $1 AND e.received_at > NOW() - make_interval(days => $2)
+		  GROUP BY dt
+		) sub ON d::date = sub.dt ORDER BY d`, orgID, d)
 	if err != nil {
 		return nil, err
 	}
@@ -158,11 +162,15 @@ func (r *AnalyticsRepo) GetTeamEmailsPerDay(ctx context.Context, teamID uuid.UUI
 	d := 30
 	if len(days) > 0 && days[0] > 0 { d = days[0] }
 	rows, err := r.db.Query(ctx,
-		`SELECT DATE(e.received_at) as d, COUNT(*) FROM emails e
-		 JOIN inboxes i ON e.inbox_id = i.id
-		 JOIN domain_assignments da ON i.domain_assignment_id = da.id
-		 WHERE da.team_id = $1 AND e.received_at > NOW() - make_interval(days => $2)
-		 GROUP BY d ORDER BY d`, teamID, d)
+		`SELECT d::date, COALESCE(sub.cnt, 0) FROM generate_series(
+		  (NOW() - make_interval(days => $2))::date, NOW()::date, '1 day'::interval
+		) d LEFT JOIN (
+		  SELECT DATE(e.received_at) as dt, COUNT(*) as cnt FROM emails e
+		  JOIN inboxes i ON e.inbox_id = i.id
+		  JOIN domain_assignments da ON i.domain_assignment_id = da.id
+		  WHERE da.team_id = $1 AND e.received_at > NOW() - make_interval(days => $2)
+		  GROUP BY dt
+		) sub ON d::date = sub.dt ORDER BY d`, teamID, d)
 	if err != nil {
 		return nil, err
 	}
