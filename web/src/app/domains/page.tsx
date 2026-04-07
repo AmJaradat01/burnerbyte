@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { copyToClipboard } from "@/lib/clipboard";
@@ -13,14 +13,18 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { Pagination } from "@/components/pagination";
 import { ErrorState } from "@/components/error-state";
 import { EmptyState } from "@/components/empty-state";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { Check, CheckCircle2, Circle, Copy, Globe, Inbox, Plus, RefreshCw, Search, Shield, Trash2, Users } from "lucide-react";
+import { AlertTriangle, Check, CheckCircle2, Circle, Copy, Globe, Inbox, Info, Plus, RefreshCw, Search, Shield, Trash2, Users } from "lucide-react";
 import type { Domain, PaginatedResponse } from "@/types";
+
+type StatusFilter = "all" | "verified" | "pending";
+type SortOption = "name-asc" | "name-desc" | "newest" | "oldest" | "most-inboxes";
 
 export default function DomainsPage() {
   const { currentOrg, currentRole } = useOrgStore();
@@ -28,6 +32,9 @@ export default function DomainsPage() {
   const qc = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [sort, setSort] = useState<SortOption>("newest");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["domains", currentOrg?.id, page],
@@ -53,10 +60,55 @@ export default function DomainsPage() {
   if (!isAdmin) return <div className="flex items-center justify-center min-h-[50vh]"><p className="text-muted-foreground">You don&apos;t have permission to access this page.</p></div>;
 
   const domains = data?.data ?? [];
-  const filtered = search ? domains.filter((d) => d.domain_name.toLowerCase().includes(search.toLowerCase())) : domains;
   const totalDomains = data?.total ?? 0;
   const verifiedCount = domains.filter((d) => d.mx_verified && d.txt_verified).length;
   const pendingCount = domains.length - verifiedCount;
+  const totalInboxes = domains.reduce((sum, d) => sum + (d.active_inboxes ?? 0), 0);
+
+  // Filter + sort
+  const filtered = useMemo(() => {
+    let result = domains;
+    if (search) result = result.filter((d) => d.domain_name.toLowerCase().includes(search.toLowerCase()));
+    if (statusFilter === "verified") result = result.filter((d) => d.mx_verified && d.txt_verified);
+    else if (statusFilter === "pending") result = result.filter((d) => !d.mx_verified || !d.txt_verified);
+    result = [...result].sort((a, b) => {
+      switch (sort) {
+        case "name-asc": return a.domain_name.localeCompare(b.domain_name);
+        case "name-desc": return b.domain_name.localeCompare(a.domain_name);
+        case "newest": return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case "oldest": return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        case "most-inboxes": return (b.active_inboxes ?? 0) - (a.active_inboxes ?? 0);
+        default: return 0;
+      }
+    });
+    return result;
+  }, [domains, search, statusFilter, sort]);
+
+  const toggleSelect = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const bulkVerify = async () => {
+    for (const id of selected) {
+      try { await api.post(`/orgs/${currentOrg.id}/domains/${id}/verify`); } catch {}
+    }
+    qc.invalidateQueries({ queryKey: ["domains"] });
+    toast.success(`Verification triggered for ${selected.size} domain(s)`);
+    setSelected(new Set());
+  };
+
+  const bulkDelete = async () => {
+    for (const id of selected) {
+      try { await api.del(`/orgs/${currentOrg.id}/domains/${id}`); } catch {}
+    }
+    qc.invalidateQueries({ queryKey: ["domains"] });
+    toast.success(`${selected.size} domain(s) removed`);
+    setSelected(new Set());
+  };
 
   return (
     <div className="space-y-6">
@@ -71,20 +123,54 @@ export default function DomainsPage() {
         <AddDomainDialog orgId={currentOrg.id} />
       </div>
 
-      {/* Summary cards */}
+      {/* Summary cards — 4 cards */}
       {totalDomains > 0 && (
-        <div className="grid gap-3 grid-cols-3">
+        <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
           <MiniStat icon={Globe} label="Total" value={totalDomains} accent="text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400" />
           <MiniStat icon={CheckCircle2} label="Verified" value={verifiedCount} accent="text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400" />
           <MiniStat icon={Shield} label="Pending" value={pendingCount} accent="text-amber-600 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400" />
+          <MiniStat icon={Inbox} label="Total Inboxes" value={totalInboxes} accent="text-violet-600 bg-violet-100 dark:bg-violet-900/30 dark:text-violet-400" />
         </div>
       )}
 
-      {/* Search */}
+      {/* Search + Sort + Status filter */}
       {totalDomains > 0 && (
-        <div className="relative max-w-sm">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Filter domains…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative max-w-sm flex-1">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Filter domains…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+          </div>
+          <div className="flex items-center gap-2">
+            {/* Status filter badges */}
+            <div className="flex items-center gap-1">
+              {(["all", "verified", "pending"] as const).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setStatusFilter(s)}
+                  className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                    statusFilter === s
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  }`}
+                >
+                  {s === "all" ? "All" : s === "verified" ? "Verified" : "Pending"}
+                </button>
+              ))}
+            </div>
+            {/* Sort dropdown */}
+            <Select value={sort} onValueChange={(v) => setSort(v as SortOption)}>
+              <SelectTrigger className="w-[150px] h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="name-asc">Name A-Z</SelectItem>
+                <SelectItem value="name-desc">Name Z-A</SelectItem>
+                <SelectItem value="newest">Newest</SelectItem>
+                <SelectItem value="oldest">Oldest</SelectItem>
+                <SelectItem value="most-inboxes">Most Inboxes</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       )}
 
@@ -108,6 +194,8 @@ export default function DomainsPage() {
                   onVerify={() => verify.mutate(d.id)}
                   onDelete={() => remove.mutate(d.id)}
                   verifying={verify.isPending && verify.variables === d.id}
+                  isSelected={selected.has(d.id)}
+                  onToggleSelect={() => toggleSelect(d.id)}
                 />
               ))}
             </div>
@@ -115,6 +203,27 @@ export default function DomainsPage() {
           </>
         )}
       </>
+      )}
+
+      {/* Bulk action bar */}
+      {selected.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 rounded-xl border bg-background px-5 py-3 shadow-lg">
+          <span className="text-sm font-medium">{selected.size} selected</span>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={bulkVerify}>
+            <RefreshCw className="h-3 w-3" /> Verify DNS
+          </Button>
+          <ConfirmDialog
+            trigger={
+              <Button variant="destructive" size="sm" className="gap-1.5">
+                <Trash2 className="h-3 w-3" /> Delete
+              </Button>
+            }
+            title="Delete selected domains?"
+            description={`This will permanently remove ${selected.size} domain(s) and all their team assignments.`}
+            onConfirm={bulkDelete}
+          />
+          <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>Cancel</Button>
+        </div>
       )}
     </div>
   );
@@ -140,9 +249,15 @@ function MiniStat({ icon: Icon, label, value, accent }: { icon: typeof Globe; la
 
 /* ── Domain card ── */
 
-function DomainCard({ domain: d, onVerify, onDelete, verifying }: { domain: Domain; onVerify: () => void; onDelete: () => void; verifying: boolean }) {
+function DomainCard({ domain: d, onVerify, onDelete, verifying, isSelected, onToggleSelect }: {
+  domain: Domain; onVerify: () => void; onDelete: () => void; verifying: boolean;
+  isSelected: boolean; onToggleSelect: () => void;
+}) {
   const [copied, setCopied] = useState(false);
   const fullyVerified = d.mx_verified && d.txt_verified;
+
+  const dnsOverdue = fullyVerified && d.dns_last_checked_at &&
+    (Date.now() - new Date(d.dns_last_checked_at).getTime()) > 86400000;
 
   const copyRecord = () => {
     if (d.verification_record) {
@@ -154,9 +269,18 @@ function DomainCard({ domain: d, onVerify, onDelete, verifying }: { domain: Doma
   };
 
   return (
-    <Card className={`group hover:shadow-md transition-all ${fullyVerified ? "hover:border-emerald-200 dark:hover:border-emerald-800" : "hover:border-amber-200 dark:hover:border-amber-800 border-dashed"}`}>
+    <Card className={`group hover:shadow-md transition-all relative ${fullyVerified ? "hover:border-emerald-200 dark:hover:border-emerald-800" : "hover:border-amber-200 dark:hover:border-amber-800 border-dashed"} ${isSelected ? "ring-2 ring-primary" : ""}`}>
+      {/* Bulk select checkbox */}
+      <button
+        onClick={onToggleSelect}
+        className="absolute top-3 left-3 z-10 h-5 w-5 rounded border flex items-center justify-center transition-colors hover:bg-muted"
+        aria-label={isSelected ? "Deselect domain" : "Select domain"}
+      >
+        {isSelected && <Check className="h-3 w-3 text-primary" />}
+      </button>
+
       {/* Header with icon + domain name */}
-      <CardContent className="pt-5 pb-0">
+      <CardContent className="pt-5 pb-0 pl-10">
         <div className="flex items-start gap-3">
           <div className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${fullyVerified ? "bg-emerald-100 dark:bg-emerald-900/30" : "bg-amber-100 dark:bg-amber-900/30"}`}>
             <Globe className={`h-5 w-5 ${fullyVerified ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`} />
@@ -169,23 +293,30 @@ function DomainCard({ domain: d, onVerify, onDelete, verifying }: { domain: Doma
               Added {new Date(d.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
             </p>
           </div>
-          {fullyVerified ? (
-            <Badge className="shrink-0 gap-1 text-[10px] bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800">
-              <CheckCircle2 className="h-2.5 w-2.5" /> Verified
-            </Badge>
-          ) : (
-            <Badge className="shrink-0 gap-1 text-[10px] bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800">
-              <Circle className="h-2.5 w-2.5" /> Pending
-            </Badge>
-          )}
+          <div className="flex flex-col items-end gap-1 shrink-0">
+            {fullyVerified ? (
+              <Badge className="gap-1 text-[10px] bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800">
+                <CheckCircle2 className="h-2.5 w-2.5" /> Verified
+              </Badge>
+            ) : (
+              <Badge className="gap-1 text-[10px] bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800">
+                <Circle className="h-2.5 w-2.5" /> Pending
+              </Badge>
+            )}
+            {dnsOverdue && (
+              <Badge className="gap-1 text-[10px] bg-amber-50 text-amber-600 border-amber-300 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-700">
+                <AlertTriangle className="h-2.5 w-2.5" /> DNS check overdue
+              </Badge>
+            )}
+          </div>
         </div>
       </CardContent>
 
       {/* DNS chips + stats */}
       <CardContent className="pt-3 pb-0">
         <div className="flex items-center gap-2 mb-3">
-          <DnsChip verified={d.mx_verified} label="MX" />
-          <DnsChip verified={d.txt_verified} label="TXT" />
+          <DnsChipWithCopy verified={d.mx_verified} label="MX" value={d.mx_target ?? "mail.burnerbyte.com"} />
+          <DnsChipWithCopy verified={d.txt_verified} label="TXT" value={d.verification_record} />
           {d.dns_last_checked_at && (
             <span className="ml-auto text-[10px] text-muted-foreground" title={new Date(d.dns_last_checked_at).toLocaleString()}>
               {timeAgo(d.dns_last_checked_at)}
@@ -253,7 +384,7 @@ function DomainCard({ domain: d, onVerify, onDelete, verifying }: { domain: Doma
   );
 }
 
-/* ── DNS chip ── */
+/* ── DNS chip with copy ── */
 
 function timeAgo(date: string) {
   const s = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
@@ -263,7 +394,18 @@ function timeAgo(date: string) {
   return `${Math.floor(s / 86400)}d ago`;
 }
 
-function DnsChip({ verified, label }: { verified: boolean; label: string }) {
+function DnsChipWithCopy({ verified, label, value }: { verified: boolean; label: string; value?: string }) {
+  const [justCopied, setJustCopied] = useState(false);
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!value) return;
+    copyToClipboard(value);
+    setJustCopied(true);
+    toast.success(`${label} record copied`);
+    setTimeout(() => setJustCopied(false), 2000);
+  };
+
   return (
     <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
       verified
@@ -272,6 +414,11 @@ function DnsChip({ verified, label }: { verified: boolean; label: string }) {
     }`}>
       {verified ? <CheckCircle2 className="h-3 w-3" /> : <Circle className="h-3 w-3" />}
       {label}
+      {value && (
+        <button onClick={handleCopy} className="ml-0.5 hover:opacity-70 transition-opacity" title={`Copy ${label} record`}>
+          {justCopied ? <Check className="h-2.5 w-2.5 text-emerald-500" /> : <Copy className="h-2.5 w-2.5" />}
+        </button>
+      )}
     </span>
   );
 }
@@ -297,21 +444,40 @@ function DomainGridSkeleton() {
 
 /* ── Add domain dialog ── */
 
+function sanitizeDomain(input: string): string {
+  let d = input.trim().toLowerCase();
+  d = d.replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, "");
+  return d;
+}
+
+function validateDomain(input: string): string | null {
+  if (!input) return null;
+  if (/\s/.test(input)) return "Domain cannot contain spaces";
+  if (/\//.test(input)) return "Domain cannot contain slashes";
+  if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*\.[a-z]{2,}$/.test(input))
+    return "Enter a valid domain (e.g. example.com)";
+  return null;
+}
+
 function AddDomainDialog({ orgId }: { orgId: string }) {
-  const [domain, setDomain] = useState("");
+  const [rawInput, setRawInput] = useState("");
   const [open, setOpen] = useState(false);
   const [adding, setAdding] = useState(false);
   const qc = useQueryClient();
 
+  const domain = sanitizeDomain(rawInput);
+  const error = domain ? validateDomain(domain) : null;
+  const isValid = !!domain && !error;
+
   const handleAdd = async () => {
-    if (!domain.trim()) return;
+    if (!isValid) return;
     setAdding(true);
     try {
-      await api.post(`/orgs/${orgId}/domains`, { domain_name: domain.trim().toLowerCase() });
+      await api.post(`/orgs/${orgId}/domains`, { domain_name: domain });
       qc.invalidateQueries({ queryKey: ["domains"] });
       toast.success("Domain added — configure DNS records to verify");
       setOpen(false);
-      setDomain("");
+      setRawInput("");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed");
     } finally {
@@ -320,7 +486,7 @@ function AddDomainDialog({ orgId }: { orgId: string }) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setDomain(""); }}>
+    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setRawInput(""); }}>
       <DialogTrigger asChild>
         <Button className="gap-2"><Plus className="h-4 w-4" /> Add Domain</Button>
       </DialogTrigger>
@@ -333,14 +499,29 @@ function AddDomainDialog({ orgId }: { orgId: string }) {
           <div className="space-y-2">
             <Label>Domain name</Label>
             <Input
-              value={domain}
-              onChange={(e) => setDomain(e.target.value)}
+              value={rawInput}
+              onChange={(e) => setRawInput(e.target.value)}
               placeholder="example.com"
               onKeyDown={(e) => e.key === "Enter" && handleAdd()}
             />
-            <p className="text-xs text-muted-foreground">Don&apos;t include http:// or www — just the bare domain.</p>
+            {rawInput && domain !== rawInput.trim().toLowerCase() && (
+              <p className="text-xs text-muted-foreground">Will be added as: <span className="font-mono">{domain}</span></p>
+            )}
+            {error && <p className="text-xs text-destructive">{error}</p>}
           </div>
-          <Button onClick={handleAdd} className="w-full" disabled={!domain.trim() || adding}>
+
+          {/* DNS preview info box */}
+          <div className="rounded-lg border bg-muted/40 p-3 space-y-1.5">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <Info className="h-3.5 w-3.5" /> After adding, configure these DNS records:
+            </div>
+            <div className="text-xs font-mono space-y-0.5 pl-5 text-muted-foreground">
+              <p>MX &nbsp;→ mail.burnerbyte.com (priority 10)</p>
+              <p>TXT → Will be generated after adding</p>
+            </div>
+          </div>
+
+          <Button onClick={handleAdd} className="w-full" disabled={!isValid || adding}>
             {adding ? "Adding…" : "Add Domain"}
           </Button>
         </div>
