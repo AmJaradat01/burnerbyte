@@ -5,6 +5,7 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { copyToClipboard } from "@/lib/clipboard";
 import { useOrgStore } from "@/stores/org-store";
+import { useAuthStore } from "@/stores/auth-store";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,7 +37,8 @@ interface DeliveryLog {
 const ALL_EVENTS = ["email.received", "inbox.created", "inbox.expired"];
 
 export default function WebhooksPage() {
-  const { currentOrg, currentTeam } = useOrgStore();
+  const { currentOrg, currentTeam, currentRole } = useOrgStore();
+  const { user } = useAuthStore();
   const qc = useQueryClient();
   const [page, setPage] = useState(1);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -74,6 +76,9 @@ export default function WebhooksPage() {
   });
 
   if (!currentTeam) return <div className="text-center py-12 space-y-3"><p className="text-muted-foreground">Select a team to manage webhooks.</p><Link href="/teams"><Button variant="outline" size="sm">Go to Teams</Button></Link></div>;
+
+  const isAdmin = currentRole === "owner" || currentRole === "admin" || user?.is_system_admin;
+  if (!isAdmin) return <div className="flex items-center justify-center min-h-[50vh]"><p className="text-muted-foreground">You don&apos;t have permission to access this page.</p></div>;
 
   return (
     <div className="space-y-6">

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { api } from "@/lib/api";
 import { useOrgStore } from "@/stores/org-store";
+import { useAuthStore } from "@/stores/auth-store";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,7 +60,8 @@ function exportCSV(entries: AuditEntry[]) {
 }
 
 export default function AuditPage() {
-  const { currentOrg } = useOrgStore();
+  const { currentOrg, currentRole } = useOrgStore();
+  const { user } = useAuthStore();
   const [action, setAction] = useState("");
   const [resource, setResource] = useState("");
   const [dateFrom, setDateFrom] = useState("");
@@ -107,6 +109,9 @@ export default function AuditPage() {
   };
 
   if (!currentOrg) return <p className="text-muted-foreground">Select an organization first.</p>;
+
+  const isAdmin = currentRole === "owner" || currentRole === "admin" || user?.is_system_admin;
+  if (!isAdmin) return <div className="flex items-center justify-center min-h-[50vh]"><p className="text-muted-foreground">You don&apos;t have permission to access this page.</p></div>;
 
   return (
     <div className="space-y-6">
