@@ -67,6 +67,16 @@ func (r *NotificationRepo) MarkAllRead(ctx context.Context, userID uuid.UUID) er
 	return err
 }
 
+func (r *NotificationRepo) DeleteAll(ctx context.Context, userID uuid.UUID) error {
+	_, err := r.db.Exec(ctx, `DELETE FROM notifications WHERE user_id=$1`, userID)
+	return err
+}
+
+func (r *NotificationRepo) Delete(ctx context.Context, id uuid.UUID) error {
+	_, err := r.db.Exec(ctx, `DELETE FROM notifications WHERE id=$1`, id)
+	return err
+}
+
 func (r *NotificationRepo) CountUnread(ctx context.Context, userID uuid.UUID) (int, error) {
 	var count int
 	err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM notifications WHERE user_id=$1 AND is_read=FALSE`, userID).Scan(&count)
