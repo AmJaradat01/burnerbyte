@@ -2,19 +2,21 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useAuthStore } from "@/stores/auth-store";
-import { WS_BASE } from "@/lib/api";
+import { api, WS_BASE } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Bell, Check, Inbox, Mail, Trash2, X } from "lucide-react";
+import { toast } from "sonner";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface Notification {
   id: string;
   type: string;
   title: string;
   message: string;
-  timestamp: string;
-  read: boolean;
+  created_at: string;
+  is_read: boolean;
 }
 
 const TYPE_CONFIG: Record<string, { icon: typeof Mail; color: string }> = {
@@ -37,9 +39,16 @@ export function NotificationCenter() {
   const user = useAuthStore((s) => s.user);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
-  const unread = notifications.filter((n) => !n.read).length;
+  const qc = useQueryClient();
+
+  const { data: notifications = [] } = useQuery<Notification[]>({
+    queryKey: ["notifications"],
+    queryFn: () => api.get<Notification[]>("/notifications"),
+    enabled: !!user,
+  });
+
+  const unread = notifications.filter((n) => !n.is_read).length;
 
   useEffect(() => {
     if (!user) return;
@@ -71,8 +80,9 @@ export function NotificationCenter() {
             title = type.replace(/\./g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
             message = data.data?.message || JSON.stringify(data.data || {}).slice(0, 100);
           }
-          const notif: Notification = { id: crypto.randomUUID(), type, title, message, timestamp: new Date().toISOString(), read: false };
-          setNotifications((prev) => [notif, ...prev].slice(0, 100));
+          toast(title, { description: message });
+          // Refresh from server (includes the persisted notification)
+          qc.invalidateQueries({ queryKey: ["notifications"] });
         } catch {}
       };
       ws.onclose = () => {
@@ -90,23 +100,33 @@ export function NotificationCenter() {
       wsRef.current?.close();
       wsRef.current = null;
     };
-  }, [user]);
+  }, [user, qc]);
 
   const markAllRead = useCallback(() => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-  }, []);
+    api.post("/notifications/mark-all-read").then(() => {
+      qc.setQueryData<Notification[]>(["notifications"], (prev) =>
+        prev?.map((n) => ({ ...n, is_read: true })) ?? []
+      );
+    });
+  }, [qc]);
 
   const markRead = useCallback((id: string) => {
-    setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, read: true } : n));
-  }, []);
+    api.patch(`/notifications/${id}/read`).then(() => {
+      qc.setQueryData<Notification[]>(["notifications"], (prev) =>
+        prev?.map((n) => (n.id === id ? { ...n, is_read: true } : n)) ?? []
+      );
+    });
+  }, [qc]);
 
   const dismiss = useCallback((id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-  }, []);
+    qc.setQueryData<Notification[]>(["notifications"], (prev) =>
+      prev?.filter((n) => n.id !== id) ?? []
+    );
+  }, [qc]);
 
   const clearAll = useCallback(() => {
-    setNotifications([]);
-  }, []);
+    qc.setQueryData<Notification[]>(["notifications"], []);
+  }, [qc]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -158,7 +178,7 @@ export function NotificationCenter() {
               return (
                 <div
                   key={n.id}
-                  className={`flex items-start gap-3 px-4 py-3 border-b last:border-0 transition-colors cursor-pointer hover:bg-muted/50 ${!n.read ? "bg-primary/5" : ""}`}
+                  className={`flex items-start gap-3 px-4 py-3 border-b last:border-0 transition-colors cursor-pointer hover:bg-muted/50 ${!n.is_read ? "bg-primary/5" : ""}`}
                   onClick={() => markRead(n.id)}
                 >
                   <div className={`mt-0.5 shrink-0 ${cfg.color}`}>
@@ -166,11 +186,11 @@ export function NotificationCenter() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className={`text-sm truncate ${!n.read ? "font-semibold" : "font-medium"}`}>{n.title}</p>
-                      {!n.read && <div className="h-2 w-2 rounded-full bg-primary shrink-0" />}
+                      <p className={`text-sm truncate ${!n.is_read ? "font-semibold" : "font-medium"}`}>{n.title}</p>
+                      {!n.is_read && <div className="h-2 w-2 rounded-full bg-primary shrink-0" />}
                     </div>
                     <p className="text-xs text-muted-foreground truncate mt-0.5">{n.message}</p>
-                    <p className="text-[10px] text-muted-foreground mt-1">{formatTime(n.timestamp)}</p>
+                    <p className="text-[10px] text-muted-foreground mt-1">{formatTime(n.created_at)}</p>
                   </div>
                   <Button
                     variant="ghost"
