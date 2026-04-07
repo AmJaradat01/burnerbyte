@@ -5,11 +5,13 @@ import { api } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth-store";
 import { useOrgStore } from "@/stores/org-store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/error-state";
-import type { AnalyticsStats, EmailsPerDay } from "@/types";
+import type { AnalyticsStats, EmailsPerDay, Inbox, PaginatedResponse } from "@/types";
 import dynamic from "next/dynamic";
-import { Activity, Globe, Inbox, Mail, TrendingUp, Users } from "lucide-react";
+import Link from "next/link";
+import { Activity, Globe, Inbox as InboxIcon, Mail, Plus, TrendingUp, Users } from "lucide-react";
 
 const RechartsBarChart = dynamic(() => import("recharts").then((m) => m.BarChart), { ssr: false });
 const RechartsAreaChart = dynamic(() => import("recharts").then((m) => m.AreaChart), { ssr: false });
@@ -23,7 +25,10 @@ const ResponsiveContainer = dynamic(() => import("recharts").then((m) => m.Respo
 
 export default function DashboardPage() {
   const org = useOrgStore((s) => s.currentOrg);
+  const currentRole = useOrgStore((s) => s.currentRole);
   const user = useAuthStore((s) => s.user);
+
+  const isAdmin = currentRole === "owner" || currentRole === "admin" || user?.is_system_admin;
 
   const greeting = (() => {
     const h = new Date().getHours();
@@ -32,25 +37,79 @@ export default function DashboardPage() {
     return "Good evening";
   })();
 
-  const { data: stats, isLoading, isError, refetch } = useQuery({
-    queryKey: ["org-analytics", org?.id],
-    queryFn: () => api.get<AnalyticsStats>(`/orgs/${org!.id}/analytics`),
+  if (!org) return <p className="text-muted-foreground">Select an organization to view the dashboard.</p>;
+
+  return isAdmin ? (
+    <AdminDashboard org={org} user={user} greeting={greeting} />
+  ) : (
+    <MemberDashboard org={org} user={user} greeting={greeting} />
+  );
+}
+
+/* ── Member Dashboard ── */
+
+function MemberDashboard({ org, user, greeting }: { org: { id: string; name: string }; user: any; greeting: string }) {
+  const { data: inboxes, isLoading } = useQuery({
+    queryKey: ["member-inboxes-count", org.id],
+    queryFn: () => api.get<PaginatedResponse<Inbox>>(`/inboxes`, { status: "active", per_page: "1" }),
     enabled: !!org,
+  });
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">{greeting}, {user?.display_name?.split(" ")[0] || "there"}</h1>
+        <p className="text-muted-foreground text-sm mt-0.5">Welcome to {org.name}</p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Card>
+          <CardContent className="pt-5 pb-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-medium text-muted-foreground">Active Inboxes</span>
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400">
+                <InboxIcon className="h-4 w-4" />
+              </div>
+            </div>
+            {isLoading ? (
+              <Skeleton className="h-8 w-20" />
+            ) : (
+              <p className="text-2xl font-bold tabular-nums">{inboxes?.total ?? 0}</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-5 pb-4 flex flex-col justify-between h-full">
+            <span className="text-sm font-medium text-muted-foreground mb-3">Quick Actions</span>
+            <Button asChild>
+              <Link href="/"><Plus className="h-4 w-4 mr-2" />Create Inbox</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+/* ── Admin Dashboard ── */
+
+function AdminDashboard({ org, user, greeting }: { org: { id: string; name: string }; user: any; greeting: string }) {
+  const { data: stats, isLoading, isError, refetch } = useQuery({
+    queryKey: ["org-analytics", org.id],
+    queryFn: () => api.get<AnalyticsStats>(`/orgs/${org.id}/analytics`),
   });
 
   const { data: chart, isError: chartError } = useQuery({
-    queryKey: ["org-emails-per-day", org?.id],
-    queryFn: () => api.get<{ data: EmailsPerDay[] }>(`/orgs/${org!.id}/analytics/emails-per-day`, { days: "30" }),
-    enabled: !!org,
+    queryKey: ["org-emails-per-day", org.id],
+    queryFn: () => api.get<{ data: EmailsPerDay[] }>(`/orgs/${org.id}/analytics/emails-per-day`, { days: "30" }),
   });
 
   const { data: chartWeek, isError: weekError } = useQuery({
-    queryKey: ["org-emails-week", org?.id],
-    queryFn: () => api.get<{ data: EmailsPerDay[] }>(`/orgs/${org!.id}/analytics/emails-per-day`, { days: "7" }),
-    enabled: !!org,
+    queryKey: ["org-emails-week", org.id],
+    queryFn: () => api.get<{ data: EmailsPerDay[] }>(`/orgs/${org.id}/analytics/emails-per-day`, { days: "7" }),
   });
 
-  if (!org) return <p className="text-muted-foreground">Select an organization to view the dashboard.</p>;
   if (isError) return <ErrorState message="Failed to load dashboard" onRetry={() => refetch()} />;
 
   const weekTotal = chartWeek?.data?.reduce((sum, d) => sum + d.count, 0) ?? 0;
@@ -87,7 +146,7 @@ export default function DashboardPage() {
           })()}
         />
         <StatCard
-          icon={Inbox}
+          icon={InboxIcon}
           label="Active Inboxes"
           value={stats?.active_inboxes}
           loading={isLoading}
