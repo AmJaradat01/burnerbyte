@@ -64,12 +64,22 @@ func Subscribe(ctx context.Context, rdb *redis.Client, hub *Hub, notifHub *Notif
 				notifHub.Notify(evt.UserID, evt.Message)
 			}
 			if notifRepo != nil {
-				title := evt.Message.Type
-				var body string
-				if m, ok := evt.Message.Data.(map[string]interface{}); ok {
-					if s, ok := m["subject"].(string); ok {
-						body = s
-					} else if s, ok := m["full_address"].(string); ok {
+				var title, body string
+				m, _ := evt.Message.Data.(map[string]interface{})
+				switch evt.Message.Type {
+				case "email.received":
+					title = "New email received"
+					from, _ := m["from_address"].(string)
+					subj, _ := m["subject"].(string)
+					if subj == "" { subj = "(no subject)" }
+					if from != "" {
+						body = "From: " + from + " — " + subj
+					} else {
+						body = subj
+					}
+				default:
+					title = evt.Message.Type
+					if s, ok := m["full_address"].(string); ok {
 						body = s
 					}
 				}
