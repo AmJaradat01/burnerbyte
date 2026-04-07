@@ -154,8 +154,8 @@ function TeamCard({ team, onSelect }: { team: Team; onSelect: () => void }) {
 
         {/* Footer */}
         <div className="flex items-center justify-between pt-1 border-t text-xs text-muted-foreground">
-          <span>Created {new Date(team.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
-          <span className="text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity">View →</span>
+          <span>Created {new Date(team.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</span>
+          <span className="text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity">View team →</span>
         </div>
       </CardContent>
     </Card>
@@ -198,8 +198,11 @@ function CreateTeamDialog({ orgId }: { orgId: string }) {
   const qc = useQueryClient();
   const fetchTeams = useOrgStore((s) => s.fetchTeams);
 
+  const slug = name.trim().toLowerCase().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-");
+  const nameValid = name.trim().length >= 2;
+
   const create = async () => {
-    if (!name.trim()) return;
+    if (!nameValid) return;
     setCreating(true);
     try {
       await api.post(`/orgs/${orgId}/teams`, { name: name.trim() });
@@ -222,15 +225,28 @@ function CreateTeamDialog({ orgId }: { orgId: string }) {
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create a team</DialogTitle>
-          <DialogDescription>Teams organize members and domain assignments. A URL slug will be generated from the name.</DialogDescription>
+          <div className="flex items-center gap-2">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+              <Users className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <DialogTitle>Create a team</DialogTitle>
+              <DialogDescription>Teams organize members and domain assignments. A URL slug will be generated from the name.</DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Team name</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Engineering" onKeyDown={(e) => e.key === "Enter" && create()} />
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Engineering, Marketing, Support" onKeyDown={(e) => e.key === "Enter" && create()} />
+            {name.trim() && !nameValid && (
+              <p className="text-xs text-destructive">Name must be at least 2 characters</p>
+            )}
+            {slug && nameValid && (
+              <p className="text-xs text-muted-foreground">Slug: <span className="font-mono">{slug}</span></p>
+            )}
           </div>
-          <Button onClick={create} className="w-full" disabled={!name.trim() || creating}>
+          <Button onClick={create} className="w-full" disabled={!nameValid || creating}>
             {creating ? "Creating…" : "Create Team"}
           </Button>
         </div>
