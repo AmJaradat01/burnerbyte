@@ -17,7 +17,7 @@ Most endpoints require authentication via one of:
 Authorization: Bearer <access_token>
 ```
 
-Obtain tokens via `POST /auth/login` or `POST /auth/register`. Access tokens expire after 15 minutes (configurable). Use `POST /auth/refresh` with the refresh token to get new tokens.
+Obtain tokens via `POST /auth/login` or `POST /auth/register`. Access tokens expire after 15 minutes (configurable). Use `POST /auth/refresh` with the refresh token to get new tokens. `GET /auth/sso-status` returns SSO configuration and `password_policy` settings.
 
 ### API Key
 
@@ -78,7 +78,7 @@ X-RateLimit-Reset: 1709251200
 | Group | Endpoints |
 |---|---|
 | Setup | `GET /setup/status`, `POST /setup/complete` |
-| Auth | `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `GET /auth/me`, `PATCH /auth/me`, `PUT /auth/me/password`, `DELETE /auth/me`, `POST /auth/forgot-password`, `POST /auth/reset-password`, `GET /auth/verify-email/:token`, `GET /auth/sso-status` |
+| Auth | `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `GET /auth/me`, `PATCH /auth/me`, `PUT /auth/me/password`, `DELETE /auth/me`, `POST /auth/forgot-password`, `POST /auth/reset-password`, `GET /auth/verify-email/:token`, `GET /auth/sso-status`, `GET /auth/datetime-settings` |
 | Sessions | `GET /auth/sessions`, `DELETE /auth/sessions/:id`, `DELETE /auth/sessions` |
 | SSO | `GET /auth/sso/:provider`, `GET /auth/sso/:provider/callback` |
 | Orgs | `POST /orgs`, `GET /orgs`, `GET /orgs/:id`, `PATCH /orgs/:id`, `DELETE /orgs/:id` |
@@ -96,6 +96,7 @@ X-RateLimit-Reset: 1709251200
 | Analytics | `GET /orgs/:id/analytics`, `GET .../analytics/emails-per-day`, `GET .../teams/:tid/analytics`, `GET .../teams/:tid/analytics/emails-per-day` |
 | Audit | `GET /orgs/:id/audit` |
 | Admin | `GET /admin/stats`, `GET /admin/orgs`, `GET /admin/health`, `GET /admin/users`, `PATCH /admin/users/:id`, `DELETE /admin/users/:id`, `GET /admin/platform`, `PUT /admin/platform`, `GET /admin/sso`, `PUT /admin/sso`, `POST /admin/roles`, `PATCH /admin/roles/:id`, `DELETE /admin/roles/:id` |
+| Notifications | `GET /notifications`, `POST /notifications/mark-all-read`, `PATCH /notifications/:id/read`, `DELETE /notifications`, `DELETE /notifications/:id` |
 | Roles | `GET /roles` |
 | WebSocket | `GET /ws/inboxes/:id`, `GET /ws/notifications` |
 | Docs | `GET /docs`, `GET /docs/openapi.json` |
