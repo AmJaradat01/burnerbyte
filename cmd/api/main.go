@@ -526,17 +526,22 @@ func main() {
 
 	<-done
 	slog.Info("shutting down api server")
-	workerCancel()
-	hub.CloseAll()
-	notifHub.CloseAll()
-	rateLimiter.Stop()
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.Server.ShutdownTimeout)
 	defer cancel()
 
+	// Drain HTTP connections first.
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		slog.Error("shutdown error", "error", err)
 	}
+
+	hub.CloseAll()
+	notifHub.CloseAll()
+	rateLimiter.Stop()
+
+	// Stop background workers and wait for in-flight jobs.
+	workerCancel()
+
 	slog.Info("api server stopped")
 }
 
