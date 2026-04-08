@@ -649,14 +649,15 @@ function UnassignDomainDialog({ orgId, teamId, assignment, onConfirm }: {
 }) {
   const [open, setOpen] = useState(false);
   const [confirmText, setConfirmText] = useState("");
-  const [activeInboxes, setActiveInboxes] = useState(0);
+  const [activeInboxes, setActiveInboxes] = useState(-1);
   const [inboxList, setInboxList] = useState<{ address: string; full_address: string; created_by_email: string; email_count: number; expires_at: string }[]>([]);
-  const [checking, setChecking] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const domainName = assignment.domain_name || assignment.domain_id;
 
-  const handleClick = async () => {
-    setChecking(true);
+  const handleOpen = async () => {
+    setOpen(true);
+    setLoading(true);
     try {
       const token = localStorage.getItem("access_token");
       const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
@@ -664,32 +665,32 @@ function UnassignDomainDialog({ orgId, teamId, assignment, onConfirm }: {
         method: "DELETE",
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
-      if (res.ok) {
-        onConfirm();
-        return;
-      }
       if (res.status === 409) {
         const body = await res.json();
         setActiveInboxes(body.active_inboxes ?? 0);
         setInboxList(body.inboxes ?? []);
-        setOpen(true);
-        return;
+      } else if (res.ok) {
+        setActiveInboxes(0);
+        setInboxList([]);
       }
-      const body = await res.json().catch(() => ({ error: res.statusText }));
-      toast.error(body.error || "Failed to unassign");
-    } catch {
-      toast.error("Failed to unassign");
-    } finally {
-      setChecking(false);
+    } catch {} finally {
+      setLoading(false);
     }
+  };
+
+  const handleConfirm = () => {
+    onConfirm();
+    setOpen(false);
+    setConfirmText("");
+    setActiveInboxes(-1);
   };
 
   return (
     <>
-      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={handleClick} disabled={checking}>
-        {checking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={handleOpen}>
+        <Trash2 className="h-3.5 w-3.5" />
       </Button>
-      <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setConfirmText(""); } }}>
+      <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setConfirmText(""); setActiveInboxes(-1); } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -697,41 +698,52 @@ function UnassignDomainDialog({ orgId, teamId, assignment, onConfirm }: {
               Unassign {domainName}
             </DialogTitle>
             <DialogDescription>
-              This will remove the domain from this team and permanently delete its active inboxes.
+              This will remove the domain from this team.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20 p-3 text-sm text-amber-800 dark:text-amber-300 flex items-start gap-2">
-              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-              <span>This assignment has <strong>{activeInboxes}</strong> active inbox{activeInboxes !== 1 ? "es" : ""} that will be permanently deleted.</span>
-            </div>
-            {inboxList.length > 0 && (
-              <div className="rounded-lg border text-xs divide-y max-h-40 overflow-auto">
-                <div className="grid grid-cols-3 gap-2 px-3 py-1.5 bg-muted/50 font-medium text-muted-foreground">
-                  <span>Address</span><span>Created By</span><span>Emails</span>
+            {loading ? (
+              <div className="flex items-center justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+            ) : activeInboxes > 0 ? (
+              <>
+                <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20 p-3 text-sm text-amber-800 dark:text-amber-300 flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <span><strong>{activeInboxes}</strong> active inbox{activeInboxes !== 1 ? "es" : ""} will be permanently deleted.</span>
                 </div>
-                {inboxList.map((inbox) => (
-                  <div key={inbox.full_address} className="grid grid-cols-3 gap-2 px-3 py-1.5">
-                    <span className="font-mono truncate">{inbox.address || inbox.full_address}</span>
-                    <span className="truncate">{inbox.created_by_email}</span>
-                    <span>{inbox.email_count}</span>
+                {inboxList.length > 0 && (
+                  <div className="rounded-lg border text-xs divide-y max-h-40 overflow-auto">
+                    <div className="grid grid-cols-3 gap-2 px-3 py-1.5 bg-muted/50 font-medium text-muted-foreground">
+                      <span>Address</span><span>Created By</span><span>Emails</span>
+                    </div>
+                    {inboxList.map((inbox) => (
+                      <div key={inbox.full_address} className="grid grid-cols-3 gap-2 px-3 py-1.5">
+                        <span className="font-mono truncate">{inbox.address || inbox.full_address}</span>
+                        <span className="truncate">{inbox.created_by_email}</span>
+                        <span>{inbox.email_count}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
+              </>
+            ) : activeInboxes === 0 ? (
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/20 p-3 text-sm text-emerald-800 dark:text-emerald-300">
+                No active inboxes on this assignment. Safe to unassign.
               </div>
+            ) : null}
+            {!loading && (
+              <>
+                <div className="space-y-2">
+                  <Label className="text-sm">Type <span className="font-mono font-semibold">{domainName}</span> to confirm</Label>
+                  <Input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} placeholder={domainName} />
+                </div>
+                <div className="flex justify-end gap-2 pt-2 border-t">
+                  <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+                  <Button variant="destructive" disabled={confirmText !== domainName} onClick={handleConfirm} className="gap-1.5">
+                    <Trash2 className="h-3.5 w-3.5" /> Unassign Domain
+                  </Button>
+                </div>
+              </>
             )}
-            <div className="space-y-2">
-              <Label className="text-sm">Type <span className="font-mono font-semibold">{domainName}</span> to confirm</Label>
-              <Input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} placeholder={domainName} />
-            </div>
-            <Button
-              variant="destructive"
-              className="w-full gap-1.5"
-              disabled={confirmText !== domainName}
-              onClick={() => { onConfirm(); setOpen(false); setConfirmText(""); }}
-            >
-              <Trash2 className="h-4 w-4" />
-              Unassign Domain
-            </Button>
           </div>
         </DialogContent>
       </Dialog>
