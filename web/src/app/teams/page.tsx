@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { api } from "@/lib/api";
 import { useOrgStore } from "@/stores/org-store";
 import { useAuthStore } from "@/stores/auth-store";
@@ -19,7 +20,7 @@ import { toast } from "sonner";
 import { EmptyState } from "@/components/empty-state";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { useRoles } from "@/hooks/use-roles";
-import { ArrowLeft, AlertTriangle, CheckCircle2, Clock, Globe, Inbox, Loader2, Plus, Settings, Trash2, UserPlus, Users } from "lucide-react";
+import { ArrowLeft, AlertTriangle, CheckCircle2, Clock, Globe, Inbox, Loader2, Plus, Search, Settings, Trash2, UserPlus, Users } from "lucide-react";
 import type { Team, Membership, Domain } from "@/types";
 
 interface DomainAssignment {
@@ -425,6 +426,7 @@ function DomainAssignmentsTab({ orgId, teamId }: { orgId: string; teamId: string
   const qc = useQueryClient();
   const [assignOpen, setAssignOpen] = useState(false);
   const [selectedDomain, setSelectedDomain] = useState("");
+  const [search, setSearch] = useState("");
 
   const { data: assignments, isLoading } = useQuery({
     queryKey: ["domain-assignments", teamId],
@@ -441,6 +443,7 @@ function DomainAssignmentsTab({ orgId, teamId }: { orgId: string; teamId: string
       api.post(`/orgs/${orgId}/teams/${teamId}/domains`, { domain_id: domainId, access_level: "full" }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["domain-assignments", teamId] });
+      qc.invalidateQueries({ queryKey: ["teams"] });
       toast.success("Domain assigned");
       setAssignOpen(false);
       setSelectedDomain("");
@@ -455,47 +458,59 @@ function DomainAssignmentsTab({ orgId, teamId }: { orgId: string; teamId: string
   });
 
   const assignedIds = new Set(assignments?.data?.map((a) => a.domain_id));
-  const available = domains?.data?.filter((d) => !assignedIds.has(d.id)) ?? [];
+  const available = domains?.data?.filter((d) => !assignedIds.has(d.id) && d.mx_verified && d.txt_verified) ?? [];
   const assignmentList = assignments?.data ?? [];
+  const filtered = search ? assignmentList.filter((a) => (a.domain_name || "").toLowerCase().includes(search.toLowerCase())) : assignmentList;
 
   return (
     <div className="space-y-4">
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
-        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Assigned</span><div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-violet-100 dark:bg-violet-900/30"><Globe className="h-4 w-4 text-violet-600 dark:text-violet-400" /></div></div><p className="text-2xl font-bold tabular-nums">{assignmentList.length}</p></CardContent></Card>
-        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Available</span><div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-emerald-100 dark:bg-emerald-900/30"><CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /></div></div><p className="text-2xl font-bold tabular-nums">{available.length}</p></CardContent></Card>
-        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Org Domains</span><div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-amber-100 dark:bg-amber-900/30"><Users className="h-4 w-4 text-amber-600 dark:text-amber-400" /></div></div><p className="text-2xl font-bold tabular-nums">{domains?.data?.length ?? 0}</p></CardContent></Card>
+        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm font-medium text-muted-foreground">Assigned</span><div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-violet-100 dark:bg-violet-900/30"><Globe className="h-4 w-4 text-violet-600 dark:text-violet-400" /></div></div><p className="text-2xl font-bold tabular-nums">{assignmentList.length}</p></CardContent></Card>
+        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm font-medium text-muted-foreground">Available</span><div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-emerald-100 dark:bg-emerald-900/30"><CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /></div></div><p className="text-2xl font-bold tabular-nums">{available.length}</p></CardContent></Card>
+        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm font-medium text-muted-foreground">Total Domains</span><div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-blue-100 dark:bg-blue-900/30"><Globe className="h-4 w-4 text-blue-600 dark:text-blue-400" /></div></div><p className="text-2xl font-bold tabular-nums">{domains?.data?.length ?? 0}</p></CardContent></Card>
       </div>
 
-      {/* Assign button */}
-      <div className="flex justify-end">
-        {available.length > 0 && (
-          <Dialog open={assignOpen} onOpenChange={(v) => { setAssignOpen(v); if (!v) setSelectedDomain(""); }}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="gap-1.5"><Plus className="h-3.5 w-3.5" /> Assign Domain</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Assign domain to team</DialogTitle>
-                <DialogDescription>Select a domain to make available for this team&apos;s inboxes.</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Domain</Label>
-                  <Select value={selectedDomain} onValueChange={setSelectedDomain}>
-                    <SelectTrigger><SelectValue placeholder="Select a domain…" /></SelectTrigger>
-                    <SelectContent>
-                      {available.map((d) => <SelectItem key={d.id} value={d.id}>{d.domain_name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button onClick={() => selectedDomain && assign.mutate(selectedDomain)} className="w-full" disabled={!selectedDomain || assign.isPending}>
-                  {assign.isPending ? "Assigning…" : "Assign Domain"}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+      {/* Search + Assign */}
+      <div className="flex items-center justify-between gap-3">
+        {assignmentList.length > 0 && (
+          <div className="relative max-w-sm flex-1">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Filter domains…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-9" />
+          </div>
         )}
+        <div className="ml-auto">
+          {available.length > 0 && (
+            <Dialog open={assignOpen} onOpenChange={(v) => { setAssignOpen(v); if (!v) setSelectedDomain(""); }}>
+              <DialogTrigger asChild>
+                <Button size="sm" className="gap-1.5"><Plus className="h-3.5 w-3.5" /> Assign Domain</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-violet-100 dark:bg-violet-900/30"><Globe className="h-4 w-4 text-violet-600 dark:text-violet-400" /></div>
+                    Assign domain to team
+                  </DialogTitle>
+                  <DialogDescription>Only verified domains are shown. Select one to make it available for this team&apos;s inboxes.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Domain</Label>
+                    <Select value={selectedDomain} onValueChange={setSelectedDomain}>
+                      <SelectTrigger><SelectValue placeholder="Select a domain…" /></SelectTrigger>
+                      <SelectContent>
+                        {available.map((d) => <SelectItem key={d.id} value={d.id}>{d.domain_name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button onClick={() => selectedDomain && assign.mutate(selectedDomain)} className="w-full" disabled={!selectedDomain || assign.isPending}>
+                    {assign.isPending ? "Assigning…" : "Assign Domain"}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
+        </div>
       </div>
 
       {/* Table */}
@@ -503,32 +518,34 @@ function DomainAssignmentsTab({ orgId, teamId }: { orgId: string; teamId: string
         {isLoading ? (
           <div className="p-4 space-y-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
         ) : (
-          assignmentList.length === 0 ? (
-            <EmptyState icon="🌐" title="No domains assigned" description="Assign domains to this team to start receiving emails." />
+          filtered.length === 0 ? (
+            assignmentList.length === 0 ? (
+              <EmptyState icon="🌐" title="No domains assigned" description="Assign verified domains to this team to start creating inboxes." />
+            ) : (
+              <div className="py-8 text-center text-sm text-muted-foreground">No domains match &quot;{search}&quot;</div>
+            )
           ) : (
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50">
                 <TableHead className="font-medium">Domain</TableHead>
-                <TableHead className="font-medium">Access Level</TableHead>
                 <TableHead className="font-medium hidden sm:table-cell">Assigned</TableHead>
                 <TableHead className="text-right font-medium">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {assignmentList.map((a) => (
+              {filtered.map((a) => (
                 <TableRow key={a.id} className="hover:bg-muted/30">
                   <TableCell>
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-xs font-bold text-emerald-600">
-                        <Globe className="h-4 w-4" />
+                    <Link href={`/domains/${a.domain_id}`} className="flex items-center gap-3 group">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
+                        <Globe className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                       </div>
-                      <p className="font-medium font-mono text-sm">{a.domain_name || a.domain_id}</p>
-                    </div>
+                      <span className="font-medium font-mono text-sm group-hover:text-primary transition-colors">{a.domain_name || a.domain_id}</span>
+                    </Link>
                   </TableCell>
-                  <TableCell><Badge variant="outline" className="capitalize text-xs">{a.access_level}</Badge></TableCell>
                   <TableCell className="text-xs text-muted-foreground hidden sm:table-cell">
-                    {a.created_at ? new Date(a.created_at).toLocaleDateString() : "—"}
+                    {a.created_at ? new Date(a.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "—"}
                   </TableCell>
                   <TableCell className="text-right">
                     <UnassignDomainDialog
