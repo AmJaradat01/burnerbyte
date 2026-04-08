@@ -54,18 +54,12 @@ export default function DomainsPage() {
     onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
   });
 
-  if (!currentOrg) return <p className="text-muted-foreground">Select an organization first.</p>;
-
-  const isAdmin = currentRole === "owner" || currentRole === "admin" || user?.is_system_admin;
-  if (!isAdmin) return <div className="flex items-center justify-center min-h-[50vh]"><p className="text-muted-foreground">You don&apos;t have permission to access this page.</p></div>;
-
   const domains = data?.data ?? [];
   const totalDomains = data?.total ?? 0;
   const verifiedCount = domains.filter((d) => d.mx_verified && d.txt_verified).length;
   const pendingCount = domains.length - verifiedCount;
   const totalInboxes = domains.reduce((sum, d) => sum + (d.active_inboxes ?? 0), 0);
 
-  // Filter + sort
   const filtered = useMemo(() => {
     let result = domains;
     if (search) result = result.filter((d) => d.domain_name.toLowerCase().includes(search.toLowerCase()));
@@ -83,6 +77,10 @@ export default function DomainsPage() {
     });
     return result;
   }, [domains, search, statusFilter, sort]);
+
+  if (!currentOrg) return <p className="text-muted-foreground">Select an organization first.</p>;
+  const isAdmin = currentRole === "owner" || currentRole === "admin" || user?.is_system_admin;
+  if (!isAdmin) return <div className="flex items-center justify-center min-h-[50vh]"><p className="text-muted-foreground">You don&apos;t have permission to access this page.</p></div>;
 
   const toggleSelect = (id: string) => {
     setSelected((prev) => {
