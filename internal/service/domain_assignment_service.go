@@ -122,6 +122,10 @@ func (s *DomainAssignmentService) UpdateAssignment(ctx context.Context, teamID, 
 	return a, nil
 }
 
+func (s *DomainAssignmentService) GetByTeamAndDomain(ctx context.Context, teamID, domainID uuid.UUID) (*domain.DomainAssignment, error) {
+	return s.assignmentRepo.GetByTeamAndDomain(ctx, teamID, domainID)
+}
+
 func (s *DomainAssignmentService) Unassign(ctx context.Context, teamID, domainID uuid.UUID) error {
 	a, err := s.assignmentRepo.GetByTeamAndDomain(ctx, teamID, domainID)
 	if err != nil {
