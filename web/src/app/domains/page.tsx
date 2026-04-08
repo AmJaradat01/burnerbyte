@@ -20,7 +20,8 @@ import { Pagination } from "@/components/pagination";
 import { ErrorState } from "@/components/error-state";
 import { EmptyState } from "@/components/empty-state";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { AlertTriangle, Check, CheckCircle2, Circle, Copy, Globe, Inbox, Plus, RefreshCw, Search, Shield, Trash2, Users } from "lucide-react";
+import { AlertTriangle, Check, CheckCircle2, ChevronDown, ChevronUp, Circle, Copy, Globe, Inbox, Loader2, Plus, RefreshCw, Search, Shield, Trash2, Users } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Domain, PaginatedResponse } from "@/types";
 
 type StatusFilter = "all" | "verified" | "pending";
@@ -366,16 +367,7 @@ function DomainCard({ domain: d, onVerify, onDelete, verifying, isSelected, onTo
               <Globe className="h-3 w-3" /> Manage
             </Button>
           </Link>
-          <ConfirmDialog
-            trigger={
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive hover:text-destructive">
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            }
-            title="Remove domain?"
-            description={`This will remove ${d.domain_name} and all its team assignments.`}
-            onConfirm={onDelete}
-          />
+          <DeleteDomainDialog domain={d} onConfirm={onDelete} />
         </div>
       </CardContent>
     </Card>
@@ -437,6 +429,133 @@ function DomainGridSkeleton() {
         </Card>
       ))}
     </div>
+  );
+}
+
+/* ── Delete domain dialog with impact preview ── */
+
+interface DomainImpact {
+  active_inboxes: number;
+  total_emails: number;
+  inboxes: {
+    id: string;
+    address: string;
+    full_address: string;
+    created_by_email: string;
+    email_count: number;
+    expires_at: string;
+  }[];
+}
+
+function DeleteDomainDialog({ domain: d, onConfirm }: { domain: Domain; onConfirm: () => void }) {
+  const { currentOrg } = useOrgStore();
+  const [open, setOpen] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+  const [expanded, setExpanded] = useState(false);
+
+  const { data: impact, isLoading } = useQuery({
+    queryKey: ["domain-impact", d.id],
+    queryFn: () => api.get<DomainImpact>(`/orgs/${currentOrg!.id}/domains/${d.id}/impact`),
+    enabled: open && !!currentOrg,
+  });
+
+  const handleDelete = () => {
+    onConfirm();
+    setOpen(false);
+    setConfirmText("");
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setConfirmText(""); setExpanded(false); } }}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive hover:text-destructive">
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-destructive" />
+            Delete {d.domain_name}
+          </DialogTitle>
+          <DialogDescription>
+            This will permanently delete the domain, all inboxes, emails, and attachments.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : impact && impact.active_inboxes > 0 ? (
+            <>
+              <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20 p-3 text-sm text-amber-800 dark:text-amber-300 flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                <span>This domain has <strong>{impact.active_inboxes}</strong> active inbox{impact.active_inboxes !== 1 ? "es" : ""} receiving email ({impact.total_emails} total email{impact.total_emails !== 1 ? "s" : ""})</span>
+              </div>
+              <div>
+                <button
+                  onClick={() => setExpanded(!expanded)}
+                  className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                  {expanded ? "Hide" : "Show"} affected inboxes
+                </button>
+                {expanded && (
+                  <div className="mt-2 rounded-lg border max-h-48 overflow-y-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-xs">Address</TableHead>
+                          <TableHead className="text-xs">Created By</TableHead>
+                          <TableHead className="text-xs text-right">Emails</TableHead>
+                          <TableHead className="text-xs text-right">Expires</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {impact.inboxes.map((inbox) => (
+                          <TableRow key={inbox.id}>
+                            <TableCell className="text-xs font-mono">{inbox.address}</TableCell>
+                            <TableCell className="text-xs">{inbox.created_by_email}</TableCell>
+                            <TableCell className="text-xs text-right">{inbox.email_count}</TableCell>
+                            <TableCell className="text-xs text-right">{new Date(inbox.expires_at).toLocaleDateString()}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : impact ? (
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/20 p-3 text-sm text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              No active inboxes on this domain
+            </div>
+          ) : null}
+
+          <div className="space-y-2">
+            <Label className="text-sm">Type <span className="font-mono font-semibold">{d.domain_name}</span> to confirm deletion</Label>
+            <Input
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value)}
+              placeholder={d.domain_name}
+            />
+          </div>
+
+          <Button
+            variant="destructive"
+            className="w-full gap-1.5"
+            disabled={confirmText !== d.domain_name}
+            onClick={handleDelete}
+          >
+            <Trash2 className="h-4 w-4" />
+            Delete Domain
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
