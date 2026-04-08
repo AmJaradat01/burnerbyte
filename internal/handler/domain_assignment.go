@@ -146,9 +146,11 @@ func (h *DomainAssignmentHandler) Unassign(w http.ResponseWriter, r *http.Reques
 	// Check for active inboxes — require force=true to unassign with active inboxes
 	activeCount, _ := h.inboxRepo.CountActiveByAssignment(r.Context(), assignment.ID)
 	if activeCount > 0 && r.URL.Query().Get("force") != "true" {
+		inboxes, _ := h.inboxRepo.ListActiveByDomain(r.Context(), domainID)
 		writeJSON(w, http.StatusConflict, map[string]any{
 			"error":          "domain assignment has active inboxes",
 			"active_inboxes": activeCount,
+			"inboxes":        inboxes,
 			"message":        "Add ?force=true to unassign this domain and delete all its active inboxes",
 		})
 		return
