@@ -10,15 +10,17 @@ import (
 	"gitlab.com/burnerbyte/burnerbyte/internal/auth"
 	"gitlab.com/burnerbyte/burnerbyte/internal/auth/rbac"
 	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
+	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
 	"gitlab.com/burnerbyte/burnerbyte/internal/service"
 )
 
 type DomainAssignmentHandler struct {
-	svc *service.DomainAssignmentService
+	svc       *service.DomainAssignmentService
+	inboxRepo *postgres.InboxRepo
 }
 
-func NewDomainAssignmentHandler(svc *service.DomainAssignmentService) *DomainAssignmentHandler {
-	return &DomainAssignmentHandler{svc: svc}
+func NewDomainAssignmentHandler(svc *service.DomainAssignmentService, inboxRepo *postgres.InboxRepo) *DomainAssignmentHandler {
+	return &DomainAssignmentHandler{svc: svc, inboxRepo: inboxRepo}
 }
 
 func (h *DomainAssignmentHandler) Routes(r chi.Router) {
@@ -133,10 +135,29 @@ func (h *DomainAssignmentHandler) Unassign(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusBadRequest, "invalid domain ID")
 		return
 	}
+
+	// Look up assignment to get its ID for inbox count check
+	assignment, err := h.svc.GetByTeamAndDomain(r.Context(), teamID, domainID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Check for active inboxes — require force=true to unassign with active inboxes
+	activeCount, _ := h.inboxRepo.CountActiveByAssignment(r.Context(), assignment.ID)
+	if activeCount > 0 && r.URL.Query().Get("force") != "true" {
+		writeJSON(w, http.StatusConflict, map[string]any{
+			"error":          "domain assignment has active inboxes",
+			"active_inboxes": activeCount,
+			"message":        "Add ?force=true to unassign this domain and delete all its active inboxes",
+		})
+		return
+	}
+
 	if err := h.svc.Unassign(r.Context(), teamID, domainID); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	auditRecord(r, orgID, "domain.unassigned", "domain_assignment", domainID, map[string]any{"domain_id": domainID.String(), "team_id": teamID.String()})
+	auditRecord(r, orgID, "domain.unassigned", "domain_assignment", domainID, map[string]any{"domain_id": domainID.String(), "team_id": teamID.String(), "force": activeCount > 0, "active_inboxes_deleted": activeCount})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "domain unassigned"})
 }

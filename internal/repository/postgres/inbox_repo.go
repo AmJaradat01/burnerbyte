@@ -199,6 +199,13 @@ func (r *InboxRepo) Deactivate(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+func (r *InboxRepo) CountActiveByAssignment(ctx context.Context, assignmentID uuid.UUID) (int, error) {
+	var count int
+	err := r.db.QueryRow(ctx,
+		`SELECT COUNT(*) FROM inboxes WHERE domain_assignment_id = $1 AND is_active = TRUE AND expires_at > NOW()`, assignmentID).Scan(&count)
+	return count, err
+}
+
 func (r *InboxRepo) CountActiveByDomain(ctx context.Context, domainID uuid.UUID) (int, error) {
 	var count int
 	err := r.db.QueryRow(ctx,
