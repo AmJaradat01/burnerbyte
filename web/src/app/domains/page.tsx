@@ -50,7 +50,7 @@ export default function DomainsPage() {
   });
 
   const remove = useMutation({
-    mutationFn: (id: string) => api.del(`/orgs/${currentOrg!.id}/domains/${id}`),
+    mutationFn: (id: string) => api.del(`/orgs/${currentOrg!.id}/domains/${id}?force=true`),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["domains"] }); toast.success("Domain removed"); },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
   });
@@ -102,7 +102,7 @@ export default function DomainsPage() {
 
   const bulkDelete = async () => {
     for (const id of selected) {
-      try { await api.del(`/orgs/${currentOrg.id}/domains/${id}`); } catch {}
+      try { await api.del(`/orgs/${currentOrg.id}/domains/${id}?force=true`); } catch {}
     }
     qc.invalidateQueries({ queryKey: ["domains"] });
     toast.success(`${selected.size} domain(s) removed`);
