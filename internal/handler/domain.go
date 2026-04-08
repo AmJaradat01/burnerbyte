@@ -161,12 +161,23 @@ func (h *DomainHandler) DeleteDomain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check for active inboxes — require force=true to delete with active inboxes
+	activeInboxes, _ := h.inboxRepo.ListActiveByDomain(r.Context(), id)
+	if len(activeInboxes) > 0 && r.URL.Query().Get("force") != "true" {
+		writeJSON(w, http.StatusConflict, map[string]any{
+			"error":          "domain has active inboxes",
+			"active_inboxes": len(activeInboxes),
+			"message":        "Add ?force=true to delete this domain and all its active inboxes",
+		})
+		return
+	}
+
 	if err := h.svc.DeleteDomain(r.Context(), orgID, id); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to delete domain")
 		return
 	}
 
-	auditRecord(r, orgID, "domain.deleted", "domain", id, map[string]any{"domain_id": id.String()})
+	auditRecord(r, orgID, "domain.deleted", "domain", id, map[string]any{"domain_id": id.String(), "force": len(activeInboxes) > 0, "active_inboxes_deleted": len(activeInboxes)})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "domain deleted"})
 }
 
