@@ -35,7 +35,6 @@ export default function DomainsPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [sort, setSort] = useState<SortOption>("newest");
-  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["domains", currentOrg?.id, page],
@@ -82,32 +81,6 @@ export default function DomainsPage() {
   if (!currentOrg) return <p className="text-muted-foreground">Select an organization first.</p>;
   const isAdmin = currentRole === "owner" || currentRole === "admin" || user?.is_system_admin;
   if (!isAdmin) return <div className="flex items-center justify-center min-h-[50vh]"><p className="text-muted-foreground">You don&apos;t have permission to access this page.</p></div>;
-
-  const toggleSelect = (id: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  };
-
-  const bulkVerify = async () => {
-    for (const id of selected) {
-      try { await api.post(`/orgs/${currentOrg.id}/domains/${id}/verify`); } catch {}
-    }
-    qc.invalidateQueries({ queryKey: ["domains"] });
-    toast.success(`Verification triggered for ${selected.size} domain(s)`);
-    setSelected(new Set());
-  };
-
-  const bulkDelete = async () => {
-    for (const id of selected) {
-      try { await api.del(`/orgs/${currentOrg.id}/domains/${id}?force=true`); } catch {}
-    }
-    qc.invalidateQueries({ queryKey: ["domains"] });
-    toast.success(`${selected.size} domain(s) removed`);
-    setSelected(new Set());
-  };
 
   return (
     <div className="space-y-6">
@@ -193,8 +166,6 @@ export default function DomainsPage() {
                   onVerify={() => verify.mutate(d.id)}
                   onDelete={() => remove.mutate(d.id)}
                   verifying={verify.isPending && verify.variables === d.id}
-                  isSelected={selected.has(d.id)}
-                  onToggleSelect={() => toggleSelect(d.id)}
                 />
               ))}
             </div>
@@ -202,21 +173,6 @@ export default function DomainsPage() {
           </>
         )}
       </>
-      )}
-
-      {/* Bulk action bar */}
-      {selected.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 rounded-xl border bg-background px-5 py-3 shadow-lg">
-          <span className="text-sm font-medium">{selected.size} selected</span>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={bulkVerify}>
-            <RefreshCw className="h-3 w-3" /> Verify DNS
-          </Button>
-          <BulkDeleteDialog
-            domains={domains.filter((d) => selected.has(d.id))}
-            onConfirm={bulkDelete}
-          />
-          <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>Cancel</Button>
-        </div>
       )}
     </div>
   );
@@ -242,9 +198,8 @@ function MiniStat({ icon: Icon, label, value, accent }: { icon: typeof Globe; la
 
 /* ── Domain card ── */
 
-function DomainCard({ domain: d, onVerify, onDelete, verifying, isSelected, onToggleSelect }: {
+function DomainCard({ domain: d, onVerify, onDelete, verifying }: {
   domain: Domain; onVerify: () => void; onDelete: () => void; verifying: boolean;
-  isSelected: boolean; onToggleSelect: () => void;
 }) {
   const [copied, setCopied] = useState(false);
   const fullyVerified = d.mx_verified && d.txt_verified;
@@ -262,15 +217,7 @@ function DomainCard({ domain: d, onVerify, onDelete, verifying, isSelected, onTo
   };
 
   return (
-    <Card className={`group hover:shadow-md transition-all relative ${fullyVerified ? "hover:border-emerald-200 dark:hover:border-emerald-800" : "hover:border-amber-200 dark:hover:border-amber-800 border-dashed"} ${isSelected ? "ring-2 ring-primary" : ""}`}>
-      {/* Bulk select checkbox */}
-      <button
-        onClick={onToggleSelect}
-        className="absolute top-3 left-3 z-10 h-5 w-5 rounded border flex items-center justify-center transition-colors hover:bg-muted"
-        aria-label={isSelected ? "Deselect domain" : "Select domain"}
-      >
-        {isSelected && <Check className="h-3 w-3 text-primary" />}
-      </button>
+    <Card className={`group hover:shadow-md transition-all duration-200 ${fullyVerified ? "hover:border-emerald-200 dark:hover:border-emerald-800" : "hover:border-amber-200 dark:hover:border-amber-800 border-dashed"}`}>
 
       {/* Header with icon + domain name */}
       <CardContent className="pt-5 pb-0 pl-10">
@@ -439,60 +386,6 @@ interface DomainImpact {
     email_count: number;
     expires_at: string;
   }[];
-}
-
-function BulkDeleteDialog({ domains, onConfirm }: { domains: Domain[]; onConfirm: () => void }) {
-  const [open, setOpen] = useState(false);
-  const [confirmText, setConfirmText] = useState("");
-  const totalActive = domains.reduce((sum, d) => sum + (d.active_inboxes ?? 0), 0);
-  const expected = `delete ${domains.length}`;
-
-  return (
-    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setConfirmText(""); }}>
-      <DialogTrigger asChild>
-        <Button variant="destructive" size="sm" className="gap-1.5"><Trash2 className="h-3 w-3" /> Delete</Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-destructive" /> Delete {domains.length} domain{domains.length !== 1 ? "s" : ""}?</DialogTitle>
-          <DialogDescription>This will permanently delete the selected domains and all associated data.</DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4">
-          {totalActive > 0 && (
-            <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3 text-sm flex items-start gap-2">
-              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
-              <span className="text-amber-800 dark:text-amber-300"><strong>{totalActive}</strong> active inbox{totalActive !== 1 ? "es" : ""} will be permanently deleted along with all their emails.</span>
-            </div>
-          )}
-          <div className="rounded-lg border divide-y text-sm max-h-40 overflow-auto">
-            {domains.map((d) => (
-              <div key={d.id} className="flex items-center justify-between px-3 py-2.5">
-                <div className="flex items-center gap-2">
-                  <Globe className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="font-mono text-xs">{d.domain_name}</span>
-                </div>
-                {(d.active_inboxes ?? 0) > 0 ? (
-                  <Badge className="text-[10px] bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800">{d.active_inboxes} active</Badge>
-                ) : (
-                  <span className="text-[10px] text-muted-foreground">No active inboxes</span>
-                )}
-              </div>
-            ))}
-          </div>
-          <div className="space-y-2">
-            <Label className="text-sm">Type <span className="font-mono font-bold">{expected}</span> to confirm</Label>
-            <Input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} placeholder={expected} />
-          </div>
-          <div className="flex justify-end gap-2 pt-2 border-t">
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button variant="destructive" disabled={confirmText !== expected} onClick={() => { onConfirm(); setOpen(false); }} className="gap-1.5">
-              <Trash2 className="h-3.5 w-3.5" /> Delete {domains.length} domain{domains.length !== 1 ? "s" : ""}
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
 }
 
 function DeleteDomainDialog({ domain: d, onConfirm }: { domain: Domain; onConfirm: () => void }) {
