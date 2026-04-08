@@ -15,12 +15,13 @@ import (
 )
 
 type DomainHandler struct {
-	svc      *service.DomainService
-	mxTarget string
+	svc       *service.DomainService
+	inboxRepo *postgres.InboxRepo
+	mxTarget  string
 }
 
-func NewDomainHandler(svc *service.DomainService, smtpHostname string) *DomainHandler {
-	return &DomainHandler{svc: svc, mxTarget: smtpHostname}
+func NewDomainHandler(svc *service.DomainService, inboxRepo *postgres.InboxRepo, smtpHostname string) *DomainHandler {
+	return &DomainHandler{svc: svc, inboxRepo: inboxRepo, mxTarget: smtpHostname}
 }
 
 func (h *DomainHandler) Routes(r chi.Router) {
@@ -31,6 +32,7 @@ func (h *DomainHandler) Routes(r chi.Router) {
 		r.Patch("/orgs/{orgId}/domains/{domainId}", h.UpdateDomain)
 		r.Delete("/orgs/{orgId}/domains/{domainId}", h.DeleteDomain)
 		r.Post("/orgs/{orgId}/domains/{domainId}/verify", h.VerifyDomain)
+		r.Get("/orgs/{orgId}/domains/{domainId}/impact", h.GetDomainImpact)
 }
 
 func (h *DomainHandler) CreateDomain(w http.ResponseWriter, r *http.Request) {
@@ -191,4 +193,50 @@ func (h *DomainHandler) VerifyDomain(w http.ResponseWriter, r *http.Request) {
 
 	auditRecord(r, orgID, "domain.verified", "domain", id, map[string]any{"domain": d.DomainName, "mx_verified": d.MXVerified, "txt_verified": d.TXTVerified})
 	writeJSON(w, http.StatusOK, d)
+}
+
+func (h *DomainHandler) GetDomainImpact(w http.ResponseWriter, r *http.Request) {
+	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid org ID")
+		return
+	}
+	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+		return
+	}
+	domainID, err := uuid.Parse(chi.URLParam(r, "domainId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid domain ID")
+		return
+	}
+
+	// Verify domain belongs to org
+	if _, err := h.svc.GetDomain(r.Context(), orgID, domainID); err != nil {
+		if errors.Is(err, postgres.ErrNotFound) {
+			writeError(w, http.StatusNotFound, "domain not found")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "failed to get domain")
+		return
+	}
+
+	inboxes, err := h.inboxRepo.ListActiveByDomain(r.Context(), domainID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to get impact data")
+		return
+	}
+	if inboxes == nil {
+		inboxes = []postgres.DomainInboxImpact{}
+	}
+
+	totalEmails := 0
+	for _, inbox := range inboxes {
+		totalEmails += inbox.EmailCount
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"active_inboxes": len(inboxes),
+		"total_emails":   totalEmails,
+		"inboxes":        inboxes,
+	})
 }

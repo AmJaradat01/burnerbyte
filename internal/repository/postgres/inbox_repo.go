@@ -227,6 +227,45 @@ func (r *InboxRepo) ListActiveAddressesByDomain(ctx context.Context, domainID uu
 	return addresses, nil
 }
 
+// DomainInboxImpact holds an active inbox with its creator email and email count.
+type DomainInboxImpact struct {
+	ID             uuid.UUID `json:"id"`
+	Address        string    `json:"address"`
+	FullAddress    string    `json:"full_address"`
+	IsActive       bool      `json:"is_active"`
+	ExpiresAt      time.Time `json:"expires_at"`
+	CreatedAt      time.Time `json:"created_at"`
+	DomainName     string    `json:"domain_name"`
+	CreatedByEmail string    `json:"created_by_email"`
+	EmailCount     int       `json:"email_count"`
+}
+
+func (r *InboxRepo) ListActiveByDomain(ctx context.Context, domainID uuid.UUID) ([]DomainInboxImpact, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT i.id, i.address, i.full_address, i.is_active, i.expires_at, i.created_at,
+		        d.domain_name, u.email as created_by_email,
+		        (SELECT COUNT(*) FROM emails e WHERE e.inbox_id = i.id) as email_count
+		 FROM inboxes i
+		 JOIN domains d ON i.domain_id = d.id
+		 JOIN users u ON i.created_by = u.id
+		 WHERE i.domain_id = $1 AND i.is_active = TRUE AND i.expires_at > NOW()
+		 ORDER BY i.created_at DESC`, domainID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var result []DomainInboxImpact
+	for rows.Next() {
+		var item DomainInboxImpact
+		if err := rows.Scan(&item.ID, &item.Address, &item.FullAddress, &item.IsActive, &item.ExpiresAt, &item.CreatedAt,
+			&item.DomainName, &item.CreatedByEmail, &item.EmailCount); err != nil {
+			return nil, err
+		}
+		result = append(result, item)
+	}
+	return result, rows.Err()
+}
+
 func (r *InboxRepo) DeleteExpired(ctx context.Context) (int64, error) {
 	tag, err := r.db.Exec(ctx, `DELETE FROM inboxes WHERE expires_at < NOW()`)
 	if err != nil {
