@@ -330,6 +330,22 @@ func main() {
 			r.With(auth.RequireSystemAdmin).Put("/admin/platform", adminHandler.UpdatePlatformSettings)
 			r.With(auth.RequireSystemAdmin).Get("/admin/sso", adminHandler.GetSSOConfig)
 			r.With(auth.RequireSystemAdmin).Put("/admin/sso", adminHandler.UpdateSSOConfig)
+			r.With(auth.RequireSystemAdmin).Delete("/admin/users/{userId}/sessions", func(w http.ResponseWriter, r *http.Request) {
+				userID, err := uuid.Parse(chi.URLParam(r, "userId"))
+				if err != nil {
+					w.WriteHeader(http.StatusBadRequest)
+					json.NewEncoder(w).Encode(map[string]string{"error": "invalid user ID"})
+					return
+				}
+				if err := sessionRepo.RevokeAllByUser(r.Context(), userID); err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					json.NewEncoder(w).Encode(map[string]string{"error": "failed to revoke sessions"})
+					return
+				}
+				handler.Audit.RecordFromRequest(r, uuid.Nil, "admin.sessions_revoked", "user", userID, map[string]any{"target_user_id": userID.String()})
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(map[string]string{"message": "all sessions revoked"})
+			})
 
 			// Role management (admin only)
 			r.With(auth.RequireSystemAdmin).Patch("/admin/roles/{roleId}", func(w http.ResponseWriter, r *http.Request) {
