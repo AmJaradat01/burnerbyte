@@ -151,7 +151,7 @@ func main() {
 	orgHandler := handler.NewOrgHandler(orgSvc)
 	domainHandler := handler.NewDomainHandler(domainSvc, inboxRepo, cfg.SMTP.Hostname)
 	teamHandler := handler.NewTeamHandler(teamSvc)
-	assignmentHandler := handler.NewDomainAssignmentHandler(assignmentSvc)
+	assignmentHandler := handler.NewDomainAssignmentHandler(assignmentSvc, inboxRepo)
 	inboxHandler := handler.NewInboxHandler(inboxSvc)
 	emailHandler := handler.NewEmailHandler(emailSvc, attachmentSvc)
 	webhookHandler := handler.NewWebhookHandler(webhookSvc)
