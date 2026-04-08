@@ -19,7 +19,7 @@ import { toast } from "sonner";
 import { EmptyState } from "@/components/empty-state";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { useRoles } from "@/hooks/use-roles";
-import { ArrowLeft, CheckCircle2, Clock, Globe, Inbox, Plus, Settings, Trash2, UserPlus, Users } from "lucide-react";
+import { ArrowLeft, AlertTriangle, CheckCircle2, Clock, Globe, Inbox, Loader2, Plus, Settings, Trash2, UserPlus, Users } from "lucide-react";
 import type { Team, Membership, Domain } from "@/types";
 
 interface DomainAssignment {
@@ -449,7 +449,7 @@ function DomainAssignmentsTab({ orgId, teamId }: { orgId: string; teamId: string
   });
 
   const unassign = useMutation({
-    mutationFn: (domainId: string) => api.del(`/orgs/${orgId}/teams/${teamId}/domains/${domainId}`),
+    mutationFn: (domainId: string) => api.del(`/orgs/${orgId}/teams/${teamId}/domains/${domainId}?force=true`),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["domain-assignments", teamId] }); qc.invalidateQueries({ queryKey: ["teams"] }); toast.success("Domain unassigned"); },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
   });
@@ -531,10 +531,10 @@ function DomainAssignmentsTab({ orgId, teamId }: { orgId: string; teamId: string
                     {a.created_at ? new Date(a.created_at).toLocaleDateString() : "—"}
                   </TableCell>
                   <TableCell className="text-right">
-                    <ConfirmDialog
-                      trigger={<Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button>}
-                      title="Unassign domain?"
-                      description={`${a.domain_name || "This domain"} will be removed from this team. Existing inboxes will stop receiving mail.`}
+                    <UnassignDomainDialog
+                      orgId={orgId}
+                      teamId={teamId}
+                      assignment={a}
                       onConfirm={() => unassign.mutate(a.domain_id)}
                     />
                   </TableCell>
@@ -641,5 +641,84 @@ function TeamSettingsTab({ orgId, team, onDeleted }: { orgId: string; team: Team
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function UnassignDomainDialog({ orgId, teamId, assignment, onConfirm }: {
+  orgId: string; teamId: string; assignment: DomainAssignment; onConfirm: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+  const [activeInboxes, setActiveInboxes] = useState(0);
+  const [checking, setChecking] = useState(false);
+
+  const domainName = assignment.domain_name || assignment.domain_id;
+
+  const handleClick = async () => {
+    setChecking(true);
+    try {
+      const token = localStorage.getItem("access_token");
+      const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
+      const res = await fetch(`${base}/orgs/${orgId}/teams/${teamId}/domains/${assignment.domain_id}`, {
+        method: "DELETE",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (res.ok) {
+        onConfirm();
+        return;
+      }
+      if (res.status === 409) {
+        const body = await res.json();
+        setActiveInboxes(body.active_inboxes ?? 0);
+        setOpen(true);
+        return;
+      }
+      const body = await res.json().catch(() => ({ error: res.statusText }));
+      toast.error(body.error || "Failed to unassign");
+    } catch {
+      toast.error("Failed to unassign");
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  return (
+    <>
+      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={handleClick} disabled={checking}>
+        {checking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+      </Button>
+      <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setConfirmText(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Unassign {domainName}
+            </DialogTitle>
+            <DialogDescription>
+              This will remove the domain from this team and permanently delete its active inboxes.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20 p-3 text-sm text-amber-800 dark:text-amber-300 flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+              <span>This assignment has <strong>{activeInboxes}</strong> active inbox{activeInboxes !== 1 ? "es" : ""} that will be permanently deleted.</span>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">Type <span className="font-mono font-semibold">{domainName}</span> to confirm</Label>
+              <Input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} placeholder={domainName} />
+            </div>
+            <Button
+              variant="destructive"
+              className="w-full gap-1.5"
+              disabled={confirmText !== domainName}
+              onClick={() => { onConfirm(); setOpen(false); setConfirmText(""); }}
+            >
+              <Trash2 className="h-4 w-4" />
+              Unassign Domain
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
