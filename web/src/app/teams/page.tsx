@@ -650,6 +650,7 @@ function UnassignDomainDialog({ orgId, teamId, assignment, onConfirm }: {
   const [open, setOpen] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const [activeInboxes, setActiveInboxes] = useState(0);
+  const [inboxList, setInboxList] = useState<{ address: string; full_address: string; created_by_email: string; email_count: number; expires_at: string }[]>([]);
   const [checking, setChecking] = useState(false);
 
   const domainName = assignment.domain_name || assignment.domain_id;
@@ -670,6 +671,7 @@ function UnassignDomainDialog({ orgId, teamId, assignment, onConfirm }: {
       if (res.status === 409) {
         const body = await res.json();
         setActiveInboxes(body.active_inboxes ?? 0);
+        setInboxList(body.inboxes ?? []);
         setOpen(true);
         return;
       }
@@ -703,6 +705,20 @@ function UnassignDomainDialog({ orgId, teamId, assignment, onConfirm }: {
               <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
               <span>This assignment has <strong>{activeInboxes}</strong> active inbox{activeInboxes !== 1 ? "es" : ""} that will be permanently deleted.</span>
             </div>
+            {inboxList.length > 0 && (
+              <div className="rounded-lg border text-xs divide-y max-h-40 overflow-auto">
+                <div className="grid grid-cols-3 gap-2 px-3 py-1.5 bg-muted/50 font-medium text-muted-foreground">
+                  <span>Address</span><span>Created By</span><span>Emails</span>
+                </div>
+                {inboxList.map((inbox) => (
+                  <div key={inbox.full_address} className="grid grid-cols-3 gap-2 px-3 py-1.5">
+                    <span className="font-mono truncate">{inbox.address || inbox.full_address}</span>
+                    <span className="truncate">{inbox.created_by_email}</span>
+                    <span>{inbox.email_count}</span>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="space-y-2">
               <Label className="text-sm">Type <span className="font-mono font-semibold">{domainName}</span> to confirm</Label>
               <Input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} placeholder={domainName} />
