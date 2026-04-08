@@ -149,7 +149,7 @@ func main() {
 	ssoMgr := auth.NewSSOManager(cfg)
 	authHandler := handler.NewAuthHandler(authSvc, ssoMgr, cfg)
 	orgHandler := handler.NewOrgHandler(orgSvc)
-	domainHandler := handler.NewDomainHandler(domainSvc, cfg.SMTP.Hostname)
+	domainHandler := handler.NewDomainHandler(domainSvc, inboxRepo, cfg.SMTP.Hostname)
 	teamHandler := handler.NewTeamHandler(teamSvc)
 	assignmentHandler := handler.NewDomainAssignmentHandler(assignmentSvc)
 	inboxHandler := handler.NewInboxHandler(inboxSvc)
@@ -260,6 +260,7 @@ func main() {
 			r.Patch("/orgs/{orgId}/domains/{domainId}", domainHandler.UpdateDomain)
 			r.Delete("/orgs/{orgId}/domains/{domainId}", domainHandler.DeleteDomain)
 			r.Post("/orgs/{orgId}/domains/{domainId}/verify", domainHandler.VerifyDomain)
+			r.Get("/orgs/{orgId}/domains/{domainId}/impact", domainHandler.GetDomainImpact)
 
 			// Teams
 			r.Post("/orgs/{orgId}/teams", teamHandler.CreateTeam)
