@@ -7,7 +7,7 @@ interface AuthState {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, displayName: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   fetchMe: () => Promise<void>;
 }
 
@@ -29,15 +29,23 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ user: res.user, loading: false });
   },
 
-  logout: () => {
+  logout: async () => {
     // Revoke all server sessions before clearing local state
     const token = localStorage.getItem("access_token");
     if (token) {
-      // Fire-and-forget — don't block logout on network
-      fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1"}/auth/sessions`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      }).catch(() => {});
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3000);
+      try {
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1"}/auth/sessions`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
+        });
+      } catch {
+        // proceed with logout even if revocation fails
+      } finally {
+        clearTimeout(timeout);
+      }
     }
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");

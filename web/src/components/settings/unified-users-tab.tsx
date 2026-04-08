@@ -19,7 +19,7 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ErrorState } from "@/components/error-state";
 import { Pagination } from "@/components/pagination";
 import { useRoles } from "@/hooks/use-roles";
-import { AlertTriangle, CheckCircle2, Clock, RefreshCw, Shield, Trash2, UserPlus, Users, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock, LogOut, RefreshCw, Shield, Trash2, UserPlus, Users, XCircle } from "lucide-react";
 import type { User, Membership, Invite, PaginatedResponse } from "@/types";
 
 const ROLE_COLORS: Record<string, string> = {
@@ -122,6 +122,12 @@ export function UnifiedUsersTab({ orgId }: { orgId: string }) {
     mutationFn: (userId: string) => api.del(`/admin/users/${userId}`),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-users"] }); qc.invalidateQueries({ queryKey: ["org-members"] }); toast.success("User deleted"); },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
+  });
+
+  const forceLogout = useMutation({
+    mutationFn: (userId: string) => api.del(`/admin/users/${userId}/sessions`),
+    onSuccess: () => toast.success("All sessions revoked"),
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Failed to revoke sessions"),
   });
 
   if (isError) return <ErrorState message="Failed to load users" onRetry={refetch} />;
@@ -229,6 +235,14 @@ export function UnifiedUsersTab({ orgId }: { orgId: string }) {
                                 title="Remove from organization?"
                                 description={`${u.display_name || u.email} will lose access to this organization.`}
                                 onConfirm={() => removeMember.mutate(u.id)}
+                              />
+                            )}
+                            {!isYou && isAdmin && (
+                              <ConfirmDialog
+                                trigger={<Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-orange-500" title="Force logout"><LogOut className="h-3.5 w-3.5" /></Button>}
+                                title="Force logout?"
+                                description={`Revoke all active sessions for ${u.display_name || u.email}? They will be signed out everywhere.`}
+                                onConfirm={() => forceLogout.mutate(u.id)}
                               />
                             )}
                             {!isYou && isAdmin && (
