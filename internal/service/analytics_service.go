@@ -36,3 +36,15 @@ func (s *AnalyticsService) GetOrgEmailsPerDay(ctx context.Context, orgID uuid.UU
 func (s *AnalyticsService) GetTeamEmailsPerDay(ctx context.Context, teamID uuid.UUID, days ...int) ([]domain.TimeSeriesPoint, error) {
 	return s.repo.GetTeamEmailsPerDay(ctx, teamID, days...)
 }
+
+func (s *AnalyticsService) GetOrgInboxesPerDay(ctx context.Context, orgID uuid.UUID, days ...int) ([]domain.TimeSeriesPoint, error) {
+	return s.repo.GetOrgInboxesPerDay(ctx, orgID, days...)
+}
+
+func (s *AnalyticsService) GetOrgPeakHours(ctx context.Context, orgID uuid.UUID, days ...int) ([]domain.HourlyPoint, error) {
+	return s.repo.GetOrgPeakHours(ctx, orgID, days...)
+}
+
+func (s *AnalyticsService) GetOrgDomainBreakdown(ctx context.Context, orgID uuid.UUID) ([]domain.DomainBreakdown, error) {
+	return s.repo.GetOrgDomainBreakdown(ctx, orgID)
+}
