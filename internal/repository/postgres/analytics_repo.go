@@ -158,6 +158,93 @@ func (r *AnalyticsRepo) GetOrgEmailsPerDay(ctx context.Context, orgID uuid.UUID,
 	return points, nil
 }
 
+func (r *AnalyticsRepo) GetOrgInboxesPerDay(ctx context.Context, orgID uuid.UUID, days ...int) ([]domain.TimeSeriesPoint, error) {
+	d := 30
+	if len(days) > 0 && days[0] > 0 { d = days[0] }
+	rows, err := r.db.Query(ctx,
+		`SELECT d::date, COALESCE(sub.cnt, 0) FROM generate_series(
+		  (NOW() - make_interval(days => $2))::date, NOW()::date, '1 day'::interval
+		) d LEFT JOIN (
+		  SELECT DATE(i.created_at) as dt, COUNT(*) as cnt FROM inboxes i
+		  JOIN domain_assignments da ON i.domain_assignment_id = da.id
+		  JOIN domains dm ON da.domain_id = dm.id
+		  WHERE dm.org_id = $1 AND i.created_at > NOW() - make_interval(days => $2)
+		  GROUP BY dt
+		) sub ON d::date = sub.dt ORDER BY d`, orgID, d)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var points []domain.TimeSeriesPoint
+	for rows.Next() {
+		var p domain.TimeSeriesPoint
+		var date time.Time
+		if err := rows.Scan(&date, &p.Count); err != nil {
+			return nil, err
+		}
+		p.Date = date.Format("2006-01-02")
+		points = append(points, p)
+	}
+	return points, rows.Err()
+}
+
+func (r *AnalyticsRepo) GetOrgPeakHours(ctx context.Context, orgID uuid.UUID, days ...int) ([]domain.HourlyPoint, error) {
+	d := 30
+	if len(days) > 0 && days[0] > 0 { d = days[0] }
+	rows, err := r.db.Query(ctx,
+		`SELECT EXTRACT(HOUR FROM e.received_at)::int as hour, COUNT(*) as cnt
+		 FROM emails e JOIN inboxes i ON e.inbox_id = i.id
+		 JOIN domain_assignments da ON i.domain_assignment_id = da.id
+		 JOIN domains dm ON da.domain_id = dm.id
+		 WHERE dm.org_id = $1 AND e.received_at > NOW() - make_interval(days => $2)
+		 GROUP BY hour ORDER BY hour`, orgID, d)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	hourMap := make(map[int]int64)
+	for rows.Next() {
+		var h int
+		var c int64
+		if err := rows.Scan(&h, &c); err != nil {
+			return nil, err
+		}
+		hourMap[h] = c
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	points := make([]domain.HourlyPoint, 24)
+	for i := 0; i < 24; i++ {
+		points[i] = domain.HourlyPoint{Hour: i, Count: hourMap[i]}
+	}
+	return points, nil
+}
+
+func (r *AnalyticsRepo) GetOrgDomainBreakdown(ctx context.Context, orgID uuid.UUID) ([]domain.DomainBreakdown, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT dm.domain_name, COUNT(e.id) as cnt
+		 FROM domains dm
+		 LEFT JOIN domain_assignments da ON da.domain_id = dm.id
+		 LEFT JOIN inboxes i ON i.domain_assignment_id = da.id
+		 LEFT JOIN emails e ON e.inbox_id = i.id
+		 WHERE dm.org_id = $1
+		 GROUP BY dm.domain_name ORDER BY cnt DESC`, orgID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var results []domain.DomainBreakdown
+	for rows.Next() {
+		var db domain.DomainBreakdown
+		if err := rows.Scan(&db.Domain, &db.Count); err != nil {
+			return nil, err
+		}
+		results = append(results, db)
+	}
+	return results, rows.Err()
+}
+
 func (r *AnalyticsRepo) GetTeamEmailsPerDay(ctx context.Context, teamID uuid.UUID, days ...int) ([]domain.TimeSeriesPoint, error) {
 	d := 30
 	if len(days) > 0 && days[0] > 0 { d = days[0] }

@@ -298,6 +298,7 @@ func main() {
 			// Analytics
 			r.Get("/orgs/{orgId}/analytics", analyticsHandler.OrgAnalytics)
 			r.Get("/orgs/{orgId}/analytics/emails-per-day", analyticsHandler.OrgEmailsPerDay)
+			r.Get("/orgs/{orgId}/analytics/insights", analyticsHandler.OrgInsights)
 			r.Get("/orgs/{orgId}/teams/{teamId}/analytics", analyticsHandler.TeamAnalytics)
 			r.Get("/orgs/{orgId}/teams/{teamId}/analytics/emails-per-day", analyticsHandler.TeamEmailsPerDay)
 
