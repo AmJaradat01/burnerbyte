@@ -145,12 +145,6 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
   const todayDelta = todayCount - yesterdayCount;
 
   const chartData = chart?.data ?? [];
-  const cumulative = chartData.reduce((acc, point, i) => {
-    const prev = i > 0 ? acc[i - 1].count : 0;
-    acc.push({ date: point.date, count: prev + point.count });
-    return acc;
-  }, [] as typeof chartData);
-  const hasCumulativeData = cumulative.length > 0 && cumulative[cumulative.length - 1]?.count > 0;
 
   // Enhancement 5: greeting emoji
   const greetingEmoji = (() => {
@@ -186,12 +180,12 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
         <StatCard
           icon={Mail}
           label="Total Emails"
-          value={stats?.total_emails}
+          value={stats?.total_emails_received ?? stats?.total_emails}
           loading={isLoading}
           accent="text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400"
           footer={
             <span className="text-xs text-muted-foreground">
-              {formatBytes(stats?.storage_used_bytes ?? 0)} storage used
+              {formatBytes(stats?.total_storage_bytes ?? stats?.storage_used_bytes ?? 0)} all-time storage
             </span>
           }
         />
@@ -266,33 +260,6 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
             </CardContent>
           </Card>
 
-          {/* Cumulative chart */}
-          {hasCumulativeData && (
-            <Card>
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">Cumulative Emails (30 days)</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={240}>
-                  <RechartsAreaChart data={cumulative}>
-                    <defs>
-                      <linearGradient id="cumulativeGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                    <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(v) => v.slice(5)} stroke="hsl(var(--muted-foreground))" />
-                    <YAxis tick={{ fontSize: 11 }} allowDecimals={false} stroke="hsl(var(--muted-foreground))" />
-                    <Tooltip contentStyle={tooltipStyle} labelFormatter={(v) => v} formatter={(v) => [`${Number(v).toLocaleString()}`, "Total"]} />
-                    <Area type="monotone" dataKey="count" stroke="hsl(var(--primary))" strokeWidth={2} fill="url(#cumulativeGradient)" />
-                  </RechartsAreaChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          )}
         </div>
 
         {/* Right column: weekly summary + audit + top senders */}

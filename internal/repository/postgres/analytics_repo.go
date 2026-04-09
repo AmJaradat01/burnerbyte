@@ -79,6 +79,12 @@ func (r *AnalyticsRepo) GetOrgStats(ctx context.Context, orgID uuid.UUID) (*doma
 		return nil, err
 	}
 
+	// Persistent counters (survive deletion)
+	_ = r.db.QueryRow(ctx,
+		`SELECT COALESCE(total_emails_received, 0), COALESCE(total_inboxes_created, 0), COALESCE(total_storage_bytes, 0)
+		 FROM org_analytics_counters WHERE org_id = $1`, orgID).
+		Scan(&stats.TotalEmailsReceived, &stats.TotalInboxesCreated, &stats.TotalStorageBytes)
+
 	return stats, nil
 }
 
