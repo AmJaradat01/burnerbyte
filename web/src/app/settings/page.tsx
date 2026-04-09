@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ErrorState } from "@/components/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Activity, AlertTriangle, CheckCircle2, Database, Globe, HardDrive, Inbox, Info, Mail, Monitor, Settings, Shield, Trash2, Users, XCircle } from "lucide-react";
+import { Activity, AlertTriangle, Archive, CheckCircle2, Database, Globe, HardDrive, Inbox, Info, Key, Link as LinkIcon, Mail, Monitor, Settings, Shield, Trash2, Users, UsersRound, XCircle } from "lucide-react";
 import Link from "next/link";
 import { UnifiedUsersTab } from "@/components/settings/unified-users-tab";
 import { RolesTab } from "@/components/settings/roles-tab";
@@ -421,28 +421,44 @@ function DangerZone({ org, onDeleted }: { org: Organization; onDeleted: () => vo
   );
 }
 
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}
+
 function OverviewTab() {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["admin-stats"],
     queryFn: () => api.get<SystemStats>("/admin/stats"),
   });
 
+  const { data: versionData } = useQuery({
+    queryKey: ["admin-version"],
+    queryFn: () => api.get<{ version: string }>("/admin/version"),
+  });
+
   if (isError) return <ErrorState message="Failed to load stats" onRetry={() => refetch()} />;
-  if (isLoading) return <div className="grid grid-cols-2 md:grid-cols-4 gap-4">{Array.from({ length: 8 }).map((_, i) => <Card key={i}><CardContent className="pt-6"><Skeleton className="h-4 w-20 mb-2" /><Skeleton className="h-8 w-16" /></CardContent></Card>)}</div>;
+  if (isLoading) return <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">{Array.from({ length: 10 }).map((_, i) => <Card key={i}><CardContent className="pt-6"><Skeleton className="h-4 w-20 mb-2" /><Skeleton className="h-8 w-16" /></CardContent></Card>)}</div>;
   if (!data) return null;
 
-  const stats: { icon: typeof Mail; label: string; value: number; desc?: string; accent: string; href?: string }[] = [
-    { icon: Users, label: "Users", value: data.total_users, accent: "text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400" },
-    { icon: Users, label: "Teams", value: data.total_teams ?? 0, accent: "text-indigo-600 bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-400", href: "/teams" },
-    { icon: Globe, label: "Domains", value: data.total_domains, accent: "text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400", href: "/domains" },
-    { icon: Inbox, label: "Active Inboxes", value: data.active_inboxes ?? 0, desc: `${(data.total_inboxes ?? 0).toLocaleString()} total`, accent: "text-amber-600 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400", href: "/" },
-    { icon: Mail, label: "Total Emails", value: data.total_emails, accent: "text-rose-600 bg-rose-100 dark:bg-rose-900/30 dark:text-rose-400", href: "/analytics" },
-    { icon: Monitor, label: "Sessions", value: data.total_sessions ?? 0, accent: "text-cyan-600 bg-cyan-100 dark:bg-cyan-900/30 dark:text-cyan-400", href: "/profile/sessions" },
+  const stats: { icon: typeof Mail; label: string; value: string; desc?: string; accent: string; href?: string }[] = [
+    { icon: Users, label: "Users", value: data.total_users.toLocaleString(), accent: "text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400" },
+    { icon: UsersRound, label: "Teams", value: (data.total_teams ?? 0).toLocaleString(), accent: "text-indigo-600 bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-400", href: "/teams" },
+    { icon: Globe, label: "Domains", value: data.total_domains.toLocaleString(), accent: "text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400", href: "/domains" },
+    { icon: Inbox, label: "Active Inboxes", value: (data.active_inboxes ?? 0).toLocaleString(), desc: `${(data.total_inboxes ?? 0).toLocaleString()} total created`, accent: "text-amber-600 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400", href: "/" },
+    { icon: Archive, label: "Total Created", value: (data.total_inboxes_created ?? 0).toLocaleString(), accent: "text-violet-600 bg-violet-100 dark:bg-violet-900/30 dark:text-violet-400" },
+    { icon: Mail, label: "Total Emails", value: data.total_emails.toLocaleString(), accent: "text-rose-600 bg-rose-100 dark:bg-rose-900/30 dark:text-rose-400", href: "/analytics" },
+    { icon: HardDrive, label: "Storage", value: formatBytes(data.storage_used_bytes ?? 0), accent: "text-slate-600 bg-slate-100 dark:bg-slate-900/30 dark:text-slate-400" },
+    { icon: Monitor, label: "Active Sessions", value: (data.total_sessions ?? 0).toLocaleString(), accent: "text-cyan-600 bg-cyan-100 dark:bg-cyan-900/30 dark:text-cyan-400", href: "/profile/sessions" },
+    { icon: LinkIcon, label: "Webhooks", value: (data.total_webhooks ?? 0).toLocaleString(), accent: "text-orange-600 bg-orange-100 dark:bg-orange-900/30 dark:text-orange-400" },
+    { icon: Key, label: "API Keys", value: (data.total_api_keys ?? 0).toLocaleString(), accent: "text-purple-600 bg-purple-100 dark:bg-purple-900/30 dark:text-purple-400" },
   ];
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {stats.map((s) => {
           const inner = (
             <CardContent className="pt-5 pb-4">
@@ -452,7 +468,7 @@ function OverviewTab() {
                   <s.icon className="h-4 w-4" />
                 </div>
               </div>
-              <p className="text-2xl font-bold tabular-nums">{(s.value ?? 0).toLocaleString()}</p>
+              <p className="text-2xl font-bold tabular-nums">{s.value}</p>
               {s.desc && <p className="text-xs text-muted-foreground mt-1">{s.desc}</p>}
             </CardContent>
           );
@@ -473,7 +489,7 @@ function OverviewTab() {
             <span className="text-sm font-medium">About</span>
           </div>
           <div className="grid grid-cols-3 gap-4 text-sm">
-            <div><p className="text-muted-foreground text-xs">Version</p><p className="font-mono">0.24.1</p></div>
+            <div><p className="text-muted-foreground text-xs">Version</p><p className="font-mono">{versionData?.version ?? "—"}</p></div>
             <div><p className="text-muted-foreground text-xs">Platform</p><p>BurnerByte — Self-hosted temporary email</p></div>
             <div><p className="text-muted-foreground text-xs">License</p><p>Apache 2.0</p></div>
           </div>

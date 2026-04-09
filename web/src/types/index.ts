@@ -207,13 +207,16 @@ export interface EmailsPerDay {
 
 export interface SystemStats {
   total_users: number;
-  total_orgs: number;
   total_teams: number;
   total_emails: number;
   total_inboxes: number;
   total_domains: number;
   active_inboxes: number;
   total_sessions: number;
+  total_inboxes_created: number;
+  storage_used_bytes: number;
+  total_webhooks: number;
+  total_api_keys: number;
 }
 
 export interface Invite {

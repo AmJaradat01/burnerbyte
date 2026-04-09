@@ -38,7 +38,7 @@ pipeline {
             steps {
                 sh '''
                     go version
-                    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/api ./cmd/api
+                    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-X main.Version=${TAG}" -o bin/api ./cmd/api
                     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/smtpd ./cmd/smtpd
                 '''
             }
