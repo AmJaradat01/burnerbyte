@@ -191,6 +191,12 @@ type PlatformSettings struct {
 	Timezone             string `json:"timezone"`
 	DateFormat           string `json:"date_format"`
 	TimeFormat           string `json:"time_format"`
+	DefaultInboxTTL      string `json:"default_inbox_ttl"`
+	MaxInboxTTL          string `json:"max_inbox_ttl"`
+	MaxAttachmentSizeMB  int    `json:"max_attachment_size_mb"`
+	MaxDomains           int    `json:"max_domains"`
+	MaxTeams             int    `json:"max_teams"`
+	MaxInboxesPerDomain  int    `json:"max_inboxes_per_domain"`
 }
 
 func (h *AdminHandler) GetPlatformSettings(w http.ResponseWriter, r *http.Request) {
@@ -208,11 +214,19 @@ func (h *AdminHandler) GetPlatformSettings(w http.ResponseWriter, r *http.Reques
 		PasswordRequireSpec:  h.cfg.Password.RequireSpecial,
 		LockoutMaxAttempts:   h.cfg.Lockout.MaxAttempts,
 		LockoutDurationMins:  int(h.cfg.Lockout.Duration.Minutes()),
+		DefaultInboxTTL:      h.cfg.Defaults.DefaultInboxTTL.String(),
+		MaxInboxTTL:          h.cfg.Defaults.MaxInboxTTL.String(),
+		MaxAttachmentSizeMB:  h.cfg.Defaults.MaxAttachmentSizeMB,
+		MaxDomains:           h.cfg.Defaults.MaxDomains,
+		MaxTeams:             h.cfg.Defaults.MaxTeams,
+		MaxInboxesPerDomain:  h.cfg.Defaults.MaxInboxesPerDomain,
 	}
 	h.cfgMu.RUnlock()
 	if tz == "" { tz = "UTC" }
 	if df == "" { df = "YYYY-MM-DD" }
 	if tf == "" { tf = "24h" }
+	if ps.DefaultInboxTTL == "0s" { ps.DefaultInboxTTL = "" }
+	if ps.MaxInboxTTL == "0s" { ps.MaxInboxTTL = "" }
 	ps.Timezone = tz
 	ps.DateFormat = df
 	ps.TimeFormat = tf
@@ -252,6 +266,16 @@ func (h *AdminHandler) UpdatePlatformSettings(w http.ResponseWriter, r *http.Req
 	h.cfg.Defaults.Timezone = input.Timezone
 	h.cfg.Defaults.DateFormat = input.DateFormat
 	h.cfg.Defaults.TimeFormat = input.TimeFormat
+	if d, err := time.ParseDuration(input.DefaultInboxTTL); err == nil {
+		h.cfg.Defaults.DefaultInboxTTL = d
+	}
+	if d, err := time.ParseDuration(input.MaxInboxTTL); err == nil {
+		h.cfg.Defaults.MaxInboxTTL = d
+	}
+	h.cfg.Defaults.MaxAttachmentSizeMB = input.MaxAttachmentSizeMB
+	h.cfg.Defaults.MaxDomains = input.MaxDomains
+	h.cfg.Defaults.MaxTeams = input.MaxTeams
+	h.cfg.Defaults.MaxInboxesPerDomain = input.MaxInboxesPerDomain
 	h.cfgMu.Unlock()
 	auditRecord(r, uuid.Nil, "admin.platform_settings_updated", "platform", uuid.Nil, map[string]any{"allow_registration": input.AllowRegistration, "email_verification": input.EmailVerification, "password_min_length": input.PasswordMinLength, "lockout_max_attempts": input.LockoutMaxAttempts, "lockout_duration_mins": input.LockoutDurationMins})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "platform settings updated"})
