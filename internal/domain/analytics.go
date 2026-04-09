@@ -39,12 +39,15 @@ type DomainBreakdown struct {
 }
 
 type SystemStats struct {
-	TotalUsers      int64 `json:"total_users"`
-	TotalOrgs       int64 `json:"total_orgs"`
-	TotalTeams      int64 `json:"total_teams"`
-	TotalDomains    int64 `json:"total_domains"`
-	TotalEmails     int64 `json:"total_emails"`
-	TotalInboxes    int64 `json:"total_inboxes"`
-	ActiveInboxes   int64 `json:"active_inboxes"`
-	TotalSessions   int64 `json:"total_sessions"`
+	TotalUsers          int64 `json:"total_users"`
+	TotalTeams          int64 `json:"total_teams"`
+	TotalDomains        int64 `json:"total_domains"`
+	TotalEmails         int64 `json:"total_emails"`
+	TotalInboxes        int64 `json:"total_inboxes"`
+	ActiveInboxes       int64 `json:"active_inboxes"`
+	TotalSessions       int64 `json:"total_sessions"`
+	TotalInboxesCreated int64 `json:"total_inboxes_created"`
+	StorageUsedBytes    int64 `json:"storage_used_bytes"`
+	TotalWebhooks       int64 `json:"total_webhooks"`
+	TotalAPIKeys        int64 `json:"total_api_keys"`
 }
