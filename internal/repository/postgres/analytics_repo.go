@@ -114,13 +114,16 @@ func (r *AnalyticsRepo) GetTeamStats(ctx context.Context, teamID uuid.UUID) (*do
 func (r *AnalyticsRepo) GetSystemStats(ctx context.Context) (*domain.SystemStats, error) {
 	stats := &domain.SystemStats{}
 	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM users`).Scan(&stats.TotalUsers); err != nil { return nil, err }
-	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM organizations`).Scan(&stats.TotalOrgs); err != nil { return nil, err }
 	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM teams`).Scan(&stats.TotalTeams); err != nil { return nil, err }
 	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM domains`).Scan(&stats.TotalDomains); err != nil { return nil, err }
 	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM emails`).Scan(&stats.TotalEmails); err != nil { return nil, err }
 	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM inboxes`).Scan(&stats.TotalInboxes); err != nil { return nil, err }
-	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM inboxes WHERE is_active = TRUE`).Scan(&stats.ActiveInboxes); err != nil { return nil, err }
-	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM sessions`).Scan(&stats.TotalSessions); err != nil { return nil, err }
+	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM inboxes WHERE is_active = TRUE AND expires_at > NOW()`).Scan(&stats.ActiveInboxes); err != nil { return nil, err }
+	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM sessions WHERE revoked = FALSE AND expires_at > NOW()`).Scan(&stats.TotalSessions); err != nil { return nil, err }
+	if err := r.db.QueryRow(ctx, `SELECT COALESCE(SUM(inboxes_created_count), 0) FROM domains`).Scan(&stats.TotalInboxesCreated); err != nil { return nil, err }
+	if err := r.db.QueryRow(ctx, `SELECT COALESCE(SUM(size_bytes), 0) FROM emails`).Scan(&stats.StorageUsedBytes); err != nil { return nil, err }
+	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM webhooks`).Scan(&stats.TotalWebhooks); err != nil { return nil, err }
+	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM api_keys WHERE (expires_at IS NULL OR expires_at > NOW())`).Scan(&stats.TotalAPIKeys); err != nil { return nil, err }
 	return stats, nil
 }
 
