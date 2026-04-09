@@ -204,9 +204,6 @@ function DomainCard({ domain: d, onVerify, onDelete, verifying }: {
   const [copied, setCopied] = useState(false);
   const fullyVerified = d.mx_verified && d.txt_verified;
 
-  const dnsOverdue = fullyVerified && d.dns_last_checked_at &&
-    (Date.now() - new Date(d.dns_last_checked_at).getTime()) > 86400000;
-
   const copyRecord = () => {
     if (d.verification_record) {
       copyToClipboard(d.verification_record);
@@ -241,11 +238,6 @@ function DomainCard({ domain: d, onVerify, onDelete, verifying }: {
             ) : (
               <Badge className="gap-1 text-[10px] bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800">
                 <Circle className="h-2.5 w-2.5" /> Pending
-              </Badge>
-            )}
-            {dnsOverdue && (
-              <Badge className="gap-1 text-[10px] bg-amber-50 text-amber-600 border-amber-300 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-700">
-                <AlertTriangle className="h-2.5 w-2.5" /> DNS check overdue
               </Badge>
             )}
           </div>
