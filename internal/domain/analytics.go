@@ -28,6 +28,16 @@ type TimeSeriesPoint struct {
 	Count int64  `json:"count"`
 }
 
+type HourlyPoint struct {
+	Hour  int   `json:"hour"`
+	Count int64 `json:"count"`
+}
+
+type DomainBreakdown struct {
+	Domain string `json:"domain"`
+	Count  int64  `json:"count"`
+}
+
 type SystemStats struct {
 	TotalUsers      int64 `json:"total_users"`
 	TotalOrgs       int64 `json:"total_orgs"`
