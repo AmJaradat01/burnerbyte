@@ -16,7 +16,8 @@ import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ErrorState } from "@/components/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Activity, AlertTriangle, Building2, CheckCircle2, Database, Globe, HardDrive, Inbox, Mail, Monitor, Settings, Shield, Trash2, Users, XCircle } from "lucide-react";
+import { Activity, AlertTriangle, Building2, CheckCircle2, Database, Globe, HardDrive, Inbox, Info, Mail, Monitor, Settings, Shield, Trash2, Users, XCircle } from "lucide-react";
+import Link from "next/link";
 import { UnifiedUsersTab } from "@/components/settings/unified-users-tab";
 import { RolesTab } from "@/components/settings/roles-tab";
 import type { Organization, OrgSettings, SystemStats } from "@/types";
@@ -430,21 +431,21 @@ function OverviewTab() {
   if (isLoading) return <div className="grid grid-cols-2 md:grid-cols-4 gap-4">{Array.from({ length: 8 }).map((_, i) => <Card key={i}><CardContent className="pt-6"><Skeleton className="h-4 w-20 mb-2" /><Skeleton className="h-8 w-16" /></CardContent></Card>)}</div>;
   if (!data) return null;
 
-  const stats: { icon: typeof Mail; label: string; value: number; desc?: string; accent: string }[] = [
+  const stats: { icon: typeof Mail; label: string; value: number; desc?: string; accent: string; href?: string }[] = [
     { icon: Users, label: "Users", value: data.total_users, accent: "text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400" },
     { icon: Building2, label: "Organizations", value: data.total_orgs, accent: "text-violet-600 bg-violet-100 dark:bg-violet-900/30 dark:text-violet-400" },
-    { icon: Users, label: "Teams", value: data.total_teams ?? 0, accent: "text-indigo-600 bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-400" },
-    { icon: Globe, label: "Domains", value: data.total_domains, accent: "text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400" },
-    { icon: Inbox, label: "Active Inboxes", value: data.active_inboxes ?? 0, desc: `${(data.total_inboxes ?? 0).toLocaleString()} total`, accent: "text-amber-600 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400" },
-    { icon: Mail, label: "Total Emails", value: data.total_emails, accent: "text-rose-600 bg-rose-100 dark:bg-rose-900/30 dark:text-rose-400" },
-    { icon: Monitor, label: "Sessions", value: data.total_sessions ?? 0, accent: "text-cyan-600 bg-cyan-100 dark:bg-cyan-900/30 dark:text-cyan-400" },
+    { icon: Users, label: "Teams", value: data.total_teams ?? 0, accent: "text-indigo-600 bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-400", href: "/teams" },
+    { icon: Globe, label: "Domains", value: data.total_domains, accent: "text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400", href: "/domains" },
+    { icon: Inbox, label: "Active Inboxes", value: data.active_inboxes ?? 0, desc: `${(data.total_inboxes ?? 0).toLocaleString()} total`, accent: "text-amber-600 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400", href: "/" },
+    { icon: Mail, label: "Total Emails", value: data.total_emails, accent: "text-rose-600 bg-rose-100 dark:bg-rose-900/30 dark:text-rose-400", href: "/analytics" },
+    { icon: Monitor, label: "Sessions", value: data.total_sessions ?? 0, accent: "text-cyan-600 bg-cyan-100 dark:bg-cyan-900/30 dark:text-cyan-400", href: "/profile/sessions" },
   ];
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {stats.map((s) => (
-          <Card key={s.label}>
+        {stats.map((s) => {
+          const inner = (
             <CardContent className="pt-5 pb-4">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm font-medium text-muted-foreground">{s.label}</span>
@@ -455,10 +456,30 @@ function OverviewTab() {
               <p className="text-2xl font-bold tabular-nums">{(s.value ?? 0).toLocaleString()}</p>
               {s.desc && <p className="text-xs text-muted-foreground mt-1">{s.desc}</p>}
             </CardContent>
-          </Card>
-        ))}
+          );
+          return s.href ? (
+            <Link key={s.label} href={s.href} className="block">
+              <Card className="transition-colors hover:border-primary/40">{inner}</Card>
+            </Link>
+          ) : (
+            <Card key={s.label}>{inner}</Card>
+          );
+        })}
       </div>
       <PlatformSettingsCard />
+      <Card>
+        <CardContent className="pt-5 pb-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Info className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">About</span>
+          </div>
+          <div className="grid grid-cols-3 gap-4 text-sm">
+            <div><p className="text-muted-foreground text-xs">Version</p><p className="font-mono">0.24.1</p></div>
+            <div><p className="text-muted-foreground text-xs">Platform</p><p>BurnerByte — Self-hosted temporary email</p></div>
+            <div><p className="text-muted-foreground text-xs">License</p><p>Apache 2.0</p></div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -472,6 +493,8 @@ function PlatformSettingsCard() {
       password_require_number: boolean; password_require_special: boolean;
       lockout_max_attempts: number; lockout_duration_mins: number;
       timezone: string; date_format: string; time_format: string;
+      default_inbox_ttl: string; max_inbox_ttl: string;
+      max_attachment_size_mb: number; max_domains: number; max_teams: number; max_inboxes_per_domain: number;
     }>("/admin/platform"),
   });
   const qc = useQueryClient();
@@ -481,6 +504,8 @@ function PlatformSettingsCard() {
     password_require_number: true, password_require_special: true,
     lockout_max_attempts: 5, lockout_duration_mins: 15,
     timezone: "UTC", date_format: "YYYY-MM-DD", time_format: "24h",
+    default_inbox_ttl: "", max_inbox_ttl: "",
+    max_attachment_size_mb: 0, max_domains: 0, max_teams: 0, max_inboxes_per_domain: 0,
   });
   const [saving, setSaving] = useState(false);
 
@@ -591,6 +616,37 @@ function PlatformSettingsCard() {
                   <SelectItem value="12h">12-hour</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+        </div>
+
+        {/* Quotas & Limits */}
+        <div className="space-y-3">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Quotas & Limits</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Default inbox TTL</Label>
+              <Input value={form.default_inbox_ttl} onChange={(e) => set("default_inbox_ttl", e.target.value)} placeholder="1h" className="h-8 font-mono text-xs" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Max inbox TTL</Label>
+              <Input value={form.max_inbox_ttl} onChange={(e) => set("max_inbox_ttl", e.target.value)} placeholder="24h" className="h-8 font-mono text-xs" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Max attachment (MB)</Label>
+              <Input type="number" min={0} value={form.max_attachment_size_mb} onChange={(e) => set("max_attachment_size_mb", Number(e.target.value) || 0)} className="h-8" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Max domains</Label>
+              <Input type="number" min={0} value={form.max_domains} onChange={(e) => set("max_domains", Number(e.target.value) || 0)} className="h-8" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Max teams</Label>
+              <Input type="number" min={0} value={form.max_teams} onChange={(e) => set("max_teams", Number(e.target.value) || 0)} className="h-8" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Max inboxes/domain</Label>
+              <Input type="number" min={0} value={form.max_inboxes_per_domain} onChange={(e) => set("max_inboxes_per_domain", Number(e.target.value) || 0)} className="h-8" />
             </div>
           </div>
         </div>
