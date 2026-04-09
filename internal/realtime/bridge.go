@@ -15,9 +15,11 @@ const (
 )
 
 type InboxEvent struct {
-	InboxID uuid.UUID `json:"inbox_id"`
-	UserID  uuid.UUID `json:"user_id"`
-	Message Message   `json:"message"`
+	InboxID   uuid.UUID `json:"inbox_id"`
+	UserID    uuid.UUID `json:"user_id"`
+	OrgID     uuid.UUID `json:"org_id"`
+	SizeBytes int64     `json:"size_bytes"`
+	Message   Message   `json:"message"`
 }
 
 // Publisher — used by smtpd to publish events to Redis.
@@ -29,8 +31,8 @@ func NewPublisher(rdb *redis.Client) *Publisher {
 	return &Publisher{rdb: rdb}
 }
 
-func (p *Publisher) PublishInboxEvent(ctx context.Context, inboxID, userID uuid.UUID, msg Message) {
-	evt := InboxEvent{InboxID: inboxID, UserID: userID, Message: msg}
+func (p *Publisher) PublishInboxEvent(ctx context.Context, inboxID, userID, orgID uuid.UUID, sizeBytes int64, msg Message) {
+	evt := InboxEvent{InboxID: inboxID, UserID: userID, OrgID: orgID, SizeBytes: sizeBytes, Message: msg}
 	data, err := json.Marshal(evt)
 	if err != nil {
 		return
@@ -45,8 +47,14 @@ type NotificationPersister interface {
 	Create(ctx context.Context, userID uuid.UUID, typ, title, message string, inboxID *uuid.UUID) error
 }
 
+// CounterPersister is the interface the bridge needs to increment analytics counters.
+type CounterPersister interface {
+	IncrementEmail(ctx context.Context, orgID uuid.UUID, sizeBytes int64) error
+	UpsertDailyStat(ctx context.Context, orgID uuid.UUID, emailsReceived, inboxesCreated int, storageBytes int64) error
+}
+
 // Subscribe — used by API server to receive events and forward to hubs.
-func Subscribe(ctx context.Context, rdb *redis.Client, hub *Hub, notifHub *NotifHub, notifRepo NotificationPersister) {
+func Subscribe(ctx context.Context, rdb *redis.Client, hub *Hub, notifHub *NotifHub, notifRepo NotificationPersister, counterRepo CounterPersister) {
 	sub := rdb.Subscribe(ctx, ChannelInbox)
 	ch := sub.Channel()
 	go func() {
@@ -86,6 +94,14 @@ func Subscribe(ctx context.Context, rdb *redis.Client, hub *Hub, notifHub *Notif
 				inboxID := &evt.InboxID
 				if err := notifRepo.Create(ctx, evt.UserID, evt.Message.Type, title, body, inboxID); err != nil {
 					slog.Error("failed to persist notification", "error", err)
+				}
+			}
+			if counterRepo != nil && evt.Message.Type == "email.received" && evt.OrgID != uuid.Nil {
+				if err := counterRepo.IncrementEmail(ctx, evt.OrgID, evt.SizeBytes); err != nil {
+					slog.Error("failed to increment email counter", "error", err)
+				}
+				if err := counterRepo.UpsertDailyStat(ctx, evt.OrgID, 1, 0, evt.SizeBytes); err != nil {
+					slog.Error("failed to upsert daily stat", "error", err)
 				}
 			}
 		}

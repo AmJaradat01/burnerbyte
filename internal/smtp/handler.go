@@ -195,7 +195,7 @@ func (h *Handler) Process(ctx context.Context, email *InboundEmail) error {
 
 	// Broadcast to WebSocket
 	if h.publisher != nil {
-		h.publisher.PublishInboxEvent(ctx, inbox.ID, inbox.CreatedBy, realtime.Message{
+		h.publisher.PublishInboxEvent(ctx, inbox.ID, inbox.CreatedBy, inbox.OrgID, e.SizeBytes, realtime.Message{
 			Type: "email.received",
 			Data: e,
 		})

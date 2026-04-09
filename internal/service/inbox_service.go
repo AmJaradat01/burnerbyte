@@ -24,6 +24,7 @@ type InboxService struct {
 	domainRepo     *postgres.DomainRepo
 	orgRepo        *postgres.OrgRepo
 	teamRepo       *postgres.TeamRepo
+	counterRepo    *postgres.CounterRepo
 	cfg            *config.Config
 }
 
@@ -34,12 +35,13 @@ func NewInboxService(
 	domainRepo *postgres.DomainRepo,
 	orgRepo *postgres.OrgRepo,
 	teamRepo *postgres.TeamRepo,
+	counterRepo *postgres.CounterRepo,
 	cfg *config.Config,
 ) *InboxService {
 	return &InboxService{
 		inboxRepo: inboxRepo, redisInboxRepo: redisInboxRepo,
 		assignmentRepo: assignmentRepo, domainRepo: domainRepo,
-		orgRepo: orgRepo, teamRepo: teamRepo, cfg: cfg,
+		orgRepo: orgRepo, teamRepo: teamRepo, counterRepo: counterRepo, cfg: cfg,
 	}
 }
 
@@ -135,6 +137,16 @@ func (s *InboxService) CreateInbox(ctx context.Context, teamID, domainID, userID
 	// Increment all-time inbox counter on domain
 	if err := s.domainRepo.IncrementInboxCount(ctx, domainID); err != nil {
 		slog.Error("failed to increment domain inbox counter", "domain_id", domainID, "error", err)
+	}
+
+	// Increment org-level analytics counter
+	if s.counterRepo != nil {
+		if err := s.counterRepo.IncrementInbox(ctx, org.ID); err != nil {
+			slog.Error("failed to increment org inbox counter", "org_id", org.ID, "error", err)
+		}
+		if err := s.counterRepo.UpsertDailyStat(ctx, org.ID, 0, 1, 0); err != nil {
+			slog.Error("failed to upsert daily inbox stat", "org_id", org.ID, "error", err)
+		}
 	}
 
 	// Store in Redis for SMTP lookups
