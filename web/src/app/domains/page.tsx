@@ -21,7 +21,7 @@ import { Pagination } from "@/components/pagination";
 import { ErrorState } from "@/components/error-state";
 import { EmptyState } from "@/components/empty-state";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { AlertTriangle, Check, CheckCircle2, ChevronDown, ChevronUp, Circle, Copy, Globe, Inbox, Loader2, Plus, RefreshCw, Search, Shield, Trash2, Users } from "lucide-react";
+import { AlertTriangle, Check, CheckCircle2, ChevronDown, ChevronUp, Circle, Copy, Globe, Inbox, Loader2, Plus, RefreshCw, Search, Shield, Trash2, Users, X } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Domain, PaginatedResponse } from "@/types";
 
@@ -553,16 +553,27 @@ function AddDomainDialog({ orgId }: { orgId: string }) {
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Domain name</Label>
-            <Input
-              value={rawInput}
-              onChange={(e) => setRawInput(e.target.value)}
-              placeholder="example.com"
-              onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-            />
+            <div className="relative">
+              <Input
+                value={rawInput}
+                onChange={(e) => setRawInput(e.target.value)}
+                placeholder="example.com"
+                onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+                className={domain ? (isValid ? "pr-9 border-emerald-400 focus-visible:ring-emerald-400" : "pr-9 border-destructive focus-visible:ring-destructive") : ""}
+              />
+              {domain && (
+                <span className="absolute right-2.5 top-1/2 -translate-y-1/2">
+                  {isValid
+                    ? <Check className="h-4 w-4 text-emerald-500" />
+                    : <X className="h-4 w-4 text-destructive" />}
+                </span>
+              )}
+            </div>
             {rawInput && domain !== rawInput.trim().toLowerCase() && (
               <p className="text-xs text-muted-foreground">Will be added as: <span className="font-mono">{domain}</span></p>
             )}
             {error && <p className="text-xs text-destructive">{error}</p>}
+            <p className="text-xs text-muted-foreground">Don&apos;t include http:// or www — just the bare domain (e.g. example.com)</p>
           </div>
 
           <Button onClick={handleAdd} className="w-full" disabled={!isValid || adding}>
