@@ -37,6 +37,8 @@ import (
 	"gitlab.com/burnerbyte/burnerbyte/internal/worker"
 )
 
+var Version = "dev"
+
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
@@ -331,6 +333,10 @@ func main() {
 			r.With(auth.RequireSystemAdmin).Put("/admin/platform", adminHandler.UpdatePlatformSettings)
 			r.With(auth.RequireSystemAdmin).Get("/admin/sso", adminHandler.GetSSOConfig)
 			r.With(auth.RequireSystemAdmin).Put("/admin/sso", adminHandler.UpdateSSOConfig)
+			r.With(auth.RequireSystemAdmin).Get("/admin/version", func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(map[string]string{"version": Version})
+			})
 			r.With(auth.RequireSystemAdmin).Delete("/admin/users/{userId}/sessions", func(w http.ResponseWriter, r *http.Request) {
 				userID, err := uuid.Parse(chi.URLParam(r, "userId"))
 				if err != nil {
