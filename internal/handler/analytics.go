@@ -68,6 +68,41 @@ func (h *AnalyticsHandler) OrgEmailsPerDay(w http.ResponseWriter, r *http.Reques
 	writeJSON(w, http.StatusOK, map[string]any{"data": data})
 }
 
+func (h *AnalyticsHandler) OrgInsights(w http.ResponseWriter, r *http.Request) {
+	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid org id")
+		return
+	}
+	if checkOrgRole(w, r, orgID, rbac.OrgMember) {
+		return
+	}
+	days := h.defaultDays
+	if v, err := strconv.Atoi(r.URL.Query().Get("days")); err == nil && v > 0 && v <= 365 {
+		days = v
+	}
+	inboxes, err := h.svc.GetOrgInboxesPerDay(r.Context(), orgID, days)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed")
+		return
+	}
+	peaks, err := h.svc.GetOrgPeakHours(r.Context(), orgID, days)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed")
+		return
+	}
+	breakdown, err := h.svc.GetOrgDomainBreakdown(r.Context(), orgID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"inboxes_per_day":  inboxes,
+		"peak_hours":       peaks,
+		"domain_breakdown": breakdown,
+	})
+}
+
 func (h *AnalyticsHandler) TeamAnalytics(w http.ResponseWriter, r *http.Request) {
 	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
 	if err != nil {
