@@ -63,10 +63,10 @@ export default function TeamsPage() {
             <h1 className="text-3xl font-bold tracking-tight">{selectedTeam.name}</h1>
             <p className="text-xs text-muted-foreground font-mono">{selectedTeam.slug}</p>
           </div>
-          <div className="flex items-center gap-2 ml-auto text-xs text-muted-foreground">
-            <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {selectedTeam.member_count}</span>
-            <span className="flex items-center gap-1"><Globe className="h-3 w-3" /> {selectedTeam.domain_count}</span>
-            <span className="flex items-center gap-1"><Inbox className="h-3 w-3" /> {selectedTeam.active_inboxes}</span>
+          <div className="flex items-center gap-2 ml-auto">
+            <Badge variant="secondary" className="gap-1 text-xs"><Users className="h-3 w-3" /> {selectedTeam.member_count}</Badge>
+            <Badge variant="secondary" className="gap-1 text-xs"><Globe className="h-3 w-3" /> {selectedTeam.domain_count}</Badge>
+            <Badge variant="secondary" className="gap-1 text-xs"><Inbox className="h-3 w-3" /> {selectedTeam.active_inboxes}</Badge>
           </div>
         </div>
         <Tabs defaultValue="members">
@@ -228,11 +228,11 @@ function CreateTeamDialog({ orgId }: { orgId: string }) {
         <DialogHeader>
           <div className="flex items-center gap-2">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-              <Users className="h-5 w-5 text-primary" />
+              <Globe className="h-5 w-5 text-primary" />
             </div>
             <div>
               <DialogTitle>Create a team</DialogTitle>
-              <DialogDescription>Teams organize members and domain assignments. A URL slug will be generated from the name.</DialogDescription>
+              <DialogDescription>Teams let you group members and assign domains so the right people have access to the right inboxes.</DialogDescription>
             </div>
           </div>
         </DialogHeader>

@@ -12,7 +12,7 @@ import type { AnalyticsStats, AuditEntry, EmailsPerDay, Inbox, PaginatedResponse
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { timeAgo } from "@/lib/time";
-import { Activity, ChevronRight, Globe, Inbox as InboxIcon, Mail, Plus, UserPlus, Users } from "lucide-react";
+import { Activity, Globe, Inbox as InboxIcon, Mail, Plus, Users } from "lucide-react";
 
 const RechartsBarChart = dynamic(() => import("recharts").then((m) => m.BarChart), { ssr: false });
 const RechartsAreaChart = dynamic(() => import("recharts").then((m) => m.AreaChart), { ssr: false });
@@ -229,31 +229,6 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
         />
       </div>
 
-      {/* Quick actions */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <QuickAction
-          icon={Mail}
-          iconColor="text-orange-600 bg-orange-100 dark:bg-orange-900/30 dark:text-orange-400"
-          title="Create Inbox"
-          description="Generate a temporary email address"
-          href="/"
-        />
-        <QuickAction
-          icon={Globe}
-          iconColor="text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400"
-          title="Add Domain"
-          description="Configure a new email domain"
-          href="/domains"
-        />
-        <QuickAction
-          icon={UserPlus}
-          iconColor="text-violet-600 bg-violet-100 dark:bg-violet-900/30 dark:text-violet-400"
-          title="Invite Member"
-          description="Add team members to your org"
-          href="/settings"
-        />
-      </div>
-
       {/* Charts + sidebar */}
       <div className="grid gap-4 lg:grid-cols-3">
         {/* Left column: charts */}
@@ -432,33 +407,6 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
         </div>
       </div>
     </div>
-  );
-}
-
-/* ── Quick Action Card ── */
-
-function QuickAction({ icon: Icon, iconColor, title, description, href }: {
-  icon: typeof Mail;
-  iconColor: string;
-  title: string;
-  description: string;
-  href: string;
-}) {
-  return (
-    <Link href={href}>
-      <Card className="group hover:bg-muted/50 transition-colors">
-        <CardContent className="pt-5 pb-4 flex items-center gap-4">
-          <div className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${iconColor}`}>
-            <Icon className="h-5 w-5" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium">{title}</p>
-            <p className="text-xs text-muted-foreground">{description}</p>
-          </div>
-          <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-        </CardContent>
-      </Card>
-    </Link>
   );
 }
 
