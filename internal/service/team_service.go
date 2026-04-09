@@ -66,6 +66,14 @@ func (s *TeamService) CreateTeam(ctx context.Context, orgID uuid.UUID, input dom
 	slug := teamSlug(input.Name)
 	team := &domain.Team{ID: uuid.New(), OrgID: orgID, Name: input.Name, Slug: slug}
 
+	// Check if team name already exists in this org
+	existing, _, _ := s.teamRepo.ListByOrg(ctx, orgID, 1, 200)
+	for _, t := range existing {
+		if strings.EqualFold(t.Name, input.Name) {
+			return nil, fmt.Errorf("a team named \"%s\" already exists", input.Name)
+		}
+	}
+
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return nil, err
@@ -75,14 +83,27 @@ func (s *TeamService) CreateTeam(ctx context.Context, orgID uuid.UUID, input dom
 	teamRepoTx := s.teamRepo.WithTx(tx)
 	if err := teamRepoTx.Create(ctx, team); err != nil {
 		if errors.Is(err, postgres.ErrConflict) {
+			// Slug conflict — rollback and retry with random suffix in new tx
+			tx.Rollback(ctx)
 			b := make([]byte, 3)
 			if _, err := rand.Read(b); err != nil {
 				return nil, fmt.Errorf("generate slug: %w", err)
 			}
 			team.Slug = slug + "-" + hex.EncodeToString(b)
-			if err := teamRepoTx.Create(ctx, team); err != nil {
+			tx2, err := s.pool.Begin(ctx)
+			if err != nil {
 				return nil, err
 			}
+			defer tx2.Rollback(ctx)
+			teamRepoTx2 := s.teamRepo.WithTx(tx2)
+			if err := teamRepoTx2.Create(ctx, team); err != nil {
+				return nil, fmt.Errorf("team slug conflict: %w", err)
+			}
+			membership := &domain.TeamMembership{ID: uuid.New(), UserID: creatorID, TeamID: team.ID, Role: rbac.TeamLead}
+			if err := teamRepoTx2.CreateMembership(ctx, membership); err != nil {
+				return nil, err
+			}
+			return team, tx2.Commit(ctx)
 		} else {
 			return nil, err
 		}
