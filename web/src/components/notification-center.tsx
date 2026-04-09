@@ -86,19 +86,6 @@ export function NotificationCenter() {
           // Refresh from server (includes the persisted notification)
           qc.invalidateQueries({ queryKey: ["notifications"] });
           if (type === "email.received") {
-            // Optimistically update all inbox list pages
-            qc.setQueriesData<{ data?: { full_address?: string; email_count?: number; unread_count?: number }[] }>(
-              { queryKey: ["home-inboxes"] },
-              (old) => {
-                if (!old?.data) return old;
-                const addr = data.data?.to_address || data.data?.full_address || "";
-                return { ...old, data: old.data.map((inbox) =>
-                  addr && inbox.full_address === addr
-                    ? { ...inbox, email_count: (inbox.email_count ?? 0) + 1, unread_count: (inbox.unread_count ?? 0) + 1 }
-                    : inbox
-                )};
-              }
-            );
             qc.invalidateQueries({ queryKey: ["home-inboxes"] });
             qc.invalidateQueries({ queryKey: ["emails"] });
             qc.invalidateQueries({ queryKey: ["inbox"] });
@@ -127,7 +114,7 @@ export function NotificationCenter() {
       qc.setQueryData<Notification[]>(["notifications"], (prev) =>
         prev?.map((n) => ({ ...n, is_read: true })) ?? []
       );
-    });
+    }).catch(() => toast.error("Failed"));
   }, [qc]);
 
   const markRead = useCallback((id: string) => {
@@ -135,7 +122,7 @@ export function NotificationCenter() {
       qc.setQueryData<Notification[]>(["notifications"], (prev) =>
         prev?.map((n) => (n.id === id ? { ...n, is_read: true } : n)) ?? []
       );
-    });
+    }).catch(() => toast.error("Failed"));
   }, [qc]);
 
   const dismiss = useCallback((id: string) => {
@@ -143,13 +130,13 @@ export function NotificationCenter() {
       qc.setQueryData<Notification[]>(["notifications"], (prev) =>
         prev?.filter((n) => n.id !== id) ?? []
       );
-    });
+    }).catch(() => toast.error("Failed"));
   }, [qc]);
 
   const clearAll = useCallback(() => {
     api.del("/notifications").then(() => {
       qc.setQueryData<Notification[]>(["notifications"], []);
-    });
+    }).catch(() => toast.error("Failed"));
   }, [qc]);
 
   return (

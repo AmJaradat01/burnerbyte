@@ -666,48 +666,30 @@ function UnassignDomainDialog({ orgId, teamId, assignment, onConfirm }: {
 }) {
   const [open, setOpen] = useState(false);
   const [confirmText, setConfirmText] = useState("");
-  const [activeInboxes, setActiveInboxes] = useState(-1);
-  const [inboxList, setInboxList] = useState<{ address: string; full_address: string; created_by_email: string; email_count: number; expires_at: string }[]>([]);
-  const [loading, setLoading] = useState(false);
 
   const domainName = assignment.domain_name || assignment.domain_id;
 
-  const handleOpen = async () => {
-    setOpen(true);
-    setLoading(true);
-    try {
-      const token = localStorage.getItem("access_token");
-      const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
-      const res = await fetch(`${base}/orgs/${orgId}/teams/${teamId}/domains/${assignment.domain_id}`, {
-        method: "DELETE",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (res.status === 409) {
-        const body = await res.json();
-        setActiveInboxes(body.active_inboxes ?? 0);
-        setInboxList(body.inboxes ?? []);
-      } else if (res.ok) {
-        setActiveInboxes(0);
-        setInboxList([]);
-      }
-    } catch {} finally {
-      setLoading(false);
-    }
-  };
+  const { data: impact, isLoading: loading } = useQuery({
+    queryKey: ["domain-impact", assignment.domain_id],
+    queryFn: () => api.get<{ active_inboxes: number; total_emails: number; inboxes: { address: string; full_address: string; created_by_email: string; email_count: number; expires_at: string }[] }>(`/orgs/${orgId}/domains/${assignment.domain_id}/impact`),
+    enabled: open,
+  });
+
+  const activeInboxes = impact?.active_inboxes ?? -1;
+  const inboxList = impact?.inboxes ?? [];
 
   const handleConfirm = () => {
     onConfirm();
     setOpen(false);
     setConfirmText("");
-    setActiveInboxes(-1);
   };
 
   return (
     <>
-      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={handleOpen}>
+      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => setOpen(true)}>
         <Trash2 className="h-3.5 w-3.5" />
       </Button>
-      <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setConfirmText(""); setActiveInboxes(-1); } }}>
+      <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setConfirmText(""); }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
