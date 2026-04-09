@@ -95,7 +95,7 @@ export default function TeamsPage() {
             </p>
           )}
         </div>
-        <CreateTeamDialog orgId={currentOrg.id} />
+        <CreateTeamDialog orgId={currentOrg.id} existingTeams={(teamsData?.data ?? []).map((t) => t.name)} />
       </div>
 
       {teamsData?.data && teamsData.data.length > 0 && (
@@ -192,7 +192,7 @@ function MiniStat({ icon: Icon, label, value, accent }: { icon: typeof Users; la
   );
 }
 
-function CreateTeamDialog({ orgId }: { orgId: string }) {
+function CreateTeamDialog({ orgId, existingTeams }: { orgId: string; existingTeams: string[] }) {
   const [name, setName] = useState("");
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -201,6 +201,7 @@ function CreateTeamDialog({ orgId }: { orgId: string }) {
 
   const slug = name.trim().toLowerCase().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-");
   const nameValid = name.trim().length >= 2;
+  const isDuplicate = existingTeams.some((t) => t.toLowerCase() === name.trim().toLowerCase());
 
   const create = async () => {
     if (!nameValid) return;
@@ -243,11 +244,14 @@ function CreateTeamDialog({ orgId }: { orgId: string }) {
             {name.trim() && !nameValid && (
               <p className="text-xs text-destructive">Name must be at least 2 characters</p>
             )}
-            {slug && nameValid && (
+            {isDuplicate && (
+              <p className="text-xs text-destructive">A team with this name already exists</p>
+            )}
+            {slug && nameValid && !isDuplicate && (
               <p className="text-xs text-muted-foreground">Slug: <span className="font-mono">{slug}</span></p>
             )}
           </div>
-          <Button onClick={create} className="w-full" disabled={!nameValid || creating}>
+          <Button onClick={create} className="w-full" disabled={!nameValid || isDuplicate || creating}>
             {creating ? "Creating…" : "Create Team"}
           </Button>
         </div>
