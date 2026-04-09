@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { copyToClipboard } from "@/lib/clipboard";
+import { timeAgo } from "@/lib/time";
 import { useOrgStore } from "@/stores/org-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -308,14 +309,6 @@ function DomainCard({ domain: d, onVerify, onDelete, verifying }: {
 }
 
 /* ── DNS chip with copy ── */
-
-function timeAgo(date: string) {
-  const s = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
-  if (s < 60) return "just now";
-  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
-  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
-  return `${Math.floor(s / 86400)}d ago`;
-}
 
 function DnsChipWithCopy({ verified, label, value }: { verified: boolean; label: string; value?: string }) {
   const [justCopied, setJustCopied] = useState(false);
