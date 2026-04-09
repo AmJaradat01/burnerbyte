@@ -92,6 +92,7 @@ func main() {
 	apikeyRepo := postgres.NewAPIKeyRepo(pool)
 	auditRepo := postgres.NewAuditRepo(pool)
 	analyticsRepo := postgres.NewAnalyticsRepo(pool)
+	counterRepo := postgres.NewCounterRepo(pool)
 	sysConfigRepo := postgres.NewSystemConfigRepo(pool)
 	if cfg.Encryption.Key != "" {
 		enc, err := appcrypto.NewEncryptor(cfg.Encryption.Key)
@@ -122,7 +123,7 @@ func main() {
 	domainSvc := service.NewDomainService(domainRepo, orgRepo, inboxRepo, redisInboxRepo, cfg)
 	teamSvc := service.NewTeamService(pool, teamRepo, orgRepo, userRepo, cfg)
 	assignmentSvc := service.NewDomainAssignmentService(assignmentRepo, domainRepo, orgRepo, cfg.Defaults)
-	inboxSvc := service.NewInboxService(inboxRepo, redisInboxRepo, assignmentRepo, domainRepo, orgRepo, teamRepo, cfg)
+	inboxSvc := service.NewInboxService(inboxRepo, redisInboxRepo, assignmentRepo, domainRepo, orgRepo, teamRepo, counterRepo, cfg)
 	// Pass explicit nil interface when attachments are disabled to avoid
 	// Go's nil-concrete-pointer-in-interface trap causing a panic on delete.
 	var emailAttachmentCleaner service.AttachmentCleaner
@@ -145,7 +146,7 @@ func main() {
 	hub := realtime.NewHub()
 	notifHub := realtime.NewNotifHub()
 	notifRepo := postgres.NewNotificationRepo(pool)
-	realtime.Subscribe(ctx, rdb, hub, notifHub, notifRepo)
+	realtime.Subscribe(ctx, rdb, hub, notifHub, notifRepo, counterRepo)
 
 	// Handlers
 	ssoMgr := auth.NewSSOManager(cfg)
