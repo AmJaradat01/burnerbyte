@@ -196,6 +196,8 @@ export interface AnalyticsStats {
   total_domains: number;
   total_teams?: number;
   total_members?: number;
+  storage_used_bytes?: number;
+  top_sender_domains?: { domain: string; count: number }[];
 }
 
 export interface EmailsPerDay {
