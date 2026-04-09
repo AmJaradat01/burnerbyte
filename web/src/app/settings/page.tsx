@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ErrorState } from "@/components/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Activity, AlertTriangle, Building2, CheckCircle2, Database, Globe, HardDrive, Inbox, Info, Mail, Monitor, Settings, Shield, Trash2, Users, XCircle } from "lucide-react";
+import { Activity, AlertTriangle, CheckCircle2, Database, Globe, HardDrive, Inbox, Info, Mail, Monitor, Settings, Shield, Trash2, Users, XCircle } from "lucide-react";
 import Link from "next/link";
 import { UnifiedUsersTab } from "@/components/settings/unified-users-tab";
 import { RolesTab } from "@/components/settings/roles-tab";
@@ -433,7 +433,6 @@ function OverviewTab() {
 
   const stats: { icon: typeof Mail; label: string; value: number; desc?: string; accent: string; href?: string }[] = [
     { icon: Users, label: "Users", value: data.total_users, accent: "text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400" },
-    { icon: Building2, label: "Organizations", value: data.total_orgs, accent: "text-violet-600 bg-violet-100 dark:bg-violet-900/30 dark:text-violet-400" },
     { icon: Users, label: "Teams", value: data.total_teams ?? 0, accent: "text-indigo-600 bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-400", href: "/teams" },
     { icon: Globe, label: "Domains", value: data.total_domains, accent: "text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400", href: "/domains" },
     { icon: Inbox, label: "Active Inboxes", value: data.active_inboxes ?? 0, desc: `${(data.total_inboxes ?? 0).toLocaleString()} total`, accent: "text-amber-600 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400", href: "/" },
