@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"log/slog"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -30,7 +31,7 @@ type UserContext struct {
 // APIKeyRepo is the minimal interface for API key validation.
 type APIKeyRepo interface {
 	GetByHash(ctx context.Context, hash string) (*domain.APIKey, error)
-	UpdateLastUsed(ctx context.Context, id uuid.UUID) error
+	UpdateLastUsedWithTracking(ctx context.Context, id uuid.UUID, ip string) error
 }
 
 // UserRepo is the minimal interface the middleware needs to check password_changed_at.
@@ -74,8 +75,28 @@ func Middleware(tm *TokenManager, userRepo UserRepo, apikeyRepo APIKeyRepo) func
 					writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "API key expired"})
 					return
 				}
-				if err := apikeyRepo.UpdateLastUsed(r.Context(), key.ID); err != nil {
-					slog.Error("failed to update API key last_used", "error", err, "key_id", key.ID)
+				if key.RevokedAt != nil {
+					writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "API key revoked"})
+					return
+				}
+				if !key.IsActive {
+					writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "API key disabled"})
+					return
+				}
+
+				// IP allowlist enforcement
+				if len(key.AllowedIPs) > 0 {
+					remoteIP := extractIP(r.RemoteAddr)
+					if !ipAllowed(remoteIP, key.AllowedIPs) {
+						writeJSON(w, http.StatusForbidden, map[string]string{"error": "IP not allowed for this API key"})
+						return
+					}
+				}
+
+				// Usage tracking
+				remoteIP := extractIP(r.RemoteAddr)
+				if err := apikeyRepo.UpdateLastUsedWithTracking(r.Context(), key.ID, remoteIP); err != nil {
+					slog.Error("failed to update API key tracking", "error", err, "key_id", key.ID)
 				}
 
 				// Resolve the key creator as the user context
@@ -133,6 +154,40 @@ func Middleware(tm *TokenManager, userRepo UserRepo, apikeyRepo APIKeyRepo) func
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
+}
+
+// extractIP extracts the IP address from a RemoteAddr string, stripping the port.
+func extractIP(remoteAddr string) string {
+	host, _, err := net.SplitHostPort(remoteAddr)
+	if err != nil {
+		return remoteAddr // already just an IP
+	}
+	return host
+}
+
+// ipAllowed checks if the given IP matches any entry in the allowlist.
+// Entries can be exact IPs or CIDR ranges.
+func ipAllowed(ip string, allowedIPs []string) bool {
+	parsedIP := net.ParseIP(ip)
+	if parsedIP == nil {
+		return false
+	}
+	for _, entry := range allowedIPs {
+		// Try exact IP match
+		if entryIP := net.ParseIP(entry); entryIP != nil {
+			if entryIP.Equal(parsedIP) {
+				return true
+			}
+			continue
+		}
+		// Try CIDR match
+		if _, cidr, err := net.ParseCIDR(entry); err == nil {
+			if cidr.Contains(parsedIP) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // OptionalAuth extracts user context if a token is present but doesn't require it.
@@ -216,5 +271,3 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 		w.Write(b)
 	}
 }
-
-// Placeholder for rate limiting state check
