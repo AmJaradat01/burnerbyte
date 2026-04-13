@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -24,16 +25,15 @@ func NewTeamHandler(svc *service.TeamService) *TeamHandler {
 }
 
 func (h *TeamHandler) Routes(r chi.Router) {
-
-		r.Post("/orgs/{orgId}/teams", h.CreateTeam)
-		r.Get("/orgs/{orgId}/teams", h.ListTeams)
-		r.Get("/orgs/{orgId}/teams/{teamId}", h.GetTeam)
-		r.Patch("/orgs/{orgId}/teams/{teamId}", h.UpdateTeam)
-		r.Delete("/orgs/{orgId}/teams/{teamId}", h.DeleteTeam)
-		r.Post("/orgs/{orgId}/teams/{teamId}/members", h.AddMember)
-		r.Get("/orgs/{orgId}/teams/{teamId}/members", h.ListMembers)
-		r.Patch("/orgs/{orgId}/teams/{teamId}/members/{userId}", h.ChangeRole)
-		r.Delete("/orgs/{orgId}/teams/{teamId}/members/{userId}", h.RemoveMember)
+	r.Post("/orgs/{orgId}/teams", h.CreateTeam)
+	r.Get("/orgs/{orgId}/teams", h.ListTeams)
+	r.Get("/orgs/{orgId}/teams/{teamId}", h.GetTeam)
+	r.Patch("/orgs/{orgId}/teams/{teamId}", h.UpdateTeam)
+	r.Delete("/orgs/{orgId}/teams/{teamId}", h.DeleteTeam)
+	r.Post("/orgs/{orgId}/teams/{teamId}/members", h.AddMember)
+	r.Get("/orgs/{orgId}/teams/{teamId}/members", h.ListMembers)
+	r.Patch("/orgs/{orgId}/teams/{teamId}/members/{userId}", h.ChangeRole)
+	r.Delete("/orgs/{orgId}/teams/{teamId}/members/{userId}", h.RemoveMember)
 }
 
 func (h *TeamHandler) CreateTeam(w http.ResponseWriter, r *http.Request) {
@@ -51,13 +51,13 @@ func (h *TeamHandler) CreateTeam(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	team, err := h.svc.CreateTeam(r.Context(), orgID, input, uc.UserID)
+	result, err := h.svc.CreateTeam(r.Context(), orgID, input, uc.UserID)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	auditRecordEnhanced(r, orgID, "team.created", "team", team.ID, team.Name, map[string]any{"name": team.Name})
-	writeJSON(w, http.StatusCreated, team)
+	auditRecordEnhanced(r, orgID, "team.created", "team", result.Team.ID, result.Team.Name, map[string]any{"name": result.Team.Name})
+	writeJSON(w, http.StatusCreated, result)
 }
 
 func (h *TeamHandler) ListTeams(w http.ResponseWriter, r *http.Request) {
@@ -70,7 +70,18 @@ func (h *TeamHandler) ListTeams(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	page, perPage := parsePagination(r)
-	teams, total, err := h.svc.ListByOrg(r.Context(), orgID, page, perPage)
+	opts := postgres.ListTeamsOpts{
+		Page:    page,
+		PerPage: perPage,
+		Search:  r.URL.Query().Get("search"),
+	}
+	if isArchivedStr := r.URL.Query().Get("is_archived"); isArchivedStr != "" {
+		val, err := strconv.ParseBool(isArchivedStr)
+		if err == nil {
+			opts.IsArchived = &val
+		}
+	}
+	teams, total, err := h.svc.ListByOrg(r.Context(), orgID, opts)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to list teams")
 		return
@@ -85,10 +96,10 @@ func (h *TeamHandler) GetTeam(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid team ID")
 		return
 	}
-	if checkTeamRole(w, r, orgID, id, rbac.OrgMember, rbac.TeamMember) {
+	if checkTeamRole(w, r, orgID, id, rbac.OrgMember, rbac.TeamViewer) {
 		return
 	}
-	team, err := h.svc.GetTeam(r.Context(), orgID, id)
+	detail, err := h.svc.GetTeamDetail(r.Context(), orgID, id)
 	if err != nil {
 		if errors.Is(err, postgres.ErrNotFound) {
 			writeError(w, http.StatusNotFound, "team not found")
@@ -97,7 +108,7 @@ func (h *TeamHandler) GetTeam(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to get team")
 		return
 	}
-	writeJSON(w, http.StatusOK, team)
+	writeJSON(w, http.StatusOK, detail)
 }
 
 func (h *TeamHandler) UpdateTeam(w http.ResponseWriter, r *http.Request) {
@@ -110,7 +121,6 @@ func (h *TeamHandler) UpdateTeam(w http.ResponseWriter, r *http.Request) {
 	if checkTeamRole(w, r, orgID, id, rbac.OrgAdmin, rbac.TeamLead) {
 		return
 	}
-	// Fetch team before update for diff
 	beforeTeam, _ := h.svc.GetTeam(r.Context(), orgID, id)
 
 	var input domain.UpdateTeamInput
@@ -142,14 +152,11 @@ func (h *TeamHandler) DeleteTeam(w http.ResponseWriter, r *http.Request) {
 	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
 		return
 	}
-
-	// Fetch team before delete for audit
 	beforeTeam, _ := h.svc.GetTeam(r.Context(), orgID, id)
 	teamName := ""
 	if beforeTeam != nil {
 		teamName = beforeTeam.Name
 	}
-
 	if err := h.svc.DeleteTeam(r.Context(), orgID, id); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to delete team")
 		return
@@ -181,8 +188,6 @@ func (h *TeamHandler) AddMember(w http.ResponseWriter, r *http.Request) {
 		writeError(w, status, err.Error())
 		return
 	}
-
-	// Audit team.member_added event
 	teamName := ""
 	if team, err := h.svc.GetTeam(r.Context(), orgID, teamID); err == nil {
 		teamName = team.Name
@@ -203,11 +208,17 @@ func (h *TeamHandler) ListMembers(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid team ID")
 		return
 	}
-	if checkTeamRole(w, r, orgID, teamID, rbac.OrgMember, rbac.TeamMember) {
+	if checkTeamRole(w, r, orgID, teamID, rbac.OrgMember, rbac.TeamViewer) {
 		return
 	}
 	page, perPage := parsePagination(r)
-	members, total, err := h.svc.ListMembers(r.Context(), teamID, page, perPage)
+	opts := postgres.ListMembersOpts{
+		Page:    page,
+		PerPage: perPage,
+		Search:  r.URL.Query().Get("search"),
+		Role:    r.URL.Query().Get("role"),
+	}
+	members, total, err := h.svc.ListMembers(r.Context(), teamID, opts)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to list members")
 		return
@@ -235,18 +246,14 @@ func (h *TeamHandler) ChangeRole(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	// Fetch current membership to get old role
 	oldRole := ""
 	if membership, err := h.svc.GetMembership(r.Context(), userID, teamID); err == nil {
 		oldRole = membership.Role
 	}
-
 	if err := h.svc.ChangeRole(r.Context(), teamID, userID, input.Role); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-
-	// Audit team.member_role_changed event
 	teamName := ""
 	if team, err := h.svc.GetTeam(r.Context(), orgID, teamID); err == nil {
 		teamName = team.Name
@@ -254,8 +261,8 @@ func (h *TeamHandler) ChangeRole(w http.ResponseWriter, r *http.Request) {
 	auditRecordEnhanced(r, orgID, "team.member_role_changed", "team", teamID, teamName, map[string]any{
 		"target_user_id": userID.String(),
 		"team_name":      teamName,
-		"old_role":        oldRole,
-		"new_role":        input.Role,
+		"old_role":       oldRole,
+		"new_role":       input.Role,
 	})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "role updated"})
 }
@@ -279,8 +286,6 @@ func (h *TeamHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-
-	// Audit team.member_removed event
 	teamName := ""
 	if team, err := h.svc.GetTeam(r.Context(), orgID, teamID); err == nil {
 		teamName = team.Name
@@ -290,4 +295,227 @@ func (h *TeamHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 		"team_name":      teamName,
 	})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "member removed"})
+}
+
+// ── New endpoints ──
+
+func (h *TeamHandler) ArchiveTeam(w http.ResponseWriter, r *http.Request) {
+	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid org ID")
+		return
+	}
+	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid team ID")
+		return
+	}
+	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+		return
+	}
+	team, err := h.svc.ArchiveTeam(r.Context(), orgID, teamID)
+	if err != nil {
+		if errors.Is(err, postgres.ErrNotFound) {
+			writeError(w, http.StatusNotFound, "team not found")
+			return
+		}
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	auditRecordEnhanced(r, orgID, "team.archived", "team", teamID, team.Name, map[string]any{"team_name": team.Name})
+	writeJSON(w, http.StatusOK, team)
+}
+
+func (h *TeamHandler) RestoreTeam(w http.ResponseWriter, r *http.Request) {
+	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid org ID")
+		return
+	}
+	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid team ID")
+		return
+	}
+	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+		return
+	}
+	team, err := h.svc.RestoreTeam(r.Context(), orgID, teamID)
+	if err != nil {
+		if errors.Is(err, postgres.ErrNotFound) {
+			writeError(w, http.StatusNotFound, "team not found")
+			return
+		}
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	auditRecordEnhanced(r, orgID, "team.restored", "team", teamID, team.Name, map[string]any{"team_name": team.Name})
+	writeJSON(w, http.StatusOK, team)
+}
+
+func (h *TeamHandler) GetImpact(w http.ResponseWriter, r *http.Request) {
+	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid org ID")
+		return
+	}
+	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid team ID")
+		return
+	}
+	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+		return
+	}
+	impact, err := h.svc.GetImpact(r.Context(), orgID, teamID)
+	if err != nil {
+		if errors.Is(err, postgres.ErrNotFound) {
+			writeError(w, http.StatusNotFound, "team not found")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "failed to get impact")
+		return
+	}
+	writeJSON(w, http.StatusOK, impact)
+}
+
+func (h *TeamHandler) LeaveTeam(w http.ResponseWriter, r *http.Request) {
+	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid org ID")
+		return
+	}
+	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid team ID")
+		return
+	}
+	if checkTeamRole(w, r, orgID, teamID, rbac.OrgMember, rbac.TeamViewer) {
+		return
+	}
+	uc := auth.GetUser(r.Context())
+	if err := h.svc.LeaveTeam(r.Context(), orgID, teamID, uc.UserID); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	teamName := ""
+	if team, err := h.svc.GetTeam(r.Context(), orgID, teamID); err == nil {
+		teamName = team.Name
+	}
+	auditRecordEnhanced(r, orgID, "team.member_left", "team", teamID, teamName, map[string]any{
+		"user_id":   uc.UserID.String(),
+		"team_name": teamName,
+	})
+	writeJSON(w, http.StatusOK, map[string]string{"message": "you have left the team"})
+}
+
+func (h *TeamHandler) BulkAddMembers(w http.ResponseWriter, r *http.Request) {
+	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid org ID")
+		return
+	}
+	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid team ID")
+		return
+	}
+	if checkTeamRole(w, r, orgID, teamID, rbac.OrgAdmin, rbac.TeamLead) {
+		return
+	}
+	var input domain.BulkAddMembersInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	result, err := h.svc.BulkAddMembers(r.Context(), teamID, input.Members)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	teamName := ""
+	if team, err := h.svc.GetTeam(r.Context(), orgID, teamID); err == nil {
+		teamName = team.Name
+	}
+	auditRecordEnhanced(r, orgID, "team.members_bulk_added", "team", teamID, teamName, map[string]any{
+		"team_name":   teamName,
+		"added_count": result.AddedCount,
+	})
+	writeJSON(w, http.StatusOK, result)
+}
+
+func (h *TeamHandler) BulkRemoveMembers(w http.ResponseWriter, r *http.Request) {
+	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid org ID")
+		return
+	}
+	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid team ID")
+		return
+	}
+	if checkTeamRole(w, r, orgID, teamID, rbac.OrgAdmin, rbac.TeamLead) {
+		return
+	}
+	var input domain.BulkRemoveMembersInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	result, err := h.svc.BulkRemoveMembers(r.Context(), teamID, input.UserIDs)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	teamName := ""
+	if team, err := h.svc.GetTeam(r.Context(), orgID, teamID); err == nil {
+		teamName = team.Name
+	}
+	auditRecordEnhanced(r, orgID, "team.members_bulk_removed", "team", teamID, teamName, map[string]any{
+		"team_name":     teamName,
+		"removed_count": result.RemovedCount,
+	})
+	writeJSON(w, http.StatusOK, result)
+}
+
+func (h *TeamHandler) TransferTeam(w http.ResponseWriter, r *http.Request) {
+	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid org ID")
+		return
+	}
+	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid team ID")
+		return
+	}
+	// System admin check is done via middleware in route registration
+	var input domain.TransferTeamInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	result, err := h.svc.TransferTeam(r.Context(), orgID, teamID, input.TargetOrgID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	// Audit in source org
+	teamName := ""
+	if result.Team != nil {
+		teamName = result.Team.Name
+	}
+	auditRecordEnhanced(r, orgID, "team.transferred", "team", teamID, teamName, map[string]any{
+		"team_name":     teamName,
+		"source_org_id": orgID.String(),
+		"target_org_id": input.TargetOrgID.String(),
+	})
+	// Audit in target org
+	auditRecordEnhanced(r, input.TargetOrgID, "team.transferred", "team", teamID, teamName, map[string]any{
+		"team_name":     teamName,
+		"source_org_id": orgID.String(),
+		"target_org_id": input.TargetOrgID.String(),
+	})
+	writeJSON(w, http.StatusOK, result)
 }
