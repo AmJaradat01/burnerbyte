@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 
 	"gitlab.com/burnerbyte/burnerbyte/internal/config"
+	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
 	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
 )
 
@@ -81,6 +82,17 @@ func (r *SettingsResolver) ResolveDefaultInboxTTL(ctx context.Context, assignmen
 		}
 	}
 	return r.defaults.DefaultInboxTTL
+}
+
+// ResolveDefaultInboxTTLWithTeam returns the default TTL for new inboxes with team-level override.
+// Cascade: team → org → system default.
+func (r *SettingsResolver) ResolveDefaultInboxTTLWithTeam(ctx context.Context, assignmentID uuid.UUID, teamSettings *domain.TeamSettings) time.Duration {
+	if teamSettings != nil && teamSettings.DefaultInboxTTL != nil {
+		if d, err := time.ParseDuration(*teamSettings.DefaultInboxTTL); err == nil {
+			return d
+		}
+	}
+	return r.ResolveDefaultInboxTTL(ctx, assignmentID)
 }
 
 // ResolveMaxInboxTTL returns the maximum allowed TTL.
