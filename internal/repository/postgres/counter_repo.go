@@ -143,3 +143,14 @@ func (r *CounterRepo) IncrementTeamInbox(ctx context.Context, teamID uuid.UUID) 
 		   updated_at = NOW()`, teamID)
 	return err
 }
+
+func (r *CounterRepo) GetTeamCounters(ctx context.Context, teamID uuid.UUID) (int64, error) {
+	var totalEmails int64
+	err := r.db.QueryRow(ctx,
+		`SELECT COALESCE(total_emails_received, 0) FROM team_analytics_counters WHERE team_id = $1`, teamID).
+		Scan(&totalEmails)
+	if err != nil {
+		return 0, nil // return zero if no row
+	}
+	return totalEmails, nil
+}
