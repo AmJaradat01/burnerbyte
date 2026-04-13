@@ -85,6 +85,10 @@ func (h *EmailHandler) GetEmail(w http.ResponseWriter, r *http.Request) {
 
 func (h *EmailHandler) MarkAllRead(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
+	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "email:write") {
+		writeError(w, http.StatusForbidden, "insufficient scope")
+		return
+	}
 	inboxID, err := uuid.Parse(chi.URLParam(r, "inboxId"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid inbox ID")
@@ -104,6 +108,10 @@ func (h *EmailHandler) MarkAllRead(w http.ResponseWriter, r *http.Request) {
 
 func (h *EmailHandler) MarkReadUnread(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
+	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "email:write") {
+		writeError(w, http.StatusForbidden, "insufficient scope")
+		return
+	}
 	id, err := uuid.Parse(chi.URLParam(r, "emailId"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid email ID")
