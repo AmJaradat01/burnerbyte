@@ -100,9 +100,25 @@ func (s *InboxService) CreateInbox(ctx context.Context, teamID, domainID, userID
 
 	fullAddress := address + "@" + dom.DomainName
 
-	// Resolve TTL via settings cascade
+	// Resolve TTL via settings cascade (including team-level override)
 	resolver := NewSettingsResolver(s.assignmentRepo, s.domainRepo, s.orgRepo, s.cfg.Defaults)
-	defaultTTL := resolver.ResolveDefaultInboxTTL(ctx, assignment.ID)
+
+	// Look up team settings for team-level default_inbox_ttl
+	team, _ := s.teamRepo.GetByID(ctx, teamID)
+	var teamSettings *domain.TeamSettings
+	if team != nil {
+		teamSettings = &team.Settings
+	}
+
+	// Check team-level max_inboxes_per_domain
+	if teamSettings != nil && teamSettings.MaxInboxesPerDomain != nil {
+		teamMax := *teamSettings.MaxInboxesPerDomain
+		if count >= teamMax {
+			return nil, fmt.Errorf("team inbox limit reached for this domain (%d)", teamMax)
+		}
+	}
+
+	defaultTTL := resolver.ResolveDefaultInboxTTLWithTeam(ctx, assignment.ID, teamSettings)
 	maxTTL := resolver.ResolveMaxInboxTTL(ctx, assignment.ID)
 	ttl := defaultTTL
 	if input.TTL != nil {

@@ -121,7 +121,7 @@ func main() {
 	orgSvc := service.NewOrgService(pool, orgRepo, ml, cfg.Server.FrontendURL, cfg.Defaults.InviteExpiryTTL)
 	redisInboxRepo := redisrepo.NewInboxRepo(rdb)
 	domainSvc := service.NewDomainService(domainRepo, orgRepo, inboxRepo, redisInboxRepo, cfg)
-	teamSvc := service.NewTeamService(pool, teamRepo, orgRepo, userRepo, cfg)
+	teamSvc := service.NewTeamService(pool, teamRepo, orgRepo, userRepo, counterRepo, cfg)
 	assignmentSvc := service.NewDomainAssignmentService(assignmentRepo, domainRepo, orgRepo, cfg.Defaults)
 	inboxSvc := service.NewInboxService(inboxRepo, redisInboxRepo, assignmentRepo, domainRepo, orgRepo, teamRepo, counterRepo, cfg)
 	// Pass explicit nil interface when attachments are disabled to avoid
@@ -271,10 +271,17 @@ func main() {
 			r.Get("/orgs/{orgId}/teams/{teamId}", teamHandler.GetTeam)
 			r.Patch("/orgs/{orgId}/teams/{teamId}", teamHandler.UpdateTeam)
 			r.Delete("/orgs/{orgId}/teams/{teamId}", teamHandler.DeleteTeam)
+			r.Post("/orgs/{orgId}/teams/{teamId}/archive", teamHandler.ArchiveTeam)
+			r.Post("/orgs/{orgId}/teams/{teamId}/restore", teamHandler.RestoreTeam)
+			r.Get("/orgs/{orgId}/teams/{teamId}/impact", teamHandler.GetImpact)
+			r.Post("/orgs/{orgId}/teams/{teamId}/leave", teamHandler.LeaveTeam)
 			r.Post("/orgs/{orgId}/teams/{teamId}/members", teamHandler.AddMember)
 			r.Get("/orgs/{orgId}/teams/{teamId}/members", teamHandler.ListMembers)
+			r.Post("/orgs/{orgId}/teams/{teamId}/members/bulk-add", teamHandler.BulkAddMembers)
+			r.Post("/orgs/{orgId}/teams/{teamId}/members/bulk-remove", teamHandler.BulkRemoveMembers)
 			r.Patch("/orgs/{orgId}/teams/{teamId}/members/{userId}", teamHandler.ChangeRole)
 			r.Delete("/orgs/{orgId}/teams/{teamId}/members/{userId}", teamHandler.RemoveMember)
+			r.With(auth.RequireSystemAdmin).Post("/orgs/{orgId}/teams/{teamId}/transfer", teamHandler.TransferTeam)
 
 			// Domain assignments
 			r.Get("/my/domains", assignmentHandler.ListMyDomains)
