@@ -18,10 +18,11 @@ const (
 
 	TeamLead   = "lead"
 	TeamMember = "member"
+	TeamViewer = "viewer"
 )
 
 var orgRank = map[string]int{OrgOwner: 3, OrgAdmin: 2, OrgMember: 1}
-var teamRank = map[string]int{TeamLead: 2, TeamMember: 1}
+var teamRank = map[string]int{TeamLead: 2, TeamMember: 1, TeamViewer: 0}
 
 // OrgRoles returns the available org roles with descriptions, ordered by rank.
 func OrgRoles() []RoleInfo {
@@ -37,6 +38,7 @@ func TeamRoles() []RoleInfo {
 	return []RoleInfo{
 		{Value: TeamLead, Label: "Lead", Description: "Manage team settings, webhooks, API keys, and members", Rank: 2},
 		{Value: TeamMember, Label: "Member", Description: "Create inboxes, view emails, use team domains", Rank: 1},
+		{Value: TeamViewer, Label: "Viewer", Description: "Read-only access to team resources", Rank: 0},
 	}
 }
 
