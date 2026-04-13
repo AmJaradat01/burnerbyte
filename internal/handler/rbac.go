@@ -61,3 +61,10 @@ func auditRecord(r *http.Request, orgID uuid.UUID, action, resourceType string, 
 		Audit.RecordFromRequest(r, orgID, action, resourceType, resourceID, meta)
 	}
 }
+
+// auditRecordEnhanced is a convenience wrapper for enhanced audit recording in handlers.
+func auditRecordEnhanced(r *http.Request, orgID uuid.UUID, action, resourceType string, resourceID uuid.UUID, resourceName string, meta map[string]any) {
+	if Audit != nil {
+		Audit.RecordEnhanced(r, orgID, action, resourceType, resourceID, resourceName, meta)
+	}
+}
