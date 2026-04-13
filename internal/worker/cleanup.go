@@ -14,7 +14,7 @@ type AttachmentCleaner interface {
 	DeleteByEmail(ctx context.Context, emailID uuid.UUID) error
 }
 
-func CleanupJob(inboxRepo *postgres.InboxRepo, emailRepo *postgres.EmailRepo, attachmentCleaner AttachmentCleaner, sessionRepo *postgres.SessionRepo, resetRepo *postgres.PasswordResetRepo) func(ctx context.Context) error {
+func CleanupJob(inboxRepo *postgres.InboxRepo, emailRepo *postgres.EmailRepo, attachmentCleaner AttachmentCleaner, sessionRepo *postgres.SessionRepo, resetRepo *postgres.PasswordResetRepo, apikeyRepo *postgres.APIKeyRepo) func(ctx context.Context) error {
 	return func(ctx context.Context) error {
 		// Delete expired emails and collect IDs for attachment cleanup
 		emailIDs, err := emailRepo.DeleteExpiredReturningIDs(ctx)
@@ -54,6 +54,15 @@ func CleanupJob(inboxRepo *postgres.InboxRepo, emailRepo *postgres.EmailRepo, at
 		if resetRepo != nil {
 			if n, err := resetRepo.DeleteExpired(ctx); err == nil && n > 0 {
 				slog.Info("cleanup: expired password resets deleted", "count", n)
+			}
+		}
+
+		// Clean expired API keys
+		if apikeyRepo != nil {
+			if n, err := apikeyRepo.DeleteExpiredKeys(ctx); err == nil && n > 0 {
+				slog.Info("cleanup: expired API keys deleted", "count", n)
+			} else if err != nil {
+				slog.Error("cleanup: failed to delete expired API keys", "error", err)
 			}
 		}
 

@@ -18,9 +18,13 @@ type APIKeyHandler struct{ svc *service.APIKeyService }
 func NewAPIKeyHandler(svc *service.APIKeyService) *APIKeyHandler { return &APIKeyHandler{svc: svc} }
 
 func (h *APIKeyHandler) Routes(r chi.Router) {
-		r.Post("/orgs/{orgId}/teams/{teamId}/api-keys", h.Create)
-		r.Get("/orgs/{orgId}/teams/{teamId}/api-keys", h.List)
-		r.Delete("/orgs/{orgId}/teams/{teamId}/api-keys/{keyId}", h.Revoke)
+	r.Post("/orgs/{orgId}/teams/{teamId}/api-keys", h.Create)
+	r.Get("/orgs/{orgId}/teams/{teamId}/api-keys", h.List)
+	r.Get("/orgs/{orgId}/teams/{teamId}/api-keys/{keyId}", h.Get)
+	r.Patch("/orgs/{orgId}/teams/{teamId}/api-keys/{keyId}", h.Update)
+	r.Delete("/orgs/{orgId}/teams/{teamId}/api-keys/{keyId}", h.Revoke)
+	r.Post("/orgs/{orgId}/teams/{teamId}/api-keys/{keyId}/rotate", h.Rotate)
+	r.Post("/orgs/{orgId}/teams/{teamId}/api-keys/bulk-revoke", h.BulkRevoke)
 }
 
 func (h *APIKeyHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -32,10 +36,14 @@ func (h *APIKeyHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	var input domain.CreateAPIKeyInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body"); return
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
 	}
 	key, err := h.svc.Generate(r.Context(), teamID, uc.UserID, input)
-	if err != nil { writeError(w, http.StatusBadRequest, err.Error()); return }
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	auditRecordEnhanced(r, orgID, "apikey.created", "api_key", key.ID, input.Name, map[string]any{"name": input.Name})
 	writeJSON(w, http.StatusCreated, key)
 }
@@ -47,12 +55,65 @@ func (h *APIKeyHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	page, perPage := parsePagination(r)
-	keys, total, err := h.svc.List(r.Context(), teamID, page, perPage)
-	if err != nil { writeError(w, http.StatusInternalServerError, "failed"); return }
+	includeRevoked := r.URL.Query().Get("include_revoked") == "true"
+	keys, total, err := h.svc.List(r.Context(), teamID, includeRevoked, page, perPage)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed")
+		return
+	}
 	writeJSON(w, http.StatusOK, paginatedResponse(keys, total, page, perPage))
 }
 
+func (h *APIKeyHandler) Get(w http.ResponseWriter, r *http.Request) {
+	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
+	teamID, _ := uuid.Parse(chi.URLParam(r, "teamId"))
+	if checkTeamRole(w, r, orgID, teamID, rbac.OrgMember, rbac.TeamMember) {
+		return
+	}
+	keyID, err := uuid.Parse(chi.URLParam(r, "keyId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid key ID")
+		return
+	}
+	key, err := h.svc.Get(r.Context(), teamID, keyID)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "API key not found")
+		return
+	}
+	writeJSON(w, http.StatusOK, key)
+}
+
+func (h *APIKeyHandler) Update(w http.ResponseWriter, r *http.Request) {
+	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
+	teamID, _ := uuid.Parse(chi.URLParam(r, "teamId"))
+	if checkTeamRole(w, r, orgID, teamID, rbac.OrgAdmin, rbac.TeamLead) {
+		return
+	}
+	keyID, err := uuid.Parse(chi.URLParam(r, "keyId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid key ID")
+		return
+	}
+	var input domain.UpdateAPIKeyInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	key, err := h.svc.Update(r.Context(), teamID, keyID, input)
+	if err != nil {
+		if err.Error() == "API key not found" {
+			writeError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	auditRecordEnhanced(r, orgID, "apikey.updated", "api_key", keyID, key.Name, map[string]any{"key_id": keyID.String()})
+	writeJSON(w, http.StatusOK, key)
+}
+
 func (h *APIKeyHandler) Revoke(w http.ResponseWriter, r *http.Request) {
+	uc := auth.GetUser(r.Context())
 	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
 	teamID, _ := uuid.Parse(chi.URLParam(r, "teamId"))
 	if checkTeamRole(w, r, orgID, teamID, rbac.OrgAdmin, rbac.TeamLead) {
@@ -63,9 +124,66 @@ func (h *APIKeyHandler) Revoke(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid key ID")
 		return
 	}
-	if err := h.svc.Revoke(r.Context(), teamID, id); err != nil {
-		writeError(w, http.StatusInternalServerError, "failed"); return
+	if err := h.svc.Revoke(r.Context(), teamID, id, uc.UserID); err != nil {
+		if err.Error() == "API key not found" {
+			writeError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "failed")
+		return
 	}
 	auditRecordEnhanced(r, orgID, "apikey.revoked", "api_key", id, id.String(), map[string]any{"key_id": id.String()})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "key revoked"})
+}
+
+func (h *APIKeyHandler) Rotate(w http.ResponseWriter, r *http.Request) {
+	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
+	teamID, _ := uuid.Parse(chi.URLParam(r, "teamId"))
+	if checkTeamRole(w, r, orgID, teamID, rbac.OrgAdmin, rbac.TeamLead) {
+		return
+	}
+	keyID, err := uuid.Parse(chi.URLParam(r, "keyId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid key ID")
+		return
+	}
+	key, err := h.svc.Rotate(r.Context(), teamID, keyID)
+	if err != nil {
+		if err.Error() == "API key not found" {
+			writeError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	auditRecordEnhanced(r, orgID, "apikey.rotated", "api_key", keyID, key.Name, map[string]any{"key_id": keyID.String()})
+	writeJSON(w, http.StatusOK, key)
+}
+
+func (h *APIKeyHandler) BulkRevoke(w http.ResponseWriter, r *http.Request) {
+	uc := auth.GetUser(r.Context())
+	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
+	teamID, _ := uuid.Parse(chi.URLParam(r, "teamId"))
+	if checkTeamRole(w, r, orgID, teamID, rbac.OrgAdmin, rbac.TeamLead) {
+		return
+	}
+	var input domain.BulkRevokeInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if len(input.KeyIDs) == 0 {
+		writeError(w, http.StatusBadRequest, "key_ids is required")
+		return
+	}
+	result, err := h.svc.BulkRevoke(r.Context(), teamID, uc.UserID, input)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	auditRecordEnhanced(r, orgID, "apikey.bulk_revoked", "api_key", uuid.Nil, "", map[string]any{
+		"revoked": result.Revoked,
+		"skipped": result.Skipped,
+	})
+	writeJSON(w, http.StatusOK, result)
 }
