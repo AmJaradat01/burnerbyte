@@ -44,7 +44,7 @@ func (h *WebhookHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	wh, err := h.svc.Create(r.Context(), teamID, uc.UserID, input)
 	if err != nil { writeError(w, http.StatusBadRequest, err.Error()); return }
-	auditRecord(r, orgID, "webhook.created", "webhook", wh.ID, map[string]any{"url": input.URL})
+	auditRecordEnhanced(r, orgID, "webhook.created", "webhook", wh.ID, input.URL, map[string]any{"url": input.URL})
 	writeJSON(w, http.StatusCreated, wh)
 }
 
@@ -72,13 +72,23 @@ func (h *WebhookHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	id, err := uuid.Parse(chi.URLParam(r, "webhookId"))
 	if err != nil { writeError(w, http.StatusBadRequest, "invalid webhook ID"); return }
+
+	// Fetch webhook before update for diff
+	beforeWh, _ := h.svc.GetByID(r.Context(), teamID, id)
+
 	var input domain.UpdateWebhookInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body"); return
 	}
 	wh, err := h.svc.Update(r.Context(), teamID, id, input)
 	if err != nil { writeError(w, http.StatusBadRequest, err.Error()); return }
-	auditRecord(r, orgID, "webhook.updated", "webhook", id, map[string]any{"url": input.URL, "events": input.Events, "active": input.Active})
+
+	meta := map[string]any{"url": input.URL, "events": input.Events, "active": input.Active}
+	if beforeWh != nil {
+		meta["before"] = map[string]any{"url": beforeWh.URL, "events": beforeWh.Events, "active": beforeWh.Active}
+		meta["after"] = map[string]any{"url": wh.URL, "events": wh.Events, "active": wh.Active}
+	}
+	auditRecordEnhanced(r, orgID, "webhook.updated", "webhook", id, wh.URL, meta)
 	writeJSON(w, http.StatusOK, wh)
 }
 
@@ -95,7 +105,7 @@ func (h *WebhookHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	if err := h.svc.Delete(r.Context(), teamID, id); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed"); return
 	}
-	auditRecord(r, orgID, "webhook.deleted", "webhook", id, map[string]any{"webhook_id": id.String()})
+	auditRecordEnhanced(r, orgID, "webhook.deleted", "webhook", id, id.String(), map[string]any{"webhook_id": id.String()})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "webhook deleted"})
 }
 

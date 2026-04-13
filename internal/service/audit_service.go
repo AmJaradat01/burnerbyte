@@ -27,3 +27,7 @@ func (s *AuditService) List(ctx context.Context, orgID uuid.UUID, filter domain.
 	if perPage < 1 || perPage > 100 { perPage = 20 }
 	return s.repo.List(ctx, orgID, filter, page, perPage)
 }
+
+func (s *AuditService) ListAll(ctx context.Context, orgID uuid.UUID, filter domain.AuditFilter) ([]domain.AuditEntry, error) {
+	return s.repo.ListAll(ctx, orgID, filter)
+}
