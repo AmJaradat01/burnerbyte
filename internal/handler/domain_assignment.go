@@ -69,7 +69,8 @@ func (h *DomainAssignmentHandler) AssignDomain(w http.ResponseWriter, r *http.Re
 		writeError(w, status, err.Error())
 		return
 	}
-	auditRecord(r, orgID, "domain.assigned", "domain_assignment", a.ID, map[string]any{"domain_id": a.DomainID.String(), "team_id": teamID.String()})
+	domainName := a.DomainName
+	auditRecordEnhanced(r, orgID, "domain.assigned", "domain_assignment", a.ID, domainName, map[string]any{"domain_id": a.DomainID.String(), "team_id": teamID.String(), "domain_name": domainName})
 	writeJSON(w, http.StatusCreated, a)
 }
 
@@ -112,11 +113,23 @@ func (h *DomainAssignmentHandler) UpdateAssignment(w http.ResponseWriter, r *htt
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
+
+	// Fetch before state for diff
+	beforeAssignment, _ := h.svc.GetByTeamAndDomain(r.Context(), teamID, domainID)
+
 	a, err := h.svc.UpdateAssignment(r.Context(), teamID, domainID, input)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+
+	meta := map[string]any{}
+	domainName := a.DomainName
+	if beforeAssignment != nil {
+		meta["before"] = map[string]any{"access_level": beforeAssignment.AccessLevel, "settings": beforeAssignment.Settings}
+		meta["after"] = map[string]any{"access_level": a.AccessLevel, "settings": a.Settings}
+	}
+	auditRecordEnhanced(r, orgID, "domain_assignment.updated", "domain_assignment", a.ID, domainName, meta)
 	writeJSON(w, http.StatusOK, a)
 }
 
@@ -160,6 +173,7 @@ func (h *DomainAssignmentHandler) Unassign(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	auditRecord(r, orgID, "domain.unassigned", "domain_assignment", domainID, map[string]any{"domain_id": domainID.String(), "team_id": teamID.String(), "force": activeCount > 0, "active_inboxes_deleted": activeCount})
+	domainName := assignment.DomainName
+	auditRecordEnhanced(r, orgID, "domain.unassigned", "domain_assignment", domainID, domainName, map[string]any{"domain_id": domainID.String(), "team_id": teamID.String(), "domain_name": domainName, "force": activeCount > 0, "active_inboxes_deleted": activeCount})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "domain unassigned"})
 }

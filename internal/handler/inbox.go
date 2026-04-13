@@ -78,7 +78,7 @@ func (h *InboxHandler) CreateInboxFlat(w http.ResponseWriter, r *http.Request) {
 			"inbox_id": inbox.ID, "address": inbox.Address, "domain_assignment_id": assignmentID,
 		})
 	}
-	auditRecord(r, inbox.OrgID, "inbox.created", "inbox", inbox.ID, map[string]any{"address": inbox.FullAddress, "expires_at": inbox.ExpiresAt.Format(time.RFC3339)})
+	auditRecordEnhanced(r, inbox.OrgID, "inbox.created", "inbox", inbox.ID, inbox.FullAddress, map[string]any{"address": inbox.FullAddress, "expires_at": inbox.ExpiresAt.Format(time.RFC3339)})
 	writeJSON(w, http.StatusCreated, inbox)
 }
 
@@ -156,7 +156,7 @@ func (h *InboxHandler) ExtendTTL(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	auditRecord(r, inbox.OrgID, "inbox.extended", "inbox", id, map[string]any{"address": inbox.FullAddress, "new_expires_at": inbox.ExpiresAt.Format(time.RFC3339)})
+	auditRecordEnhanced(r, inbox.OrgID, "inbox.extended", "inbox", id, inbox.FullAddress, map[string]any{"address": inbox.FullAddress, "new_expires_at": inbox.ExpiresAt.Format(time.RFC3339)})
 	writeJSON(w, http.StatusOK, inbox)
 }
 
@@ -180,6 +180,6 @@ func (h *InboxHandler) DeleteInbox(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	auditRecord(r, inbox.OrgID, "inbox.deleted", "inbox", id, map[string]any{"address": inbox.FullAddress})
+	auditRecordEnhanced(r, inbox.OrgID, "inbox.deleted", "inbox", id, inbox.FullAddress, map[string]any{"address": inbox.FullAddress})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "inbox deleted"})
 }

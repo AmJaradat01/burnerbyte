@@ -95,6 +95,10 @@ func (h *EmailHandler) MarkAllRead(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	auditRecordEnhanced(r, uuid.Nil, "email.all_read", "inbox", inboxID, "", map[string]any{
+		"inbox_id": inboxID.String(),
+		"count":    count,
+	})
 	writeJSON(w, http.StatusOK, map[string]int64{"marked": count})
 }
 
@@ -130,10 +134,27 @@ func (h *EmailHandler) DeleteEmail(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid email ID")
 		return
 	}
+
+	// Fetch email before delete for audit
+	email, err := h.svc.GetEmail(r.Context(), id, uc.UserID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	if err := h.svc.DeleteEmail(r.Context(), id, uc.UserID); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+
+	subject := ""
+	if email.Subject != nil {
+		subject = *email.Subject
+	}
+	auditRecordEnhanced(r, uuid.Nil, "email.deleted", "email", id, subject, map[string]any{
+		"subject":       subject,
+		"inbox_address": email.ToAddress,
+	})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "email deleted"})
 }
 

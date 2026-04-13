@@ -22,6 +22,7 @@ const UserContextKey contextKey = "user"
 type UserContext struct {
 	UserID        uuid.UUID
 	Email         string
+	DisplayName   string
 	IsSystemAdmin bool
 	APIKeyScopes  []string // non-nil only for API key auth
 }
@@ -86,6 +87,7 @@ func Middleware(tm *TokenManager, userRepo UserRepo, apikeyRepo APIKeyRepo) func
 				ctx := context.WithValue(r.Context(), UserContextKey, &UserContext{
 					UserID:        user.ID,
 					Email:         user.Email,
+					DisplayName:   user.DisplayName,
 					IsSystemAdmin: false, // API keys never grant system admin
 					APIKeyScopes:  key.Scopes,
 				})
@@ -124,6 +126,7 @@ func Middleware(tm *TokenManager, userRepo UserRepo, apikeyRepo APIKeyRepo) func
 			ctx := context.WithValue(r.Context(), UserContextKey, &UserContext{
 				UserID:        userID,
 				Email:         claims.Email,
+				DisplayName:   user.DisplayName,
 				IsSystemAdmin: claims.IsSystemAdmin,
 			})
 

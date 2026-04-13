@@ -307,6 +307,7 @@ func main() {
 
 			// Audit
 			r.Get("/orgs/{orgId}/audit", auditHandler.List)
+			r.Get("/orgs/{orgId}/audit/export", auditHandler.Export)
 
 			// User-scoped inboxes
 			r.Get("/inboxes", inboxHandler.ListMyInboxes)
@@ -345,12 +346,20 @@ func main() {
 					json.NewEncoder(w).Encode(map[string]string{"error": "invalid user ID"})
 					return
 				}
+				// Fetch target user info for audit
+				targetUser, _ := authSvc.GetMe(r.Context(), userID)
+				targetEmail := ""
+				targetDisplayName := ""
+				if targetUser != nil {
+					targetEmail = targetUser.Email
+					targetDisplayName = targetUser.DisplayName
+				}
 				if err := sessionRepo.RevokeAllByUser(r.Context(), userID); err != nil {
 					w.WriteHeader(http.StatusInternalServerError)
 					json.NewEncoder(w).Encode(map[string]string{"error": "failed to revoke sessions"})
 					return
 				}
-				handler.Audit.RecordFromRequest(r, uuid.Nil, "admin.sessions_revoked", "user", userID, map[string]any{"target_user_id": userID.String()})
+				handler.Audit.RecordEnhanced(r, uuid.Nil, "admin.sessions_revoked", "user", userID, targetEmail, map[string]any{"target_user_id": userID.String(), "email": targetEmail, "display_name": targetDisplayName})
 				w.Header().Set("Content-Type", "application/json")
 				json.NewEncoder(w).Encode(map[string]string{"message": "all sessions revoked"})
 			})
@@ -387,6 +396,9 @@ func main() {
 						return
 					}
 				}
+				handler.Audit.RecordEnhanced(r, uuid.Nil, "admin.role_updated", "role", roleID, input.Label, map[string]any{
+					"role_id": roleID.String(), "label": input.Label, "description": input.Description, "permissions": input.Permissions,
+				})
 				w.Header().Set("Content-Type", "application/json")
 				json.NewEncoder(w).Encode(map[string]string{"message": "role updated"})
 			})
@@ -424,6 +436,9 @@ func main() {
 				if len(input.Permissions) > 0 {
 					_ = roleRepo.SetRolePermissions(r.Context(), role.ID, input.Permissions)
 				}
+				handler.Audit.RecordEnhanced(r, uuid.Nil, "admin.role_created", "role", role.ID, input.Label, map[string]any{
+					"scope": input.Scope, "value": input.Value, "label": input.Label, "permissions": input.Permissions,
+				})
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusCreated)
 				json.NewEncoder(w).Encode(role)
@@ -441,6 +456,9 @@ func main() {
 					json.NewEncoder(w).Encode(map[string]string{"error": "failed to delete role"})
 					return
 				}
+				handler.Audit.RecordEnhanced(r, uuid.Nil, "admin.role_deleted", "role", roleID, roleID.String(), map[string]any{
+					"role_id": roleID.String(),
+				})
 				w.Header().Set("Content-Type", "application/json")
 				json.NewEncoder(w).Encode(map[string]string{"message": "role deleted"})
 			})

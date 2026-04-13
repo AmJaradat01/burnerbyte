@@ -36,7 +36,7 @@ func (h *APIKeyHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	key, err := h.svc.Generate(r.Context(), teamID, uc.UserID, input)
 	if err != nil { writeError(w, http.StatusBadRequest, err.Error()); return }
-	auditRecord(r, orgID, "apikey.created", "api_key", key.ID, map[string]any{"name": input.Name})
+	auditRecordEnhanced(r, orgID, "apikey.created", "api_key", key.ID, input.Name, map[string]any{"name": input.Name})
 	writeJSON(w, http.StatusCreated, key)
 }
 
@@ -66,6 +66,6 @@ func (h *APIKeyHandler) Revoke(w http.ResponseWriter, r *http.Request) {
 	if err := h.svc.Revoke(r.Context(), teamID, id); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed"); return
 	}
-	auditRecord(r, orgID, "apikey.revoked", "api_key", id, map[string]any{"key_id": id.String()})
+	auditRecordEnhanced(r, orgID, "apikey.revoked", "api_key", id, id.String(), map[string]any{"key_id": id.String()})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "key revoked"})
 }
