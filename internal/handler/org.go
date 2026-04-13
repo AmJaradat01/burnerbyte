@@ -68,7 +68,7 @@ func (h *OrgHandler) CreateOrg(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auditRecord(r, org.ID, "org.created", "org", org.ID, map[string]any{"name": org.Name})
+	auditRecordEnhanced(r, org.ID, "org.created", "org", org.ID, org.Name, map[string]any{"name": org.Name})
 	writeJSON(w, http.StatusCreated, org)
 }
 
@@ -124,13 +124,22 @@ func (h *OrgHandler) UpdateOrg(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch before state for diff
+	beforeOrg, _ := h.svc.GetOrg(r.Context(), orgID)
+
 	org, err := h.svc.UpdateOrg(r.Context(), orgID, input)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	auditRecord(r, orgID, "org.updated", "org", orgID, map[string]any{"name": input.Name, "logo_url": input.LogoURL})
+	meta := map[string]any{"name": input.Name, "logo_url": input.LogoURL}
+	if beforeOrg != nil {
+		meta["before"] = map[string]any{"name": beforeOrg.Name, "logo_url": beforeOrg.LogoURL}
+		meta["after"] = map[string]any{"name": org.Name, "logo_url": org.LogoURL}
+	}
+	resourceName := org.Name
+	auditRecordEnhanced(r, orgID, "org.updated", "org", orgID, resourceName, meta)
 	writeJSON(w, http.StatusOK, org)
 }
 
@@ -144,12 +153,19 @@ func (h *OrgHandler) DeleteOrg(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch org before delete for audit
+	beforeOrg, _ := h.svc.GetOrg(r.Context(), orgID)
+	orgName := ""
+	if beforeOrg != nil {
+		orgName = beforeOrg.Name
+	}
+
 	if err := h.svc.DeleteOrg(r.Context(), orgID); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to delete org")
 		return
 	}
 
-	auditRecord(r, orgID, "org.deleted", "org", orgID, map[string]any{"org_id": orgID.String()})
+	auditRecordEnhanced(r, orgID, "org.deleted", "org", orgID, orgName, map[string]any{"org_id": orgID.String(), "name": orgName})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "org deleted"})
 }
 
@@ -188,13 +204,26 @@ func (h *OrgHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch before state for diff
+	beforeSettings, _ := h.svc.GetSettings(r.Context(), orgID)
+	beforeOrg, _ := h.svc.GetOrg(r.Context(), orgID)
+
 	org, err := h.svc.UpdateSettings(r.Context(), orgID, settings)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	auditRecord(r, orgID, "org.settings.updated", "org", orgID, map[string]any{"enforce_sso": settings.EnforceSSO, "default_inbox_ttl": settings.DefaultInboxTTL, "max_inbox_ttl": settings.MaxInboxTTL, "attachments_enabled": settings.AttachmentsEnabled})
+	meta := map[string]any{"enforce_sso": settings.EnforceSSO, "default_inbox_ttl": settings.DefaultInboxTTL, "max_inbox_ttl": settings.MaxInboxTTL, "attachments_enabled": settings.AttachmentsEnabled}
+	if beforeSettings != nil {
+		meta["before"] = map[string]any{"enforce_sso": beforeSettings.EnforceSSO, "default_inbox_ttl": beforeSettings.DefaultInboxTTL, "max_inbox_ttl": beforeSettings.MaxInboxTTL, "attachments_enabled": beforeSettings.AttachmentsEnabled}
+		meta["after"] = map[string]any{"enforce_sso": org.Settings.EnforceSSO, "default_inbox_ttl": org.Settings.DefaultInboxTTL, "max_inbox_ttl": org.Settings.MaxInboxTTL, "attachments_enabled": org.Settings.AttachmentsEnabled}
+	}
+	resourceName := ""
+	if beforeOrg != nil {
+		resourceName = beforeOrg.Name
+	}
+	auditRecordEnhanced(r, orgID, "org.settings.updated", "org", orgID, resourceName, meta)
 	writeJSON(w, http.StatusOK, org.Settings)
 }
 
@@ -221,7 +250,7 @@ func (h *OrgHandler) InviteMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auditRecord(r, orgID, "member.invited", "org", orgID, map[string]any{"email": input.Email, "role": input.OrgRole})
+	auditRecordEnhanced(r, orgID, "member.invited", "org", orgID, input.Email, map[string]any{"email": input.Email, "role": input.OrgRole})
 	writeJSON(w, http.StatusCreated, invite)
 }
 
@@ -266,12 +295,21 @@ func (h *OrgHandler) ChangeRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch current membership to get old role before change
+	oldRole := ""
+	targetEmail := ""
+	if membership, err := h.svc.GetMembership(r.Context(), userID, orgID); err == nil {
+		oldRole = membership.Role
+		targetEmail = membership.Email
+	}
+
 	if err := h.svc.ChangeRole(r.Context(), orgID, userID, input.Role); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	auditRecord(r, orgID, "member.role_changed", "org", userID, map[string]any{"new_role": input.Role})
+	meta := map[string]any{"old_role": oldRole, "new_role": input.Role, "target_user_id": userID.String(), "target_user_email": targetEmail}
+	auditRecordEnhanced(r, orgID, "member.role_changed", "org", userID, targetEmail, meta)
 	writeJSON(w, http.StatusOK, map[string]string{"message": "role updated"})
 }
 
@@ -290,12 +328,19 @@ func (h *OrgHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch target user info before removal
+	meta := map[string]any{"user_id": userID.String()}
+	if membership, err := h.svc.GetMembership(r.Context(), userID, orgID); err == nil {
+		meta["target_user_email"] = membership.Email
+		meta["target_user_display_name"] = membership.DisplayName
+	}
+
 	if err := h.svc.RemoveMember(r.Context(), orgID, userID); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	auditRecord(r, orgID, "member.removed", "org", userID, map[string]any{"user_id": userID.String()})
+	auditRecordEnhanced(r, orgID, "member.removed", "org", userID, "", meta)
 	writeJSON(w, http.StatusOK, map[string]string{"message": "member removed"})
 }
 
@@ -317,7 +362,7 @@ func (h *OrgHandler) RevokeInvite(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	auditRecord(r, orgID, "invite.revoked", "invite", inviteID, map[string]any{"invite_id": inviteID.String()})
+	auditRecordEnhanced(r, orgID, "invite.revoked", "invite", inviteID, "", map[string]any{"invite_id": inviteID.String()})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "invite revoked"})
 }
 
@@ -336,7 +381,7 @@ func (h *OrgHandler) AcceptInvite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auditRecord(r, uuid.Nil, "invite.accepted", "invite", uc.UserID, map[string]any{"email": uc.Email})
+	auditRecordEnhanced(r, uuid.Nil, "invite.accepted", "invite", uc.UserID, uc.Email, map[string]any{"email": uc.Email})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "invite accepted"})
 }
 

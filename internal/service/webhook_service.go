@@ -60,6 +60,14 @@ func (s *WebhookService) List(ctx context.Context, teamID uuid.UUID, page, perPa
 	return webhooks, total, nil
 }
 
+func (s *WebhookService) GetByID(ctx context.Context, teamID, id uuid.UUID) (*domain.Webhook, error) {
+	w, err := s.webhookRepo.GetByID(ctx, id)
+	if err != nil { return nil, err }
+	if w.TeamID != teamID { return nil, fmt.Errorf("webhook not found") }
+	w.Secret = ""
+	return w, nil
+}
+
 func (s *WebhookService) Update(ctx context.Context, teamID, id uuid.UUID, input domain.UpdateWebhookInput) (*domain.Webhook, error) {
 	w, err := s.webhookRepo.GetByID(ctx, id)
 	if err != nil { return nil, err }

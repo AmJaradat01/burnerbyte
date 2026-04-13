@@ -56,7 +56,7 @@ func (h *TeamHandler) CreateTeam(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	auditRecord(r, orgID, "team.created", "team", team.ID, map[string]any{"name": team.Name})
+	auditRecordEnhanced(r, orgID, "team.created", "team", team.ID, team.Name, map[string]any{"name": team.Name})
 	writeJSON(w, http.StatusCreated, team)
 }
 
@@ -110,6 +110,9 @@ func (h *TeamHandler) UpdateTeam(w http.ResponseWriter, r *http.Request) {
 	if checkTeamRole(w, r, orgID, id, rbac.OrgAdmin, rbac.TeamLead) {
 		return
 	}
+	// Fetch team before update for diff
+	beforeTeam, _ := h.svc.GetTeam(r.Context(), orgID, id)
+
 	var input domain.UpdateTeamInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -120,7 +123,12 @@ func (h *TeamHandler) UpdateTeam(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	auditRecord(r, orgID, "team.updated", "team", id, map[string]any{"name": input.Name})
+	meta := map[string]any{"name": input.Name}
+	if beforeTeam != nil {
+		meta["before"] = map[string]any{"name": beforeTeam.Name}
+		meta["after"] = map[string]any{"name": team.Name}
+	}
+	auditRecordEnhanced(r, orgID, "team.updated", "team", id, team.Name, meta)
 	writeJSON(w, http.StatusOK, team)
 }
 
@@ -134,11 +142,19 @@ func (h *TeamHandler) DeleteTeam(w http.ResponseWriter, r *http.Request) {
 	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
 		return
 	}
+
+	// Fetch team before delete for audit
+	beforeTeam, _ := h.svc.GetTeam(r.Context(), orgID, id)
+	teamName := ""
+	if beforeTeam != nil {
+		teamName = beforeTeam.Name
+	}
+
 	if err := h.svc.DeleteTeam(r.Context(), orgID, id); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to delete team")
 		return
 	}
-	auditRecord(r, orgID, "team.deleted", "team", id, map[string]any{"team_id": id.String()})
+	auditRecordEnhanced(r, orgID, "team.deleted", "team", id, teamName, map[string]any{"team_id": id.String(), "name": teamName})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "team deleted"})
 }
 
@@ -165,6 +181,18 @@ func (h *TeamHandler) AddMember(w http.ResponseWriter, r *http.Request) {
 		writeError(w, status, err.Error())
 		return
 	}
+
+	// Audit team.member_added event
+	teamName := ""
+	if team, err := h.svc.GetTeam(r.Context(), orgID, teamID); err == nil {
+		teamName = team.Name
+	}
+	auditRecordEnhanced(r, orgID, "team.member_added", "team", teamID, teamName, map[string]any{
+		"target_user_email": input.Email,
+		"target_user_id":    input.UserID,
+		"team_name":         teamName,
+		"role":              input.Role,
+	})
 	writeJSON(w, http.StatusCreated, map[string]string{"message": "member added"})
 }
 
@@ -207,10 +235,28 @@ func (h *TeamHandler) ChangeRole(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
+	// Fetch current membership to get old role
+	oldRole := ""
+	if membership, err := h.svc.GetMembership(r.Context(), userID, teamID); err == nil {
+		oldRole = membership.Role
+	}
+
 	if err := h.svc.ChangeRole(r.Context(), teamID, userID, input.Role); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+
+	// Audit team.member_role_changed event
+	teamName := ""
+	if team, err := h.svc.GetTeam(r.Context(), orgID, teamID); err == nil {
+		teamName = team.Name
+	}
+	auditRecordEnhanced(r, orgID, "team.member_role_changed", "team", teamID, teamName, map[string]any{
+		"target_user_id": userID.String(),
+		"team_name":      teamName,
+		"old_role":        oldRole,
+		"new_role":        input.Role,
+	})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "role updated"})
 }
 
@@ -233,5 +279,15 @@ func (h *TeamHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+
+	// Audit team.member_removed event
+	teamName := ""
+	if team, err := h.svc.GetTeam(r.Context(), orgID, teamID); err == nil {
+		teamName = team.Name
+	}
+	auditRecordEnhanced(r, orgID, "team.member_removed", "team", teamID, teamName, map[string]any{
+		"target_user_id": userID.String(),
+		"team_name":      teamName,
+	})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "member removed"})
 }

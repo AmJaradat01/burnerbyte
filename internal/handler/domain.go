@@ -61,7 +61,7 @@ func (h *DomainHandler) CreateDomain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auditRecord(r, orgID, "domain.created", "domain", d.ID, map[string]any{"domain": input.DomainName})
+	auditRecordEnhanced(r, orgID, "domain.created", "domain", d.ID, input.DomainName, map[string]any{"domain": input.DomainName})
 	writeJSON(w, http.StatusCreated, d)
 }
 
@@ -137,12 +137,22 @@ func (h *DomainHandler) UpdateDomain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch before state for diff
+	beforeDomain, _ := h.svc.GetDomain(r.Context(), orgID, id)
+
 	d, err := h.svc.UpdateDomain(r.Context(), orgID, id, input)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
+	meta := map[string]any{}
+	domainName := d.DomainName
+	if beforeDomain != nil {
+		meta["before"] = map[string]any{"settings": beforeDomain.Settings}
+		meta["after"] = map[string]any{"settings": d.Settings}
+	}
+	auditRecordEnhanced(r, orgID, "domain.updated", "domain", id, domainName, meta)
 	writeJSON(w, http.StatusOK, d)
 }
 
@@ -161,6 +171,13 @@ func (h *DomainHandler) DeleteDomain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch domain before delete for audit
+	beforeDomain, _ := h.svc.GetDomain(r.Context(), orgID, id)
+	domainName := ""
+	if beforeDomain != nil {
+		domainName = beforeDomain.DomainName
+	}
+
 	// Check for active inboxes — require force=true to delete with active inboxes
 	activeInboxes, _ := h.inboxRepo.ListActiveByDomain(r.Context(), id)
 	if len(activeInboxes) > 0 && r.URL.Query().Get("force") != "true" {
@@ -177,7 +194,7 @@ func (h *DomainHandler) DeleteDomain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auditRecord(r, orgID, "domain.deleted", "domain", id, map[string]any{"domain_id": id.String(), "force": len(activeInboxes) > 0, "active_inboxes_deleted": len(activeInboxes)})
+	auditRecordEnhanced(r, orgID, "domain.deleted", "domain", id, domainName, map[string]any{"domain_id": id.String(), "domain_name": domainName, "force": len(activeInboxes) > 0, "active_inboxes_deleted": len(activeInboxes)})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "domain deleted"})
 }
 
@@ -202,7 +219,7 @@ func (h *DomainHandler) VerifyDomain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auditRecord(r, orgID, "domain.verified", "domain", id, map[string]any{"domain": d.DomainName, "mx_verified": d.MXVerified, "txt_verified": d.TXTVerified})
+	auditRecordEnhanced(r, orgID, "domain.verified", "domain", id, d.DomainName, map[string]any{"domain": d.DomainName, "mx_verified": d.MXVerified, "txt_verified": d.TXTVerified})
 	writeJSON(w, http.StatusOK, d)
 }
 
