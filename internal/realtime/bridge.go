@@ -15,11 +15,15 @@ const (
 )
 
 type InboxEvent struct {
-	InboxID   uuid.UUID `json:"inbox_id"`
-	UserID    uuid.UUID `json:"user_id"`
-	OrgID     uuid.UUID `json:"org_id"`
-	SizeBytes int64     `json:"size_bytes"`
-	Message   Message   `json:"message"`
+	InboxID      uuid.UUID `json:"inbox_id"`
+	UserID       uuid.UUID `json:"user_id"`
+	OrgID        uuid.UUID `json:"org_id"`
+	SizeBytes    int64     `json:"size_bytes"`
+	SenderDomain string    `json:"sender_domain"`
+	DomainName   string    `json:"domain_name"`
+	TeamID       uuid.UUID `json:"team_id"`
+	Hour         int       `json:"hour"`
+	Message      Message   `json:"message"`
 }
 
 // Publisher — used by smtpd to publish events to Redis.
@@ -31,8 +35,12 @@ func NewPublisher(rdb *redis.Client) *Publisher {
 	return &Publisher{rdb: rdb}
 }
 
-func (p *Publisher) PublishInboxEvent(ctx context.Context, inboxID, userID, orgID uuid.UUID, sizeBytes int64, msg Message) {
-	evt := InboxEvent{InboxID: inboxID, UserID: userID, OrgID: orgID, SizeBytes: sizeBytes, Message: msg}
+func (p *Publisher) PublishInboxEvent(ctx context.Context, inboxID, userID, orgID uuid.UUID, sizeBytes int64, senderDomain, domainName string, teamID uuid.UUID, hour int, msg Message) {
+	evt := InboxEvent{
+		InboxID: inboxID, UserID: userID, OrgID: orgID, SizeBytes: sizeBytes,
+		SenderDomain: senderDomain, DomainName: domainName, TeamID: teamID, Hour: hour,
+		Message: msg,
+	}
 	data, err := json.Marshal(evt)
 	if err != nil {
 		return
@@ -51,6 +59,11 @@ type NotificationPersister interface {
 type CounterPersister interface {
 	IncrementEmail(ctx context.Context, orgID uuid.UUID, sizeBytes int64) error
 	UpsertDailyStat(ctx context.Context, orgID uuid.UUID, emailsReceived, inboxesCreated int, storageBytes int64) error
+	UpsertHourlyStat(ctx context.Context, orgID uuid.UUID, hour int) error
+	UpsertDomainStat(ctx context.Context, orgID uuid.UUID, domainName string) error
+	UpsertSenderDomainStat(ctx context.Context, orgID uuid.UUID, senderDomain string) error
+	UpsertDailyTeamStat(ctx context.Context, teamID uuid.UUID, emailsReceived, inboxesCreated int, storageBytes int64) error
+	IncrementTeamEmail(ctx context.Context, teamID uuid.UUID, sizeBytes int64) error
 }
 
 // Subscribe — used by API server to receive events and forward to hubs.
@@ -102,6 +115,29 @@ func Subscribe(ctx context.Context, rdb *redis.Client, hub *Hub, notifHub *Notif
 				}
 				if err := counterRepo.UpsertDailyStat(ctx, evt.OrgID, 1, 0, evt.SizeBytes); err != nil {
 					slog.Error("failed to upsert daily stat", "error", err)
+				}
+				if evt.Hour >= 0 {
+					if err := counterRepo.UpsertHourlyStat(ctx, evt.OrgID, evt.Hour); err != nil {
+						slog.Error("failed to upsert hourly stat", "error", err)
+					}
+				}
+				if evt.DomainName != "" {
+					if err := counterRepo.UpsertDomainStat(ctx, evt.OrgID, evt.DomainName); err != nil {
+						slog.Error("failed to upsert domain stat", "error", err)
+					}
+				}
+				if evt.SenderDomain != "" {
+					if err := counterRepo.UpsertSenderDomainStat(ctx, evt.OrgID, evt.SenderDomain); err != nil {
+						slog.Error("failed to upsert sender domain stat", "error", err)
+					}
+				}
+				if evt.TeamID != uuid.Nil {
+					if err := counterRepo.IncrementTeamEmail(ctx, evt.TeamID, evt.SizeBytes); err != nil {
+						slog.Error("failed to increment team email counter", "error", err)
+					}
+					if err := counterRepo.UpsertDailyTeamStat(ctx, evt.TeamID, 1, 0, evt.SizeBytes); err != nil {
+						slog.Error("failed to upsert daily team stat", "error", err)
+					}
 				}
 			}
 		}
