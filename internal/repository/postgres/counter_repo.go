@@ -84,3 +84,62 @@ func (r *CounterRepo) GetDailyStats(ctx context.Context, orgID uuid.UUID, days i
 	}
 	return stats, rows.Err()
 }
+
+func (r *CounterRepo) UpsertHourlyStat(ctx context.Context, orgID uuid.UUID, hour int) error {
+	_, err := r.db.Exec(ctx,
+		`INSERT INTO hourly_email_stats (org_id, date, hour, emails_received)
+		 VALUES ($1, NOW()::date, $2, 1)
+		 ON CONFLICT (org_id, date, hour) DO UPDATE SET
+		   emails_received = hourly_email_stats.emails_received + 1`, orgID, hour)
+	return err
+}
+
+func (r *CounterRepo) UpsertDomainStat(ctx context.Context, orgID uuid.UUID, domainName string) error {
+	_, err := r.db.Exec(ctx,
+		`INSERT INTO daily_domain_email_stats (org_id, date, domain_name, emails_received)
+		 VALUES ($1, NOW()::date, $2, 1)
+		 ON CONFLICT (org_id, date, domain_name) DO UPDATE SET
+		   emails_received = daily_domain_email_stats.emails_received + 1`, orgID, domainName)
+	return err
+}
+
+func (r *CounterRepo) UpsertSenderDomainStat(ctx context.Context, orgID uuid.UUID, senderDomain string) error {
+	_, err := r.db.Exec(ctx,
+		`INSERT INTO daily_sender_domain_stats (org_id, date, sender_domain, emails_received)
+		 VALUES ($1, NOW()::date, $2, 1)
+		 ON CONFLICT (org_id, date, sender_domain) DO UPDATE SET
+		   emails_received = daily_sender_domain_stats.emails_received + 1`, orgID, senderDomain)
+	return err
+}
+
+func (r *CounterRepo) UpsertDailyTeamStat(ctx context.Context, teamID uuid.UUID, emailsReceived, inboxesCreated int, storageBytes int64) error {
+	_, err := r.db.Exec(ctx,
+		`INSERT INTO daily_team_email_stats (team_id, date, emails_received, inboxes_created, storage_bytes)
+		 VALUES ($1, NOW()::date, $2, $3, $4)
+		 ON CONFLICT (team_id, date) DO UPDATE SET
+		   emails_received = daily_team_email_stats.emails_received + $2,
+		   inboxes_created = daily_team_email_stats.inboxes_created + $3,
+		   storage_bytes = daily_team_email_stats.storage_bytes + $4`, teamID, emailsReceived, inboxesCreated, storageBytes)
+	return err
+}
+
+func (r *CounterRepo) IncrementTeamEmail(ctx context.Context, teamID uuid.UUID, sizeBytes int64) error {
+	_, err := r.db.Exec(ctx,
+		`INSERT INTO team_analytics_counters (team_id, total_emails_received, total_storage_bytes, updated_at)
+		 VALUES ($1, 1, $2, NOW())
+		 ON CONFLICT (team_id) DO UPDATE SET
+		   total_emails_received = team_analytics_counters.total_emails_received + 1,
+		   total_storage_bytes = team_analytics_counters.total_storage_bytes + $2,
+		   updated_at = NOW()`, teamID, sizeBytes)
+	return err
+}
+
+func (r *CounterRepo) IncrementTeamInbox(ctx context.Context, teamID uuid.UUID) error {
+	_, err := r.db.Exec(ctx,
+		`INSERT INTO team_analytics_counters (team_id, total_inboxes_created, updated_at)
+		 VALUES ($1, 1, NOW())
+		 ON CONFLICT (team_id) DO UPDATE SET
+		   total_inboxes_created = team_analytics_counters.total_inboxes_created + 1,
+		   updated_at = NOW()`, teamID)
+	return err
+}
