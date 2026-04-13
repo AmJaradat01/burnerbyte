@@ -87,11 +87,21 @@ func (h *AdminHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "cannot delete your own account from admin panel")
 		return
 	}
+
+	// Fetch target user before delete for audit
+	targetUser, _ := h.authSvc.GetMe(r.Context(), userID)
+	targetEmail := ""
+	targetDisplayName := ""
+	if targetUser != nil {
+		targetEmail = targetUser.Email
+		targetDisplayName = targetUser.DisplayName
+	}
+
 	if err := h.authSvc.DeleteUser(r.Context(), userID); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to delete user")
 		return
 	}
-	auditRecord(r, uuid.Nil, "admin.user_deleted", "user", userID, map[string]any{"target_user_id": userID.String()})
+	auditRecordEnhanced(r, uuid.Nil, "admin.user_deleted", "user", userID, targetEmail, map[string]any{"target_user_id": userID.String(), "email": targetEmail, "display_name": targetDisplayName})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "user deleted"})
 }
 
@@ -159,12 +169,22 @@ func (h *AdminHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "cannot remove your own system admin status")
 		return
 	}
+
+	// Fetch user before update for diff
+	beforeUser, _ := h.authSvc.GetMe(r.Context(), userID)
+
 	user, err := h.authSvc.AdminUpdateUser(r.Context(), userID, input.DisplayName, input.AvatarURL, input.IsSystemAdmin, input.EmailVerified)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to update user")
 		return
 	}
-	auditRecord(r, uuid.Nil, "admin.user_updated", "user", userID, map[string]any{"email": user.Email, "display_name": input.DisplayName, "is_system_admin": input.IsSystemAdmin, "email_verified": input.EmailVerified})
+
+	meta := map[string]any{"email": user.Email, "display_name": input.DisplayName, "is_system_admin": input.IsSystemAdmin, "email_verified": input.EmailVerified}
+	if beforeUser != nil {
+		meta["before"] = map[string]any{"display_name": beforeUser.DisplayName, "avatar_url": beforeUser.AvatarURL, "is_system_admin": beforeUser.IsSystemAdmin, "email_verified": beforeUser.EmailVerified}
+		meta["after"] = map[string]any{"display_name": user.DisplayName, "avatar_url": user.AvatarURL, "is_system_admin": user.IsSystemAdmin, "email_verified": user.EmailVerified}
+	}
+	auditRecordEnhanced(r, uuid.Nil, "admin.user_updated", "user", userID, user.Email, meta)
 	writeJSON(w, http.StatusOK, user)
 }
 
@@ -277,7 +297,7 @@ func (h *AdminHandler) UpdatePlatformSettings(w http.ResponseWriter, r *http.Req
 	h.cfg.Defaults.MaxTeams = input.MaxTeams
 	h.cfg.Defaults.MaxInboxesPerDomain = input.MaxInboxesPerDomain
 	h.cfgMu.Unlock()
-	auditRecord(r, uuid.Nil, "admin.platform_settings_updated", "platform", uuid.Nil, map[string]any{"allow_registration": input.AllowRegistration, "email_verification": input.EmailVerification, "password_min_length": input.PasswordMinLength, "lockout_max_attempts": input.LockoutMaxAttempts, "lockout_duration_mins": input.LockoutDurationMins})
+	auditRecordEnhanced(r, uuid.Nil, "admin.platform_settings_updated", "platform", uuid.Nil, "platform", map[string]any{"allow_registration": input.AllowRegistration, "email_verification": input.EmailVerification, "password_min_length": input.PasswordMinLength, "lockout_max_attempts": input.LockoutMaxAttempts, "lockout_duration_mins": input.LockoutDurationMins})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "platform settings updated"})
 }
 
@@ -311,6 +331,6 @@ func (h *AdminHandler) UpdateSSOConfig(w http.ResponseWriter, r *http.Request) {
 	h.cfgMu.Lock()
 	h.cfg.SSO = input
 	h.cfgMu.Unlock()
-	auditRecord(r, uuid.Nil, "admin.sso_config_updated", "sso", uuid.Nil, map[string]any{"provider": input.Provider})
+	auditRecordEnhanced(r, uuid.Nil, "admin.sso_config_updated", "sso", uuid.Nil, "sso", map[string]any{"provider": input.Provider})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "SSO config updated"})
 }
