@@ -78,7 +78,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auditRecord(r, uuid.Nil, "user.registered", "user", user.ID, map[string]any{"email": user.Email})
+	auditRecordEnhanced(r, uuid.Nil, "user.registered", "user", user.ID, user.Email, map[string]any{"email": user.Email})
 	writeJSON(w, http.StatusCreated, map[string]any{
 		"user":   user,
 		"tokens": tokens,
@@ -109,7 +109,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auditRecord(r, uuid.Nil, "user.login", "user", user.ID, map[string]any{"email": user.Email})
+	auditRecordEnhanced(r, uuid.Nil, "user.login", "user", user.ID, user.Email, map[string]any{"email": user.Email, "user_agent": r.Header.Get("User-Agent")})
 	writeJSON(w, http.StatusOK, map[string]any{
 		"user":   user,
 		"tokens": tokens,
@@ -156,7 +156,7 @@ func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auditRecord(r, uuid.Nil, "user.password_reset", "user", uuid.Nil, map[string]any{"method": "token"})
+	auditRecordEnhanced(r, uuid.Nil, "user.password_reset", "user", uuid.Nil, "password_reset", map[string]any{"method": "token"})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "password reset successful"})
 }
 
@@ -172,6 +172,12 @@ func (h *AuthHandler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	uc := auth.GetUser(r.Context())
+	if uc != nil {
+		auditRecordEnhanced(r, uuid.Nil, "user.email_verified", "user", uc.UserID, uc.Email, map[string]any{"email": uc.Email})
+	} else {
+		auditRecordEnhanced(r, uuid.Nil, "user.email_verified", "user", uuid.Nil, "", map[string]any{})
+	}
 	writeJSON(w, http.StatusOK, map[string]string{"message": "email verified"})
 }
 
@@ -193,11 +199,23 @@ func (h *AuthHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch before state for diff
+	beforeUser, _ := h.svc.GetMe(r.Context(), uc.UserID)
+
 	user, err := h.svc.UpdateProfile(r.Context(), uc.UserID, input)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to update profile")
 		return
 	}
+
+	meta := map[string]any{}
+	if beforeUser != nil {
+		before := map[string]any{"display_name": beforeUser.DisplayName, "avatar_url": beforeUser.AvatarURL, "timezone": beforeUser.Timezone, "date_format": beforeUser.DateFormat, "time_format": beforeUser.TimeFormat}
+		after := map[string]any{"display_name": user.DisplayName, "avatar_url": user.AvatarURL, "timezone": user.Timezone, "date_format": user.DateFormat, "time_format": user.TimeFormat}
+		meta["before"] = before
+		meta["after"] = after
+	}
+	auditRecordEnhanced(r, uuid.Nil, "user.profile_updated", "user", uc.UserID, uc.Email, meta)
 	writeJSON(w, http.StatusOK, user)
 }
 
@@ -240,7 +258,7 @@ func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auditRecord(r, uuid.Nil, "user.password_changed", "user", uc.UserID, map[string]any{"email": uc.Email})
+	auditRecordEnhanced(r, uuid.Nil, "user.password_changed", "user", uc.UserID, uc.Email, map[string]any{"email": uc.Email})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "password changed"})
 }
 
@@ -257,7 +275,7 @@ func (h *AuthHandler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auditRecord(r, uuid.Nil, "user.account_deleted", "user", uc.UserID, map[string]any{"email": uc.Email})
+	auditRecordEnhanced(r, uuid.Nil, "user.account_deleted", "user", uc.UserID, uc.Email, map[string]any{"email": uc.Email})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "account deleted"})
 }
 
@@ -284,6 +302,7 @@ func (h *AuthHandler) RevokeSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	auditRecordEnhanced(r, uuid.Nil, "session.revoked", "session", sessionID, uc.Email, map[string]any{"session_id": sessionID.String()})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "session revoked"})
 }
 
@@ -294,6 +313,7 @@ func (h *AuthHandler) RevokeAllSessions(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	auditRecordEnhanced(r, uuid.Nil, "session.revoked_all", "session", uc.UserID, uc.Email, map[string]any{"email": uc.Email})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "all sessions revoked"})
 }
 
@@ -407,6 +427,8 @@ func (h *AuthHandler) SSOCallback(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	auditRecordEnhanced(r, uuid.Nil, "user.sso_login", "user", user.ID, user.Email, map[string]any{"email": user.Email, "provider": provider})
 
 	// Use fragment (#) instead of query params to prevent tokens from being
 	// logged by proxies, appearing in Referer headers, or stored in server logs
