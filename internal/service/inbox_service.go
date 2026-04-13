@@ -147,6 +147,13 @@ func (s *InboxService) CreateInbox(ctx context.Context, teamID, domainID, userID
 		if err := s.counterRepo.UpsertDailyStat(ctx, org.ID, 0, 1, 0); err != nil {
 			slog.Error("failed to upsert daily inbox stat", "org_id", org.ID, "error", err)
 		}
+		// Team-level analytics counters
+		if err := s.counterRepo.IncrementTeamInbox(ctx, teamID); err != nil {
+			slog.Error("failed to increment team inbox counter", "team_id", teamID, "error", err)
+		}
+		if err := s.counterRepo.UpsertDailyTeamStat(ctx, teamID, 0, 1, 0); err != nil {
+			slog.Error("failed to upsert daily team inbox stat", "team_id", teamID, "error", err)
+		}
 	}
 
 	// Store in Redis for SMTP lookups

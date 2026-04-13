@@ -21,13 +21,17 @@ func NewAnalyticsRepo(db database.DBTX) *AnalyticsRepo {
 func (r *AnalyticsRepo) GetOrgStats(ctx context.Context, orgID uuid.UUID) (*domain.OrgStats, error) {
 	stats := &domain.OrgStats{}
 
-	if err := r.db.QueryRow(ctx,
-		`SELECT COUNT(*) FROM emails e JOIN inboxes i ON e.inbox_id = i.id
-		 JOIN domain_assignments da ON i.domain_assignment_id = da.id
-		 JOIN domains d ON da.domain_id = d.id WHERE d.org_id = $1`, orgID).Scan(&stats.TotalEmails); err != nil {
-		return nil, err
-	}
+	// Persistent counters (survive email deletion)
+	_ = r.db.QueryRow(ctx,
+		`SELECT COALESCE(total_emails_received, 0), COALESCE(total_inboxes_created, 0), COALESCE(total_storage_bytes, 0)
+		 FROM org_analytics_counters WHERE org_id = $1`, orgID).
+		Scan(&stats.TotalEmailsReceived, &stats.TotalInboxesCreated, &stats.TotalStorageBytes)
 
+	// Use persistent counters for TotalEmails and StorageUsedBytes
+	stats.TotalEmails = stats.TotalEmailsReceived
+	stats.StorageUsedBytes = stats.TotalStorageBytes
+
+	// Live entity counts (these reflect current state, not historical)
 	if err := r.db.QueryRow(ctx,
 		`SELECT COUNT(*) FROM inboxes i JOIN domain_assignments da ON i.domain_assignment_id = da.id
 		 JOIN domains d ON da.domain_id = d.id WHERE d.org_id = $1 AND i.is_active = TRUE`, orgID).Scan(&stats.ActiveInboxes); err != nil {
@@ -50,19 +54,11 @@ func (r *AnalyticsRepo) GetOrgStats(ctx context.Context, orgID uuid.UUID) (*doma
 		return nil, err
 	}
 
-	if err := r.db.QueryRow(ctx,
-		`SELECT COALESCE(SUM(e.size_bytes), 0) FROM emails e JOIN inboxes i ON e.inbox_id = i.id
-		 JOIN domain_assignments da ON i.domain_assignment_id = da.id
-		 JOIN domains d ON da.domain_id = d.id WHERE d.org_id = $1`, orgID).Scan(&stats.StorageUsedBytes); err != nil {
-		return nil, err
-	}
-
+	// Top sender domains from persistent table (survives email deletion)
 	rows, err := r.db.Query(ctx,
-		`SELECT SPLIT_PART(e.from_address, '@', 2) AS sender_domain, COUNT(*) AS cnt
-		 FROM emails e JOIN inboxes i ON e.inbox_id = i.id
-		 JOIN domain_assignments da ON i.domain_assignment_id = da.id
-		 JOIN domains d ON da.domain_id = d.id
-		 WHERE d.org_id = $1 AND e.from_address LIKE '%@%'
+		`SELECT sender_domain, SUM(emails_received) AS cnt
+		 FROM daily_sender_domain_stats
+		 WHERE org_id = $1
 		 GROUP BY sender_domain ORDER BY cnt DESC LIMIT 5`, orgID)
 	if err != nil {
 		return nil, err
@@ -79,24 +75,19 @@ func (r *AnalyticsRepo) GetOrgStats(ctx context.Context, orgID uuid.UUID) (*doma
 		return nil, err
 	}
 
-	// Persistent counters (survive deletion)
-	_ = r.db.QueryRow(ctx,
-		`SELECT COALESCE(total_emails_received, 0), COALESCE(total_inboxes_created, 0), COALESCE(total_storage_bytes, 0)
-		 FROM org_analytics_counters WHERE org_id = $1`, orgID).
-		Scan(&stats.TotalEmailsReceived, &stats.TotalInboxesCreated, &stats.TotalStorageBytes)
-
 	return stats, nil
 }
 
 func (r *AnalyticsRepo) GetTeamStats(ctx context.Context, teamID uuid.UUID) (*domain.TeamStats, error) {
 	stats := &domain.TeamStats{}
 
-	if err := r.db.QueryRow(ctx,
-		`SELECT COUNT(*) FROM emails e JOIN inboxes i ON e.inbox_id = i.id
-		 JOIN domain_assignments da ON i.domain_assignment_id = da.id WHERE da.team_id = $1`, teamID).Scan(&stats.TotalEmails); err != nil {
-		return nil, err
-	}
+	// Use persistent counter for TotalEmails (survives email deletion)
+	_ = r.db.QueryRow(ctx,
+		`SELECT COALESCE(total_emails_received, 0)
+		 FROM team_analytics_counters WHERE team_id = $1`, teamID).
+		Scan(&stats.TotalEmails)
 
+	// Live entity counts
 	if err := r.db.QueryRow(ctx,
 		`SELECT COUNT(*) FROM inboxes i JOIN domain_assignments da ON i.domain_assignment_id = da.id
 		 WHERE da.team_id = $1 AND i.is_active = TRUE`, teamID).Scan(&stats.ActiveInboxes); err != nil {
@@ -133,20 +124,17 @@ func (r *AnalyticsRepo) GetSystemStats(ctx context.Context) (*domain.SystemStats
 	return stats, nil
 }
 
+// GetOrgEmailsPerDay reads from persistent daily_email_stats (survives email deletion).
 func (r *AnalyticsRepo) GetOrgEmailsPerDay(ctx context.Context, orgID uuid.UUID, days ...int) ([]domain.TimeSeriesPoint, error) {
 	d := 30
 	if len(days) > 0 && days[0] > 0 { d = days[0] }
 	rows, err := r.db.Query(ctx,
-		`SELECT d::date, COALESCE(sub.cnt, 0) FROM generate_series(
+		`SELECT d::date, COALESCE(sub.emails_received, 0) FROM generate_series(
 		  (NOW() - make_interval(days => $2))::date, NOW()::date, '1 day'::interval
 		) d LEFT JOIN (
-		  SELECT DATE(e.received_at) as dt, COUNT(*) as cnt FROM emails e
-		  JOIN inboxes i ON e.inbox_id = i.id
-		  JOIN domain_assignments da ON i.domain_assignment_id = da.id
-		  JOIN domains dm ON da.domain_id = dm.id
-		  WHERE dm.org_id = $1 AND e.received_at > NOW() - make_interval(days => $2)
-		  GROUP BY dt
-		) sub ON d::date = sub.dt ORDER BY d`, orgID, d)
+		  SELECT date, emails_received FROM daily_email_stats
+		  WHERE org_id = $1 AND date >= (NOW() - make_interval(days => $2))::date
+		) sub ON d::date = sub.date ORDER BY d`, orgID, d)
 	if err != nil {
 		return nil, err
 	}
@@ -167,19 +155,17 @@ func (r *AnalyticsRepo) GetOrgEmailsPerDay(ctx context.Context, orgID uuid.UUID,
 	return points, nil
 }
 
+// GetOrgInboxesPerDay reads from persistent daily_email_stats (survives inbox deletion).
 func (r *AnalyticsRepo) GetOrgInboxesPerDay(ctx context.Context, orgID uuid.UUID, days ...int) ([]domain.TimeSeriesPoint, error) {
 	d := 30
 	if len(days) > 0 && days[0] > 0 { d = days[0] }
 	rows, err := r.db.Query(ctx,
-		`SELECT d::date, COALESCE(sub.cnt, 0) FROM generate_series(
+		`SELECT d::date, COALESCE(sub.inboxes_created, 0) FROM generate_series(
 		  (NOW() - make_interval(days => $2))::date, NOW()::date, '1 day'::interval
 		) d LEFT JOIN (
-		  SELECT DATE(i.created_at) as dt, COUNT(*) as cnt FROM inboxes i
-		  JOIN domain_assignments da ON i.domain_assignment_id = da.id
-		  JOIN domains dm ON da.domain_id = dm.id
-		  WHERE dm.org_id = $1 AND i.created_at > NOW() - make_interval(days => $2)
-		  GROUP BY dt
-		) sub ON d::date = sub.dt ORDER BY d`, orgID, d)
+		  SELECT date, inboxes_created FROM daily_email_stats
+		  WHERE org_id = $1 AND date >= (NOW() - make_interval(days => $2))::date
+		) sub ON d::date = sub.date ORDER BY d`, orgID, d)
 	if err != nil {
 		return nil, err
 	}
@@ -197,15 +183,14 @@ func (r *AnalyticsRepo) GetOrgInboxesPerDay(ctx context.Context, orgID uuid.UUID
 	return points, rows.Err()
 }
 
+// GetOrgPeakHours reads from persistent hourly_email_stats (survives email deletion).
 func (r *AnalyticsRepo) GetOrgPeakHours(ctx context.Context, orgID uuid.UUID, days ...int) ([]domain.HourlyPoint, error) {
 	d := 30
 	if len(days) > 0 && days[0] > 0 { d = days[0] }
 	rows, err := r.db.Query(ctx,
-		`SELECT EXTRACT(HOUR FROM e.received_at)::int as hour, COUNT(*) as cnt
-		 FROM emails e JOIN inboxes i ON e.inbox_id = i.id
-		 JOIN domain_assignments da ON i.domain_assignment_id = da.id
-		 JOIN domains dm ON da.domain_id = dm.id
-		 WHERE dm.org_id = $1 AND e.received_at > NOW() - make_interval(days => $2)
+		`SELECT hour, SUM(emails_received) AS cnt
+		 FROM hourly_email_stats
+		 WHERE org_id = $1 AND date >= (NOW() - make_interval(days => $2))::date
 		 GROUP BY hour ORDER BY hour`, orgID, d)
 	if err != nil {
 		return nil, err
@@ -230,15 +215,13 @@ func (r *AnalyticsRepo) GetOrgPeakHours(ctx context.Context, orgID uuid.UUID, da
 	return points, nil
 }
 
+// GetOrgDomainBreakdown reads from persistent daily_domain_email_stats (survives email deletion).
 func (r *AnalyticsRepo) GetOrgDomainBreakdown(ctx context.Context, orgID uuid.UUID) ([]domain.DomainBreakdown, error) {
 	rows, err := r.db.Query(ctx,
-		`SELECT dm.domain_name, COUNT(e.id) as cnt
-		 FROM domains dm
-		 LEFT JOIN domain_assignments da ON da.domain_id = dm.id
-		 LEFT JOIN inboxes i ON i.domain_assignment_id = da.id
-		 LEFT JOIN emails e ON e.inbox_id = i.id
-		 WHERE dm.org_id = $1
-		 GROUP BY dm.domain_name ORDER BY cnt DESC`, orgID)
+		`SELECT domain_name, SUM(emails_received) AS cnt
+		 FROM daily_domain_email_stats
+		 WHERE org_id = $1
+		 GROUP BY domain_name ORDER BY cnt DESC`, orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -254,19 +237,17 @@ func (r *AnalyticsRepo) GetOrgDomainBreakdown(ctx context.Context, orgID uuid.UU
 	return results, rows.Err()
 }
 
+// GetTeamEmailsPerDay reads from persistent daily_team_email_stats (survives email deletion).
 func (r *AnalyticsRepo) GetTeamEmailsPerDay(ctx context.Context, teamID uuid.UUID, days ...int) ([]domain.TimeSeriesPoint, error) {
 	d := 30
 	if len(days) > 0 && days[0] > 0 { d = days[0] }
 	rows, err := r.db.Query(ctx,
-		`SELECT d::date, COALESCE(sub.cnt, 0) FROM generate_series(
+		`SELECT d::date, COALESCE(sub.emails_received, 0) FROM generate_series(
 		  (NOW() - make_interval(days => $2))::date, NOW()::date, '1 day'::interval
 		) d LEFT JOIN (
-		  SELECT DATE(e.received_at) as dt, COUNT(*) as cnt FROM emails e
-		  JOIN inboxes i ON e.inbox_id = i.id
-		  JOIN domain_assignments da ON i.domain_assignment_id = da.id
-		  WHERE da.team_id = $1 AND e.received_at > NOW() - make_interval(days => $2)
-		  GROUP BY dt
-		) sub ON d::date = sub.dt ORDER BY d`, teamID, d)
+		  SELECT date, emails_received FROM daily_team_email_stats
+		  WHERE team_id = $1 AND date >= (NOW() - make_interval(days => $2))::date
+		) sub ON d::date = sub.date ORDER BY d`, teamID, d)
 	if err != nil {
 		return nil, err
 	}
