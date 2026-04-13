@@ -183,22 +183,38 @@ func (h *Handler) Process(ctx context.Context, email *InboundEmail) error {
 		}
 	}
 
-	// Dispatch webhook event
-	if h.webhookDispatcher != nil && h.assignmentRepo != nil {
+	// Look up domain assignment for analytics metadata and webhook dispatch
+	var teamID uuid.UUID
+	var domainName string
+	if h.assignmentRepo != nil {
 		assignment, err := h.assignmentRepo.GetByID(ctx, inbox.DomainAssignmentID)
 		if err == nil {
-			h.webhookDispatcher.Dispatch(ctx, assignment.TeamID, "email.received", map[string]any{
-				"email_id": e.ID, "inbox_id": inbox.ID, "from": email.From, "subject": email.Subject,
-			})
+			teamID = assignment.TeamID
+			domainName = assignment.DomainName
 		}
+	}
+
+	// Extract sender domain from From address
+	var senderDomain string
+	if parts := strings.SplitN(email.From, "@", 2); len(parts) == 2 {
+		senderDomain = strings.ToLower(parts[1])
+	}
+
+	// Dispatch webhook event
+	if h.webhookDispatcher != nil && teamID != uuid.Nil {
+		h.webhookDispatcher.Dispatch(ctx, teamID, "email.received", map[string]any{
+			"email_id": e.ID, "inbox_id": inbox.ID, "from": email.From, "subject": email.Subject,
+		})
 	}
 
 	// Broadcast to WebSocket
 	if h.publisher != nil {
-		h.publisher.PublishInboxEvent(ctx, inbox.ID, inbox.CreatedBy, inbox.OrgID, e.SizeBytes, realtime.Message{
-			Type: "email.received",
-			Data: e,
-		})
+		h.publisher.PublishInboxEvent(ctx, inbox.ID, inbox.CreatedBy, inbox.OrgID, e.SizeBytes,
+			senderDomain, domainName, teamID, email.ReceivedAt.Hour(),
+			realtime.Message{
+				Type: "email.received",
+				Data: e,
+			})
 	} else {
 		if h.hub != nil {
 			h.hub.Broadcast(inbox.ID, realtime.Message{
