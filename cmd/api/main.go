@@ -296,7 +296,11 @@ func main() {
 			// API Keys
 			r.Post("/orgs/{orgId}/teams/{teamId}/api-keys", apikeyHandler.Create)
 			r.Get("/orgs/{orgId}/teams/{teamId}/api-keys", apikeyHandler.List)
+			r.Get("/orgs/{orgId}/teams/{teamId}/api-keys/{keyId}", apikeyHandler.Get)
+			r.Patch("/orgs/{orgId}/teams/{teamId}/api-keys/{keyId}", apikeyHandler.Update)
 			r.Delete("/orgs/{orgId}/teams/{teamId}/api-keys/{keyId}", apikeyHandler.Revoke)
+			r.Post("/orgs/{orgId}/teams/{teamId}/api-keys/{keyId}/rotate", apikeyHandler.Rotate)
+			r.Post("/orgs/{orgId}/teams/{teamId}/api-keys/bulk-revoke", apikeyHandler.BulkRevoke)
 
 			// Analytics
 			r.Get("/orgs/{orgId}/analytics", analyticsHandler.OrgAnalytics)
@@ -552,7 +556,7 @@ func main() {
 	// Background workers
 	workerCtx, workerCancel := context.WithCancel(context.Background())
 	wm := worker.NewManager()
-	wm.Add("cleanup", cfg.Workers.CleanupInterval, worker.CleanupJob(inboxRepo, emailRepo, attachmentSvc, sessionRepo, resetRepo))
+	wm.Add("cleanup", cfg.Workers.CleanupInterval, worker.CleanupJob(inboxRepo, emailRepo, attachmentSvc, sessionRepo, resetRepo, apikeyRepo))
 	wm.Add("reconciler", cfg.Workers.ReconcilerInterval, worker.ReconcilerJob(inboxRepo, redisInboxRepo))
 	wm.Add("dns_recheck", cfg.Workers.DNSRecheckInterval, worker.DNSRecheckJob(domainRepo, cfg.SMTP.Hostname))
 	wm.Add("webhook_retry", cfg.Workers.WebhookRetryInterval, worker.WebhookRetryJob(webhookRepo, webhookDispatcher))

@@ -31,6 +31,10 @@ func (h *WebhookHandler) Routes(r chi.Router) {
 
 func (h *WebhookHandler) Create(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
+	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "webhook:write") {
+		writeError(w, http.StatusForbidden, "insufficient scope")
+		return
+	}
 	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
 	if err != nil { writeError(w, http.StatusBadRequest, "invalid org ID"); return }
 	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
@@ -49,6 +53,11 @@ func (h *WebhookHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *WebhookHandler) List(w http.ResponseWriter, r *http.Request) {
+	uc := auth.GetUser(r.Context())
+	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "webhook:read") {
+		writeError(w, http.StatusForbidden, "insufficient scope")
+		return
+	}
 	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
 	if err != nil { writeError(w, http.StatusBadRequest, "invalid org ID"); return }
 	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
@@ -63,6 +72,11 @@ func (h *WebhookHandler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *WebhookHandler) Update(w http.ResponseWriter, r *http.Request) {
+	uc := auth.GetUser(r.Context())
+	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "webhook:write") {
+		writeError(w, http.StatusForbidden, "insufficient scope")
+		return
+	}
 	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
 	if err != nil { writeError(w, http.StatusBadRequest, "invalid org ID"); return }
 	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
@@ -93,6 +107,11 @@ func (h *WebhookHandler) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *WebhookHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	uc := auth.GetUser(r.Context())
+	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "webhook:write") {
+		writeError(w, http.StatusForbidden, "insufficient scope")
+		return
+	}
 	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
 	if err != nil { writeError(w, http.StatusBadRequest, "invalid org ID"); return }
 	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
@@ -110,6 +129,11 @@ func (h *WebhookHandler) Delete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *WebhookHandler) ListDeliveryLogs(w http.ResponseWriter, r *http.Request) {
+	uc := auth.GetUser(r.Context())
+	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "webhook:read") {
+		writeError(w, http.StatusForbidden, "insufficient scope")
+		return
+	}
 	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
 	if err != nil { writeError(w, http.StatusBadRequest, "invalid org ID"); return }
 	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
