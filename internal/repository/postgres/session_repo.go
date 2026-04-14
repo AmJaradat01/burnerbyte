@@ -85,6 +85,21 @@ func (r *SessionRepo) RevokeAll(ctx context.Context, userID uuid.UUID) error {
 	return nil
 }
 
+func (r *SessionRepo) RevokeAllCount(ctx context.Context, userID uuid.UUID) (int, error) {
+	tag, err := r.db.Exec(ctx, `UPDATE sessions SET revoked = TRUE WHERE user_id = $1 AND revoked = FALSE`, userID)
+	if err != nil {
+		return 0, fmt.Errorf("revoke all sessions: %w", err)
+	}
+	return int(tag.RowsAffected()), nil
+}
+
+func (r *SessionRepo) GetByIDForUser(ctx context.Context, userID, sessionID uuid.UUID) (*domain.Session, error) {
+	return r.scanOne(ctx,
+		`SELECT id, user_id, refresh_token_hash, token_family, ip_address::text, user_agent,
+		        last_used_at, expires_at, revoked, created_at
+		 FROM sessions WHERE id = $1 AND user_id = $2`, sessionID, userID)
+}
+
 func (r *SessionRepo) RevokeAllByUser(ctx context.Context, userID uuid.UUID) error {
 	_, err := r.db.Exec(ctx, `UPDATE sessions SET revoked = TRUE WHERE user_id = $1 AND revoked = FALSE`, userID)
 	return err

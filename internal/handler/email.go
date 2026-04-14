@@ -14,10 +14,11 @@ import (
 type EmailHandler struct {
 	svc           *service.EmailService
 	attachmentSvc *service.AttachmentService
+	inboxSvc      *service.InboxService
 }
 
-func NewEmailHandler(svc *service.EmailService, attachmentSvc *service.AttachmentService) *EmailHandler {
-	return &EmailHandler{svc: svc, attachmentSvc: attachmentSvc}
+func NewEmailHandler(svc *service.EmailService, attachmentSvc *service.AttachmentService, inboxSvc *service.InboxService) *EmailHandler {
+	return &EmailHandler{svc: svc, attachmentSvc: attachmentSvc, inboxSvc: inboxSvc}
 }
 
 func (h *EmailHandler) Routes(r chi.Router) {
@@ -99,9 +100,18 @@ func (h *EmailHandler) MarkAllRead(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+
+	inboxAddress := ""
+	if h.inboxSvc != nil {
+		if inbox, err := h.inboxSvc.GetInbox(r.Context(), inboxID, uc.UserID); err == nil && inbox != nil {
+			inboxAddress = inbox.FullAddress
+		}
+	}
+
 	auditRecordEnhanced(r, uuid.Nil, "email.all_read", "inbox", inboxID, "", map[string]any{
-		"inbox_id": inboxID.String(),
-		"count":    count,
+		"inbox_id":      inboxID.String(),
+		"count":         count,
+		"inbox_address": inboxAddress,
 	})
 	writeJSON(w, http.StatusOK, map[string]int64{"marked": count})
 }
@@ -162,6 +172,7 @@ func (h *EmailHandler) DeleteEmail(w http.ResponseWriter, r *http.Request) {
 	auditRecordEnhanced(r, uuid.Nil, "email.deleted", "email", id, subject, map[string]any{
 		"subject":       subject,
 		"inbox_address": email.ToAddress,
+		"from_address":  email.FromAddress,
 	})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "email deleted"})
 }

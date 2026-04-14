@@ -154,9 +154,9 @@ func main() {
 	orgHandler := handler.NewOrgHandler(orgSvc)
 	domainHandler := handler.NewDomainHandler(domainSvc, inboxRepo, cfg.SMTP.Hostname)
 	teamHandler := handler.NewTeamHandler(teamSvc)
-	assignmentHandler := handler.NewDomainAssignmentHandler(assignmentSvc, inboxRepo)
+	assignmentHandler := handler.NewDomainAssignmentHandler(assignmentSvc, inboxRepo, teamSvc)
 	inboxHandler := handler.NewInboxHandler(inboxSvc)
-	emailHandler := handler.NewEmailHandler(emailSvc, attachmentSvc)
+	emailHandler := handler.NewEmailHandler(emailSvc, attachmentSvc, inboxSvc)
 	webhookHandler := handler.NewWebhookHandler(webhookSvc)
 	apikeyHandler := handler.NewAPIKeyHandler(apikeySvc)
 	auditHandler := handler.NewAuditHandler(auditSvc)
@@ -393,6 +393,16 @@ func main() {
 					json.NewEncoder(w).Encode(map[string]string{"error": "invalid request body"})
 					return
 				}
+
+				// Fetch role before update for diffs
+				var beforeLabel, beforeDesc string
+				var beforePerms []string
+				if oldRole, err := roleRepo.GetRole(r.Context(), roleID); err == nil && oldRole != nil {
+					beforeLabel = oldRole.Label
+					beforeDesc = oldRole.Description
+					beforePerms = oldRole.Permissions
+				}
+
 				if input.Label != "" || input.Description != "" {
 					if err := roleRepo.UpdateRole(r.Context(), roleID, input.Label, input.Description); err != nil {
 						w.WriteHeader(http.StatusInternalServerError)
@@ -407,8 +417,24 @@ func main() {
 						return
 					}
 				}
+
+				afterLabel := input.Label
+				if afterLabel == "" {
+					afterLabel = beforeLabel
+				}
+				afterDesc := input.Description
+				if afterDesc == "" {
+					afterDesc = beforeDesc
+				}
+				afterPerms := input.Permissions
+				if afterPerms == nil {
+					afterPerms = beforePerms
+				}
+
 				handler.Audit.RecordEnhanced(r, uuid.Nil, "admin.role_updated", "role", roleID, input.Label, map[string]any{
 					"role_id": roleID.String(), "label": input.Label, "description": input.Description, "permissions": input.Permissions,
+					"before": map[string]any{"label": beforeLabel, "description": beforeDesc, "permissions": beforePerms},
+					"after":  map[string]any{"label": afterLabel, "description": afterDesc, "permissions": afterPerms},
 				})
 				w.Header().Set("Content-Type", "application/json")
 				json.NewEncoder(w).Encode(map[string]string{"message": "role updated"})
@@ -522,6 +548,7 @@ func main() {
 					json.NewEncoder(w).Encode(map[string]string{"error": "failed"})
 					return
 				}
+				handler.Audit.RecordEnhanced(r, uuid.Nil, "notification.all_deleted", "notification", uuid.Nil, "", map[string]any{})
 				w.Header().Set("Content-Type", "application/json")
 				json.NewEncoder(w).Encode(map[string]string{"message": "ok"})
 			})
@@ -538,6 +565,7 @@ func main() {
 					json.NewEncoder(w).Encode(map[string]string{"error": "failed"})
 					return
 				}
+				handler.Audit.RecordEnhanced(r, uuid.Nil, "notification.deleted", "notification", id, "", map[string]any{"notification_id": id.String()})
 				w.Header().Set("Content-Type", "application/json")
 				json.NewEncoder(w).Encode(map[string]string{"message": "ok"})
 			})

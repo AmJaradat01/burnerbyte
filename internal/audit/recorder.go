@@ -44,6 +44,18 @@ var SeverityMap = map[string]string{
 	"admin.user_updated":   "warning",
 	"org.updated":          "warning",
 	"org.settings.updated": "warning",
+	// new events
+	"user.login_failed":      "warning",
+	"user.locked":            "critical",
+	"user.forgot_password":   "info",
+	"apikey.disabled":        "warning",
+	"apikey.enabled":         "info",
+	"apikey.updated":         "warning",
+	"apikey.rotated":         "warning",
+	"apikey.bulk_revoked":    "warning",
+	"domain.settings_updated": "info",
+	"notification.deleted":     "info",
+	"notification.all_deleted": "info",
 }
 
 // CategoryMap maps action strings to their category classification.
@@ -115,6 +127,18 @@ var CategoryMap = map[string]string{
 	"admin.role_created":              "admin",
 	"admin.role_updated":              "admin",
 	"admin.role_deleted":              "admin",
+	// new events
+	"user.login_failed":      "auth",
+	"user.locked":            "auth",
+	"user.forgot_password":   "auth",
+	"apikey.disabled":        "apikey",
+	"apikey.enabled":         "apikey",
+	"apikey.updated":         "apikey",
+	"apikey.rotated":         "apikey",
+	"apikey.bulk_revoked":    "apikey",
+	"domain.settings_updated": "domain",
+	"notification.deleted":     "notification",
+	"notification.all_deleted": "notification",
 }
 
 // GetSeverity returns the severity for the given action, defaulting to "info".

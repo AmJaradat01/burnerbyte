@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -151,6 +152,15 @@ func (h *DomainHandler) UpdateDomain(w http.ResponseWriter, r *http.Request) {
 	if beforeDomain != nil {
 		meta["before"] = map[string]any{"settings": beforeDomain.Settings}
 		meta["after"] = map[string]any{"settings": d.Settings}
+
+		// Emit domain.settings_updated if settings changed
+		if fmt.Sprintf("%v", beforeDomain.Settings) != fmt.Sprintf("%v", d.Settings) {
+			auditRecordEnhanced(r, orgID, "domain.settings_updated", "domain", id, domainName, map[string]any{
+				"domain_name": domainName,
+				"before":      map[string]any{"settings": beforeDomain.Settings},
+				"after":       map[string]any{"settings": d.Settings},
+			})
+		}
 	}
 	auditRecordEnhanced(r, orgID, "domain.updated", "domain", id, domainName, meta)
 	writeJSON(w, http.StatusOK, d)
