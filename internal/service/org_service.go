@@ -317,22 +317,26 @@ func (s *OrgService) InviteMember(ctx context.Context, orgID uuid.UUID, input do
 	return invite, nil
 }
 
-func (s *OrgService) AcceptInvite(ctx context.Context, token string, userID uuid.UUID, userEmail string) error {
+func (s *OrgService) AcceptInvite(ctx context.Context, token string, userID uuid.UUID, userEmail string) (uuid.UUID, string, error) {
 	invite, err := s.orgRepo.GetInviteByToken(ctx, token)
 	if err != nil {
 		if errors.Is(err, postgres.ErrNotFound) {
-			return fmt.Errorf("invite not found")
+			return uuid.Nil, "", fmt.Errorf("invite not found")
 		}
-		return err
+		return uuid.Nil, "", err
 	}
 
 	// Idempotent: already accepted
 	if invite.AcceptedAt != nil {
-		return nil
+		orgName := ""
+		if org, err := s.orgRepo.GetByID(ctx, invite.OrgID); err == nil {
+			orgName = org.Name
+		}
+		return invite.OrgID, orgName, nil
 	}
 
 	if time.Now().After(invite.ExpiresAt) {
-		return fmt.Errorf("invite expired")
+		return uuid.Nil, "", fmt.Errorf("invite expired")
 	}
 
 	// Security: verify the accepting user's email matches the invite
@@ -343,12 +347,12 @@ func (s *OrgService) AcceptInvite(ctx context.Context, token string, userID uuid
 			"user_id", userID,
 			"invite_id", invite.ID,
 		)
-		return fmt.Errorf("email mismatch: this invite was sent to a different email address")
+		return uuid.Nil, "", fmt.Errorf("email mismatch: this invite was sent to a different email address")
 	}
 
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return err
+		return uuid.Nil, "", err
 	}
 	defer tx.Rollback(ctx)
 
@@ -365,22 +369,41 @@ func (s *OrgService) AcceptInvite(ctx context.Context, token string, userID uuid
 		if errors.Is(err, postgres.ErrConflict) {
 			// Already a member — just mark invite accepted
 			if err := orgRepoTx.MarkInviteAccepted(ctx, invite.ID); err != nil {
-				return err
+				return uuid.Nil, "", err
 			}
-			return tx.Commit(ctx)
+			if err := tx.Commit(ctx); err != nil {
+				return uuid.Nil, "", err
+			}
+			orgName := ""
+			if org, err := s.orgRepo.GetByID(ctx, invite.OrgID); err == nil {
+				orgName = org.Name
+			}
+			return invite.OrgID, orgName, nil
 		}
-		return err
+		return uuid.Nil, "", err
 	}
 
 	if err := orgRepoTx.MarkInviteAccepted(ctx, invite.ID); err != nil {
-		return err
+		return uuid.Nil, "", err
 	}
 
-	return tx.Commit(ctx)
+	if err := tx.Commit(ctx); err != nil {
+		return uuid.Nil, "", err
+	}
+
+	orgName := ""
+	if org, err := s.orgRepo.GetByID(ctx, invite.OrgID); err == nil {
+		orgName = org.Name
+	}
+	return invite.OrgID, orgName, nil
 }
 
 func (s *OrgService) RevokeInvite(ctx context.Context, orgID, inviteID uuid.UUID) error {
 	return s.orgRepo.DeleteInvite(ctx, orgID, inviteID)
+}
+
+func (s *OrgService) GetInviteByID(ctx context.Context, inviteID uuid.UUID) (*domain.Invite, error) {
+	return s.orgRepo.GetInviteByID(ctx, inviteID)
 }
 
 func (s *OrgService) PreviewInvite(ctx context.Context, token string) (map[string]any, error) {

@@ -253,6 +253,22 @@ func (r *OrgRepo) DeleteInvite(ctx context.Context, orgID, id uuid.UUID) error {
 	return err
 }
 
+func (r *OrgRepo) GetInviteByID(ctx context.Context, id uuid.UUID) (*domain.Invite, error) {
+	var inv domain.Invite
+	err := r.db.QueryRow(ctx,
+		`SELECT id, org_id, team_id, email, org_role, team_role, token, invited_by, accepted_at, expires_at, created_at
+		 FROM invites WHERE id = $1`, id).
+		Scan(&inv.ID, &inv.OrgID, &inv.TeamID, &inv.Email, &inv.OrgRole, &inv.TeamRole,
+			&inv.Token, &inv.InvitedBy, &inv.AcceptedAt, &inv.ExpiresAt, &inv.CreatedAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("get invite by id: %w", err)
+	}
+	return &inv, nil
+}
+
 func (r *OrgRepo) DeletePendingInviteByEmail(ctx context.Context, orgID uuid.UUID, email string) error {
 	_, err := r.db.Exec(ctx, `DELETE FROM invites WHERE org_id = $1 AND email = $2 AND accepted_at IS NULL`, orgID, email)
 	return err
