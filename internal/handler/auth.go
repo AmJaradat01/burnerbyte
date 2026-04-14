@@ -78,7 +78,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auditRecordEnhanced(r, uuid.Nil, "user.registered", "user", user.ID, user.Email, map[string]any{"email": user.Email})
+	auditRecordEnhanced(r, uuid.Nil, "user.registered", "user", user.ID, user.Email, map[string]any{"email": user.Email, "display_name": user.DisplayName, "ip_address": r.RemoteAddr})
 	writeJSON(w, http.StatusCreated, map[string]any{
 		"user":   user,
 		"tokens": tokens,
@@ -101,15 +101,18 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		var lockedErr *service.LockedError
 		if errors.As(err, &lockedErr) {
+			auditRecordEnhanced(r, uuid.Nil, "user.locked", "user", uuid.Nil, input.Email, map[string]any{"email": input.Email, "ip_address": r.RemoteAddr, "lockout_duration": lockedErr.RetryAfter.String()})
+			auditRecordEnhanced(r, uuid.Nil, "user.login_failed", "user", uuid.Nil, input.Email, map[string]any{"email": input.Email, "ip_address": r.RemoteAddr, "reason": "account_locked"})
 			w.Header().Set("Retry-After", strconv.Itoa(int(lockedErr.RetryAfter.Seconds())))
 			writeError(w, http.StatusLocked, err.Error())
 			return
 		}
+		auditRecordEnhanced(r, uuid.Nil, "user.login_failed", "user", uuid.Nil, input.Email, map[string]any{"email": input.Email, "ip_address": r.RemoteAddr, "reason": "invalid_credentials"})
 		writeError(w, http.StatusUnauthorized, err.Error())
 		return
 	}
 
-	auditRecordEnhanced(r, uuid.Nil, "user.login", "user", user.ID, user.Email, map[string]any{"email": user.Email, "user_agent": r.Header.Get("User-Agent")})
+	auditRecordEnhanced(r, uuid.Nil, "user.login", "user", user.ID, user.Email, map[string]any{"email": user.Email, "user_agent": r.Header.Get("User-Agent"), "ip_address": r.RemoteAddr, "login_method": "password"})
 	writeJSON(w, http.StatusOK, map[string]any{
 		"user":   user,
 		"tokens": tokens,
@@ -141,6 +144,7 @@ func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 
 	// Always return 200 to not reveal email existence
 	_ = h.svc.ForgotPassword(r.Context(), input)
+	auditRecordEnhanced(r, uuid.Nil, "user.forgot_password", "user", uuid.Nil, input.Email, map[string]any{"email": input.Email})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "if the email exists, a reset link has been sent"})
 }
 
@@ -151,12 +155,13 @@ func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.svc.ResetPassword(r.Context(), input); err != nil {
+	userID, userEmail, err := h.svc.ResetPassword(r.Context(), input)
+	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	auditRecordEnhanced(r, uuid.Nil, "user.password_reset", "user", uuid.Nil, "password_reset", map[string]any{"method": "token"})
+	auditRecordEnhanced(r, uuid.Nil, "user.password_reset", "user", userID, userEmail, map[string]any{"method": "token", "email": userEmail})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "password reset successful"})
 }
 
@@ -167,17 +172,13 @@ func (h *AuthHandler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.svc.VerifyEmail(r.Context(), token); err != nil {
+	userID, userEmail, err := h.svc.VerifyEmail(r.Context(), token)
+	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid or expired verification link")
 		return
 	}
 
-	uc := auth.GetUser(r.Context())
-	if uc != nil {
-		auditRecordEnhanced(r, uuid.Nil, "user.email_verified", "user", uc.UserID, uc.Email, map[string]any{"email": uc.Email})
-	} else {
-		auditRecordEnhanced(r, uuid.Nil, "user.email_verified", "user", uuid.Nil, "", map[string]any{})
-	}
+	auditRecordEnhanced(r, uuid.Nil, "user.email_verified", "user", userID, userEmail, map[string]any{"email": userEmail})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "email verified"})
 }
 
@@ -258,7 +259,7 @@ func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auditRecordEnhanced(r, uuid.Nil, "user.password_changed", "user", uc.UserID, uc.Email, map[string]any{"email": uc.Email})
+	auditRecordEnhanced(r, uuid.Nil, "user.password_changed", "user", uc.UserID, uc.Email, map[string]any{"email": uc.Email, "sessions_revoked": true})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "password changed"})
 }
 
@@ -270,12 +271,18 @@ func (h *AuthHandler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch user before deletion for display_name
+	displayName := ""
+	if user, err := h.svc.GetMe(r.Context(), uc.UserID); err == nil && user != nil {
+		displayName = user.DisplayName
+	}
+
 	if err := h.svc.DeleteAccount(r.Context(), uc.UserID, input.Password); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	auditRecordEnhanced(r, uuid.Nil, "user.account_deleted", "user", uc.UserID, uc.Email, map[string]any{"email": uc.Email})
+	auditRecordEnhanced(r, uuid.Nil, "user.account_deleted", "user", uc.UserID, uc.Email, map[string]any{"email": uc.Email, "display_name": displayName})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "account deleted"})
 }
 
@@ -297,23 +304,36 @@ func (h *AuthHandler) RevokeSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch session details before revocation for audit
+	sessionIP := ""
+	sessionUA := ""
+	if sess, err := h.svc.GetSession(r.Context(), uc.UserID, sessionID); err == nil && sess != nil {
+		if sess.IPAddress != nil {
+			sessionIP = *sess.IPAddress
+		}
+		if sess.UserAgent != nil {
+			sessionUA = *sess.UserAgent
+		}
+	}
+
 	if err := h.svc.RevokeSession(r.Context(), uc.UserID, sessionID); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to revoke session")
 		return
 	}
 
-	auditRecordEnhanced(r, uuid.Nil, "session.revoked", "session", sessionID, uc.Email, map[string]any{"session_id": sessionID.String()})
+	auditRecordEnhanced(r, uuid.Nil, "session.revoked", "session", sessionID, uc.Email, map[string]any{"session_id": sessionID.String(), "session_ip": sessionIP, "session_user_agent": sessionUA})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "session revoked"})
 }
 
 func (h *AuthHandler) RevokeAllSessions(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
-	if err := h.svc.RevokeAllSessions(r.Context(), uc.UserID); err != nil {
+	count, err := h.svc.RevokeAllSessions(r.Context(), uc.UserID)
+	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to revoke sessions")
 		return
 	}
 
-	auditRecordEnhanced(r, uuid.Nil, "session.revoked_all", "session", uc.UserID, uc.Email, map[string]any{"email": uc.Email})
+	auditRecordEnhanced(r, uuid.Nil, "session.revoked_all", "session", uc.UserID, uc.Email, map[string]any{"email": uc.Email, "revoked_count": count})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "all sessions revoked"})
 }
 

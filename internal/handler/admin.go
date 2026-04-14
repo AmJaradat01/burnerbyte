@@ -268,6 +268,22 @@ func (h *AdminHandler) UpdatePlatformSettings(w http.ResponseWriter, r *http.Req
 	if input.LockoutDurationMins < 1 {
 		input.LockoutDurationMins = 1
 	}
+
+	// Capture before state under read lock
+	h.cfgMu.RLock()
+	before := map[string]any{
+		"allow_registration":    h.cfg.Defaults.AllowRegistration,
+		"email_verification":    h.cfg.EmailVerification.Enabled,
+		"password_min_length":   h.cfg.Password.MinLength,
+		"password_require_upper": h.cfg.Password.RequireUppercase,
+		"password_require_lower": h.cfg.Password.RequireLowercase,
+		"password_require_number": h.cfg.Password.RequireNumber,
+		"password_require_special": h.cfg.Password.RequireSpecial,
+		"lockout_max_attempts":  h.cfg.Lockout.MaxAttempts,
+		"lockout_duration_mins": int(h.cfg.Lockout.Duration.Minutes()),
+	}
+	h.cfgMu.RUnlock()
+
 	if err := h.sysConfig.Set(r.Context(), "platform", input); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to save")
 		return
@@ -297,7 +313,28 @@ func (h *AdminHandler) UpdatePlatformSettings(w http.ResponseWriter, r *http.Req
 	h.cfg.Defaults.MaxTeams = input.MaxTeams
 	h.cfg.Defaults.MaxInboxesPerDomain = input.MaxInboxesPerDomain
 	h.cfgMu.Unlock()
-	auditRecordEnhanced(r, uuid.Nil, "admin.platform_settings_updated", "platform", uuid.Nil, "platform", map[string]any{"allow_registration": input.AllowRegistration, "email_verification": input.EmailVerification, "password_min_length": input.PasswordMinLength, "lockout_max_attempts": input.LockoutMaxAttempts, "lockout_duration_mins": input.LockoutDurationMins})
+
+	after := map[string]any{
+		"allow_registration":    input.AllowRegistration,
+		"email_verification":    input.EmailVerification,
+		"password_min_length":   input.PasswordMinLength,
+		"password_require_upper": input.PasswordRequireUpper,
+		"password_require_lower": input.PasswordRequireLower,
+		"password_require_number": input.PasswordRequireNum,
+		"password_require_special": input.PasswordRequireSpec,
+		"lockout_max_attempts":  input.LockoutMaxAttempts,
+		"lockout_duration_mins": input.LockoutDurationMins,
+	}
+
+	auditRecordEnhanced(r, uuid.Nil, "admin.platform_settings_updated", "platform", uuid.Nil, "platform", map[string]any{
+		"allow_registration":    input.AllowRegistration,
+		"email_verification":    input.EmailVerification,
+		"password_min_length":   input.PasswordMinLength,
+		"lockout_max_attempts":  input.LockoutMaxAttempts,
+		"lockout_duration_mins": input.LockoutDurationMins,
+		"before":                before,
+		"after":                 after,
+	})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "platform settings updated"})
 }
 
@@ -307,6 +344,19 @@ func (h *AdminHandler) UpdateSSOConfig(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
+
+	// Capture before state (excluding client_secret)
+	h.cfgMu.RLock()
+	before := map[string]any{
+		"provider":         h.cfg.SSO.Provider,
+		"client_id":        h.cfg.SSO.ClientID,
+		"issuer_url":       h.cfg.SSO.IssuerURL,
+		"allowed_domains":  h.cfg.SSO.AllowedDomains,
+		"auto_provision":   h.cfg.SSO.AutoProvision,
+		"default_org_role": h.cfg.SSO.DefaultOrgRole,
+	}
+	h.cfgMu.RUnlock()
+
 	h.cfgMu.Lock()
 	// If secret is masked, keep the existing one
 	if input.ClientSecret == "••••••••" {
@@ -331,6 +381,16 @@ func (h *AdminHandler) UpdateSSOConfig(w http.ResponseWriter, r *http.Request) {
 	h.cfgMu.Lock()
 	h.cfg.SSO = input
 	h.cfgMu.Unlock()
-	auditRecordEnhanced(r, uuid.Nil, "admin.sso_config_updated", "sso", uuid.Nil, "sso", map[string]any{"provider": input.Provider})
+
+	after := map[string]any{
+		"provider":         input.Provider,
+		"client_id":        input.ClientID,
+		"issuer_url":       input.IssuerURL,
+		"allowed_domains":  input.AllowedDomains,
+		"auto_provision":   input.AutoProvision,
+		"default_org_role": input.DefaultOrgRole,
+	}
+
+	auditRecordEnhanced(r, uuid.Nil, "admin.sso_config_updated", "sso", uuid.Nil, "sso", map[string]any{"provider": input.Provider, "before": before, "after": after})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "SSO config updated"})
 }

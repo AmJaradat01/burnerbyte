@@ -250,7 +250,11 @@ func (h *OrgHandler) InviteMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auditRecordEnhanced(r, orgID, "member.invited", "org", orgID, input.Email, map[string]any{"email": input.Email, "role": input.OrgRole})
+	orgName := ""
+	if org, err := h.svc.GetOrg(r.Context(), orgID); err == nil && org != nil {
+		orgName = org.Name
+	}
+	auditRecordEnhanced(r, orgID, "member.invited", "org", orgID, input.Email, map[string]any{"email": input.Email, "role": input.OrgRole, "org_name": orgName})
 	writeJSON(w, http.StatusCreated, invite)
 }
 
@@ -329,18 +333,25 @@ func (h *OrgHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Fetch target user info before removal
+	targetEmail := ""
 	meta := map[string]any{"user_id": userID.String()}
 	if membership, err := h.svc.GetMembership(r.Context(), userID, orgID); err == nil {
+		targetEmail = membership.Email
 		meta["target_user_email"] = membership.Email
 		meta["target_user_display_name"] = membership.DisplayName
 	}
+	orgName := ""
+	if org, err := h.svc.GetOrg(r.Context(), orgID); err == nil && org != nil {
+		orgName = org.Name
+	}
+	meta["org_name"] = orgName
 
 	if err := h.svc.RemoveMember(r.Context(), orgID, userID); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	auditRecordEnhanced(r, orgID, "member.removed", "org", userID, "", meta)
+	auditRecordEnhanced(r, orgID, "member.removed", "org", userID, targetEmail, meta)
 	writeJSON(w, http.StatusOK, map[string]string{"message": "member removed"})
 }
 
@@ -358,11 +369,18 @@ func (h *OrgHandler) RevokeInvite(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid invite ID")
 		return
 	}
+
+	// Fetch invite details before revocation for audit
+	inviteEmail := ""
+	if invite, err := h.svc.GetInviteByID(r.Context(), inviteID); err == nil && invite != nil {
+		inviteEmail = invite.Email
+	}
+
 	if err := h.svc.RevokeInvite(r.Context(), orgID, inviteID); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	auditRecordEnhanced(r, orgID, "invite.revoked", "invite", inviteID, "", map[string]any{"invite_id": inviteID.String()})
+	auditRecordEnhanced(r, orgID, "invite.revoked", "invite", inviteID, inviteEmail, map[string]any{"invite_id": inviteID.String(), "invite_email": inviteEmail})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "invite revoked"})
 }
 
@@ -370,7 +388,8 @@ func (h *OrgHandler) AcceptInvite(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
 	token := chi.URLParam(r, "token")
 
-	if err := h.svc.AcceptInvite(r.Context(), token, uc.UserID, uc.Email); err != nil {
+	orgID, orgName, err := h.svc.AcceptInvite(r.Context(), token, uc.UserID, uc.Email)
+	if err != nil {
 		if err.Error() == "invite not found" || err.Error() == "invite expired" {
 			writeError(w, http.StatusNotFound, err.Error())
 		} else if err.Error() == "email mismatch: this invite was sent to a different email address" {
@@ -381,7 +400,7 @@ func (h *OrgHandler) AcceptInvite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auditRecordEnhanced(r, uuid.Nil, "invite.accepted", "invite", uc.UserID, uc.Email, map[string]any{"email": uc.Email})
+	auditRecordEnhanced(r, orgID, "invite.accepted", "invite", uc.UserID, uc.Email, map[string]any{"email": uc.Email, "org_name": orgName, "org_id": orgID.String()})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "invite accepted"})
 }
 

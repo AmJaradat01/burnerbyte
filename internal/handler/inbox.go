@@ -188,6 +188,6 @@ func (h *InboxHandler) DeleteInbox(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	auditRecordEnhanced(r, inbox.OrgID, "inbox.deleted", "inbox", id, inbox.FullAddress, map[string]any{"address": inbox.FullAddress})
+	auditRecordEnhanced(r, inbox.OrgID, "inbox.deleted", "inbox", id, inbox.FullAddress, map[string]any{"address": inbox.FullAddress, "email_count": inbox.EmailCount})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "inbox deleted"})
 }

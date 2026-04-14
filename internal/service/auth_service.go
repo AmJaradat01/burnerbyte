@@ -351,8 +351,12 @@ func (s *AuthService) RevokeSession(ctx context.Context, userID, sessionID uuid.
 	return s.sessionRepo.RevokeForUser(ctx, userID, sessionID)
 }
 
-func (s *AuthService) RevokeAllSessions(ctx context.Context, userID uuid.UUID) error {
-	return s.sessionRepo.RevokeAll(ctx, userID)
+func (s *AuthService) GetSession(ctx context.Context, userID, sessionID uuid.UUID) (*domain.Session, error) {
+	return s.sessionRepo.GetByIDForUser(ctx, userID, sessionID)
+}
+
+func (s *AuthService) RevokeAllSessions(ctx context.Context, userID uuid.UUID) (int, error) {
+	return s.sessionRepo.RevokeAllCount(ctx, userID)
 }
 
 func (s *AuthService) ForgotPassword(ctx context.Context, input domain.ForgotPasswordInput) error {
@@ -392,39 +396,39 @@ func (s *AuthService) ForgotPassword(ctx context.Context, input domain.ForgotPas
 	return nil
 }
 
-func (s *AuthService) ResetPassword(ctx context.Context, input domain.ResetPasswordInput) error {
+func (s *AuthService) ResetPassword(ctx context.Context, input domain.ResetPasswordInput) (uuid.UUID, string, error) {
 	if input.Token == "" || input.NewPassword == "" {
-		return fmt.Errorf("token and new_password are required")
+		return uuid.Nil, "", fmt.Errorf("token and new_password are required")
 	}
 
 	if err := auth.ValidatePassword(input.NewPassword, s.cfg.Password); err != nil {
-		return err
+		return uuid.Nil, "", err
 	}
 
 	tokenHash := postgres.HashToken(input.Token)
 	resetToken, err := s.resetRepo.Consume(ctx, tokenHash)
 	if err != nil {
-		return fmt.Errorf("invalid or expired reset token")
+		return uuid.Nil, "", fmt.Errorf("invalid or expired reset token")
 	}
 
 	user, err := s.userRepo.GetByID(ctx, resetToken.UserID)
 	if err != nil {
-		return fmt.Errorf("user not found")
+		return uuid.Nil, "", fmt.Errorf("user not found")
 	}
 
 	hash, err := auth.HashPassword(input.NewPassword)
 	if err != nil {
-		return err
+		return uuid.Nil, "", err
 	}
 
 	now := time.Now()
 	user.PasswordHash = &hash
 	user.PasswordChangedAt = &now
 	if err := s.userRepo.Update(ctx, user); err != nil {
-		return err
+		return uuid.Nil, "", err
 	}
 	// Revoke all sessions so stolen refresh tokens can't mint new access tokens
-	return s.sessionRepo.RevokeAll(ctx, user.ID)
+	return user.ID, user.Email, s.sessionRepo.RevokeAll(ctx, user.ID)
 }
 
 func (s *AuthService) SSOLogin(ctx context.Context, email, displayName, provider, subject, ip, userAgent string) (*domain.User, *domain.TokenPair, error) {
@@ -509,12 +513,12 @@ func (s *AuthService) autoProvisionSSO(ctx context.Context, user *domain.User, s
 	slog.Info("SSO auto-provisioned user into org", "user", user.Email, "org", orgs[0].Name, "role", role)
 }
 
-func (s *AuthService) VerifyEmail(ctx context.Context, token string) error {
+func (s *AuthService) VerifyEmail(ctx context.Context, token string) (uuid.UUID, string, error) {
 	tokenHash := postgres.HashToken(token)
 
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("begin tx: %w", err)
+		return uuid.Nil, "", fmt.Errorf("begin tx: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
@@ -522,30 +526,30 @@ func (s *AuthService) VerifyEmail(ctx context.Context, token string) error {
 
 	vt, err := emailVerifyRepoTx.Consume(ctx, tokenHash)
 	if err != nil {
-		return fmt.Errorf("invalid or expired verification link")
+		return uuid.Nil, "", fmt.Errorf("invalid or expired verification link")
 	}
 
 	userRepoTx := s.userRepo.WithTx(tx)
 	user, err := userRepoTx.GetByID(ctx, vt.UserID)
 	if err != nil {
-		return err
+		return uuid.Nil, "", err
 	}
 
 	if !user.EmailVerified {
 		user.EmailVerified = true
 		if err := userRepoTx.Update(ctx, user); err != nil {
-			return err
+			return uuid.Nil, "", err
 		}
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("commit: %w", err)
+		return uuid.Nil, "", fmt.Errorf("commit: %w", err)
 	}
 
 	// Invalidate remaining tokens outside transaction (best-effort)
 	_ = s.emailVerifyRepo.InvalidateForUser(ctx, vt.UserID)
 
-	return nil
+	return user.ID, user.Email, nil
 }
 
 // generateSecureToken creates a cryptographically random hex token.

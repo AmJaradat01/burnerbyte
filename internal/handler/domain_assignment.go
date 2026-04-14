@@ -17,10 +17,11 @@ import (
 type DomainAssignmentHandler struct {
 	svc       *service.DomainAssignmentService
 	inboxRepo *postgres.InboxRepo
+	teamSvc   *service.TeamService
 }
 
-func NewDomainAssignmentHandler(svc *service.DomainAssignmentService, inboxRepo *postgres.InboxRepo) *DomainAssignmentHandler {
-	return &DomainAssignmentHandler{svc: svc, inboxRepo: inboxRepo}
+func NewDomainAssignmentHandler(svc *service.DomainAssignmentService, inboxRepo *postgres.InboxRepo, teamSvc *service.TeamService) *DomainAssignmentHandler {
+	return &DomainAssignmentHandler{svc: svc, inboxRepo: inboxRepo, teamSvc: teamSvc}
 }
 
 func (h *DomainAssignmentHandler) Routes(r chi.Router) {
@@ -70,7 +71,13 @@ func (h *DomainAssignmentHandler) AssignDomain(w http.ResponseWriter, r *http.Re
 		return
 	}
 	domainName := a.DomainName
-	auditRecordEnhanced(r, orgID, "domain.assigned", "domain_assignment", a.ID, domainName, map[string]any{"domain_id": a.DomainID.String(), "team_id": teamID.String(), "domain_name": domainName})
+	teamName := ""
+	if h.teamSvc != nil {
+		if team, err := h.teamSvc.GetTeam(r.Context(), orgID, teamID); err == nil && team != nil {
+			teamName = team.Name
+		}
+	}
+	auditRecordEnhanced(r, orgID, "domain.assigned", "domain_assignment", a.ID, domainName, map[string]any{"domain_id": a.DomainID.String(), "team_id": teamID.String(), "domain_name": domainName, "team_name": teamName})
 	writeJSON(w, http.StatusCreated, a)
 }
 
