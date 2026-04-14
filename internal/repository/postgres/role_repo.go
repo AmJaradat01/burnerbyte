@@ -102,6 +102,22 @@ func (r *RoleRepo) UpdateRole(ctx context.Context, id uuid.UUID, label, descript
 	return err
 }
 
+func (r *RoleRepo) GetRole(ctx context.Context, id uuid.UUID) (*Role, error) {
+	var role Role
+	err := r.db.QueryRow(ctx,
+		`SELECT id, scope, value, label, description, rank, is_system FROM roles WHERE id = $1`, id).
+		Scan(&role.ID, &role.Scope, &role.Value, &role.Label, &role.Description, &role.Rank, &role.IsSystem)
+	if err != nil {
+		return nil, err
+	}
+	perms, err := r.GetRolePermissions(ctx, role.ID)
+	if err != nil {
+		return nil, err
+	}
+	role.Permissions = perms
+	return &role, nil
+}
+
 func (r *RoleRepo) SetRolePermissions(ctx context.Context, roleID uuid.UUID, permissionKeys []string) error {
 	// Delete existing
 	if _, err := r.db.Exec(ctx, `DELETE FROM role_permissions WHERE role_id = $1`, roleID); err != nil {

@@ -121,10 +121,19 @@ func (h *WebhookHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 	id, err := uuid.Parse(chi.URLParam(r, "webhookId"))
 	if err != nil { writeError(w, http.StatusBadRequest, "invalid webhook ID"); return }
+
+	// Fetch webhook before deletion for audit
+	webhookURL := ""
+	resourceName := id.String()
+	if wh, err := h.svc.GetByID(r.Context(), teamID, id); err == nil && wh != nil {
+		webhookURL = wh.URL
+		resourceName = wh.URL
+	}
+
 	if err := h.svc.Delete(r.Context(), teamID, id); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed"); return
 	}
-	auditRecordEnhanced(r, orgID, "webhook.deleted", "webhook", id, id.String(), map[string]any{"webhook_id": id.String()})
+	auditRecordEnhanced(r, orgID, "webhook.deleted", "webhook", id, resourceName, map[string]any{"webhook_id": id.String(), "webhook_url": webhookURL})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "webhook deleted"})
 }
 
