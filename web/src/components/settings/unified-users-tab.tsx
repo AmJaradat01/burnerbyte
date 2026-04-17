@@ -502,7 +502,7 @@ function InviteDialog({ orgId }: { orgId: string }) {
   const [open, setOpen] = useState(false);
   const [sending, setSending] = useState(false);
 
-  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const emailValid = /^[^\s@]+@[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/.test(email);
 
   const invite = async () => {
     if (!email || !emailValid) return;
