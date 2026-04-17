@@ -14,8 +14,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import Link from "next/link";
-import { Clock, KeyRound, LogOut, Monitor, Shield, Trash2 } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { Clock, KeyRound, Link2, LogOut, Monitor, Shield, Trash2, Unlink } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useDateFormat } from "@/hooks/use-date-format";
 
 export default function ProfilePage() {
@@ -101,6 +101,8 @@ export default function ProfilePage() {
 
         {/* Right column */}
         <div className="space-y-6">
+          <ConnectedAccountsCard />
+
           {!isSSO ? <ChangePasswordForm /> : (
             <Card>
               <CardHeader>
@@ -298,6 +300,127 @@ function DateTimePreferencesCard() {
         <Button onClick={save} disabled={saving || !dirty}>
           {saving ? "Saving…" : "Save Preferences"}
         </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
+
+interface SSOIdentity {
+  id: string;
+  provider: string;
+  subject: string;
+  email: string;
+  display_name: string;
+  linked_at: string;
+  last_used_at: string;
+}
+
+interface SSOStatusProvider {
+  name: string;
+  provider_type: string;
+  label: string;
+  enabled: boolean;
+}
+
+interface SSOStatusResponse {
+  enabled: boolean;
+  providers?: SSOStatusProvider[];
+  enforce_sso?: boolean;
+}
+
+function ConnectedAccountsCard() {
+  const { user } = useAuthStore();
+  const qc = useQueryClient();
+  const [unlinking, setUnlinking] = useState<string | null>(null);
+
+  const { data: identities, isLoading: identitiesLoading } = useQuery({
+    queryKey: ["sso-identities"],
+    queryFn: () => api.get<SSOIdentity[]>("/auth/me/sso"),
+  });
+
+  const { data: ssoStatus } = useQuery({
+    queryKey: ["sso-status"],
+    queryFn: () => api.get<SSOStatusResponse>("/auth/sso-status"),
+    staleTime: 60000,
+  });
+
+  const providers = (ssoStatus?.providers ?? []).filter((p) => p.enabled);
+  const linkedProviders = new Set((identities ?? []).map((i) => i.provider));
+  const unlinkedProviders = providers.filter((p) => !linkedProviders.has(p.name));
+  const enforceSSO = ssoStatus?.enforce_sso ?? false;
+  const hasPassword = user?.sso_provider === undefined || user?.sso_provider === null;
+
+  const handleUnlink = async (provider: string) => {
+    setUnlinking(provider);
+    try {
+      await api.del(`/auth/me/sso/${provider}`);
+      qc.invalidateQueries({ queryKey: ["sso-identities"] });
+      toast.success(`${provider} account unlinked`);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to unlink");
+    } finally {
+      setUnlinking(null);
+    }
+  };
+
+  const handleLink = (providerName: string) => {
+    window.location.href = `${API_BASE}/auth/sso/${providerName}?intent=link`;
+  };
+
+  if (!ssoStatus?.enabled && (!identities || identities.length === 0)) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base"><Link2 className="h-4 w-4" /> Connected Accounts</CardTitle>
+        <CardDescription>Manage your linked SSO identities.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {identitiesLoading ? (
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        ) : (
+          <>
+            {(identities ?? []).map((identity) => (
+              <div key={identity.id} className="flex items-center justify-between rounded-lg border p-3">
+                <div>
+                  <p className="text-sm font-medium capitalize">{identity.provider}</p>
+                  <p className="text-xs text-muted-foreground">{identity.email}</p>
+                  <p className="text-xs text-muted-foreground">Linked {new Date(identity.linked_at).toLocaleDateString()}</p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  disabled={unlinking === identity.provider || !hasPassword || enforceSSO}
+                  onClick={() => handleUnlink(identity.provider)}
+                  title={!hasPassword ? "Set a password first" : enforceSSO ? "SSO required by organization" : "Unlink account"}
+                >
+                  <Unlink className="h-3.5 w-3.5" />
+                  {unlinking === identity.provider ? "Unlinking…" : "Unlink"}
+                </Button>
+              </div>
+            ))}
+
+            {unlinkedProviders.map((p) => (
+              <div key={p.name} className="flex items-center justify-between rounded-lg border border-dashed p-3">
+                <div>
+                  <p className="text-sm font-medium">{p.label}</p>
+                  <p className="text-xs text-muted-foreground">Not connected</p>
+                </div>
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => handleLink(p.name)}>
+                  <Link2 className="h-3.5 w-3.5" /> Link Account
+                </Button>
+              </div>
+            ))}
+
+            {(identities ?? []).length === 0 && unlinkedProviders.length === 0 && (
+              <p className="text-sm text-muted-foreground">No SSO providers available.</p>
+            )}
+          </>
+        )}
       </CardContent>
     </Card>
   );

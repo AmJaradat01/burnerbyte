@@ -78,6 +78,7 @@ type Session struct {
 	TokenFamily      uuid.UUID  `json:"-"`
 	IPAddress        *string    `json:"ip_address,omitempty"`
 	UserAgent        *string    `json:"user_agent,omitempty"`
+	SSOProviderName  *string    `json:"sso_provider_name,omitempty"`
 	LastUsedAt       time.Time  `json:"last_used_at"`
 	ExpiresAt        time.Time  `json:"expires_at"`
 	Revoked          bool       `json:"-"`
