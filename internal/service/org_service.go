@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/mail"
 	"regexp"
 	"strings"
 	"time"
@@ -262,6 +263,11 @@ func (s *OrgService) RemoveMember(ctx context.Context, orgID, targetUserID uuid.
 func (s *OrgService) InviteMember(ctx context.Context, orgID uuid.UUID, input domain.InviteMemberInput, inviterID uuid.UUID) (*domain.Invite, error) {
 	if input.Email == "" {
 		return nil, fmt.Errorf("email is required")
+	}
+	// Validate email format using net/mail (same as auth registration)
+	input.Email = strings.ToLower(strings.TrimSpace(input.Email))
+	if _, err := mail.ParseAddress(input.Email); err != nil {
+		return nil, fmt.Errorf("invalid email format")
 	}
 	if !rbac.ValidOrgRole(input.OrgRole) {
 		return nil, fmt.Errorf("invalid org_role: %s", input.OrgRole)
