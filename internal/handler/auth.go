@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -37,7 +39,7 @@ func (h *AuthHandler) PublicRoutes(r chi.Router, rl *middleware.RateLimiter) {
 	r.With(rl.LoginLimiter).Post("/auth/reset-password", h.ResetPassword)
 	r.Get("/auth/verify-email/{token}", h.VerifyEmail)
 	r.Get("/auth/sso/{provider}", h.SSORedirect)
-	r.Get("/auth/sso/{provider}/callback", h.SSOCallback)
+	r.With(rl.LoginLimiter).Get("/auth/sso/{provider}/callback", h.SSOCallback)
 	r.Get("/auth/sso-status", h.SSOStatus)
 }
 
@@ -110,7 +112,11 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusLocked, err.Error())
 			return
 		}
-		auditRecordEnhanced(r, uuid.Nil, "user.login_failed", "user", uuid.Nil, input.Email, map[string]any{"email": input.Email, "ip_address": r.RemoteAddr, "reason": "invalid_credentials"})
+		reason := "invalid_credentials"
+		if strings.Contains(err.Error(), "SSO login required") {
+			reason = "sso_enforced"
+		}
+		auditRecordEnhanced(r, uuid.Nil, "user.login_failed", "user", uuid.Nil, input.Email, map[string]any{"email": input.Email, "ip_address": r.RemoteAddr, "reason": reason})
 		writeError(w, http.StatusUnauthorized, err.Error())
 		return
 	}
@@ -405,6 +411,18 @@ func (h *AuthHandler) SSORedirect(w http.ResponseWriter, r *http.Request) {
 	if origin == "" {
 		origin = h.cfg.Server.FrontendURL // fallback to config
 	}
+
+	// Validate origin against allowed origins
+	validOrigin := false
+	for _, allowed := range h.cfg.CORS.AllowedOrigins {
+		if origin == allowed {
+			validOrigin = true
+			break
+		}
+	}
+	if !validOrigin {
+		origin = h.cfg.Server.FrontendURL
+	}
 	scheme := "http"
 	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
 		scheme = "https"
@@ -499,6 +517,7 @@ func (h *AuthHandler) SSOCallback(w http.ResponseWriter, r *http.Request) {
 	if intent == "link" && linkUserID != "" {
 		userID, parseErr := uuid.Parse(linkUserID)
 		if parseErr != nil {
+			slog.Warn("invalid linkUserID in SSO callback state", "linkUserID", linkUserID, "provider", providerName, "ip", r.RemoteAddr)
 			writeError(w, http.StatusBadRequest, "invalid user ID in link intent")
 			return
 		}
@@ -524,7 +543,7 @@ func (h *AuthHandler) SSOCallback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	auditRecordEnhanced(r, uuid.Nil, "user.sso_login", "user", user.ID, user.Email, map[string]any{
-		"email": user.Email, "provider": providerName, "subject": result.Subject,
+		"email": user.Email, "provider": providerName, "subject": result.Subject, "is_new_user": user.CreatedAt.After(time.Now().Add(-10*time.Second)),
 	})
 
 	http.Redirect(w, r, fmt.Sprintf("%s/login#access_token=%s&refresh_token=%s&user_id=%s",

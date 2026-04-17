@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -437,6 +438,14 @@ func (h *AdminHandler) CreateSSOProvider(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusBadRequest, "name, provider_type, client_id, and client_secret are required")
 		return
 	}
+	if input.RedirectURL == "" {
+		writeError(w, http.StatusBadRequest, "redirect_url is required")
+		return
+	}
+	if !strings.HasPrefix(input.RedirectURL, "https://") && !strings.HasPrefix(input.RedirectURL, "http://localhost") {
+		writeError(w, http.StatusBadRequest, "redirect_url must use HTTPS (except localhost for development)")
+		return
+	}
 	validTypes := map[string]bool{"google": true, "github": true, "azure": true, "okta": true, "oidc": true}
 	if !validTypes[input.ProviderType] {
 		writeError(w, http.StatusBadRequest, "provider_type must be one of: google, github, azure, okta, oidc")
@@ -445,6 +454,12 @@ func (h *AdminHandler) CreateSSOProvider(w http.ResponseWriter, r *http.Request)
 	if (input.ProviderType == "okta" || input.ProviderType == "oidc") && input.IssuerURL == "" {
 		writeError(w, http.StatusBadRequest, "issuer_url is required for okta and oidc provider types")
 		return
+	}
+	if (input.ProviderType == "okta" || input.ProviderType == "oidc") && input.IssuerURL != "" {
+		if !strings.HasPrefix(input.IssuerURL, "https://") {
+			writeError(w, http.StatusBadRequest, "issuer_url must use HTTPS")
+			return
+		}
 	}
 	if input.ProviderType == "azure" && input.TenantID == "" {
 		writeError(w, http.StatusBadRequest, "tenant_id is required for azure provider type")

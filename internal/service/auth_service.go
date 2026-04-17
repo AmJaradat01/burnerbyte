@@ -849,7 +849,9 @@ func (s *AuthService) applyClaimMappings(ctx context.Context, userID uuid.UUID, 
 		if mapping.OrgRole != "" && s.orgRepo != nil {
 			orgs, _, err := s.orgRepo.ListAll(ctx, 1, 1)
 			if err == nil && len(orgs) > 0 {
-				_ = s.orgRepo.UpdateMemberRole(ctx, userID, orgs[0].ID, mapping.OrgRole)
+				if err := s.orgRepo.UpdateMemberRole(ctx, userID, orgs[0].ID, mapping.OrgRole); err != nil {
+					slog.Warn("failed to apply claim mapping org role", "user_id", userID, "org_id", orgs[0].ID, "role", mapping.OrgRole, "error", err)
+				}
 			}
 		}
 
@@ -861,12 +863,14 @@ func (s *AuthService) applyClaimMappings(ctx context.Context, userID uuid.UUID, 
 				if teamRole == "" {
 					teamRole = "member"
 				}
-				_ = s.teamRepo.CreateMembership(ctx, &domain.TeamMembership{
+				if err := s.teamRepo.CreateMembership(ctx, &domain.TeamMembership{
 					ID:     uuid.New(),
 					UserID: userID,
 					TeamID: teamID,
 					Role:   teamRole,
-				})
+				}); err != nil {
+					slog.Warn("failed to apply claim mapping team membership", "user_id", userID, "team_id", mapping.TeamID, "error", err)
+				}
 			}
 		}
 	}
