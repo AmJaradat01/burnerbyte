@@ -119,7 +119,7 @@ func main() {
 		attachmentSvc = service.NewAttachmentService(attachmentRepo, emailRepo, inboxRepo, s3Client, cfg.MinIO, cfg.Defaults.MaxAttachmentSizeMB, cfg.Defaults.PresignedURLTTL)
 	}
 	authSvc := service.NewAuthService(pool, userRepo, sessionRepo, resetRepo, postgres.NewEmailVerificationRepo(pool), orgRepo, tokenMgr, lockout, ml, cfg)
-	orgSvc := service.NewOrgService(pool, orgRepo, teamRepo, ml, cfg.Server.FrontendURL, cfg.Defaults.InviteExpiryTTL)
+	orgSvc := service.NewOrgService(pool, orgRepo, teamRepo, userRepo, ml, cfg.Server.FrontendURL, cfg.Defaults.InviteExpiryTTL)
 	redisInboxRepo := redisrepo.NewInboxRepo(rdb)
 	domainSvc := service.NewDomainService(domainRepo, orgRepo, inboxRepo, redisInboxRepo, verHistoryRepo, cfg)
 	teamSvc := service.NewTeamService(pool, teamRepo, orgRepo, userRepo, counterRepo, cfg)

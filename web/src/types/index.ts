@@ -6,6 +6,9 @@ export interface User {
   sso_provider?: string;
   is_system_admin: boolean;
   email_verified: boolean;
+  timezone?: string;
+  date_format?: string;
+  time_format?: string;
   created_at: string;
   updated_at: string;
 }
