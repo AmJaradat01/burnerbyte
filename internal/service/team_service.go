@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"gitlab.com/burnerbyte/burnerbyte/internal/auth/rbac"
@@ -156,10 +157,12 @@ func (s *TeamService) CreateTeam(ctx context.Context, orgID uuid.UUID, input dom
 			}
 			// Add initial members
 			failedMembers := s.addInitialMembers(ctx, teamRepoTx2, team.ID, creatorID, input.Members)
+			// Assign initial domains
+			failedDomains, assignedCount := s.assignInitialDomains(ctx, tx2, team.ID, orgID, input.Domains)
 			if err := tx2.Commit(ctx); err != nil {
 				return nil, err
 			}
-			return &domain.CreateTeamResult{Team: team, FailedMembers: failedMembers}, nil
+			return &domain.CreateTeamResult{Team: team, FailedMembers: failedMembers, FailedDomains: failedDomains, AssignedDomains: assignedCount}, nil
 		}
 		return nil, err
 	}
@@ -172,10 +175,13 @@ func (s *TeamService) CreateTeam(ctx context.Context, orgID uuid.UUID, input dom
 	// Add initial members
 	failedMembers := s.addInitialMembers(ctx, teamRepoTx, team.ID, creatorID, input.Members)
 
+	// Assign initial domains
+	failedDomains, assignedCount := s.assignInitialDomains(ctx, tx, team.ID, orgID, input.Domains)
+
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
-	return &domain.CreateTeamResult{Team: team, FailedMembers: failedMembers}, nil
+	return &domain.CreateTeamResult{Team: team, FailedMembers: failedMembers, FailedDomains: failedDomains, AssignedDomains: assignedCount}, nil
 }
 
 func (s *TeamService) addInitialMembers(ctx context.Context, repo *postgres.TeamRepo, teamID, creatorID uuid.UUID, members []domain.AddTeamMemberInput) []domain.BulkMemberFailed {
@@ -207,6 +213,36 @@ func (s *TeamService) addInitialMembers(ctx context.Context, repo *postgres.Team
 		}
 	}
 	return failed
+}
+
+func (s *TeamService) assignInitialDomains(ctx context.Context, tx pgx.Tx, teamID, orgID uuid.UUID, domains []domain.CreateTeamDomainInput) ([]domain.BulkDomainFailed, int) {
+	var failed []domain.BulkDomainFailed
+	assigned := 0
+	for _, d := range domains {
+		domainID, err := uuid.Parse(d.DomainID)
+		if err != nil {
+			failed = append(failed, domain.BulkDomainFailed{DomainID: d.DomainID, Reason: "invalid domain ID"})
+			continue
+		}
+		accessLevel := d.AccessLevel
+		if accessLevel == "" {
+			accessLevel = "full"
+		}
+		if accessLevel != "full" && accessLevel != "create_inbox" && accessLevel != "read_only" {
+			failed = append(failed, domain.BulkDomainFailed{DomainID: d.DomainID, Reason: "invalid access_level"})
+			continue
+		}
+		assignmentID := uuid.New()
+		_, err = tx.Exec(ctx,
+			`INSERT INTO domain_assignments (id, team_id, domain_id, access_level) VALUES ($1, $2, $3, $4)`,
+			assignmentID, teamID, domainID, accessLevel)
+		if err != nil {
+			failed = append(failed, domain.BulkDomainFailed{DomainID: d.DomainID, Reason: "failed to assign domain"})
+			continue
+		}
+		assigned++
+	}
+	return failed, assigned
 }
 
 func (s *TeamService) resolveUser(ctx context.Context, input domain.AddTeamMemberInput) (uuid.UUID, string, error) {
