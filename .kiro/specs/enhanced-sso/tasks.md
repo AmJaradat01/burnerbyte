@@ -1,0 +1,544 @@
+# Implementation Plan: Enhanced SSO
+
+## Overview
+
+This plan implements the enhanced SSO feature across 14 requirements, transforming BurnerByte's single-provider OIDC-only SSO into a multi-provider authentication platform. The implementation proceeds bottom-up: database migration first, then domain models, repository layer (SSOProviderRepo with encryption, SSOIdentityRepo), SSO Manager refactor to multi-provider registry with GitHub OAuth2 fix, service layer changes (AuthService new methods), handler routes (link/unlink, admin CRUD, test connection), audit events, wiring in main.go, and finally frontend changes (multi-provider SSO buttons, Connected Accounts on profile, admin SSO dashboard).
+
+## Tasks
+
+- [x] 1. Create database migration 000035 for enhanced SSO schema
+  - [x] 1.1 Create `migrations/000035_enhanced_sso.up.sql`
+    - Create `sso_providers` table with columns: id (UUID PK), name (VARCHAR(50) UNIQUE), provider_type (VARCHAR(20)), client_id (VARCHAR(255)), client_secret_encrypted (TEXT), redirect_url (TEXT), issuer_url (TEXT), tenant_id (VARCHAR(255)), auto_provision (BOOLEAN DEFAULT FALSE), default_org_role (VARCHAR(50) DEFAULT 'member'), default_team_role (VARCHAR(50) DEFAULT 'member'), allowed_domains (TEXT), claim_mappings (JSONB DEFAULT '[]'), custom_claims (JSONB DEFAULT '[]'), enabled (BOOLEAN DEFAULT TRUE), created_at (TIMESTAMPTZ DEFAULT NOW()), updated_at (TIMESTAMPTZ DEFAULT NOW())
+    - Create `user_sso_identities` table with columns: id (UUID PK), user_id (UUID FK→users ON DELETE CASCADE), provider (VARCHAR(50)), subject (VARCHAR(255)), email (VARCHAR(255)), display_name (VARCHAR(255)), metadata (JSONB DEFAULT '{}'), linked_at (TIMESTAMPTZ DEFAULT NOW()), last_used_at (TIMESTAMPTZ DEFAULT NOW()), with UNIQUE(provider, subject)
+    - Create index `idx_user_sso_identities_user_id` on user_sso_identities(user_id)
+    - Create index `idx_user_sso_identities_provider_subject` on user_sso_identities(provider, subject)
+    - Migrate existing SSO data: INSERT INTO user_sso_identities from users WHERE sso_provider IS NOT NULL AND sso_subject IS NOT NULL
+    - Add `sso_provider_name VARCHAR(50)` column to sessions table
+    - Add deprecation comments on users.sso_provider and users.sso_subject columns
+    - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 11.1, 9.1_
+  - [x] 1.2 Create `migrations/000035_enhanced_sso.down.sql`
+    - DROP COLUMN sso_provider_name from sessions
+    - Remove deprecation comments from users.sso_provider and users.sso_subject
+    - DROP TABLE user_sso_identities
+    - DROP TABLE sso_providers
+    - _Requirements: 10.5_
+
+- [x] 2. Create domain models in `internal/domain/sso.go` and update `internal/domain/user.go`
+  - [x] 2.1 Create `internal/domain/sso.go` with all SSO domain types
+    - Define `SSOIdentity` struct with ID, UserID, Provider, Subject, Email, DisplayName, Metadata, LinkedAt, LastUsedAt
+    - Define `SSOProvider` struct with all fields from design: ID, Name, ProviderType, ClientID, ClientSecretEncrypted, ClientSecret (input only), RedirectURL, IssuerURL, TenantID, AutoProvision, DefaultOrgRole, DefaultTeamRole, AllowedDomains, ClaimMappings, CustomClaims, Enabled, LinkedUserCount, CreatedAt, UpdatedAt
+    - Define `ClaimMapping` struct with ClaimName, ClaimValue, OrgRole, TeamID, TeamRole
+    - Define `SSOCallbackResult` struct with Email, DisplayName, Provider, Subject, AvatarURL, Claims
+    - Define `SSOTestResult` struct with Success, Endpoint, StatusCode, Message, ResponseTime
+    - Define `SSOStatusResponse` struct with Enabled, AllowRegistration, EnforceSSO, Providers, PasswordPolicy
+    - Define `SSOStatusProvider` struct with Name, ProviderType, Label, Enabled
+    - _Requirements: 2.3, 5.4, 10.1, 11.1_
+  - [x] 2.2 Update `Session` struct in `internal/domain/user.go`
+    - Add `SSOProviderName *string` field with json tag `sso_provider_name,omitempty`
+    - _Requirements: 9.1, 9.2_
+
+- [x] 3. Create SSO provider repository `internal/repository/postgres/sso_provider_repo.go`
+  - [x] 3.1 Implement `SSOProviderRepo` struct and constructor
+    - Accept `database.DBTX` and `*crypto.Encryptor` dependencies
+    - Implement `WithTx` method for transaction support
+    - _Requirements: 11.1, 11.3_
+  - [x] 3.2 Implement `Create` method
+    - Encrypt client_secret using encryptor before INSERT
+    - INSERT all columns into sso_providers table
+    - Return error on duplicate name (UNIQUE constraint)
+    - _Requirements: 11.3_
+  - [x] 3.3 Implement `GetByName` and `GetByID` methods
+    - SELECT all columns, decrypt client_secret_encrypted on read
+    - _Requirements: 11.2_
+  - [x] 3.4 Implement `List` and `ListEnabled` methods
+    - `List`: SELECT all providers with decrypted secrets, include linked user count via subquery on user_sso_identities
+    - `ListEnabled`: SELECT WHERE enabled=true, decrypt secrets, include linked user counts
+    - _Requirements: 2.3, 11.2, 14.1_
+  - [x] 3.5 Implement `Update` method
+    - Re-encrypt client_secret if changed (not masked "••••••••"), otherwise keep existing encrypted value
+    - UPDATE all mutable columns, set updated_at=NOW()
+    - _Requirements: 11.3_
+  - [x] 3.6 Implement `Delete` and `CountLinkedUsers` methods
+    - `Delete`: hard DELETE by ID
+    - `CountLinkedUsers`: COUNT from user_sso_identities WHERE provider=$1
+    - _Requirements: 2.8, 14.1_
+
+- [x] 4. Create SSO identity repository `internal/repository/postgres/sso_identity_repo.go`
+  - [x] 4.1 Implement `SSOIdentityRepo` struct and constructor
+    - Accept `database.DBTX` dependency
+    - Implement `WithTx` method for transaction support
+    - _Requirements: 10.6_
+  - [x] 4.2 Implement `Create` method
+    - INSERT into user_sso_identities with all fields
+    - Return conflict error on duplicate (provider, subject)
+    - _Requirements: 3.2, 10.1_
+  - [x] 4.3 Implement `GetByProviderSubject` method
+    - SELECT by provider + subject for SSO login lookup
+    - _Requirements: 10.6_
+  - [x] 4.4 Implement `ListByUser` and `GetByUserAndProvider` methods
+    - `ListByUser`: SELECT all identities for a user_id
+    - `GetByUserAndProvider`: SELECT by user_id + provider for conflict check
+    - _Requirements: 3.4, 13.1_
+  - [x] 4.5 Implement `Delete` and `UpdateLastUsed` methods
+    - `Delete`: DELETE by user_id + provider
+    - `UpdateLastUsed`: UPDATE last_used_at=NOW() by identity ID
+    - _Requirements: 4.1, 4.3_
+
+- [x] 5. Checkpoint - Verify migration, domain models, and repositories compile
+  - Ensure the migration SQL is syntactically correct, domain structs compile, and both new repositories compile with `go build ./...`. Ask the user if questions arise.
+
+- [x] 6. Update session repository `internal/repository/postgres/session_repo.go`
+  - [x] 6.1 Update `Create` to include `sso_provider_name` column
+    - Add sso_provider_name to the INSERT statement, reading from `session.SSOProviderName`
+    - _Requirements: 9.1_
+  - [x] 6.2 Update `ListByUser` and scan helpers to include `sso_provider_name`
+    - Add sso_provider_name to SELECT columns and Scan calls
+    - _Requirements: 9.2_
+
+- [x] 7. Refactor SSO Manager to multi-provider registry in `internal/auth/sso.go`
+  - [x] 7.1 Refactor `SSOManager` struct to multi-provider model
+    - Replace single-provider fields with `providers map[string]*providerState` keyed by provider name
+    - Add `sync.RWMutex` for concurrent access
+    - Add `encryptor *crypto.Encryptor` field
+    - Define `providerState` struct with config (domain.SSOProvider), oidcProv (*oidc.Provider), verifier (*oidc.IDTokenVerifier), oauth (*oauth2.Config)
+    - Update `NewSSOManager` to accept `cfg *config.Config` and `encryptor *crypto.Encryptor`
+    - _Requirements: 2.1, 2.2_
+  - [x] 7.2 Implement `LoadProviders` method
+    - Accept `[]domain.SSOProvider` from database + file config merge
+    - For each provider: initialize OIDC discovery (for non-GitHub types) or set up GitHub OAuth2 config
+    - Store initialized `providerState` in the providers map
+    - Database config takes precedence over file config for same provider name
+    - _Requirements: 2.1, 11.2, 11.5_
+  - [x] 7.3 Implement `IsConfigured`, `IsProviderConfigured`, and `ListProviders` methods
+    - `IsConfigured`: return true if any provider is in the map
+    - `IsProviderConfigured(name)`: check specific provider exists and is enabled
+    - `ListProviders`: return `[]domain.SSOStatusProvider` with name, type, label, enabled for all providers
+    - _Requirements: 2.3, 2.4_
+  - [x] 7.4 Update `RedirectURL` to accept provider name parameter
+    - Look up provider by name from the map
+    - For GitHub type: return `https://github.com/login/oauth/authorize` with client_id, redirect_uri, scope, state params
+    - For OIDC types: return the oauth2 AuthCodeURL as before
+    - Return error if provider not found or disabled
+    - _Requirements: 1.1, 2.2, 2.4_
+  - [x] 7.5 Update `HandleCallback` to accept provider name and dispatch
+    - Accept `providerName string` and `*http.Request` parameters
+    - Look up provider by name, dispatch to `handleOIDCCallback` or `handleGitHubCallback` based on provider_type
+    - Return `*domain.SSOCallbackResult` instead of individual strings
+    - _Requirements: 1.2, 2.4_
+  - [x] 7.6 Implement `handleGitHubCallback` method
+    - Exchange authorization code at `https://github.com/login/oauth/access_token` (POST with Accept: application/json)
+    - Fetch user info from `https://api.github.com/user` with Bearer token
+    - If no public email: fetch from `https://api.github.com/user/emails`, select verified primary email
+    - Build `SSOCallbackResult` with provider="github", subject=string(github_user_id), email, display_name (name or login fallback), avatar_url
+    - Return descriptive errors for token exchange failure and user API failure
+    - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6_
+  - [x] 7.7 Implement `handleOIDCCallback` method
+    - Extract from existing `HandleCallback` logic: exchange code, verify id_token, extract claims
+    - Call `extractClaims` for standard + custom claims
+    - Build `SSOCallbackResult` with all extracted fields
+    - _Requirements: 7.1, 7.3_
+  - [x] 7.8 Implement `extractClaims` helper
+    - Extract standard claims: email, name, given_name, family_name, picture, locale
+    - Extract configured custom claims from the provider's CustomClaims list
+    - Construct display_name from given_name + family_name when name is absent
+    - Return `map[string]any` of all extracted claims
+    - _Requirements: 7.1, 7.3, 7.4, 7.5_
+  - [x] 7.9 Implement `TestConnection` method
+    - Accept `domain.SSOProvider` config (not necessarily saved)
+    - For OIDC types: HTTP GET to `{issuer_url}/.well-known/openid-configuration` with 10s timeout
+    - For GitHub type: HTTP GET to `https://github.com/login/oauth/authorize` with 10s timeout (check reachability)
+    - Return `*domain.SSOTestResult` with success, endpoint, status_code, message, response_time
+    - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.8_
+
+- [x] 8. Checkpoint - Verify SSO Manager compiles
+  - Ensure the refactored SSO Manager compiles with `go build ./...`. Ask the user if questions arise.
+
+- [x] 9. Update AuthService with new SSO methods in `internal/service/auth_service.go`
+  - [x] 9.1 Add new dependencies to `AuthService` struct
+    - Add `ssoIdentityRepo *postgres.SSOIdentityRepo`, `ssoProviderRepo *postgres.SSOProviderRepo`, `teamRepo *postgres.TeamRepo` fields
+    - Update `NewAuthService` constructor to accept and store these new repos
+    - _Requirements: 10.6, 3.2_
+  - [x] 9.2 Refactor `SSOLogin` to use `SSOIdentityRepo` and `SSOCallbackResult`
+    - Accept `*domain.SSOCallbackResult` instead of individual strings, plus ip and userAgent
+    - Check allowed domains from the provider config (not global SSO config)
+    - Look up identity via `ssoIdentityRepo.GetByProviderSubject`
+    - If identity found: update last_used_at, load user by identity.UserID
+    - If identity not found but user exists by email: create identity link (only if user has no password or is SSO-only)
+    - If new user: create user + identity, auto-provision into org if configured, apply claim mappings
+    - Create session with `SSOProviderName` set to the provider name
+    - Set avatar_url from picture claim only when user has no existing avatar
+    - _Requirements: 2.4, 3.2, 7.2, 9.1, 11.5_
+  - [x] 9.3 Implement `LinkSSOIdentity` method
+    - Accept userID and `*domain.SSOCallbackResult`
+    - Check identity (provider, subject) not already linked to another user via `ssoIdentityRepo.GetByProviderSubject`
+    - Check user doesn't already have this provider linked via `ssoIdentityRepo.GetByUserAndProvider`
+    - Create new identity record via `ssoIdentityRepo.Create`
+    - _Requirements: 3.2, 3.3, 3.4, 3.6_
+  - [x] 9.4 Implement `UnlinkSSOIdentity` method
+    - Accept userID and provider name
+    - Check user has a password set (reject if PasswordHash is nil)
+    - Check enforce_sso is not enabled for user's org (reject if enabled)
+    - Delete identity via `ssoIdentityRepo.Delete`
+    - _Requirements: 4.1, 4.2, 4.3, 4.5, 4.6_
+  - [x] 9.5 Implement `GetSSOIdentities` method
+    - Accept userID, return `[]domain.SSOIdentity` via `ssoIdentityRepo.ListByUser`
+    - _Requirements: 13.1_
+  - [x] 9.6 Implement `applyClaimMappings` method
+    - Accept userID, provider name, claims map, and `[]domain.ClaimMapping` rules
+    - Extract group/role claim values from the claims map based on mapping rules
+    - For each matching rule: assign org role via orgRepo, assign team membership via teamRepo if team_id specified
+    - Apply default org role when no rules match
+    - _Requirements: 6.2, 6.3, 6.4, 6.5, 6.8_
+  - [x] 9.7 Update `Login` method for enhanced enforce_sso check
+    - After credential validation, check if user has any linked SSO identities via `ssoIdentityRepo.ListByUser`
+    - If user has SSO identities AND org has enforce_sso enabled: reject with SSO redirect message
+    - If user has no SSO identities: allow password login regardless of enforce_sso
+    - _Requirements: 12.1, 12.2_
+  - [x] 9.8 Update `createSession` to accept optional SSO provider name
+    - Add `ssoProviderName *string` parameter
+    - Set `session.SSOProviderName` before creating the session
+    - Update all callers: pass nil for password logins, pass provider name for SSO logins
+    - _Requirements: 9.1_
+
+- [x] 10. Update audit event definitions in `internal/audit/recorder.go`
+  - [x] 10.1 Register new SSO audit actions in SeverityMap and CategoryMap
+    - Add `user.sso_login_failed` (category: auth, severity: warning)
+    - Add `user.sso_linked` (category: auth, severity: info)
+    - Add `user.sso_unlinked` (category: auth, severity: warning)
+    - Add `user.sso_enforced` (category: auth, severity: warning)
+    - Add `admin.sso_provider_created` (category: admin, severity: critical)
+    - Add `admin.sso_provider_deleted` (category: admin, severity: critical)
+    - Add `admin.sso_test` (category: admin, severity: info)
+    - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7_
+
+- [x] 11. Checkpoint - Verify service layer and audit changes compile
+  - Ensure the updated AuthService, new methods, and audit recorder compile with `go build ./...`. Ask the user if questions arise.
+
+- [x] 12. Update AuthHandler with multi-provider SSO routes in `internal/handler/auth.go`
+  - [x] 12.1 Update `SSORedirect` handler for multi-provider + link intent
+    - Read `{provider}` path param from URL
+    - Read `intent` query param (empty = login, "link" = account linking)
+    - Look up provider from SSOManager by name
+    - Store intent + user_id (if linking, from auth context) in the sso_state cookie alongside the state token
+    - Call `ssoMgr.RedirectURL(ctx, providerName, state)` to get the redirect URL
+    - _Requirements: 2.2, 3.1_
+  - [x] 12.2 Update `SSOCallback` handler for multi-provider + link intent
+    - Read `{provider}` path param from URL
+    - Validate state cookie as before
+    - Read intent from state cookie
+    - Call `ssoMgr.HandleCallback(ctx, providerName, r)` to get `SSOCallbackResult`
+    - If intent=link: call `authSvc.LinkSSOIdentity(userID, result)`, audit "user.sso_linked", redirect to profile
+    - If intent=login: call `authSvc.SSOLogin(result, ip, userAgent)`, audit "user.sso_login", redirect with tokens
+    - On failure: audit "user.sso_login_failed" with provider and reason
+    - _Requirements: 2.4, 3.1, 3.2, 3.6, 8.1, 8.2_
+  - [x] 12.3 Update `SSOStatus` handler to return provider list
+    - Call `ssoMgr.ListProviders()` to get all configured providers
+    - Return `SSOStatusResponse` with providers array, enabled flag, enforce_sso, allow_registration, password_policy
+    - _Requirements: 2.3_
+  - [x] 12.4 Implement `ListSSOIdentities` handler (GET /auth/me/sso)
+    - Get user ID from auth context
+    - Call `authSvc.GetSSOIdentities(userID)`
+    - Return JSON array of SSO identities
+    - _Requirements: 13.1_
+  - [x] 12.5 Implement `UnlinkSSO` handler (DELETE /auth/me/sso/{provider})
+    - Get user ID from auth context, read `{provider}` path param
+    - Call `authSvc.UnlinkSSOIdentity(userID, provider)`
+    - Audit "user.sso_unlinked" on success
+    - Return appropriate error for no-password or enforce_sso cases
+    - _Requirements: 4.1, 4.2, 4.5, 4.6, 8.4_
+  - [x] 12.6 Register new authenticated routes
+    - Add `GET /auth/me/sso` → ListSSOIdentities
+    - Add `DELETE /auth/me/sso/{provider}` → UnlinkSSO
+    - _Requirements: 4.1, 13.1_
+
+- [x] 13. Update AdminHandler with SSO provider CRUD and test connection in `internal/handler/admin.go`
+  - [x] 13.1 Add SSO provider dependencies to AdminHandler
+    - Add `ssoProviderRepo *postgres.SSOProviderRepo`, `ssoMgr *auth.SSOManager`, `encryptor *crypto.Encryptor` fields
+    - Update `NewAdminHandler` constructor to accept these new dependencies
+    - _Requirements: 11.1, 14.2_
+  - [x] 13.2 Implement `ListSSOProviders` handler (GET /admin/sso/providers)
+    - Call `ssoProviderRepo.List(ctx)` to get all providers with linked user counts
+    - Mask client_secret as "••••••••" in response
+    - _Requirements: 11.4, 14.1_
+  - [x] 13.3 Implement `CreateSSOProvider` handler (POST /admin/sso/providers)
+    - Decode provider config from request body
+    - Validate required fields: name, provider_type, client_id, client_secret
+    - Validate provider_type is one of: google, github, azure, okta, oidc
+    - Validate issuer_url required for okta/oidc types, tenant_id required for azure type
+    - Call `ssoProviderRepo.Create(ctx, provider)` with encrypted secret
+    - Reload SSO Manager providers via `ssoMgr.LoadProviders`
+    - Audit "admin.sso_provider_created"
+    - _Requirements: 11.3, 14.2, 14.3, 8.5_
+  - [x] 13.4 Implement `GetSSOProvider` handler (GET /admin/sso/providers/{providerId})
+    - Parse providerId from URL, call `ssoProviderRepo.GetByID`
+    - Mask client_secret in response
+    - _Requirements: 11.4_
+  - [x] 13.5 Implement `UpdateSSOProvider` handler (PUT /admin/sso/providers/{providerId})
+    - Decode updated config, validate fields
+    - If client_secret is "••••••••", keep existing encrypted value
+    - Call `ssoProviderRepo.Update(ctx, provider)`
+    - Reload SSO Manager providers
+    - Audit "admin.sso_config_updated" with before/after diff (excluding secrets)
+    - _Requirements: 11.3, 8.5_
+  - [x] 13.6 Implement `DeleteSSOProvider` handler (DELETE /admin/sso/providers/{providerId})
+    - Parse providerId, get linked user count for warning
+    - Call `ssoProviderRepo.Delete(ctx, id)`
+    - Reload SSO Manager providers
+    - Audit "admin.sso_provider_deleted"
+    - Return response with linked_user_count for frontend confirmation
+    - _Requirements: 2.8, 8.5_
+  - [x] 13.7 Implement `TestSSOConnection` handler (POST /admin/sso/test)
+    - Decode provider config from request body (unsaved config for testing)
+    - Call `ssoMgr.TestConnection(ctx, provider)` with 10s timeout
+    - Audit "admin.sso_test" with provider name and result
+    - Return `SSOTestResult`
+    - _Requirements: 5.1, 5.4, 5.8, 8.6_
+
+- [x] 14. Wire everything together in `cmd/api/main.go`
+  - [x] 14.1 Create new repository instances
+    - Create `ssoProviderRepo` using `postgres.NewSSOProviderRepo(pool, enc)` (use the existing encryptor)
+    - Create `ssoIdentityRepo` using `postgres.NewSSOIdentityRepo(pool)`
+    - _Requirements: 10.6, 11.1_
+  - [x] 14.2 Update AuthService constructor call
+    - Pass `ssoIdentityRepo`, `ssoProviderRepo`, and `teamRepo` to `NewAuthService`
+    - _Requirements: 9.1, 10.6_
+  - [x] 14.3 Update SSOManager initialization
+    - Update `NewSSOManager` call to pass encryptor: `auth.NewSSOManager(cfg, enc)`
+    - Load providers from database at startup: call `ssoProviderRepo.ListEnabled(ctx)` then `ssoMgr.LoadProviders(ctx, providers)`
+    - Merge file-based SSO config as a fallback provider if database has no matching entry
+    - _Requirements: 11.2, 11.5_
+  - [x] 14.4 Update AdminHandler constructor call
+    - Pass `ssoProviderRepo`, `ssoMgr`, and `enc` to `NewAdminHandler`
+    - _Requirements: 14.2_
+  - [x] 14.5 Register new admin SSO routes
+    - Add `GET /admin/sso/providers` → adminHandler.ListSSOProviders
+    - Add `POST /admin/sso/providers` → adminHandler.CreateSSOProvider
+    - Add `GET /admin/sso/providers/{providerId}` → adminHandler.GetSSOProvider
+    - Add `PUT /admin/sso/providers/{providerId}` → adminHandler.UpdateSSOProvider
+    - Add `DELETE /admin/sso/providers/{providerId}` → adminHandler.DeleteSSOProvider
+    - Add `POST /admin/sso/test` → adminHandler.TestSSOConnection
+    - All routes require `auth.RequireSystemAdmin` middleware
+    - Retain existing `GET /admin/sso` and `PUT /admin/sso` for backward compatibility
+    - _Requirements: 5.1, 14.2, 14.5_
+  - [x] 14.6 Register new auth SSO routes
+    - Add `GET /auth/me/sso` → authHandler.ListSSOIdentities (authenticated)
+    - Add `DELETE /auth/me/sso/{provider}` → authHandler.UnlinkSSO (authenticated)
+    - _Requirements: 4.1, 13.1_
+
+- [x] 15. Checkpoint - Full backend compilation and route verification
+  - Run `go build ./...` to verify the entire backend compiles. Verify all new routes are registered, all service methods are wired, and all handler methods exist. Ask the user if questions arise.
+
+- [x] 16. Update frontend Login and Register pages for multi-provider SSO
+  - [x] 16.1 Update SSO status API types and hook in frontend
+    - Update the SSO status response type to include `providers: SSOStatusProvider[]` array with name, provider_type, label, enabled fields
+    - Update the existing `useQuery` hook for `/auth/sso-status` to return the new shape
+    - _Requirements: 2.3, 2.5, 2.6_
+  - [x] 16.2 Update Login page (`web/src/app/login/page.tsx`) for multi-provider SSO buttons
+    - Replace single SSO button with a loop over `ssoStatus.providers` array
+    - Render a separate button for each enabled provider with provider-specific icon and label
+    - Each button redirects to `GET /auth/sso/{provider.name}`
+    - Show enforce_sso notice when `ssoStatus.enforce_sso` is true
+    - _Requirements: 2.5, 12.3_
+  - [x] 16.3 Update Register page (`web/src/app/register/page.tsx`) for multi-provider SSO buttons
+    - Same multi-provider button rendering as login page
+    - Block password registration form when enforce_sso is enabled, show SSO-only message
+    - _Requirements: 2.6, 12.5_
+
+- [x] 17. Implement Connected Accounts section on Profile page
+  - [x] 17.1 Create `ConnectedAccountsCard` component in profile page (`web/src/app/profile/page.tsx`)
+    - Fetch linked identities via `GET /auth/me/sso` using TanStack Query
+    - Fetch available providers via `GET /auth/sso-status` for the providers list
+    - Display each linked identity: provider name with icon, linked email, linked date, "Unlink" button
+    - Display each unlinked but available provider with "Link Account" button
+    - _Requirements: 13.1, 13.2, 13.3, 13.4_
+  - [x] 17.2 Implement Link Account flow
+    - "Link Account" button redirects to `GET /auth/sso/{provider}?intent=link`
+    - After successful linking, the callback redirects back to profile page
+    - Invalidate and refetch SSO identities query on return
+    - _Requirements: 13.5, 3.1_
+  - [x] 17.3 Implement Unlink flow with safety guards
+    - "Unlink" button triggers confirmation dialog
+    - On confirm: call `DELETE /auth/me/sso/{provider}`
+    - Disable "Unlink" button when user has no password (show tooltip: "Set a password first")
+    - Disable "Unlink" button when enforce_sso is active (show tooltip: "SSO required by organization")
+    - Invalidate and refetch identities query on success
+    - _Requirements: 13.4, 13.6, 4.2, 4.6_
+  - [x] 17.4 Update profile page session list and password section
+    - Display SSO provider name/icon next to sessions that have `sso_provider_name` set
+    - Display "Password" label for sessions without `sso_provider_name`
+    - Hide password change section when user has no password hash (SSO-only user)
+    - _Requirements: 9.3, 9.4, 13.7_
+
+- [x] 18. Implement admin SSO dashboard on Settings page
+  - [x] 18.1 Create `SSOProvidersTab` component in settings page (`web/src/app/settings/page.tsx`)
+    - Replace existing `SSOCard` with new `SSOProvidersTab`
+    - Fetch providers via `GET /admin/sso/providers` using TanStack Query
+    - Display each provider as a card with: status badge (enabled/disabled), provider type, name, linked user count
+    - "Add Provider" button at the top
+    - _Requirements: 14.1, 14.2_
+  - [x] 18.2 Implement provider form dialog (Add/Edit)
+    - Form fields: name, provider_type (dropdown: Google, GitHub, Azure AD, Okta, Generic OIDC), client_id, client_secret, redirect_url
+    - Conditional fields: tenant_id (shown for Azure), issuer_url (shown for Okta and OIDC)
+    - Auto-provision toggle, default_org_role dropdown, default_team_role dropdown, allowed_domains text input
+    - On save: POST /admin/sso/providers (create) or PUT /admin/sso/providers/{id} (update)
+    - Invalidate providers query on success
+    - _Requirements: 14.2, 14.3, 2.7_
+  - [x] 18.3 Implement claim mapping editor within provider card
+    - Display table of existing claim mapping rules: claim_name, claim_value, org_role, team_id, team_role
+    - "Add Rule" button to add new mapping row
+    - Edit and delete existing rules inline
+    - Save mappings as part of provider update (claim_mappings JSONB field)
+    - _Requirements: 14.4, 6.6, 6.7_
+  - [x] 18.4 Implement "Test Connection" button per provider
+    - Button triggers POST /admin/sso/test with the provider's current config
+    - Display inline result: success with green checkmark and endpoint details, or failure with red X and error message
+    - Show loading spinner during test
+    - _Requirements: 14.5, 5.5, 5.6, 5.7_
+  - [x] 18.5 Implement delete provider with confirmation
+    - Delete button on each provider card
+    - Confirmation dialog showing affected user count (linked_user_count)
+    - On confirm: DELETE /admin/sso/providers/{id}
+    - Invalidate providers query on success
+    - _Requirements: 2.8, 14.6_
+
+- [x] 19. Checkpoint - Full frontend compilation verification
+  - Ensure the frontend builds successfully. Verify all new components render, API hooks work, and routes are correct. Ask the user if questions arise.
+
+- [ ]* 20. Write property-based tests for SSO Manager
+  - [ ]* 20.1 Write property test for GitHub redirect URL
+    - **Property 1: GitHub redirect URL uses correct OAuth2 endpoint**
+    - Generate random GitHub provider configs with varying client_id and redirect_url
+    - Assert generated redirect URL starts with `https://github.com/login/oauth/authorize`
+    - Assert redirect URL never contains `token.actions.githubusercontent.com`
+    - **Validates: Requirements 1.1**
+  - [ ]* 20.2 Write property test for GitHub callback field extraction
+    - **Property 2: GitHub callback extracts correct user fields**
+    - Generate random GitHub User API responses with id, login, name, email
+    - Assert SSOCallbackResult has provider="github", subject=string(id), correct email and display_name
+    - **Validates: Requirements 1.4**
+  - [ ]* 20.3 Write property test for multi-provider redirect dispatch
+    - **Property 3: Multi-provider redirect dispatches to correct provider**
+    - Generate random sets of provider configs, pick a name from the set
+    - Assert RedirectURL returns URL matching that provider's endpoint
+    - Assert RedirectURL with unknown name returns error
+    - **Validates: Requirements 2.2, 2.4**
+  - [ ]* 20.4 Write property test for SSO status completeness
+    - **Property 4: SSO status returns all configured providers**
+    - Generate random provider lists with varying enabled states
+    - Assert ListProviders returns same set of names with matching enabled flags
+    - **Validates: Requirements 2.3**
+
+- [ ]* 21. Write property-based tests for SSO identity operations
+  - [ ]* 21.1 Write property test for identity linking correctness
+    - **Property 5: SSO identity linking creates correct record**
+    - Generate random user IDs and callback results
+    - Assert LinkSSOIdentity creates record with correct fields
+    - Assert ListByUser includes the new identity
+    - **Validates: Requirements 3.2**
+  - [ ]* 21.2 Write property test for identity linking conflict detection
+    - **Property 6: SSO identity linking detects conflicts**
+    - Generate scenarios: same (provider, subject) linked to user A, attempt link to user B
+    - Generate scenarios: user already has provider P linked, attempt different identity from P
+    - Assert both cases return conflict errors
+    - **Validates: Requirements 3.3, 3.4**
+  - [ ]* 21.3 Write property test for unlink safety guards
+    - **Property 7: SSO unlink safety guards**
+    - Generate users with no password (PasswordHash nil), assert unlink rejected
+    - Generate users in orgs with enforce_sso enabled, assert unlink rejected regardless of password
+    - **Validates: Requirements 4.2, 4.6**
+
+- [ ]* 22. Write property-based tests for claim extraction and mapping
+  - [ ]* 22.1 Write property test for claim extraction completeness
+    - **Property 8: Claim extraction completeness**
+    - Generate random token claim maps and custom claim name lists
+    - Assert extracted claims include all present standard claims + present custom claims
+    - Assert absent claims are not included
+    - **Validates: Requirements 6.2, 7.1, 7.5**
+  - [ ]* 22.2 Write property test for claim mapping role assignments
+    - **Property 9: Claim mapping produces correct role assignments**
+    - Generate random mapping rules and token claims
+    - Assert matching claim values produce corresponding org role and team assignments
+    - Assert non-matching values result in default org role
+    - **Validates: Requirements 6.3, 6.4, 6.5**
+  - [ ]* 22.3 Write property test for role update on re-login
+    - **Property 10: Role assignments update on re-login with changed claims**
+    - Generate before/after claim sets for same user
+    - Assert role assignments reflect new claims after re-login
+    - **Validates: Requirements 6.8**
+  - [ ]* 22.4 Write property test for avatar from picture claim
+    - **Property 11: Avatar set from picture claim only when user has no avatar**
+    - Generate users with/without existing avatar_url and callback results with/without picture claim
+    - Assert avatar set only when user has no avatar AND picture claim present
+    - **Validates: Requirements 7.2**
+  - [ ]* 22.5 Write property test for display name construction
+    - **Property 12: Display name construction from given_name and family_name**
+    - Generate random given_name, family_name, and optional name claims
+    - Assert display_name = name when present, else given_name + " " + family_name
+    - **Validates: Requirements 7.3**
+
+- [ ]* 23. Write property-based tests for session metadata and admin operations
+  - [ ]* 23.1 Write property test for SSO session metadata
+    - **Property 13: SSO sessions store provider metadata**
+    - Generate SSO login scenarios with provider P, assert session.sso_provider_name == P
+    - Generate password login scenarios, assert session.sso_provider_name is nil
+    - **Validates: Requirements 9.1**
+  - [ ]* 23.2 Write property test for client secret encryption round-trip
+    - **Property 14: Client secret encryption round-trip**
+    - Generate random secret strings, encrypt, store, read, decrypt
+    - Assert decrypted value equals original
+    - **Validates: Requirements 11.3**
+  - [ ]* 23.3 Write property test for client secret masking
+    - **Property 15: Client secret masking on admin read**
+    - Generate random provider configs with various secret values
+    - Assert admin GET always returns client_secret as "••••••••"
+    - **Validates: Requirements 11.4**
+  - [ ]* 23.4 Write property test for enforce SSO login policy
+    - **Property 16: Enforce SSO login policy**
+    - Generate users with/without SSO identities and orgs with/without enforce_sso
+    - Assert password login rejected only when user has SSO identity AND enforce_sso enabled
+    - Assert password login allowed when user has no SSO identities regardless of enforce_sso
+    - **Validates: Requirements 12.1, 12.2**
+  - [ ]* 23.5 Write property test for enforce SSO registration policy
+    - **Property 17: Enforce SSO registration policy**
+    - Generate registration attempts with enforce_sso enabled
+    - Assert password registration rejected with SSO redirect message
+    - **Validates: Requirements 12.5**
+
+- [ ]* 24. Write unit tests for SSO handlers and service methods
+  - [ ]* 24.1 Write unit tests for GitHub OAuth2 flow in `internal/auth/sso_test.go`
+    - Test token exchange with mock GitHub endpoints (success and failure)
+    - Test user API call with mock response (with and without public email)
+    - Test email fallback to /user/emails API
+    - Test error handling for token exchange failure and user API failure
+    - _Requirements: 1.1, 1.2, 1.3, 1.5, 1.6_
+  - [ ]* 24.2 Write unit tests for account linking/unlinking in `internal/service/auth_service_test.go`
+    - Test LinkSSOIdentity success, conflict (same identity different user), conflict (same provider same user)
+    - Test UnlinkSSOIdentity success, rejection without password, rejection with enforce_sso
+    - _Requirements: 3.2, 3.3, 3.4, 4.2, 4.6_
+  - [ ]* 24.3 Write unit tests for admin SSO CRUD handlers
+    - Test CreateSSOProvider with valid input, duplicate name, missing fields, invalid provider_type
+    - Test GetSSOProvider returns masked secret
+    - Test UpdateSSOProvider preserves secret when masked
+    - Test DeleteSSOProvider returns linked_user_count
+    - Test TestSSOConnection success and timeout
+    - _Requirements: 11.3, 11.4, 5.4, 5.8_
+  - [ ]* 24.4 Write unit tests for enforce_sso enhanced logic
+    - Test password login blocked for user with SSO identity + enforce_sso
+    - Test password login allowed for user without SSO identity + enforce_sso
+    - Test password registration blocked with enforce_sso
+    - _Requirements: 12.1, 12.2, 12.5_
+
+- [ ] 25. Final checkpoint - Ensure all tests pass
+  - Run `go build ./...` and `go test ./...` to verify everything compiles and all tests pass. Ensure all 14 requirements are covered by implementation tasks. Ask the user if questions arise.
+
+## Notes
+
+- Tasks marked with `*` are optional and can be skipped for faster MVP
+- Each task references specific requirement clauses for traceability
+- The backend uses Go with Chi router, pgxpool, and Redis; the frontend uses Next.js + React + shadcn/ui + Tailwind + TanStack Query
+- Property-based tests use `pgregory.net/rapid` (already used in this project) with minimum 100 iterations per property
+- Migration 000035 is the next available migration number (after 000034)
+- The existing `GET /admin/sso` and `PUT /admin/sso` endpoints are retained for backward compatibility
+- GitHub requires a dedicated OAuth2 flow (not OIDC) — this is the core fix for the broken GitHub SSO
+- Client secrets are encrypted at rest using the existing `internal/crypto/encryptor.go` AES-256-GCM encryptor
+- Checkpoints ensure incremental validation at key integration points

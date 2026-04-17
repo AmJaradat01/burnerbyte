@@ -17,6 +17,8 @@ import (
 	"gitlab.com/burnerbyte/burnerbyte/internal/auth"
 	"gitlab.com/burnerbyte/burnerbyte/internal/auth/rbac"
 	"gitlab.com/burnerbyte/burnerbyte/internal/config"
+	appcrypto "gitlab.com/burnerbyte/burnerbyte/internal/crypto"
+	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
 	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
 	"gitlab.com/burnerbyte/burnerbyte/internal/service"
 )
@@ -24,20 +26,23 @@ import (
 var startTime = time.Now()
 
 type AdminHandler struct {
-	analyticsSvc *service.AnalyticsService
-	orgSvc       *service.OrgService
-	authSvc      *service.AuthService
-	sysConfig    *postgres.SystemConfigRepo
-	cfg          *config.Config
-	cfgMu        sync.RWMutex
-	pool         *pgxpool.Pool
-	rdb          *redis.Client
-	s3           *minio.Client
-	bucket       string
+	analyticsSvc    *service.AnalyticsService
+	orgSvc          *service.OrgService
+	authSvc         *service.AuthService
+	sysConfig       *postgres.SystemConfigRepo
+	ssoProviderRepo *postgres.SSOProviderRepo
+	ssoMgr          *auth.SSOManager
+	encryptor       *appcrypto.Encryptor
+	cfg             *config.Config
+	cfgMu           sync.RWMutex
+	pool            *pgxpool.Pool
+	rdb             *redis.Client
+	s3              *minio.Client
+	bucket          string
 }
 
-func NewAdminHandler(analyticsSvc *service.AnalyticsService, orgSvc *service.OrgService, authSvc *service.AuthService, sysConfig *postgres.SystemConfigRepo, cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, s3 *minio.Client, bucket string) *AdminHandler {
-	return &AdminHandler{analyticsSvc: analyticsSvc, orgSvc: orgSvc, authSvc: authSvc, sysConfig: sysConfig, cfg: cfg, pool: pool, rdb: rdb, s3: s3, bucket: bucket}
+func NewAdminHandler(analyticsSvc *service.AnalyticsService, orgSvc *service.OrgService, authSvc *service.AuthService, sysConfig *postgres.SystemConfigRepo, ssoProviderRepo *postgres.SSOProviderRepo, ssoMgr *auth.SSOManager, encryptor *appcrypto.Encryptor, cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, s3 *minio.Client, bucket string) *AdminHandler {
+	return &AdminHandler{analyticsSvc: analyticsSvc, orgSvc: orgSvc, authSvc: authSvc, sysConfig: sysConfig, ssoProviderRepo: ssoProviderRepo, ssoMgr: ssoMgr, encryptor: encryptor, cfg: cfg, pool: pool, rdb: rdb, s3: s3, bucket: bucket}
 }
 
 func (h *AdminHandler) Routes(r chi.Router) {
@@ -393,4 +398,224 @@ func (h *AdminHandler) UpdateSSOConfig(w http.ResponseWriter, r *http.Request) {
 
 	auditRecordEnhanced(r, uuid.Nil, "admin.sso_config_updated", "sso", uuid.Nil, "sso", map[string]any{"provider": input.Provider, "before": before, "after": after})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "SSO config updated"})
+}
+
+// ── SSO Provider CRUD ──
+
+func (h *AdminHandler) ListSSOProviders(w http.ResponseWriter, r *http.Request) {
+	if h.ssoProviderRepo == nil {
+		writeJSON(w, http.StatusOK, []any{})
+		return
+	}
+	providers, err := h.ssoProviderRepo.List(r.Context())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to list SSO providers")
+		return
+	}
+	// Mask client secrets
+	for i := range providers {
+		providers[i].ClientSecret = "••••••••"
+		providers[i].ClientSecretEncrypted = ""
+	}
+	if providers == nil {
+		providers = []domain.SSOProvider{}
+	}
+	writeJSON(w, http.StatusOK, providers)
+}
+
+func (h *AdminHandler) CreateSSOProvider(w http.ResponseWriter, r *http.Request) {
+	if h.ssoProviderRepo == nil {
+		writeError(w, http.StatusInternalServerError, "SSO provider repository not configured")
+		return
+	}
+	var input domain.SSOProvider
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if input.Name == "" || input.ProviderType == "" || input.ClientID == "" || input.ClientSecret == "" {
+		writeError(w, http.StatusBadRequest, "name, provider_type, client_id, and client_secret are required")
+		return
+	}
+	validTypes := map[string]bool{"google": true, "github": true, "azure": true, "okta": true, "oidc": true}
+	if !validTypes[input.ProviderType] {
+		writeError(w, http.StatusBadRequest, "provider_type must be one of: google, github, azure, okta, oidc")
+		return
+	}
+	if (input.ProviderType == "okta" || input.ProviderType == "oidc") && input.IssuerURL == "" {
+		writeError(w, http.StatusBadRequest, "issuer_url is required for okta and oidc provider types")
+		return
+	}
+	if input.ProviderType == "azure" && input.TenantID == "" {
+		writeError(w, http.StatusBadRequest, "tenant_id is required for azure provider type")
+		return
+	}
+
+	input.ID = uuid.New()
+	if input.DefaultOrgRole == "" {
+		input.DefaultOrgRole = "member"
+	}
+	if input.DefaultTeamRole == "" {
+		input.DefaultTeamRole = "member"
+	}
+
+	if err := h.ssoProviderRepo.Create(r.Context(), &input); err != nil {
+		if err.Error() == "conflict: resource already exists" {
+			writeError(w, http.StatusConflict, "a provider with this name already exists")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "failed to create SSO provider")
+		return
+	}
+
+	// Reload SSO Manager providers
+	h.reloadSSOProviders(r.Context())
+
+	auditRecordEnhanced(r, uuid.Nil, "admin.sso_provider_created", "sso_provider", input.ID, input.Name, map[string]any{
+		"name": input.Name, "provider_type": input.ProviderType,
+	})
+
+	input.ClientSecret = "••••••••"
+	input.ClientSecretEncrypted = ""
+	writeJSON(w, http.StatusCreated, input)
+}
+
+func (h *AdminHandler) GetSSOProvider(w http.ResponseWriter, r *http.Request) {
+	if h.ssoProviderRepo == nil {
+		writeError(w, http.StatusNotFound, "SSO provider repository not configured")
+		return
+	}
+	providerID, err := uuid.Parse(chi.URLParam(r, "providerId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid provider ID")
+		return
+	}
+	provider, err := h.ssoProviderRepo.GetByID(r.Context(), providerID)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "SSO provider not found")
+		return
+	}
+	provider.ClientSecret = "••••••••"
+	provider.ClientSecretEncrypted = ""
+	writeJSON(w, http.StatusOK, provider)
+}
+
+func (h *AdminHandler) UpdateSSOProvider(w http.ResponseWriter, r *http.Request) {
+	if h.ssoProviderRepo == nil {
+		writeError(w, http.StatusInternalServerError, "SSO provider repository not configured")
+		return
+	}
+	providerID, err := uuid.Parse(chi.URLParam(r, "providerId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid provider ID")
+		return
+	}
+
+	existing, err := h.ssoProviderRepo.GetByID(r.Context(), providerID)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "SSO provider not found")
+		return
+	}
+
+	var input domain.SSOProvider
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	input.ID = providerID
+	// If client_secret is masked, keep existing encrypted value
+	if input.ClientSecret == "••••••••" || input.ClientSecret == "" {
+		input.ClientSecret = ""
+		input.ClientSecretEncrypted = existing.ClientSecretEncrypted
+	}
+
+	if err := h.ssoProviderRepo.Update(r.Context(), &input); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to update SSO provider")
+		return
+	}
+
+	// Reload SSO Manager providers
+	h.reloadSSOProviders(r.Context())
+
+	auditRecordEnhanced(r, uuid.Nil, "admin.sso_config_updated", "sso_provider", providerID, input.Name, map[string]any{
+		"name": input.Name, "provider_type": input.ProviderType,
+	})
+
+	input.ClientSecret = "••••••••"
+	input.ClientSecretEncrypted = ""
+	writeJSON(w, http.StatusOK, input)
+}
+
+func (h *AdminHandler) DeleteSSOProvider(w http.ResponseWriter, r *http.Request) {
+	if h.ssoProviderRepo == nil {
+		writeError(w, http.StatusInternalServerError, "SSO provider repository not configured")
+		return
+	}
+	providerID, err := uuid.Parse(chi.URLParam(r, "providerId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid provider ID")
+		return
+	}
+
+	provider, err := h.ssoProviderRepo.GetByID(r.Context(), providerID)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "SSO provider not found")
+		return
+	}
+
+	linkedCount, _ := h.ssoProviderRepo.CountLinkedUsers(r.Context(), provider.Name)
+
+	if err := h.ssoProviderRepo.Delete(r.Context(), providerID); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to delete SSO provider")
+		return
+	}
+
+	// Reload SSO Manager providers
+	h.reloadSSOProviders(r.Context())
+
+	auditRecordEnhanced(r, uuid.Nil, "admin.sso_provider_deleted", "sso_provider", providerID, provider.Name, map[string]any{
+		"name": provider.Name, "linked_user_count": linkedCount,
+	})
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"message":           "SSO provider deleted",
+		"linked_user_count": linkedCount,
+	})
+}
+
+func (h *AdminHandler) TestSSOConnection(w http.ResponseWriter, r *http.Request) {
+	if h.ssoMgr == nil {
+		writeError(w, http.StatusInternalServerError, "SSO manager not configured")
+		return
+	}
+	var input domain.SSOProvider
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	result, err := h.ssoMgr.TestConnection(r.Context(), input)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "test connection failed")
+		return
+	}
+
+	auditRecordEnhanced(r, uuid.Nil, "admin.sso_test", "sso_provider", uuid.Nil, input.Name, map[string]any{
+		"provider": input.Name, "success": result.Success, "endpoint": result.Endpoint,
+	})
+
+	writeJSON(w, http.StatusOK, result)
+}
+
+func (h *AdminHandler) reloadSSOProviders(ctx context.Context) {
+	if h.ssoProviderRepo == nil || h.ssoMgr == nil {
+		return
+	}
+	providers, err := h.ssoProviderRepo.ListEnabled(ctx)
+	if err != nil {
+		slog.Error("failed to reload SSO providers", "error", err)
+		return
+	}
+	h.ssoMgr.LoadProviders(ctx, providers)
 }

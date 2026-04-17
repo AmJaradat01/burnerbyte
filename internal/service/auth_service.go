@@ -40,6 +40,9 @@ type AuthService struct {
 	resetRepo       *postgres.PasswordResetRepo
 	emailVerifyRepo *postgres.EmailVerificationRepo
 	orgRepo         *postgres.OrgRepo
+	ssoIdentityRepo *postgres.SSOIdentityRepo
+	ssoProviderRepo *postgres.SSOProviderRepo
+	teamRepo        *postgres.TeamRepo
 	tokens          *auth.TokenManager
 	lockout         *auth.Lockout
 	mailer          *mailer.Mailer
@@ -53,6 +56,9 @@ func NewAuthService(
 	resetRepo *postgres.PasswordResetRepo,
 	emailVerifyRepo *postgres.EmailVerificationRepo,
 	orgRepo *postgres.OrgRepo,
+	ssoIdentityRepo *postgres.SSOIdentityRepo,
+	ssoProviderRepo *postgres.SSOProviderRepo,
+	teamRepo *postgres.TeamRepo,
 	tokens *auth.TokenManager,
 	lockout *auth.Lockout,
 	mailer *mailer.Mailer,
@@ -61,6 +67,7 @@ func NewAuthService(
 	return &AuthService{
 		pool: pool, userRepo: userRepo, sessionRepo: sessionRepo,
 		resetRepo: resetRepo, emailVerifyRepo: emailVerifyRepo, orgRepo: orgRepo,
+		ssoIdentityRepo: ssoIdentityRepo, ssoProviderRepo: ssoProviderRepo, teamRepo: teamRepo,
 		tokens: tokens, lockout: lockout, mailer: mailer, cfg: cfg,
 	}
 }
@@ -108,7 +115,7 @@ func (s *AuthService) Register(ctx context.Context, input domain.CreateUserInput
 		return nil, nil, err
 	}
 
-	tokenPair, err = s.createSession(ctx, sessionRepoTx, user, "", "")
+	tokenPair, err = s.createSession(ctx, sessionRepoTx, user, "", "", nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -180,6 +187,7 @@ func (s *AuthService) Login(ctx context.Context, input domain.LoginInput, ip, us
 	_ = s.lockout.Reset(ctx, user.ID)
 
 	// Check enforce_sso: if any of user's orgs enforce SSO, reject password login
+	// Enhanced: only block users who have linked SSO identities
 	var enforced bool
 	if err := s.pool.QueryRow(ctx,
 		`SELECT EXISTS(
@@ -188,11 +196,16 @@ func (s *AuthService) Login(ctx context.Context, input domain.LoginInput, ip, us
 		)`, user.ID).Scan(&enforced); err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil, fmt.Errorf("failed to check SSO enforcement: %w", err)
 	}
-	if enforced {
+	if enforced && s.ssoIdentityRepo != nil {
+		identities, idErr := s.ssoIdentityRepo.ListByUser(ctx, user.ID)
+		if idErr == nil && len(identities) > 0 {
+			return nil, nil, fmt.Errorf("SSO login required for your organization")
+		}
+	} else if enforced {
 		return nil, nil, fmt.Errorf("SSO login required for your organization")
 	}
 
-	tokenPair, err := s.createSession(ctx, s.sessionRepo, user, ip, userAgent)
+	tokenPair, err := s.createSession(ctx, s.sessionRepo, user, ip, userAgent, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -431,71 +444,166 @@ func (s *AuthService) ResetPassword(ctx context.Context, input domain.ResetPassw
 	return user.ID, user.Email, s.sessionRepo.RevokeAll(ctx, user.ID)
 }
 
-func (s *AuthService) SSOLogin(ctx context.Context, email, displayName, provider, subject, ip, userAgent string) (*domain.User, *domain.TokenPair, error) {
+func (s *AuthService) SSOLogin(ctx context.Context, result *domain.SSOCallbackResult, ip, userAgent string) (*domain.User, *domain.TokenPair, error) {
 	ip = stripPort(ip)
-	ssoCfg := s.cfg.SSO
+	email := strings.ToLower(result.Email)
 
-	// Check allowed domains
-	if ssoCfg.AllowedDomains != "" {
-		parts := strings.Split(email, "@")
-		if len(parts) != 2 {
-			return nil, nil, fmt.Errorf("invalid email")
-		}
-		emailDomain := parts[1]
-		allowed := false
-		for _, d := range strings.Split(ssoCfg.AllowedDomains, ",") {
-			if strings.TrimSpace(d) == emailDomain {
-				allowed = true
-				break
+	// Check allowed domains from provider config (if ssoProviderRepo is available)
+	if s.ssoProviderRepo != nil {
+		provCfg, err := s.ssoProviderRepo.GetByName(ctx, result.Provider)
+		if err == nil && provCfg.AllowedDomains != "" {
+			parts := strings.Split(email, "@")
+			if len(parts) != 2 {
+				return nil, nil, fmt.Errorf("invalid email")
 			}
-		}
-		if !allowed {
-			return nil, nil, fmt.Errorf("email domain %s is not allowed for SSO", emailDomain)
+			emailDomain := parts[1]
+			allowed := false
+			for _, d := range strings.Split(provCfg.AllowedDomains, ",") {
+				if strings.TrimSpace(d) == emailDomain {
+					allowed = true
+					break
+				}
+			}
+			if !allowed {
+				return nil, nil, fmt.Errorf("email domain %s is not allowed for SSO", emailDomain)
+			}
 		}
 	}
 
-	// Try to find existing SSO user
-	isNew := false
-	user, err := s.userRepo.GetBySSO(ctx, provider, subject)
-	if err != nil {
-		user, err = s.userRepo.GetByEmail(ctx, strings.ToLower(email))
-		if err != nil {
-			// New user — create with SSO identity
-			user = &domain.User{
-				ID: uuid.New(), Email: strings.ToLower(email), DisplayName: displayName,
-				SSOProvider: &provider, SSOSubject: &subject,
-				IsSystemAdmin: false, EmailVerified: true,
-				PasswordChangedAt: func() *time.Time { t := time.Now(); return &t }(),
+	// Fallback: check global SSO config allowed domains
+	if s.ssoProviderRepo == nil {
+		ssoCfg := s.cfg.SSO
+		if ssoCfg.AllowedDomains != "" {
+			parts := strings.Split(email, "@")
+			if len(parts) != 2 {
+				return nil, nil, fmt.Errorf("invalid email")
 			}
-			if err := s.userRepo.Create(ctx, user); err != nil {
-				return nil, nil, fmt.Errorf("create SSO user: %w", err)
+			emailDomain := parts[1]
+			allowed := false
+			for _, d := range strings.Split(ssoCfg.AllowedDomains, ",") {
+				if strings.TrimSpace(d) == emailDomain {
+					allowed = true
+					break
+				}
 			}
-			isNew = true
-		} else {
-			// Existing user found by email — only link SSO if they don't have a password
-			// (prevents account takeover via SSO email claim)
-			if user.PasswordHash != nil {
-				return nil, nil, fmt.Errorf("an account with this email already exists — please sign in with your password first, then link SSO from your profile")
-			}
-			user.SSOProvider = &provider
-			user.SSOSubject = &subject
-			user.EmailVerified = true
-			if err := s.userRepo.Update(ctx, user); err != nil {
-				return nil, nil, fmt.Errorf("link SSO: %w", err)
+			if !allowed {
+				return nil, nil, fmt.Errorf("email domain %s is not allowed for SSO", emailDomain)
 			}
 		}
+	}
+
+	isNew := false
+	var user *domain.User
+
+	// Look up identity via ssoIdentityRepo
+	if s.ssoIdentityRepo != nil {
+		identity, err := s.ssoIdentityRepo.GetByProviderSubject(ctx, result.Provider, result.Subject)
+		if err == nil {
+			// Identity found — update last_used_at and load user
+			_ = s.ssoIdentityRepo.UpdateLastUsed(ctx, identity.ID)
+			user, err = s.userRepo.GetByID(ctx, identity.UserID)
+			if err != nil {
+				return nil, nil, fmt.Errorf("load SSO user: %w", err)
+			}
+		}
+	}
+
+	if user == nil {
+		// Try legacy lookup
+		var err error
+		user, err = s.userRepo.GetBySSO(ctx, result.Provider, result.Subject)
+		if err != nil {
+			// Try by email
+			user, err = s.userRepo.GetByEmail(ctx, email)
+			if err != nil {
+				// New user — create
+				user = &domain.User{
+					ID: uuid.New(), Email: email, DisplayName: result.DisplayName,
+					SSOProvider: &result.Provider, SSOSubject: &result.Subject,
+					IsSystemAdmin: false, EmailVerified: true,
+					PasswordChangedAt: func() *time.Time { t := time.Now(); return &t }(),
+				}
+				if result.AvatarURL != "" {
+					user.AvatarURL = &result.AvatarURL
+				}
+				if err := s.userRepo.Create(ctx, user); err != nil {
+					return nil, nil, fmt.Errorf("create SSO user: %w", err)
+				}
+				isNew = true
+			} else {
+				// Existing user by email — only link if no password
+				if user.PasswordHash != nil {
+					return nil, nil, fmt.Errorf("an account with this email already exists — please sign in with your password first, then link SSO from your profile")
+				}
+				user.SSOProvider = &result.Provider
+				user.SSOSubject = &result.Subject
+				user.EmailVerified = true
+				if err := s.userRepo.Update(ctx, user); err != nil {
+					return nil, nil, fmt.Errorf("link SSO: %w", err)
+				}
+			}
+		}
+
+		// Create identity record if ssoIdentityRepo is available
+		if s.ssoIdentityRepo != nil {
+			identity := &domain.SSOIdentity{
+				ID:          uuid.New(),
+				UserID:      user.ID,
+				Provider:    result.Provider,
+				Subject:     result.Subject,
+				Email:       email,
+				DisplayName: result.DisplayName,
+				Metadata:    result.Claims,
+			}
+			// Ignore conflict — identity may already exist from migration
+			_ = s.ssoIdentityRepo.Create(ctx, identity)
+		}
+	}
+
+	// Set avatar from picture claim only when user has no existing avatar
+	if result.AvatarURL != "" && (user.AvatarURL == nil || *user.AvatarURL == "") {
+		user.AvatarURL = &result.AvatarURL
+		_ = s.userRepo.Update(ctx, user)
 	}
 
 	// Auto-provision into org
-	if isNew && ssoCfg.AutoProvision && s.orgRepo != nil {
-		s.autoProvisionSSO(ctx, user, ssoCfg)
+	if isNew && s.orgRepo != nil {
+		// Check provider-level auto-provision first
+		if s.ssoProviderRepo != nil {
+			provCfg, err := s.ssoProviderRepo.GetByName(ctx, result.Provider)
+			if err == nil && provCfg.AutoProvision {
+				s.autoProvisionSSOFromProvider(ctx, user, provCfg)
+				// Apply claim mappings
+				if len(provCfg.ClaimMappings) > 0 && result.Claims != nil {
+					s.applyClaimMappings(ctx, user.ID, result.Provider, result.Claims, provCfg.ClaimMappings)
+				}
+			}
+		} else if s.cfg.SSO.AutoProvision {
+			s.autoProvisionSSO(ctx, user, s.cfg.SSO)
+		}
 	}
 
-	tokenPair, err := s.createSession(ctx, s.sessionRepo, user, ip, userAgent)
+	providerName := result.Provider
+	tokenPair, err := s.createSession(ctx, s.sessionRepo, user, ip, userAgent, &providerName)
 	if err != nil {
 		return nil, nil, err
 	}
 	return user, tokenPair, nil
+}
+
+func (s *AuthService) autoProvisionSSOFromProvider(ctx context.Context, user *domain.User, provCfg *domain.SSOProvider) {
+	orgs, _, err := s.orgRepo.ListAll(ctx, 1, 1)
+	if err != nil || len(orgs) == 0 {
+		return
+	}
+	role := provCfg.DefaultOrgRole
+	if role == "" {
+		role = "member"
+	}
+	_ = s.orgRepo.CreateMembership(ctx, &domain.OrgMembership{
+		ID: uuid.New(), UserID: user.ID, OrgID: orgs[0].ID, Role: role,
+	})
+	slog.Info("SSO auto-provisioned user into org", "user", user.Email, "org", orgs[0].Name, "role", role)
 }
 
 func (s *AuthService) autoProvisionSSO(ctx context.Context, user *domain.User, ssoCfg config.SSOConfig) {
@@ -599,7 +707,7 @@ func (s *AuthService) AdminUpdateUser(ctx context.Context, userID uuid.UUID, dis
 	return user, nil
 }
 
-func (s *AuthService) createSession(ctx context.Context, repo *postgres.SessionRepo, user *domain.User, ip, userAgent string) (*domain.TokenPair, error) {
+func (s *AuthService) createSession(ctx context.Context, repo *postgres.SessionRepo, user *domain.User, ip, userAgent string, ssoProviderName *string) (*domain.TokenPair, error) {
 	ip = stripPort(ip)
 	accessToken, err := s.tokens.GenerateAccessToken(user.ID, user.Email, user.IsSystemAdmin)
 	if err != nil {
@@ -624,6 +732,7 @@ func (s *AuthService) createSession(ctx context.Context, repo *postgres.SessionR
 		TokenFamily:      uuid.New(),
 		IPAddress:        ipPtr,
 		UserAgent:        uaPtr,
+		SSOProviderName:  ssoProviderName,
 		ExpiresAt:        time.Now().Add(s.tokens.RefreshTTL()),
 	}
 
@@ -636,6 +745,131 @@ func (s *AuthService) createSession(ctx context.Context, repo *postgres.SessionR
 		RefreshToken: rawRefresh,
 		ExpiresIn:    int64(s.tokens.AccessTTL().Seconds()),
 	}, nil
+}
+
+// LinkSSOIdentity links an SSO identity to an existing user.
+func (s *AuthService) LinkSSOIdentity(ctx context.Context, userID uuid.UUID, result *domain.SSOCallbackResult) error {
+	if s.ssoIdentityRepo == nil {
+		return fmt.Errorf("SSO identity repository not configured")
+	}
+
+	// Check identity not already linked to another user
+	existing, err := s.ssoIdentityRepo.GetByProviderSubject(ctx, result.Provider, result.Subject)
+	if err == nil && existing.UserID != userID {
+		return fmt.Errorf("this SSO identity is already linked to another account")
+	}
+
+	// Check user doesn't already have this provider linked
+	_, err = s.ssoIdentityRepo.GetByUserAndProvider(ctx, userID, result.Provider)
+	if err == nil {
+		return fmt.Errorf("you already have a %s account linked", result.Provider)
+	}
+
+	identity := &domain.SSOIdentity{
+		ID:          uuid.New(),
+		UserID:      userID,
+		Provider:    result.Provider,
+		Subject:     result.Subject,
+		Email:       strings.ToLower(result.Email),
+		DisplayName: result.DisplayName,
+		Metadata:    result.Claims,
+	}
+	if err := s.ssoIdentityRepo.Create(ctx, identity); err != nil {
+		if errors.Is(err, postgres.ErrConflict) {
+			return fmt.Errorf("this SSO identity is already linked to another account")
+		}
+		return fmt.Errorf("link SSO identity: %w", err)
+	}
+	return nil
+}
+
+// UnlinkSSOIdentity removes an SSO identity from a user.
+func (s *AuthService) UnlinkSSOIdentity(ctx context.Context, userID uuid.UUID, provider string) error {
+	if s.ssoIdentityRepo == nil {
+		return fmt.Errorf("SSO identity repository not configured")
+	}
+
+	// Check user has a password set
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("user not found")
+	}
+	if user.PasswordHash == nil {
+		return fmt.Errorf("you must set a password before unlinking SSO")
+	}
+
+	// Check enforce_sso is not enabled
+	var enforced bool
+	if err := s.pool.QueryRow(ctx,
+		`SELECT EXISTS(
+			SELECT 1 FROM organizations o JOIN org_memberships m ON m.org_id = o.id
+			WHERE m.user_id = $1 AND (o.settings->>'enforce_sso')::boolean = true
+		)`, userID).Scan(&enforced); err == nil && enforced {
+		return fmt.Errorf("SSO is required by your organization")
+	}
+
+	return s.ssoIdentityRepo.Delete(ctx, userID, provider)
+}
+
+// GetSSOIdentities returns all SSO identities for a user.
+func (s *AuthService) GetSSOIdentities(ctx context.Context, userID uuid.UUID) ([]domain.SSOIdentity, error) {
+	if s.ssoIdentityRepo == nil {
+		return nil, nil
+	}
+	return s.ssoIdentityRepo.ListByUser(ctx, userID)
+}
+
+// applyClaimMappings maps IdP group claims to org roles and team memberships.
+func (s *AuthService) applyClaimMappings(ctx context.Context, userID uuid.UUID, provider string, claims map[string]any, mappings []domain.ClaimMapping) {
+	for _, mapping := range mappings {
+		claimVal, ok := claims[mapping.ClaimName]
+		if !ok {
+			continue
+		}
+
+		// Check if claim value matches (supports string or []string)
+		matched := false
+		switch v := claimVal.(type) {
+		case string:
+			matched = v == mapping.ClaimValue
+		case []any:
+			for _, item := range v {
+				if str, ok := item.(string); ok && str == mapping.ClaimValue {
+					matched = true
+					break
+				}
+			}
+		}
+
+		if !matched {
+			continue
+		}
+
+		// Apply org role
+		if mapping.OrgRole != "" && s.orgRepo != nil {
+			orgs, _, err := s.orgRepo.ListAll(ctx, 1, 1)
+			if err == nil && len(orgs) > 0 {
+				_ = s.orgRepo.UpdateMemberRole(ctx, userID, orgs[0].ID, mapping.OrgRole)
+			}
+		}
+
+		// Apply team membership
+		if mapping.TeamID != "" && mapping.TeamRole != "" && s.teamRepo != nil {
+			teamID, err := uuid.Parse(mapping.TeamID)
+			if err == nil {
+				teamRole := mapping.TeamRole
+				if teamRole == "" {
+					teamRole = "member"
+				}
+				_ = s.teamRepo.CreateMembership(ctx, &domain.TeamMembership{
+					ID:     uuid.New(),
+					UserID: userID,
+					TeamID: teamID,
+					Role:   teamRole,
+				})
+			}
+		}
+	}
 }
 
 // LockedError indicates the account is locked.

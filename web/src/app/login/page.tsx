@@ -16,12 +16,20 @@ import { Shield, Zap, Clock, Eye, EyeOff } from "lucide-react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
 
+interface SSOStatusProvider {
+  name: string;
+  provider_type: string;
+  label: string;
+  enabled: boolean;
+}
+
 interface SSOStatus {
   enabled: boolean;
   allow_registration: boolean;
   provider?: string;
   provider_label?: string;
   enforce_sso?: boolean;
+  providers?: SSOStatusProvider[];
 }
 
 export default function LoginPage() {
@@ -82,7 +90,7 @@ export default function LoginPage() {
 
   const ssoEnabled = sso?.enabled ?? false;
   const enforceSSO = sso?.enforce_sso ?? false;
-  const ssoUrl = ssoEnabled ? `${API_BASE}/auth/sso/${sso!.provider}` : "";
+  const ssoProviders = (sso?.providers ?? []).filter((p) => p.enabled);
 
   return (
     <div className="flex min-h-[calc(100vh-8rem)]">
@@ -114,17 +122,21 @@ export default function LoginPage() {
             <div className="text-3xl mb-2 lg:hidden">🔥</div>
             <CardTitle className="text-2xl">Sign in to BurnerByte</CardTitle>
             <CardDescription>
-              {enforceSSO ? `Sign in with ${sso?.provider_label ?? "SSO"} to continue` : "Enter your credentials to continue"}
+              {enforceSSO ? "Sign in with SSO to continue" : "Enter your credentials to continue"}
             </CardDescription>
           </CardHeader>
 
-          {ssoEnabled && (
+          {ssoEnabled && ssoProviders.length > 0 && (
             <CardContent className={enforceSSO ? "" : "pb-0"}>
-              <a href={ssoUrl}>
-                <Button variant="outline" className="w-full gap-2 h-11" type="button">
-                  Sign in with {sso?.provider_label ?? "SSO"}
-                </Button>
-              </a>
+              <div className="space-y-2">
+                {ssoProviders.map((p) => (
+                  <a key={p.name} href={`${API_BASE}/auth/sso/${p.name}`}>
+                    <Button variant="outline" className="w-full gap-2 h-11 mb-1" type="button">
+                      Sign in with {p.label}
+                    </Button>
+                  </a>
+                ))}
+              </div>
             </CardContent>
           )}
 

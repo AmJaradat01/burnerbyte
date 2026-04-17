@@ -26,9 +26,9 @@ func (r *SessionRepo) WithTx(tx database.DBTX) *SessionRepo {
 
 func (r *SessionRepo) Create(ctx context.Context, s *domain.Session) error {
 	_, err := r.db.Exec(ctx,
-		`INSERT INTO sessions (id, user_id, refresh_token_hash, token_family, ip_address, user_agent, expires_at)
-		 VALUES ($1, $2, $3, $4, $5::inet, $6, $7)`,
-		s.ID, s.UserID, s.RefreshTokenHash, s.TokenFamily, s.IPAddress, s.UserAgent, s.ExpiresAt,
+		`INSERT INTO sessions (id, user_id, refresh_token_hash, token_family, ip_address, user_agent, expires_at, sso_provider_name)
+		 VALUES ($1, $2, $3, $4, $5::inet, $6, $7, $8)`,
+		s.ID, s.UserID, s.RefreshTokenHash, s.TokenFamily, s.IPAddress, s.UserAgent, s.ExpiresAt, s.SSOProviderName,
 	)
 	if err != nil {
 		return fmt.Errorf("create session: %w", err)
@@ -39,14 +39,14 @@ func (r *SessionRepo) Create(ctx context.Context, s *domain.Session) error {
 func (r *SessionRepo) GetByTokenHash(ctx context.Context, hash string) (*domain.Session, error) {
 	return r.scanOne(ctx,
 		`SELECT id, user_id, refresh_token_hash, token_family, ip_address::text, user_agent,
-		        last_used_at, expires_at, revoked, created_at
+		        last_used_at, expires_at, revoked, created_at, sso_provider_name
 		 FROM sessions WHERE refresh_token_hash = $1`, hash)
 }
 
 func (r *SessionRepo) ListByUser(ctx context.Context, userID uuid.UUID) ([]domain.Session, error) {
 	rows, err := r.db.Query(ctx,
 		`SELECT id, user_id, refresh_token_hash, token_family, ip_address::text, user_agent,
-		        last_used_at, expires_at, revoked, created_at
+		        last_used_at, expires_at, revoked, created_at, sso_provider_name
 		 FROM sessions WHERE user_id = $1 AND revoked = FALSE AND expires_at > NOW()
 		 ORDER BY last_used_at DESC`, userID)
 	if err != nil {
@@ -58,7 +58,8 @@ func (r *SessionRepo) ListByUser(ctx context.Context, userID uuid.UUID) ([]domai
 	for rows.Next() {
 		var s domain.Session
 		if err := rows.Scan(&s.ID, &s.UserID, &s.RefreshTokenHash, &s.TokenFamily,
-			&s.IPAddress, &s.UserAgent, &s.LastUsedAt, &s.ExpiresAt, &s.Revoked, &s.CreatedAt); err != nil {
+			&s.IPAddress, &s.UserAgent, &s.LastUsedAt, &s.ExpiresAt, &s.Revoked, &s.CreatedAt,
+			&s.SSOProviderName); err != nil {
 			return nil, fmt.Errorf("scan session: %w", err)
 		}
 		sessions = append(sessions, s)
@@ -96,7 +97,7 @@ func (r *SessionRepo) RevokeAllCount(ctx context.Context, userID uuid.UUID) (int
 func (r *SessionRepo) GetByIDForUser(ctx context.Context, userID, sessionID uuid.UUID) (*domain.Session, error) {
 	return r.scanOne(ctx,
 		`SELECT id, user_id, refresh_token_hash, token_family, ip_address::text, user_agent,
-		        last_used_at, expires_at, revoked, created_at
+		        last_used_at, expires_at, revoked, created_at, sso_provider_name
 		 FROM sessions WHERE id = $1 AND user_id = $2`, sessionID, userID)
 }
 
@@ -152,6 +153,7 @@ func (r *SessionRepo) scanOne(ctx context.Context, query string, args ...any) (*
 	err := r.db.QueryRow(ctx, query, args...).Scan(
 		&s.ID, &s.UserID, &s.RefreshTokenHash, &s.TokenFamily,
 		&s.IPAddress, &s.UserAgent, &s.LastUsedAt, &s.ExpiresAt, &s.Revoked, &s.CreatedAt,
+		&s.SSOProviderName,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
