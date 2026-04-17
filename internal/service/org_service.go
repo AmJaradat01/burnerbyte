@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/mail"
 	"regexp"
 	"strings"
@@ -39,6 +40,10 @@ func NewOrgService(pool *pgxpool.Pool, orgRepo *postgres.OrgRepo, teamRepo *post
 }
 
 var slugRe = regexp.MustCompile(`[^a-z0-9]+`)
+
+// emailDomainRe validates the domain part of an email: requires labels separated by dots,
+// with a TLD of at least 2 characters. Rejects things like "hgfhgf.v" or "foo..bar.com".
+var emailDomainRe = regexp.MustCompile(`^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$`)
 
 func generateSlug(name string) string {
 	s := strings.ToLower(strings.TrimSpace(name))
@@ -264,10 +269,23 @@ func (s *OrgService) InviteMember(ctx context.Context, orgID uuid.UUID, input do
 	if input.Email == "" {
 		return nil, fmt.Errorf("email is required")
 	}
-	// Validate email format using net/mail (same as auth registration)
+	// Validate email format: net/mail for RFC compliance + stricter domain check
 	input.Email = strings.ToLower(strings.TrimSpace(input.Email))
 	if _, err := mail.ParseAddress(input.Email); err != nil {
 		return nil, fmt.Errorf("invalid email format")
+	}
+	// Require a real-looking domain: at least one dot, TLD >= 2 chars, no consecutive dots
+	parts := strings.SplitN(input.Email, "@", 2)
+	if len(parts) != 2 || !emailDomainRe.MatchString(parts[1]) {
+		return nil, fmt.Errorf("invalid email domain")
+	}
+	// DNS check: verify the domain has MX or A records (catches completely fake domains)
+	emailDomain := parts[1]
+	if _, err := net.LookupMX(emailDomain); err != nil {
+		// No MX records — try A record as fallback (some domains deliver mail via A)
+		if _, err := net.LookupHost(emailDomain); err != nil {
+			return nil, fmt.Errorf("email domain %q does not exist or has no mail server", emailDomain)
+		}
 	}
 	if !rbac.ValidOrgRole(input.OrgRole) {
 		return nil, fmt.Errorf("invalid org_role: %s", input.OrgRole)
