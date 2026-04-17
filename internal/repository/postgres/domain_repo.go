@@ -80,7 +80,7 @@ func (r *DomainRepo) GetByIDEnriched(ctx context.Context, id uuid.UUID) (*domain
 		        (SELECT COUNT(*) FROM inboxes i WHERE i.domain_id = d.id),
 		        (SELECT COALESCE(SUM(sub.cnt), 0) FROM (SELECT COUNT(*) as cnt FROM emails e JOIN inboxes i ON e.inbox_id = i.id WHERE i.domain_id = d.id) sub),
 		        (SELECT COUNT(DISTINCT da.team_id) FROM domain_assignments da WHERE da.domain_id = d.id),
-		        (SELECT COALESCE(SUM(value), 0) FROM org_analytics_counters WHERE dimension_type = 'domain' AND dimension_id = d.id::text)
+		        (SELECT COALESCE(SUM(ddes.emails_received), 0) FROM daily_domain_email_stats ddes WHERE ddes.org_id = d.org_id AND ddes.domain_name = d.domain_name)
 		 FROM domains d WHERE d.id = $1`, id).Scan(
 		&d.ID, &d.OrgID, &d.DomainName, &description, &d.MXVerified, &d.TXTVerified, &d.SPFVerified,
 		&d.DNSLastCheckedAt, &settings, &d.CreatedAt, &d.UpdatedAt,
