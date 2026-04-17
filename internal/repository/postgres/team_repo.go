@@ -380,3 +380,11 @@ func (r *TeamRepo) DeleteMembership(ctx context.Context, userID, teamID uuid.UUI
 	_, err := r.db.Exec(ctx, `DELETE FROM team_memberships WHERE user_id = $1 AND team_id = $2`, userID, teamID)
 	return err
 }
+
+func (r *TeamRepo) ExistsByNameInOrg(ctx context.Context, orgID uuid.UUID, name string) (bool, error) {
+	var exists bool
+	err := r.db.QueryRow(ctx,
+		`SELECT EXISTS(SELECT 1 FROM teams WHERE org_id = $1 AND LOWER(name) = LOWER($2))`,
+		orgID, name).Scan(&exists)
+	return exists, err
+}
