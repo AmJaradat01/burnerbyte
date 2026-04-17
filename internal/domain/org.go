@@ -55,6 +55,13 @@ type InviteMemberInput struct {
 	TeamRole *string `json:"team_role,omitempty"`
 }
 
+type OrgMemberSuggestion struct {
+	UserID      uuid.UUID `json:"user_id"`
+	Email       string    `json:"email"`
+	DisplayName string    `json:"display_name"`
+	AvatarURL   *string   `json:"avatar_url,omitempty"`
+}
+
 type ChangeRoleInput struct {
 	Role string `json:"role"`
 }
