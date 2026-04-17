@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -49,6 +50,8 @@ func (h *AuthHandler) AuthenticatedRoutes(r chi.Router) {
 	r.Delete("/auth/sessions/{sessionId}", h.RevokeSession)
 	r.Delete("/auth/sessions", h.RevokeAllSessions)
 	r.Get("/auth/datetime-settings", h.GetDateTimeSettings)
+	r.Get("/auth/me/sso", h.ListSSOIdentities)
+	r.Delete("/auth/me/sso/{provider}", h.UnlinkSSO)
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
@@ -339,26 +342,32 @@ func (h *AuthHandler) RevokeAllSessions(w http.ResponseWriter, r *http.Request) 
 
 func (h *AuthHandler) SSOStatus(w http.ResponseWriter, r *http.Request) {
 	enabled := h.sso.IsConfigured()
+	providers := h.sso.ListProviders()
+
 	resp := map[string]any{
 		"enabled":            enabled,
 		"allow_registration": h.cfg.Defaults.AllowRegistration,
+		"providers":          providers,
 	}
-	if enabled {
-		cfg := h.cfg.SSO
-		resp["provider"] = cfg.Provider
-		labels := map[string]string{"google": "Google", "github": "GitHub", "azure": "Microsoft", "okta": "Okta", "oidc": "SSO"}
-		if l, ok := labels[cfg.Provider]; ok {
-			resp["provider_label"] = l
-		} else {
-			resp["provider_label"] = "SSO"
-		}
-		// Check if org enforces SSO
-		resp["enforce_sso"] = false
-		orgs, _, err := h.svc.ListAllOrgs(r.Context(), 1, 1)
-		if err == nil && len(orgs) > 0 && orgs[0].Settings.EnforceSSO != nil && *orgs[0].Settings.EnforceSSO {
-			resp["enforce_sso"] = true
+
+	if enabled && len(providers) > 0 {
+		// Backward compatibility: set provider/provider_label from first enabled provider
+		for _, p := range providers {
+			if p.Enabled {
+				resp["provider"] = p.Name
+				resp["provider_label"] = p.Label
+				break
+			}
 		}
 	}
+
+	// Check if org enforces SSO
+	resp["enforce_sso"] = false
+	orgs, _, err := h.svc.ListAllOrgs(r.Context(), 1, 1)
+	if err == nil && len(orgs) > 0 && orgs[0].Settings.EnforceSSO != nil && *orgs[0].Settings.EnforceSSO {
+		resp["enforce_sso"] = true
+	}
+
 	resp["password_policy"] = map[string]any{
 		"min_length":        h.cfg.Password.MinLength,
 		"require_uppercase": h.cfg.Password.RequireUppercase,
@@ -370,8 +379,9 @@ func (h *AuthHandler) SSOStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) SSORedirect(w http.ResponseWriter, r *http.Request) {
-	if !h.sso.IsConfigured() {
-		writeError(w, http.StatusNotFound, "SSO not configured")
+	providerName := chi.URLParam(r, "provider")
+	if !h.sso.IsProviderConfigured(providerName) {
+		writeError(w, http.StatusNotFound, "SSO provider not configured")
 		return
 	}
 	state, err := h.sso.GenerateState()
@@ -379,6 +389,10 @@ func (h *AuthHandler) SSORedirect(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to generate state")
 		return
 	}
+
+	// Read intent (empty = login, "link" = account linking)
+	intent := r.URL.Query().Get("intent")
+
 	// Capture the frontend origin so the callback can redirect back
 	origin := r.Header.Get("Origin")
 	if origin == "" {
@@ -395,8 +409,20 @@ func (h *AuthHandler) SSORedirect(w http.ResponseWriter, r *http.Request) {
 	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
 		scheme = "https"
 	}
+
+	// Store state + intent + user_id (if linking) in cookie
+	stateValue := state
+	if intent == "link" {
+		uc := auth.GetUser(r.Context())
+		if uc != nil {
+			stateValue = state + "|link|" + uc.UserID.String()
+		} else {
+			stateValue = state + "|link|"
+		}
+	}
+
 	http.SetCookie(w, &http.Cookie{
-		Name: "sso_state", Value: state, Path: "/", MaxAge: 600,
+		Name: "sso_state", Value: stateValue, Path: "/", MaxAge: 600,
 		HttpOnly: true, SameSite: http.SameSiteLaxMode,
 		Secure: scheme == "https",
 	})
@@ -405,58 +431,139 @@ func (h *AuthHandler) SSORedirect(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true, SameSite: http.SameSiteLaxMode,
 		Secure: scheme == "https",
 	})
-	url, err := h.sso.RedirectURL(r.Context(), state)
+	redirectURL, err := h.sso.RedirectURL(r.Context(), providerName, state)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	http.Redirect(w, r, url, http.StatusFound)
+	http.Redirect(w, r, redirectURL, http.StatusFound)
 }
 
 func (h *AuthHandler) SSOCallback(w http.ResponseWriter, r *http.Request) {
-	if !h.sso.IsConfigured() {
-		writeError(w, http.StatusNotFound, "SSO not configured")
+	providerName := chi.URLParam(r, "provider")
+	if !h.sso.IsProviderConfigured(providerName) {
+		writeError(w, http.StatusNotFound, "SSO provider not configured")
 		return
 	}
 	cookie, err := r.Cookie("sso_state")
-	if err != nil || cookie.Value != r.URL.Query().Get("state") {
-		writeError(w, http.StatusBadRequest, "invalid state parameter")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "missing state cookie")
 		return
 	}
+
+	// Parse state cookie: may be "state" or "state|link|userID"
+	cookieValue := cookie.Value
+	stateParam := r.URL.Query().Get("state")
+	intent := ""
+	linkUserID := ""
+
+	parts := strings.SplitN(cookieValue, "|", 3)
+	if len(parts) >= 2 {
+		if parts[0] != stateParam {
+			writeError(w, http.StatusBadRequest, "invalid state parameter")
+			return
+		}
+		intent = parts[1]
+		if len(parts) == 3 {
+			linkUserID = parts[2]
+		}
+	} else {
+		if cookieValue != stateParam {
+			writeError(w, http.StatusBadRequest, "invalid state parameter")
+			return
+		}
+	}
+
 	// Clear state cookie
 	http.SetCookie(w, &http.Cookie{Name: "sso_state", Path: "/", MaxAge: -1})
 
-	// Read and clear origin cookie — validate against allowed frontend URL
+	// Read and clear origin cookie
 	frontendURL := h.cfg.Server.FrontendURL
 	if oc, err := r.Cookie("sso_origin"); err == nil && oc.Value != "" {
-		// Only allow the configured frontend URL to prevent open redirect
 		if oc.Value == h.cfg.Server.FrontendURL {
 			frontendURL = oc.Value
 		}
 	}
 	http.SetCookie(w, &http.Cookie{Name: "sso_origin", Path: "/", MaxAge: -1})
 
-	email, displayName, provider, subject, err := h.sso.HandleCallback(r.Context(), r)
+	result, err := h.sso.HandleCallback(r.Context(), providerName, r)
 	if err != nil {
+		auditRecordEnhanced(r, uuid.Nil, "user.sso_login_failed", "user", uuid.Nil, "", map[string]any{
+			"provider": providerName, "reason": err.Error(), "ip_address": r.RemoteAddr,
+		})
 		writeError(w, http.StatusUnauthorized, err.Error())
 		return
 	}
 
-	user, tokens, err := h.svc.SSOLogin(r.Context(), email, displayName, provider, subject, r.RemoteAddr, r.UserAgent())
+	// Handle link intent
+	if intent == "link" && linkUserID != "" {
+		userID, parseErr := uuid.Parse(linkUserID)
+		if parseErr != nil {
+			writeError(w, http.StatusBadRequest, "invalid user ID in link intent")
+			return
+		}
+		if err := h.svc.LinkSSOIdentity(r.Context(), userID, result); err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		auditRecordEnhanced(r, uuid.Nil, "user.sso_linked", "user", userID, result.Email, map[string]any{
+			"provider": providerName, "subject": result.Subject,
+		})
+		http.Redirect(w, r, frontendURL+"/profile?sso_linked="+providerName, http.StatusFound)
+		return
+	}
+
+	// Default: login intent
+	user, tokens, err := h.svc.SSOLogin(r.Context(), result, r.RemoteAddr, r.UserAgent())
 	if err != nil {
+		auditRecordEnhanced(r, uuid.Nil, "user.sso_login_failed", "user", uuid.Nil, result.Email, map[string]any{
+			"provider": providerName, "reason": err.Error(), "email": result.Email,
+		})
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	auditRecordEnhanced(r, uuid.Nil, "user.sso_login", "user", user.ID, user.Email, map[string]any{"email": user.Email, "provider": provider})
+	auditRecordEnhanced(r, uuid.Nil, "user.sso_login", "user", user.ID, user.Email, map[string]any{
+		"email": user.Email, "provider": providerName, "subject": result.Subject,
+	})
 
-	// Use fragment (#) instead of query params to prevent tokens from being
-	// logged by proxies, appearing in Referer headers, or stored in server logs
 	http.Redirect(w, r, fmt.Sprintf("%s/login#access_token=%s&refresh_token=%s&user_id=%s",
 		frontendURL,
 		url.QueryEscape(tokens.AccessToken),
 		url.QueryEscape(tokens.RefreshToken),
 		url.QueryEscape(user.ID.String())), http.StatusFound)
+}
+
+func (h *AuthHandler) ListSSOIdentities(w http.ResponseWriter, r *http.Request) {
+	uc := auth.GetUser(r.Context())
+	identities, err := h.svc.GetSSOIdentities(r.Context(), uc.UserID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to list SSO identities")
+		return
+	}
+	if identities == nil {
+		identities = []domain.SSOIdentity{}
+	}
+	writeJSON(w, http.StatusOK, identities)
+}
+
+func (h *AuthHandler) UnlinkSSO(w http.ResponseWriter, r *http.Request) {
+	uc := auth.GetUser(r.Context())
+	provider := chi.URLParam(r, "provider")
+	if provider == "" {
+		writeError(w, http.StatusBadRequest, "provider is required")
+		return
+	}
+
+	if err := h.svc.UnlinkSSOIdentity(r.Context(), uc.UserID, provider); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	auditRecordEnhanced(r, uuid.Nil, "user.sso_unlinked", "user", uc.UserID, uc.Email, map[string]any{
+		"provider": provider,
+	})
+	writeJSON(w, http.StatusOK, map[string]string{"message": "SSO identity unlinked"})
 }
 
 // Shared JSON helpers

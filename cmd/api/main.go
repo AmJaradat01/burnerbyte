@@ -95,8 +95,10 @@ func main() {
 	counterRepo := postgres.NewCounterRepo(pool)
 	verHistoryRepo := postgres.NewVerificationHistoryRepo(pool)
 	sysConfigRepo := postgres.NewSystemConfigRepo(pool)
+	var enc *appcrypto.Encryptor
 	if cfg.Encryption.Key != "" {
-		enc, err := appcrypto.NewEncryptor(cfg.Encryption.Key)
+		var err error
+		enc, err = appcrypto.NewEncryptor(cfg.Encryption.Key)
 		if err != nil {
 			slog.Error("invalid encryption key", "error", err)
 			os.Exit(1)
@@ -104,6 +106,10 @@ func main() {
 		sysConfigRepo.WithEncryptor(enc)
 		slog.Info("encryption enabled for sensitive config values")
 	}
+
+	// SSO repositories
+	ssoProviderRepo := postgres.NewSSOProviderRepo(pool, enc)
+	ssoIdentityRepo := postgres.NewSSOIdentityRepo(pool)
 
 	// Load runtime configs from DB (overrides config.yaml/env for mailer + storage)
 	cfg.LoadFromDB(ctx, sysConfigRepo)
@@ -118,7 +124,7 @@ func main() {
 	if s3Client != nil {
 		attachmentSvc = service.NewAttachmentService(attachmentRepo, emailRepo, inboxRepo, s3Client, cfg.MinIO, cfg.Defaults.MaxAttachmentSizeMB, cfg.Defaults.PresignedURLTTL)
 	}
-	authSvc := service.NewAuthService(pool, userRepo, sessionRepo, resetRepo, postgres.NewEmailVerificationRepo(pool), orgRepo, tokenMgr, lockout, ml, cfg)
+	authSvc := service.NewAuthService(pool, userRepo, sessionRepo, resetRepo, postgres.NewEmailVerificationRepo(pool), orgRepo, ssoIdentityRepo, ssoProviderRepo, teamRepo, tokenMgr, lockout, ml, cfg)
 	orgSvc := service.NewOrgService(pool, orgRepo, teamRepo, userRepo, ml, cfg.Server.FrontendURL, cfg.Defaults.InviteExpiryTTL)
 	redisInboxRepo := redisrepo.NewInboxRepo(rdb)
 	domainSvc := service.NewDomainService(domainRepo, orgRepo, inboxRepo, redisInboxRepo, verHistoryRepo, cfg)
@@ -150,7 +156,14 @@ func main() {
 	realtime.Subscribe(ctx, rdb, hub, notifHub, notifRepo, counterRepo)
 
 	// Handlers
-	ssoMgr := auth.NewSSOManager(cfg)
+	ssoMgr := auth.NewSSOManager(cfg, enc)
+	// Load SSO providers from database at startup
+	if dbProviders, err := ssoProviderRepo.ListEnabled(ctx); err == nil {
+		ssoMgr.LoadProviders(ctx, dbProviders)
+	} else {
+		slog.Warn("failed to load SSO providers from database", "error", err)
+		ssoMgr.LoadProviders(ctx, nil)
+	}
 	authHandler := handler.NewAuthHandler(authSvc, ssoMgr, cfg)
 	orgHandler := handler.NewOrgHandler(orgSvc)
 	domainHandler := handler.NewDomainHandler(domainSvc, inboxRepo, cfg.SMTP.Hostname)
@@ -162,7 +175,7 @@ func main() {
 	apikeyHandler := handler.NewAPIKeyHandler(apikeySvc)
 	auditHandler := handler.NewAuditHandler(auditSvc)
 	analyticsHandler := handler.NewAnalyticsHandler(analyticsSvc, cfg.Defaults.AnalyticsDefaultDays)
-	adminHandler := handler.NewAdminHandler(analyticsSvc, orgSvc, authSvc, sysConfigRepo, cfg, pool, rdb, s3Client, cfg.MinIO.Bucket)
+	adminHandler := handler.NewAdminHandler(analyticsSvc, orgSvc, authSvc, sysConfigRepo, ssoProviderRepo, ssoMgr, enc, cfg, pool, rdb, s3Client, cfg.MinIO.Bucket)
 	setupHandler := handler.NewSetupHandler(pool, userRepo, orgRepo, domainRepo, teamRepo, sessionRepo, sysConfigRepo, tokenMgr, ml, cfg)
 	wsHandler := handler.NewWSHandler(hub, inboxRepo, cfg.CORS.AllowedOrigins)
 	notifWSHandler := handler.NewNotifWSHandler(notifHub, cfg.CORS.AllowedOrigins)
@@ -352,6 +365,12 @@ func main() {
 			r.With(auth.RequireSystemAdmin).Put("/admin/platform", adminHandler.UpdatePlatformSettings)
 			r.With(auth.RequireSystemAdmin).Get("/admin/sso", adminHandler.GetSSOConfig)
 			r.With(auth.RequireSystemAdmin).Put("/admin/sso", adminHandler.UpdateSSOConfig)
+			r.With(auth.RequireSystemAdmin).Get("/admin/sso/providers", adminHandler.ListSSOProviders)
+			r.With(auth.RequireSystemAdmin).Post("/admin/sso/providers", adminHandler.CreateSSOProvider)
+			r.With(auth.RequireSystemAdmin).Get("/admin/sso/providers/{providerId}", adminHandler.GetSSOProvider)
+			r.With(auth.RequireSystemAdmin).Put("/admin/sso/providers/{providerId}", adminHandler.UpdateSSOProvider)
+			r.With(auth.RequireSystemAdmin).Delete("/admin/sso/providers/{providerId}", adminHandler.DeleteSSOProvider)
+			r.With(auth.RequireSystemAdmin).Post("/admin/sso/test", adminHandler.TestSSOConnection)
 			r.With(auth.RequireSystemAdmin).Get("/admin/version", func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Content-Type", "application/json")
 				json.NewEncoder(w).Encode(map[string]string{"version": Version})

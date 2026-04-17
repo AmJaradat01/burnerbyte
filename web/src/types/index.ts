@@ -169,6 +169,7 @@ export interface Session {
   user_id: string;
   ip_address?: string;
   user_agent?: string;
+  sso_provider_name?: string;
   last_used_at: string;
   expires_at: string;
   created_at: string;
