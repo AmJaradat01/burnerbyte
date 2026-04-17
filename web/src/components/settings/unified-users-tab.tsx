@@ -309,9 +309,13 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
   const [displayName, setDisplayName] = useState(u.display_name);
   const [isAdminFlag, setIsAdminFlag] = useState(u.is_system_admin);
   const [verified, setVerified] = useState(u.email_verified);
+  const [avatarURL, setAvatarURL] = useState(u.avatar_url ?? "");
+  const [timezone, setTimezone] = useState(u.timezone ?? "");
+  const [dateFormat, setDateFormat] = useState(u.date_format ?? "");
+  const [timeFormat, setTimeFormat] = useState(u.time_format ?? "");
   const [saving, setSaving] = useState(false);
 
-  const dirty = displayName !== u.display_name || isAdminFlag !== u.is_system_admin || verified !== u.email_verified;
+  const dirty = displayName !== u.display_name || isAdminFlag !== u.is_system_admin || verified !== u.email_verified || avatarURL !== (u.avatar_url ?? "") || timezone !== (u.timezone ?? "") || dateFormat !== (u.date_format ?? "") || timeFormat !== (u.time_format ?? "");
 
   const save = async () => {
     setSaving(true);
@@ -319,11 +323,17 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
       if (isAdmin) {
         await api.patch(`/admin/users/${u.id}`, {
           display_name: displayName !== u.display_name ? displayName : undefined,
+          avatar_url: avatarURL !== (u.avatar_url ?? "") ? avatarURL : undefined,
           is_system_admin: isAdminFlag !== u.is_system_admin ? isAdminFlag : undefined,
           email_verified: verified !== u.email_verified ? verified : undefined,
         });
       } else {
-        await api.patch("/auth/me", { display_name: displayName });
+        await api.patch("/auth/me", {
+          display_name: displayName !== u.display_name ? displayName : undefined,
+          timezone: timezone !== (u.timezone ?? "") ? timezone : undefined,
+          date_format: dateFormat !== (u.date_format ?? "") ? dateFormat : undefined,
+          time_format: timeFormat !== (u.time_format ?? "") ? timeFormat : undefined,
+        });
       }
       qc.invalidateQueries({ queryKey: ["admin-users"] });
       qc.invalidateQueries({ queryKey: ["org-members"] });
@@ -349,7 +359,7 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
   return (
     <Dialog open={open} onOpenChange={(v) => {
       setOpen(v);
-      if (v) { setDisplayName(u.display_name); setIsAdminFlag(u.is_system_admin); setVerified(u.email_verified); }
+      if (v) { setDisplayName(u.display_name); setIsAdminFlag(u.is_system_admin); setVerified(u.email_verified); setAvatarURL(u.avatar_url ?? ""); setTimezone(u.timezone ?? ""); setDateFormat(u.date_format ?? ""); setTimeFormat(u.time_format ?? ""); }
     }}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="max-w-lg">
@@ -417,6 +427,43 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
               <Input value={u.email} disabled className="bg-muted font-mono text-sm" />
             </div>
             {isAdmin && (
+              <div className="space-y-2">
+                <Label>Avatar URL</Label>
+                <Input value={avatarURL} onChange={(e) => setAvatarURL(e.target.value)} placeholder="https://..." />
+              </div>
+            )}
+            {(isAdmin || isYou) && (
+              <>
+                <div className="space-y-2">
+                  <Label>Timezone</Label>
+                  <Input value={timezone} onChange={(e) => setTimezone(e.target.value)} placeholder="e.g. America/New_York, UTC" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label>Date Format</Label>
+                    <Select value={dateFormat || "YYYY-MM-DD"} onValueChange={setDateFormat}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="YYYY-MM-DD">YYYY-MM-DD</SelectItem>
+                        <SelectItem value="MM/DD/YYYY">MM/DD/YYYY</SelectItem>
+                        <SelectItem value="DD/MM/YYYY">DD/MM/YYYY</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Time Format</Label>
+                    <Select value={timeFormat || "24h"} onValueChange={setTimeFormat}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="24h">24-hour</SelectItem>
+                        <SelectItem value="12h">12-hour</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </>
+            )}
+            {isAdmin && (
               <>
                 <div className="flex items-center justify-between">
                   <div>
@@ -455,8 +502,10 @@ function InviteDialog({ orgId }: { orgId: string }) {
   const [open, setOpen] = useState(false);
   const [sending, setSending] = useState(false);
 
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
   const invite = async () => {
-    if (!email) return;
+    if (!email || !emailValid) return;
     setSending(true);
     try {
       await api.post(`/orgs/${orgId}/invites`, { email, org_role: role });
@@ -486,6 +535,9 @@ function InviteDialog({ orgId }: { orgId: string }) {
           <div className="space-y-2">
             <Label>Email</Label>
             <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="colleague@example.com" onKeyDown={(e) => e.key === "Enter" && invite()} />
+            {email && !emailValid && (
+              <p className="text-xs text-destructive">Please enter a valid email address</p>
+            )}
           </div>
           <div className="space-y-2">
             <Label>Role</Label>
@@ -498,7 +550,7 @@ function InviteDialog({ orgId }: { orgId: string }) {
               </SelectContent>
             </Select>
           </div>
-          <Button onClick={invite} className="w-full" disabled={!email || sending}>
+          <Button onClick={invite} className="w-full" disabled={!email || !emailValid || sending}>
             {sending ? "Sending…" : "Send Invite"}
           </Button>
         </div>
