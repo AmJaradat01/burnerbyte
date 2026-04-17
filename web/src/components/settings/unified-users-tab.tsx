@@ -348,9 +348,11 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
 
   const addToOrg = async () => {
     try {
-      await api.post(`/orgs/${orgId}/invites`, { email: u.email, org_role: "member" });
-      qc.invalidateQueries({ queryKey: ["org-invites"] });
-      toast.success(`Invite sent to ${u.email}`);
+      await api.post(`/orgs/${orgId}/members/add`, { user_id: u.id, role: "member" });
+      qc.invalidateQueries({ queryKey: ["org-members"] });
+      qc.invalidateQueries({ queryKey: ["admin-users"] });
+      toast.success(`${u.display_name || u.email} added to organization`);
+      setOpen(false);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed");
     }
@@ -412,7 +414,7 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
           {/* Add to org button for non-members */}
           {!u.org_role && (
             <Button variant="outline" className="w-full gap-2" onClick={addToOrg}>
-              <UserPlus className="h-4 w-4" /> Invite to Organization
+              <UserPlus className="h-4 w-4" /> Add to Organization
             </Button>
           )}
 

@@ -223,6 +223,33 @@ func (s *OrgService) ListMembers(ctx context.Context, orgID uuid.UUID, page, per
 	return s.orgRepo.ListMembers(ctx, orgID, page, perPage)
 }
 
+// DirectAddMember adds an existing user directly to the org without the invite flow.
+// Used for single-org systems where the admin wants to add a user who already has an account.
+func (s *OrgService) DirectAddMember(ctx context.Context, orgID, userID uuid.UUID, role string) error {
+	if !rbac.ValidOrgRole(role) {
+		return fmt.Errorf("invalid role: %s", role)
+	}
+	// Verify user exists
+	if s.userRepo != nil {
+		if _, err := s.userRepo.GetByID(ctx, userID); err != nil {
+			return fmt.Errorf("user not found")
+		}
+	}
+	membership := &domain.OrgMembership{
+		ID:     uuid.New(),
+		UserID: userID,
+		OrgID:  orgID,
+		Role:   role,
+	}
+	if err := s.orgRepo.CreateMembership(ctx, membership); err != nil {
+		if errors.Is(err, postgres.ErrConflict) {
+			return fmt.Errorf("user is already a member of this organization")
+		}
+		return err
+	}
+	return nil
+}
+
 func (s *OrgService) ChangeRole(ctx context.Context, orgID, targetUserID uuid.UUID, role string) error {
 	if !rbac.ValidOrgRole(role) {
 		return fmt.Errorf("invalid role: %s", role)
