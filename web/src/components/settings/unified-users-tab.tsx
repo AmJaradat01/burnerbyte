@@ -500,7 +500,7 @@ function InviteDialog({ orgId }: { orgId: string }) {
   const teams = useOrgStore((s) => s.teams);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("member");
-  const [teamId, setTeamId] = useState("");
+  const [teamId, setTeamId] = useState("none");
   const [teamRole, setTeamRole] = useState("member");
   const [open, setOpen] = useState(false);
   const [sending, setSending] = useState(false);
@@ -512,7 +512,7 @@ function InviteDialog({ orgId }: { orgId: string }) {
     setSending(true);
     try {
       const payload: Record<string, string> = { email, org_role: role };
-      if (teamId) {
+      if (teamId && teamId !== "none") {
         payload.team_id = teamId;
         payload.team_role = teamRole;
       }
@@ -522,7 +522,7 @@ function InviteDialog({ orgId }: { orgId: string }) {
       setOpen(false);
       setEmail("");
       setRole("member");
-      setTeamId("");
+      setTeamId("none");
       setTeamRole("member");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Invite failed");
@@ -532,14 +532,14 @@ function InviteDialog({ orgId }: { orgId: string }) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEmail(""); setRole("member"); setTeamId(""); setTeamRole("member"); } }}>
+    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEmail(""); setRole("member"); setTeamId("none"); setTeamRole("member"); } }}>
       <DialogTrigger asChild>
         <Button size="sm" className="gap-1.5"><UserPlus className="h-3.5 w-3.5" /> Invite User</Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Invite a user</DialogTitle>
-          <DialogDescription>They&apos;ll receive an email with a link to join your organization{teamId ? " and be added to the selected team" : ""}.</DialogDescription>
+          <DialogDescription>They&apos;ll receive an email with a link to join your organization{teamId && teamId !== "none" ? " and be added to the selected team" : ""}.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
@@ -570,13 +570,13 @@ function InviteDialog({ orgId }: { orgId: string }) {
               <Select value={teamId} onValueChange={setTeamId}>
                 <SelectTrigger><SelectValue placeholder="No team — org only" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No team — org only</SelectItem>
+                  <SelectItem value="none">No team — org only</SelectItem>
                   {teams.map((t) => (
                     <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {teamId && (
+              {teamId && teamId !== "none" && (
                 <div className="space-y-2">
                   <Label>Team Role</Label>
                   <Select value={teamRole} onValueChange={setTeamRole}>
