@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Shield, Zap, Clock, Eye, EyeOff } from "lucide-react";
+import { Shield, Zap, Clock, Eye, EyeOff, Loader2 } from "lucide-react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
 
@@ -38,6 +38,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [ssoLoading, setSsoLoading] = useState<string | null>(null);
   const login = useAuthStore((s) => s.login);
   const fetchMe = useAuthStore((s) => s.fetchMe);
   const router = useRouter();
@@ -53,6 +54,12 @@ export default function LoginPage() {
     const hash = window.location.hash;
     if (!hash) return;
     const params = new URLSearchParams(hash.substring(1));
+    const error = params.get("error");
+    if (error) {
+      toast.error(`SSO login failed: ${error}`);
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+      return;
+    }
     const accessToken = params.get("access_token");
     const refreshToken = params.get("refresh_token");
     if (accessToken && refreshToken) {
@@ -130,9 +137,10 @@ export default function LoginPage() {
             <CardContent className={enforceSSO ? "" : "pb-0"}>
               <div className="space-y-2">
                 {ssoProviders.map((p) => (
-                  <a key={p.name} href={`${API_BASE}/auth/sso/${p.name}`}>
-                    <Button variant="outline" className="w-full gap-2 h-11 mb-1" type="button">
-                      Sign in with {p.label}
+                  <a key={p.name} href={`${API_BASE}/auth/sso/${p.name}`} onClick={() => setSsoLoading(p.name)}>
+                    <Button variant="outline" className="w-full gap-2 h-11 mb-1" type="button" disabled={ssoLoading === p.name}>
+                      {ssoLoading === p.name ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                      {ssoLoading === p.name ? `Redirecting to ${p.label}…` : `Sign in with ${p.label}`}
                     </Button>
                   </a>
                 ))}
