@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuthStore } from "@/stores/auth-store";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -14,12 +14,24 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import Link from "next/link";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Clock, KeyRound, Link2, LogOut, Monitor, Shield, Trash2, Unlink } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useDateFormat } from "@/hooks/use-date-format";
 
 export default function ProfilePage() {
   const { user, fetchMe } = useAuthStore();
+  const qc = useQueryClient();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const linked = params.get("sso_linked");
+    if (linked) {
+      toast.success(`${linked} account linked successfully`);
+      window.history.replaceState(null, "", window.location.pathname);
+      qc.invalidateQueries({ queryKey: ["sso-identities"] });
+    }
+  }, [qc]);
 
   if (!user) return (
     <div className="mx-auto max-w-5xl space-y-8">
@@ -390,17 +402,23 @@ function ConnectedAccountsCard() {
                   <p className="text-xs text-muted-foreground">{identity.email}</p>
                   <p className="text-xs text-muted-foreground">Linked {new Date(identity.linked_at).toLocaleDateString()}</p>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5"
-                  disabled={unlinking === identity.provider || !hasPassword || enforceSSO}
-                  onClick={() => handleUnlink(identity.provider)}
-                  title={!hasPassword ? "Set a password first" : enforceSSO ? "SSO required by organization" : "Unlink account"}
-                >
-                  <Unlink className="h-3.5 w-3.5" />
-                  {unlinking === identity.provider ? "Unlinking…" : "Unlink"}
-                </Button>
+                <ConfirmDialog
+                  trigger={
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5"
+                      disabled={unlinking === identity.provider || !hasPassword || enforceSSO}
+                      title={!hasPassword ? "Set a password first" : enforceSSO ? "SSO required by organization" : "Unlink account"}
+                    >
+                      <Unlink className="h-3.5 w-3.5" />
+                      {unlinking === identity.provider ? "Unlinking…" : "Unlink"}
+                    </Button>
+                  }
+                  title="Unlink SSO account?"
+                  description={`This will disconnect your ${identity.provider} account. You can re-link it later from your profile.`}
+                  onConfirm={() => handleUnlink(identity.provider)}
+                />
               </div>
             ))}
 
