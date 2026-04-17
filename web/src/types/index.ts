@@ -231,6 +231,9 @@ export interface Invite {
   org_id: string;
   email: string;
   org_role: string;
+  team_id?: string;
+  team_name?: string;
+  team_role?: string;
   expires_at: string;
   created_at: string;
 }
