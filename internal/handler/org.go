@@ -227,6 +227,52 @@ func (h *OrgHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, org.Settings)
 }
 
+func (h *OrgHandler) DirectAddMember(w http.ResponseWriter, r *http.Request) {
+	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid org ID")
+		return
+	}
+	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+		return
+	}
+	var input struct {
+		UserID string `json:"user_id"`
+		Role   string `json:"role"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if input.UserID == "" || input.Role == "" {
+		writeError(w, http.StatusBadRequest, "user_id and role are required")
+		return
+	}
+	userID, err := uuid.Parse(input.UserID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid user_id")
+		return
+	}
+
+	if err := h.svc.DirectAddMember(r.Context(), orgID, userID, input.Role); err != nil {
+		if err.Error() == "user is already a member of this organization" {
+			writeError(w, http.StatusConflict, err.Error())
+			return
+		}
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	orgName := ""
+	if org, err := h.svc.GetOrg(r.Context(), orgID); err == nil && org != nil {
+		orgName = org.Name
+	}
+	auditRecordEnhanced(r, orgID, "member.added", "org", userID, input.UserID, map[string]any{
+		"user_id": input.UserID, "role": input.Role, "org_name": orgName, "method": "direct_add",
+	})
+	writeJSON(w, http.StatusCreated, map[string]string{"message": "member added"})
+}
+
 func (h *OrgHandler) InviteMember(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
 	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))

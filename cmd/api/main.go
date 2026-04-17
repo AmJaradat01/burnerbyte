@@ -262,6 +262,7 @@ func main() {
 			r.Patch("/orgs/{orgId}/settings", orgHandler.UpdateSettings)
 			r.Put("/orgs/{orgId}/settings", orgHandler.UpdateSettings)
 			r.Post("/orgs/{orgId}/members", orgHandler.InviteMember)
+			r.Post("/orgs/{orgId}/members/add", orgHandler.DirectAddMember)
 			r.Get("/orgs/{orgId}/members", orgHandler.ListMembers)
 			r.Get("/orgs/{orgId}/members/search", orgHandler.SearchMembers)
 			r.Patch("/orgs/{orgId}/members/{userId}", orgHandler.ChangeRole)
