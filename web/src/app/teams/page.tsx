@@ -18,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/empty-state";
+import { ErrorState } from "@/components/error-state";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { useRoles } from "@/hooks/use-roles";
 import { ArrowLeft, AlertTriangle, CheckCircle2, Clock, Globe, Inbox, Loader2, Plus, Search, Settings, Trash2, UserPlus, Users } from "lucide-react";
@@ -37,7 +38,7 @@ export default function TeamsPage() {
   const { user } = useAuthStore();
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
 
-  const { data: teamsData, isLoading } = useQuery({
+  const { data: teamsData, isLoading, isError, refetch } = useQuery({
     queryKey: ["teams", currentOrg?.id],
     queryFn: () => api.get<{ data: Team[] }>(`/orgs/${currentOrg!.id}/teams`, { per_page: "200" }),
     enabled: !!currentOrg,
@@ -45,8 +46,9 @@ export default function TeamsPage() {
 
   if (!currentOrg) return <p className="text-muted-foreground">Select an organization first.</p>;
 
+  const isOrgMember = !!currentRole;
   const isAdmin = currentRole === "owner" || currentRole === "admin" || user?.is_system_admin;
-  if (!isAdmin) return <div className="flex items-center justify-center min-h-[50vh]"><p className="text-muted-foreground">You don&apos;t have permission to access this page.</p></div>;
+  if (!isOrgMember) return <div className="flex items-center justify-center min-h-[50vh]"><p className="text-muted-foreground">You don&apos;t have permission to access this page.</p></div>;
 
   // Team detail view
   if (selectedTeam) {
@@ -95,7 +97,7 @@ export default function TeamsPage() {
             </p>
           )}
         </div>
-        <CreateTeamDialog orgId={currentOrg.id} existingTeams={(teamsData?.data ?? []).map((t) => t.name)} />
+        {isAdmin && <CreateTeamDialog orgId={currentOrg.id} existingTeams={(teamsData?.data ?? []).map((t) => t.name)} />}
       </div>
 
       {teamsData?.data && teamsData.data.length > 0 && (
@@ -106,7 +108,9 @@ export default function TeamsPage() {
         </div>
       )}
 
-      {isLoading ? <TeamGridSkeleton /> : (
+      {isLoading ? <TeamGridSkeleton /> : isError ? (
+        <ErrorState message="Failed to load teams" onRetry={() => refetch()} />
+      ) : (
         (!teamsData?.data || teamsData.data.length === 0) ? (
           <EmptyState icon="👥" title="No teams yet" description="Create a team to organize your domains and inboxes." />
         ) : (
@@ -291,6 +295,7 @@ function TeamMembersTab({ orgId, teamId }: { orgId: string; teamId: string }) {
       setShowSuggestions(true);
     } catch {
       setSuggestions([]);
+      toast.error("Failed to search members");
     } finally {
       setSuggestionsLoading(false);
     }
@@ -670,6 +675,69 @@ function DomainAssignmentsTab({ orgId, teamId }: { orgId: string; teamId: string
   );
 }
 
+function TeamSettingsDeleteSection({ orgId, team, onDeleted }: { orgId: string; team: Team; onDeleted: () => void }) {
+  const qc = useQueryClient();
+  const { fetchTeams } = useOrgStore();
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  const { data: impact, isLoading: impactLoading } = useQuery({
+    queryKey: ["team-impact", team.id],
+    queryFn: () => api.get<{ member_count: number; domain_assignment_count: number; active_inbox_count: number; email_count: number }>(`/orgs/${orgId}/teams/${team.id}/impact`),
+    enabled: deleteOpen,
+  });
+
+  const deleteTeam = async () => {
+    try {
+      await api.del(`/orgs/${orgId}/teams/${team.id}`);
+      qc.invalidateQueries({ queryKey: ["teams"] });
+      fetchTeams(orgId);
+      onDeleted();
+      toast.success("Team deleted");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+    }
+  };
+
+  return (
+    <Card className="border-destructive/50">
+      <CardHeader>
+        <CardTitle className="text-base text-destructive">Danger Zone</CardTitle>
+        <CardDescription>Permanently delete this team and all its data.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+          <DialogTrigger asChild>
+            <Button variant="destructive" className="gap-1.5"><Trash2 className="h-4 w-4" /> Delete Team</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+                Delete &quot;{team.name}&quot;?
+              </DialogTitle>
+              <DialogDescription>
+                {impactLoading ? (
+                  "Loading impact..."
+                ) : impact ? (
+                  `This will remove ${impact.member_count} member${impact.member_count !== 1 ? "s" : ""}, ${impact.domain_assignment_count} domain assignment${impact.domain_assignment_count !== 1 ? "s" : ""}, ${impact.active_inbox_count} active inbox${impact.active_inbox_count !== 1 ? "es" : ""}, and ${impact.email_count} email${impact.email_count !== 1 ? "s" : ""}. This cannot be undone.`
+                ) : (
+                  "All team members, domain assignments, and inboxes will be permanently removed. This cannot be undone."
+                )}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setDeleteOpen(false)}>Cancel</Button>
+              <Button variant="destructive" onClick={() => { deleteTeam(); setDeleteOpen(false); }} className="gap-1.5">
+                <Trash2 className="h-3.5 w-3.5" /> Delete Team
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </CardContent>
+    </Card>
+  );
+}
+
 function TeamSettingsTab({ orgId, team, onDeleted }: { orgId: string; team: Team; onDeleted: () => void }) {
   const [name, setName] = useState(team.name);
   const [attachments, setAttachments] = useState(team.settings?.attachments_enabled ?? "inherit");
@@ -679,6 +747,7 @@ function TeamSettingsTab({ orgId, team, onDeleted }: { orgId: string; team: Team
   const { fetchTeams } = useOrgStore();
 
   const dirty = name !== team.name || attachments !== (team.settings?.attachments_enabled ?? "inherit") || maxTTL !== (team.settings?.max_inbox_ttl ?? "");
+  const ttlValid = !maxTTL || /^\d+[smh]$/.test(maxTTL);
 
   const save = async () => {
     if (!name.trim()) { toast.error("Name is required"); return; }
@@ -695,18 +764,6 @@ function TeamSettingsTab({ orgId, team, onDeleted }: { orgId: string; team: Team
       toast.error(err instanceof Error ? err.message : "Failed");
     } finally {
       setSaving(false);
-    }
-  };
-
-  const deleteTeam = async () => {
-    try {
-      await api.del(`/orgs/${orgId}/teams/${team.id}`);
-      qc.invalidateQueries({ queryKey: ["teams"] });
-      fetchTeams(orgId);
-      onDeleted();
-      toast.success("Team deleted");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed");
     }
   };
 
@@ -740,27 +797,15 @@ function TeamSettingsTab({ orgId, team, onDeleted }: { orgId: string; team: Team
           <div className="space-y-2">
             <Label>Max Inbox TTL</Label>
             <Input value={maxTTL} onChange={(e) => setMaxTTL(e.target.value)} placeholder="e.g. 24h, 72h (empty = inherit)" />
+            {maxTTL && !ttlValid && <p className="text-xs text-destructive">Use format like 1h, 24h, 30m</p>}
           </div>
-          <Button onClick={save} disabled={saving || !dirty}>
+          <Button onClick={save} disabled={saving || !dirty || (!!maxTTL && !ttlValid)}>
             {saving ? "Saving…" : "Save Changes"}
           </Button>
         </CardContent>
       </Card>
 
-      <Card className="border-destructive/50">
-        <CardHeader>
-          <CardTitle className="text-base text-destructive">Danger Zone</CardTitle>
-          <CardDescription>Permanently delete this team and all its data.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ConfirmDialog
-            trigger={<Button variant="destructive" className="gap-1.5"><Trash2 className="h-4 w-4" /> Delete Team</Button>}
-            title={`Delete "${team.name}"?`}
-            description="All team members, domain assignments, and inboxes will be permanently removed. This cannot be undone."
-            onConfirm={deleteTeam}
-          />
-        </CardContent>
-      </Card>
+      <TeamSettingsDeleteSection orgId={orgId} team={team} onDeleted={onDeleted} />
     </div>
   );
 }
