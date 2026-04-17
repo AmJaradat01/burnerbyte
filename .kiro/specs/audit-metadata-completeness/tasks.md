@@ -78,9 +78,9 @@
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 3.10_
 
 
-- [ ] 3. Fix auth service return types to expose resolved user data
+- [x] 3. Fix auth service return types to expose resolved user data
 
-  - [ ] 3.1 Modify `AuthService.ResetPassword` to return user ID and email
+  - [x] 3.1 Modify `AuthService.ResetPassword` to return user ID and email
     - Change return type from `error` to `(uuid.UUID, string, error)`
     - After resolving the user from the reset token, return `user.ID` and `user.Email` alongside the error
     - The resolved user is already fetched internally (`user, err := s.userRepo.GetByID(ctx, resetToken.UserID)`) — just return the values
@@ -90,7 +90,7 @@
     - _Preservation: All callers of ResetPassword must be updated to accept the new return values_
     - _Requirements: 2.3_
 
-  - [ ] 3.2 Modify `AuthService.VerifyEmail` to return user ID and email
+  - [x] 3.2 Modify `AuthService.VerifyEmail` to return user ID and email
     - Change return type from `error` to `(uuid.UUID, string, error)`
     - After resolving the user from the verification token, return `user.ID` and `user.Email`
     - The resolved user is already fetched internally (`user, err := userRepoTx.GetByID(ctx, vt.UserID)`) — just return the values
@@ -100,7 +100,7 @@
     - _Preservation: All callers of VerifyEmail must be updated to accept the new return values_
     - _Requirements: 2.6_
 
-  - [ ] 3.3 Modify `AuthService.RevokeAllSessions` to return revoked count
+  - [x] 3.3 Modify `AuthService.RevokeAllSessions` to return revoked count
     - Change return type from `error` to `(int, error)`
     - The underlying `sessionRepo.RevokeAll` needs to return the count of revoked sessions
     - If `RevokeAll` already returns a count, propagate it; otherwise modify the repo method to return `(int, error)` using `DELETE ... RETURNING` or `RowsAffected()`
@@ -109,7 +109,7 @@
     - _Preservation: All callers of RevokeAllSessions must be updated to accept the new return values_
     - _Requirements: 2.8_
 
-  - [ ] 3.4 Add method or modify `AuthService.RevokeSession` to return session details before revocation
+  - [x] 3.4 Add method or modify `AuthService.RevokeSession` to return session details before revocation
     - Before revoking, fetch the session by ID to get its `IPAddress` and `UserAgent` fields
     - Either change `RevokeSession` to return `(*domain.Session, error)` or add a `GetSession` method
     - The handler needs `session_ip` and `session_user_agent` for the audit metadata
@@ -118,9 +118,9 @@
     - _Preservation: Existing RevokeSession behavior (actual revocation) must remain unchanged_
     - _Requirements: 2.7_
 
-- [ ] 4. Fix auth handler audit metadata enrichment
+- [x] 4. Fix auth handler audit metadata enrichment
 
-  - [ ] 4.1 Enrich `Register` handler audit metadata
+  - [x] 4.1 Enrich `Register` handler audit metadata
     - In `internal/handler/auth.go`, `Register` method
     - Add `"display_name": user.DisplayName` to the metadata map
     - Add `"ip_address": r.RemoteAddr` to the metadata map (use the request's remote address)
@@ -130,7 +130,7 @@
     - _Expected_Behavior: metadata contains email, display_name, ip_address_
     - _Requirements: 2.1_
 
-  - [ ] 4.2 Enrich `Login` handler audit metadata
+  - [x] 4.2 Enrich `Login` handler audit metadata
     - In `internal/handler/auth.go`, `Login` method
     - Add `"ip_address": r.RemoteAddr` and `"login_method": "password"` to the metadata map
     - Current: `map[string]any{"email": user.Email, "user_agent": r.Header.Get("User-Agent")}`
@@ -139,7 +139,7 @@
     - _Expected_Behavior: metadata contains email, user_agent, ip_address, login_method_
     - _Requirements: 2.2_
 
-  - [ ] 4.3 Add `user.login_failed` audit event
+  - [x] 4.3 Add `user.login_failed` audit event
     - In `internal/handler/auth.go`, `Login` method
     - After the `LockedError` check (before returning 423), add: `auditRecordEnhanced(r, uuid.Nil, "user.login_failed", "user", uuid.Nil, input.Email, map[string]any{"email": input.Email, "ip_address": r.RemoteAddr, "reason": "account_locked"})`
     - After the generic "invalid email or password" error return (401), add: `auditRecordEnhanced(r, uuid.Nil, "user.login_failed", "user", uuid.Nil, input.Email, map[string]any{"email": input.Email, "ip_address": r.RemoteAddr, "reason": "invalid_credentials"})`
@@ -147,7 +147,7 @@
     - _Expected_Behavior: user.login_failed event recorded with email, ip_address, reason_
     - _Requirements: 2.25_
 
-  - [ ] 4.4 Add `user.locked` audit event
+  - [x] 4.4 Add `user.locked` audit event
     - In `internal/handler/auth.go`, `Login` method
     - When `LockedError` is detected, add: `auditRecordEnhanced(r, uuid.Nil, "user.locked", "user", uuid.Nil, input.Email, map[string]any{"email": input.Email, "ip_address": r.RemoteAddr, "lockout_duration": lockedErr.RetryAfter.String()})`
     - This should fire BEFORE the `user.login_failed` event for the locked case
@@ -155,14 +155,14 @@
     - _Expected_Behavior: user.locked event recorded with email, ip_address, lockout_duration_
     - _Requirements: 2.26_
 
-  - [ ] 4.5 Add `user.forgot_password` audit event
+  - [x] 4.5 Add `user.forgot_password` audit event
     - In `internal/handler/auth.go`, `ForgotPassword` method
     - After calling `h.svc.ForgotPassword`, add: `auditRecordEnhanced(r, uuid.Nil, "user.forgot_password", "user", uuid.Nil, input.Email, map[string]any{"email": input.Email})`
     - _Bug_Condition: isBugCondition(event) where event.action = "user.forgot_password" and event.recorded = false_
     - _Expected_Behavior: user.forgot_password event recorded with email_
     - _Requirements: 2.27_
 
-  - [ ] 4.6 Fix `ResetPassword` handler to use resolved user data
+  - [x] 4.6 Fix `ResetPassword` handler to use resolved user data
     - In `internal/handler/auth.go`, `ResetPassword` method
     - Update the call to `h.svc.ResetPassword` to capture the returned user ID and email: `userID, userEmail, err := h.svc.ResetPassword(r.Context(), input)`
     - Update the audit call: `auditRecordEnhanced(r, uuid.Nil, "user.password_reset", "user", userID, userEmail, map[string]any{"method": "token", "email": userEmail})`
@@ -170,7 +170,7 @@
     - _Expected_Behavior: resource_id = user.ID, metadata contains email_
     - _Requirements: 2.3_
 
-  - [ ] 4.7 Enrich `ChangePassword` handler audit metadata
+  - [x] 4.7 Enrich `ChangePassword` handler audit metadata
     - In `internal/handler/auth.go`, `ChangePassword` method
     - Add `"sessions_revoked": true` to the metadata map
     - Current: `map[string]any{"email": uc.Email}`
@@ -179,7 +179,7 @@
     - _Expected_Behavior: metadata contains email, sessions_revoked_
     - _Requirements: 2.4_
 
-  - [ ] 4.8 Enrich `DeleteAccount` handler audit metadata
+  - [x] 4.8 Enrich `DeleteAccount` handler audit metadata
     - In `internal/handler/auth.go`, `DeleteAccount` method
     - Fetch user before deletion to get display name: `user, _ := h.svc.GetMe(r.Context(), uc.UserID)`
     - Add `"display_name": user.DisplayName` to the metadata map (with nil check)
@@ -189,7 +189,7 @@
     - _Expected_Behavior: metadata contains email, display_name_
     - _Requirements: 2.5_
 
-  - [ ] 4.9 Fix `VerifyEmail` handler to use resolved user data
+  - [x] 4.9 Fix `VerifyEmail` handler to use resolved user data
     - In `internal/handler/auth.go`, `VerifyEmail` method
     - Update the call to `h.svc.VerifyEmail` to capture the returned user ID and email: `userID, userEmail, err := h.svc.VerifyEmail(r.Context(), token)`
     - Replace the existing conditional audit logic with a single call that always uses the resolved data: `auditRecordEnhanced(r, uuid.Nil, "user.email_verified", "user", userID, userEmail, map[string]any{"email": userEmail})`
@@ -197,7 +197,7 @@
     - _Expected_Behavior: resource_id = user.ID, metadata contains email regardless of auth state_
     - _Requirements: 2.6_
 
-  - [ ] 4.10 Enrich `RevokeSession` handler audit metadata
+  - [x] 4.10 Enrich `RevokeSession` handler audit metadata
     - In `internal/handler/auth.go`, `RevokeSession` method
     - Before revoking, fetch session details using the new method from task 3.4
     - Add `"session_ip"` and `"session_user_agent"` to the metadata map from the fetched session
@@ -207,7 +207,7 @@
     - _Expected_Behavior: metadata contains session_id, session_ip, session_user_agent_
     - _Requirements: 2.7_
 
-  - [ ] 4.11 Enrich `RevokeAllSessions` handler audit metadata
+  - [x] 4.11 Enrich `RevokeAllSessions` handler audit metadata
     - In `internal/handler/auth.go`, `RevokeAllSessions` method
     - Update the call to `h.svc.RevokeAllSessions` to capture the returned count: `count, err := h.svc.RevokeAllSessions(r.Context(), uc.UserID)`
     - Add `"revoked_count": count` to the metadata map
@@ -218,9 +218,9 @@
     - _Requirements: 2.8_
 
 
-- [ ] 5. Fix org handler audit metadata enrichment
+- [x] 5. Fix org handler audit metadata enrichment
 
-  - [ ] 5.1 Enrich `InviteMember` handler audit metadata with org_name
+  - [x] 5.1 Enrich `InviteMember` handler audit metadata with org_name
     - In `internal/handler/org.go`, `InviteMember` method
     - Fetch org before recording audit: `org, _ := h.svc.GetOrg(r.Context(), orgID)`
     - Add `"org_name": org.Name` to the metadata map (with nil check)
@@ -230,7 +230,7 @@
     - _Expected_Behavior: metadata contains email, role, org_name_
     - _Requirements: 2.9_
 
-  - [ ] 5.2 Fix `RemoveMember` handler resourceName
+  - [x] 5.2 Fix `RemoveMember` handler resourceName
     - In `internal/handler/org.go`, `RemoveMember` method
     - Change the `resourceName` argument in `auditRecordEnhanced` from empty string `""` to the target user's email
     - The target user's email is already fetched via `h.svc.GetMembership` and stored in `meta["target_user_email"]`
@@ -242,7 +242,7 @@
     - _Expected_Behavior: resourceName = target user's email_
     - _Requirements: 2.10_
 
-  - [ ] 5.3 Enrich `RevokeInvite` handler audit metadata with invite_email
+  - [x] 5.3 Enrich `RevokeInvite` handler audit metadata with invite_email
     - In `internal/handler/org.go`, `RevokeInvite` method
     - Fetch invite details before revocation to get the invited email address
     - This requires either a new service method to get invite by ID, or fetching from the pending invites list
@@ -253,7 +253,7 @@
     - _Expected_Behavior: metadata contains invite_id, invite_email_
     - _Requirements: 2.11_
 
-  - [ ] 5.4 Enrich `AcceptInvite` handler audit metadata with org info
+  - [x] 5.4 Enrich `AcceptInvite` handler audit metadata with org info
     - In `internal/handler/org.go`, `AcceptInvite` method
     - After accepting the invite, resolve the org info (org_name, org_id) from the accepted invite
     - This may require modifying `OrgService.AcceptInvite` to return the org info, or fetching it separately
@@ -264,9 +264,9 @@
     - _Expected_Behavior: metadata contains email, org_name, org_id_
     - _Requirements: 2.12_
 
-- [ ] 6. Fix email handler audit metadata enrichment
+- [x] 6. Fix email handler audit metadata enrichment
 
-  - [ ] 6.1 Enrich `MarkAllRead` handler audit metadata with inbox_address
+  - [x] 6.1 Enrich `MarkAllRead` handler audit metadata with inbox_address
     - In `internal/handler/email.go`, `MarkAllRead` method
     - Fetch inbox details to get the full address: use `h.svc` or add an inbox lookup
     - The inbox service or a direct repo call can provide the inbox's `FullAddress`
@@ -278,7 +278,7 @@
     - _Expected_Behavior: metadata contains inbox_id, count, inbox_address_
     - _Requirements: 2.21_
 
-  - [ ] 6.2 Enrich `DeleteEmail` handler audit metadata with from_address
+  - [x] 6.2 Enrich `DeleteEmail` handler audit metadata with from_address
     - In `internal/handler/email.go`, `DeleteEmail` method
     - The email object is already fetched before deletion and has `FromAddress` field
     - Add `"from_address": email.FromAddress` to the metadata map
@@ -288,9 +288,9 @@
     - _Expected_Behavior: metadata contains subject, inbox_address, from_address_
     - _Requirements: 2.22_
 
-- [ ] 7. Fix inbox handler audit metadata enrichment
+- [x] 7. Fix inbox handler audit metadata enrichment
 
-  - [ ] 7.1 Enrich `DeleteInbox` handler audit metadata with email_count
+  - [x] 7.1 Enrich `DeleteInbox` handler audit metadata with email_count
     - In `internal/handler/inbox.go`, `DeleteInbox` method
     - Before deletion, count the emails in the inbox using the email service or a direct repo query
     - The inbox service or email repo should have a method to count emails by inbox ID
@@ -302,9 +302,9 @@
     - _Expected_Behavior: metadata contains address, email_count_
     - _Requirements: 2.23_
 
-- [ ] 8. Fix webhook handler audit metadata enrichment
+- [x] 8. Fix webhook handler audit metadata enrichment
 
-  - [ ] 8.1 Enrich `Delete` handler audit metadata with webhook_url
+  - [x] 8.1 Enrich `Delete` handler audit metadata with webhook_url
     - In `internal/handler/webhook.go`, `Delete` method
     - Fetch webhook before deletion to get its URL: `wh, _ := h.svc.GetByID(r.Context(), teamID, id)`
     - Add `"webhook_url"` to the metadata map and use the URL as resourceName
@@ -315,9 +315,9 @@
     - _Expected_Behavior: metadata contains webhook_id, webhook_url_
     - _Requirements: 2.24_
 
-- [ ] 9. Fix API key handler audit metadata enrichment
+- [x] 9. Fix API key handler audit metadata enrichment
 
-  - [ ] 9.1 Enrich `Update` handler with key_name and before/after diffs
+  - [x] 9.1 Enrich `Update` handler with key_name and before/after diffs
     - In `internal/handler/apikey.go`, `Update` method
     - Fetch key before update: `beforeKey, _ := h.svc.Get(r.Context(), teamID, keyID)`
     - Add `"key_name"` and before/after diffs to the metadata map
@@ -327,7 +327,7 @@
     - _Expected_Behavior: metadata contains key_id, key_name, before, after diffs_
     - _Requirements: 2.13_
 
-  - [ ] 9.2 Add `apikey.disabled` / `apikey.enabled` events on is_active toggle
+  - [x] 9.2 Add `apikey.disabled` / `apikey.enabled` events on is_active toggle
     - In `internal/handler/apikey.go`, `Update` method
     - After the update, compare `beforeKey.IsActive` with `key.IsActive`
     - If `is_active` changed from true to false, emit: `auditRecordEnhanced(r, orgID, "apikey.disabled", "api_key", keyID, key.Name, map[string]any{"key_id": keyID.String(), "key_name": key.Name})`
@@ -336,7 +336,7 @@
     - _Expected_Behavior: distinct apikey.disabled or apikey.enabled event recorded with key_id, key_name_
     - _Requirements: 2.28_
 
-  - [ ] 9.3 Enrich `Revoke` handler with key_name
+  - [x] 9.3 Enrich `Revoke` handler with key_name
     - In `internal/handler/apikey.go`, `Revoke` method
     - Fetch key before revocation: `key, _ := h.svc.Get(r.Context(), teamID, id)`
     - Add `"key_name"` to the metadata map and use key name as resourceName
@@ -346,7 +346,7 @@
     - _Expected_Behavior: metadata contains key_id, key_name_
     - _Requirements: 2.14_
 
-  - [ ] 9.4 Enrich `Rotate` handler with key_name
+  - [x] 9.4 Enrich `Rotate` handler with key_name
     - In `internal/handler/apikey.go`, `Rotate` method
     - The key is already returned from `h.svc.Rotate` with `key.Name`
     - Add `"key_name": key.Name` to the metadata map
@@ -356,7 +356,7 @@
     - _Expected_Behavior: metadata contains key_id, key_name_
     - _Requirements: 2.15_
 
-  - [ ] 9.5 Enrich `BulkRevoke` handler with key_names
+  - [x] 9.5 Enrich `BulkRevoke` handler with key_names
     - In `internal/handler/apikey.go`, `BulkRevoke` method
     - Collect key names from the bulk revoke result or fetch them before revocation
     - Add `"key_names"` list to the metadata map
@@ -368,9 +368,9 @@
     - _Requirements: 2.16_
 
 
-- [ ] 10. Fix domain and domain assignment handler audit metadata
+- [x] 10. Fix domain and domain assignment handler audit metadata
 
-  - [ ] 10.1 Add `domain.settings_updated` event to `UpdateDomain` handler
+  - [x] 10.1 Add `domain.settings_updated` event to `UpdateDomain` handler
     - In `internal/handler/domain.go`, `UpdateDomain` method
     - After the existing `domain.updated` audit call, check if settings changed between `beforeDomain.Settings` and `d.Settings`
     - If settings changed, emit additional event: `auditRecordEnhanced(r, orgID, "domain.settings_updated", "domain", id, domainName, map[string]any{"domain_name": domainName, "before": map[string]any{"settings": beforeDomain.Settings}, "after": map[string]any{"settings": d.Settings}})`
@@ -378,7 +378,7 @@
     - _Expected_Behavior: domain.settings_updated event recorded with domain_name, before/after diffs_
     - _Requirements: 2.29_
 
-  - [ ] 10.2 Enrich `AssignDomain` handler with team_name
+  - [x] 10.2 Enrich `AssignDomain` handler with team_name
     - In `internal/handler/domain_assignment.go`, `AssignDomain` method
     - Fetch team name — the `DomainAssignmentService` or a team lookup can provide this
     - The assignment result `a` may already have team info, or fetch via team service
@@ -390,9 +390,9 @@
     - _Expected_Behavior: metadata contains domain_id, team_id, domain_name, team_name_
     - _Requirements: 2.17_
 
-- [ ] 11. Fix admin handler audit metadata enrichment
+- [x] 11. Fix admin handler audit metadata enrichment
 
-  - [ ] 11.1 Enrich `UpdatePlatformSettings` handler with before/after diffs
+  - [x] 11.1 Enrich `UpdatePlatformSettings` handler with before/after diffs
     - In `internal/handler/admin.go`, `UpdatePlatformSettings` method
     - Fetch current platform settings BEFORE applying the update by reading from `h.cfg` under `h.cfgMu.RLock()`
     - Build a `before` map from the current config values
@@ -404,7 +404,7 @@
     - _Expected_Behavior: metadata contains before/after diffs of all platform settings_
     - _Requirements: 2.18_
 
-  - [ ] 11.2 Enrich `UpdateSSOConfig` handler with before/after diffs
+  - [x] 11.2 Enrich `UpdateSSOConfig` handler with before/after diffs
     - In `internal/handler/admin.go`, `UpdateSSOConfig` method
     - Fetch current SSO config BEFORE applying the update by reading from `h.cfg.SSO` under `h.cfgMu.RLock()`
     - Build a `before` map excluding `client_secret` (security: never log secrets)
@@ -416,9 +416,9 @@
     - _Expected_Behavior: metadata contains provider, before/after diffs (excluding client_secret)_
     - _Requirements: 2.19_
 
-- [ ] 12. Fix main.go audit metadata enrichment
+- [x] 12. Fix main.go audit metadata enrichment
 
-  - [ ] 12.1 Enrich role update endpoint with before/after diffs
+  - [x] 12.1 Enrich role update endpoint with before/after diffs
     - In `cmd/api/main.go`, the `PATCH /admin/roles/{roleId}` inline handler
     - Fetch role before update: use `roleRepo.GetRole(r.Context(), roleID)` or similar to get current label, description, permissions
     - Build `before` and `after` maps
@@ -430,23 +430,23 @@
     - _Expected_Behavior: metadata contains before/after diffs of role label, description, permissions_
     - _Requirements: 2.20_
 
-  - [ ] 12.2 Add `notification.deleted` audit event for single notification delete
+  - [x] 12.2 Add `notification.deleted` audit event for single notification delete
     - In `cmd/api/main.go`, the `DELETE /notifications/{notifId}` inline handler
     - After successful deletion, add: `handler.Audit.RecordEnhanced(r, uuid.Nil, "notification.deleted", "notification", id, "", map[string]any{"notification_id": id.String()})`
     - _Bug_Condition: isBugCondition(event) where event.action = "notification.deleted" and event.recorded = false_
     - _Expected_Behavior: notification.deleted event recorded with notification_id_
     - _Requirements: 2.30_
 
-  - [ ] 12.3 Add `notification.all_deleted` audit event for bulk notification delete
+  - [x] 12.3 Add `notification.all_deleted` audit event for bulk notification delete
     - In `cmd/api/main.go`, the `DELETE /notifications` inline handler
     - After successful deletion, add: `handler.Audit.RecordEnhanced(r, uuid.Nil, "notification.all_deleted", "notification", uuid.Nil, "", map[string]any{})`
     - _Bug_Condition: isBugCondition(event) where event.action = "notification.all_deleted" and event.recorded = false_
     - _Expected_Behavior: notification.all_deleted event recorded_
     - _Requirements: 2.31_
 
-- [ ] 13. Update audit recorder severity and category maps
+- [x] 13. Update audit recorder severity and category maps
 
-  - [ ] 13.1 Add new event entries to SeverityMap
+  - [x] 13.1 Add new event entries to SeverityMap
     - In `internal/audit/recorder.go`, add to `SeverityMap`:
     - `"user.login_failed": "warning"` — failed login is a security warning
     - `"user.locked": "critical"` — account lockout is critical security event
@@ -464,7 +464,7 @@
     - _Preservation: All existing SeverityMap entries must remain unchanged_
     - _Requirements: 2.25, 2.26, 2.27, 2.28, 2.29, 2.30, 2.31_
 
-  - [ ] 13.2 Add new event entries to CategoryMap
+  - [x] 13.2 Add new event entries to CategoryMap
     - In `internal/audit/recorder.go`, add to `CategoryMap`:
     - `"user.login_failed": "auth"` — failed login is an auth event
     - `"user.locked": "auth"` — account lockout is an auth event
@@ -506,7 +506,7 @@
     - RecordEnhanced auto-population of actor_id, actor_display_name, user_agent, severity, category is unchanged
     - Confirm all tests still pass after fix (no regressions)
 
-- [ ] 15. Checkpoint - Ensure all tests pass
+- [x] 15. Checkpoint - Ensure all tests pass
   - Run the full test suite to ensure no compilation errors or test failures
   - Verify all bug condition tests pass (31 defects fixed)
   - Verify all preservation tests pass (no regressions)

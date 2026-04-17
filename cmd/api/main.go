@@ -93,6 +93,7 @@ func main() {
 	auditRepo := postgres.NewAuditRepo(pool)
 	analyticsRepo := postgres.NewAnalyticsRepo(pool)
 	counterRepo := postgres.NewCounterRepo(pool)
+	verHistoryRepo := postgres.NewVerificationHistoryRepo(pool)
 	sysConfigRepo := postgres.NewSystemConfigRepo(pool)
 	if cfg.Encryption.Key != "" {
 		enc, err := appcrypto.NewEncryptor(cfg.Encryption.Key)
@@ -120,7 +121,7 @@ func main() {
 	authSvc := service.NewAuthService(pool, userRepo, sessionRepo, resetRepo, postgres.NewEmailVerificationRepo(pool), orgRepo, tokenMgr, lockout, ml, cfg)
 	orgSvc := service.NewOrgService(pool, orgRepo, ml, cfg.Server.FrontendURL, cfg.Defaults.InviteExpiryTTL)
 	redisInboxRepo := redisrepo.NewInboxRepo(rdb)
-	domainSvc := service.NewDomainService(domainRepo, orgRepo, inboxRepo, redisInboxRepo, cfg)
+	domainSvc := service.NewDomainService(domainRepo, orgRepo, inboxRepo, redisInboxRepo, verHistoryRepo, cfg)
 	teamSvc := service.NewTeamService(pool, teamRepo, orgRepo, userRepo, counterRepo, cfg)
 	assignmentSvc := service.NewDomainAssignmentService(assignmentRepo, domainRepo, orgRepo, cfg.Defaults)
 	inboxSvc := service.NewInboxService(inboxRepo, redisInboxRepo, assignmentRepo, domainRepo, orgRepo, teamRepo, counterRepo, cfg)
@@ -264,6 +265,10 @@ func main() {
 			r.Delete("/orgs/{orgId}/domains/{domainId}", domainHandler.DeleteDomain)
 			r.Post("/orgs/{orgId}/domains/{domainId}/verify", domainHandler.VerifyDomain)
 			r.Get("/orgs/{orgId}/domains/{domainId}/impact", domainHandler.GetDomainImpact)
+			r.Get("/orgs/{orgId}/domains/{domainId}/verification-history", domainHandler.GetVerificationHistory)
+			r.With(auth.RequireSystemAdmin).Post("/orgs/{orgId}/domains/{domainId}/transfer", domainHandler.TransferDomain)
+			r.Post("/orgs/{orgId}/domains/bulk-verify", domainHandler.BulkVerify)
+			r.Post("/orgs/{orgId}/domains/bulk-delete", domainHandler.BulkDelete)
 
 			// Teams
 			r.Post("/orgs/{orgId}/teams", teamHandler.CreateTeam)
@@ -593,7 +598,7 @@ func main() {
 	wm := worker.NewManager()
 	wm.Add("cleanup", cfg.Workers.CleanupInterval, worker.CleanupJob(inboxRepo, emailRepo, attachmentSvc, sessionRepo, resetRepo, apikeyRepo))
 	wm.Add("reconciler", cfg.Workers.ReconcilerInterval, worker.ReconcilerJob(inboxRepo, redisInboxRepo))
-	wm.Add("dns_recheck", cfg.Workers.DNSRecheckInterval, worker.DNSRecheckJob(domainRepo, cfg.SMTP.Hostname))
+	wm.Add("dns_recheck", cfg.Workers.DNSRecheckInterval, worker.DNSRecheckJob(domainRepo, verHistoryRepo, cfg.SMTP.Hostname))
 	wm.Add("webhook_retry", cfg.Workers.WebhookRetryInterval, worker.WebhookRetryJob(webhookRepo, webhookDispatcher))
 	wm.Add("analytics", cfg.Workers.AnalyticsInterval, worker.AnalyticsJob(analyticsRepo, rdb, cfg.Defaults.AnalyticsCacheTTL))
 	go wm.Start(workerCtx)
