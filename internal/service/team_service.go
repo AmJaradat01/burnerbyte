@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/url"
 	"regexp"
 	"strings"
@@ -81,6 +82,9 @@ func (s *TeamService) CreateTeam(ctx context.Context, orgID uuid.UUID, input dom
 	if input.Name == "" {
 		return nil, fmt.Errorf("name is required")
 	}
+	if len(input.Name) > 100 {
+		return nil, fmt.Errorf("name must be 100 characters or less")
+	}
 	if input.AvatarURL != nil && *input.AvatarURL != "" {
 		if err := s.validateAvatarURL(*input.AvatarURL); err != nil {
 			return nil, err
@@ -114,11 +118,12 @@ func (s *TeamService) CreateTeam(ctx context.Context, orgID uuid.UUID, input dom
 	}
 
 	// Check if team name already exists in this org
-	existing, _, _ := s.teamRepo.ListByOrg(ctx, orgID, postgres.ListTeamsOpts{Page: 1, PerPage: 200, IsArchived: nil})
-	for _, t := range existing {
-		if strings.EqualFold(t.Name, input.Name) {
-			return nil, fmt.Errorf("a team named \"%s\" already exists", input.Name)
-		}
+	exists, err := s.teamRepo.ExistsByNameInOrg(ctx, orgID, input.Name)
+	if err != nil {
+		return nil, fmt.Errorf("check team name: %w", err)
+	}
+	if exists {
+		return nil, fmt.Errorf("a team named \"%s\" already exists", input.Name)
 	}
 
 	tx, err := s.pool.Begin(ctx)
@@ -243,7 +248,10 @@ func (s *TeamService) GetTeamDetail(ctx context.Context, orgID, id uuid.UUID) (*
 	}
 	// Fetch total_emails_received from counter repo
 	if s.counterRepo != nil {
-		totalEmails, _ := s.counterRepo.GetTeamCounters(ctx, id)
+		totalEmails, err := s.counterRepo.GetTeamCounters(ctx, id)
+		if err != nil {
+			slog.Warn("failed to fetch team counters", "team_id", id, "error", err)
+		}
 		td.TotalEmailsReceived = totalEmails
 	}
 	return td, nil
@@ -446,6 +454,15 @@ func (s *TeamService) BulkAddMembers(ctx context.Context, teamID uuid.UUID, memb
 }
 
 func (s *TeamService) BulkRemoveMembers(ctx context.Context, teamID uuid.UUID, userIDs []uuid.UUID) (*domain.BulkMemberResult, error) {
+	// Check if team is archived
+	team, err := s.teamRepo.GetByID(ctx, teamID)
+	if err != nil {
+		return nil, err
+	}
+	if team.IsArchived {
+		return nil, fmt.Errorf("cannot modify an archived team")
+	}
+
 	result := &domain.BulkMemberResult{
 		Skipped: []domain.BulkMemberSkipped{},
 	}
@@ -515,6 +532,14 @@ func (s *TeamService) ListMembers(ctx context.Context, teamID uuid.UUID, opts po
 }
 
 func (s *TeamService) ChangeRole(ctx context.Context, teamID, userID uuid.UUID, role string) error {
+	team, err := s.teamRepo.GetByID(ctx, teamID)
+	if err != nil {
+		return err
+	}
+	if team.IsArchived {
+		return fmt.Errorf("cannot modify an archived team")
+	}
+
 	if !rbac.ValidTeamRole(role) {
 		return fmt.Errorf("invalid role: %s", role)
 	}
@@ -536,6 +561,13 @@ func (s *TeamService) ChangeRole(ctx context.Context, teamID, userID uuid.UUID, 
 }
 
 func (s *TeamService) RemoveMember(ctx context.Context, teamID, userID uuid.UUID) error {
+	team, err := s.teamRepo.GetByID(ctx, teamID)
+	if err != nil {
+		return err
+	}
+	if team.IsArchived {
+		return fmt.Errorf("cannot modify an archived team")
+	}
 	return s.teamRepo.DeleteMembership(ctx, userID, teamID)
 }
 
@@ -549,7 +581,7 @@ func (s *TeamService) TransferTeam(ctx context.Context, orgID, teamID, targetOrg
 		return nil, err
 	}
 	if team.OrgID != orgID {
-		return nil, fmt.Errorf("team not found")
+		return nil, fmt.Errorf("team not found in this organization")
 	}
 	if team.IsArchived {
 		return nil, fmt.Errorf("cannot transfer an archived team")
