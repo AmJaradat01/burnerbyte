@@ -19,7 +19,7 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ErrorState } from "@/components/error-state";
 import { Pagination } from "@/components/pagination";
 import { useRoles } from "@/hooks/use-roles";
-import { AlertTriangle, CheckCircle2, Clock, LogOut, RefreshCw, Shield, Trash2, UserPlus, Users, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock, LogOut, RefreshCw, Trash2, UserPlus, Users, XCircle } from "lucide-react";
 import type { User, Membership, Invite, PaginatedResponse } from "@/types";
 
 const ROLE_COLORS: Record<string, string> = {
@@ -496,9 +496,12 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
 
 function InviteDialog({ orgId }: { orgId: string }) {
   const qc = useQueryClient();
-  const { orgRoles } = useRoles();
+  const { orgRoles, teamRoles } = useRoles();
+  const teams = useOrgStore((s) => s.teams);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("member");
+  const [teamId, setTeamId] = useState("");
+  const [teamRole, setTeamRole] = useState("member");
   const [open, setOpen] = useState(false);
   const [sending, setSending] = useState(false);
 
@@ -508,12 +511,19 @@ function InviteDialog({ orgId }: { orgId: string }) {
     if (!email || !emailValid) return;
     setSending(true);
     try {
-      await api.post(`/orgs/${orgId}/invites`, { email, org_role: role });
+      const payload: Record<string, string> = { email, org_role: role };
+      if (teamId) {
+        payload.team_id = teamId;
+        payload.team_role = teamRole;
+      }
+      await api.post(`/orgs/${orgId}/invites`, payload);
       toast.success(`Invite sent to ${email}`);
       qc.invalidateQueries({ queryKey: ["org-invites", orgId] });
       setOpen(false);
       setEmail("");
       setRole("member");
+      setTeamId("");
+      setTeamRole("member");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Invite failed");
     } finally {
@@ -522,14 +532,14 @@ function InviteDialog({ orgId }: { orgId: string }) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEmail(""); setRole("member"); setTeamId(""); setTeamRole("member"); } }}>
       <DialogTrigger asChild>
         <Button size="sm" className="gap-1.5"><UserPlus className="h-3.5 w-3.5" /> Invite User</Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Invite a user</DialogTitle>
-          <DialogDescription>They&apos;ll receive an email with a link to join your organization.</DialogDescription>
+          <DialogDescription>They&apos;ll receive an email with a link to join your organization{teamId ? " and be added to the selected team" : ""}.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
@@ -540,7 +550,7 @@ function InviteDialog({ orgId }: { orgId: string }) {
             )}
           </div>
           <div className="space-y-2">
-            <Label>Role</Label>
+            <Label>Organization Role</Label>
             <Select value={role} onValueChange={setRole}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -550,6 +560,38 @@ function InviteDialog({ orgId }: { orgId: string }) {
               </SelectContent>
             </Select>
           </div>
+
+          {teams.length > 0 && (
+            <div className="border-t pt-4 space-y-3">
+              <div className="space-y-1">
+                <Label>Assign to Team <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                <p className="text-xs text-muted-foreground">The user will be automatically added to this team when they accept the invite.</p>
+              </div>
+              <Select value={teamId} onValueChange={setTeamId}>
+                <SelectTrigger><SelectValue placeholder="No team — org only" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">No team — org only</SelectItem>
+                  {teams.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {teamId && (
+                <div className="space-y-2">
+                  <Label>Team Role</Label>
+                  <Select value={teamRole} onValueChange={setTeamRole}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {teamRoles.map((r) => (
+                        <SelectItem key={r.value} value={r.value}>{r.label}{r.description ? ` — ${r.description}` : ""}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+          )}
+
           <Button onClick={invite} className="w-full" disabled={!email || !emailValid || sending}>
             {sending ? "Sending…" : "Send Invite"}
           </Button>
@@ -599,6 +641,11 @@ function PendingInviteRow({ invite: inv, orgId }: { invite: Invite; orgId: strin
       </div>
       <div className="flex items-center gap-2">
         <Badge variant="outline" className={`capitalize text-xs ${ROLE_COLORS[inv.org_role] ?? ""}`}>{inv.org_role}</Badge>
+        {inv.team_name && (
+          <Badge variant="outline" className="text-xs text-violet-600 border-violet-200 dark:text-violet-400 dark:border-violet-800">
+            {inv.team_name}{inv.team_role ? ` · ${inv.team_role}` : ""}
+          </Badge>
+        )}
         <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={resend} disabled={resending}>
           <RefreshCw className={`h-3 w-3 ${resending ? "animate-spin" : ""}`} /> Resend
         </Button>
