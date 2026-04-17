@@ -513,6 +513,13 @@ func (s *OrgService) GetMembership(ctx context.Context, userID, orgID uuid.UUID)
 	return s.orgRepo.GetMembership(ctx, userID, orgID)
 }
 
+func (s *OrgService) SearchMembers(ctx context.Context, orgID uuid.UUID, query string, excludeTeamID *uuid.UUID) ([]domain.OrgMemberSuggestion, error) {
+	if query == "" {
+		return []domain.OrgMemberSuggestion{}, nil
+	}
+	return s.orgRepo.SearchMembers(ctx, orgID, query, excludeTeamID, 10)
+}
+
 func (s *OrgService) ListAll(ctx context.Context, page, perPage int) ([]domain.Organization, int, error) {
 	return s.orgRepo.ListAll(ctx, page, perPage)
 }
