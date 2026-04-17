@@ -21,7 +21,7 @@ import { EmptyState } from "@/components/empty-state";
 import { ErrorState } from "@/components/error-state";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { useRoles } from "@/hooks/use-roles";
-import { ArrowLeft, AlertTriangle, CheckCircle2, Clock, Globe, Inbox, Loader2, Plus, Search, Settings, Trash2, UserPlus, Users } from "lucide-react";
+import { ArrowLeft, AlertTriangle, CheckCircle2, Clock, Globe, Inbox, Loader2, Plus, Search, Settings, Trash2, UserPlus, Users, XCircle } from "lucide-react";
 import type { Team, Membership, Domain } from "@/types";
 
 interface DomainAssignment {
@@ -198,25 +198,89 @@ function MiniStat({ icon: Icon, label, value, accent }: { icon: typeof Users; la
 
 function CreateTeamDialog({ orgId, existingTeams }: { orgId: string; existingTeams: string[] }) {
   const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [initialMembers, setInitialMembers] = useState<{ email: string; display_name: string; role: string }[]>([]);
+  const [memberSearch, setMemberSearch] = useState("");
+  const [suggestions, setSuggestions] = useState<{ user_id: string; email: string; display_name: string }[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+  const memberInputRef = useRef<HTMLInputElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const qc = useQueryClient();
   const fetchTeams = useOrgStore((s) => s.fetchTeams);
+  const { teamRoles } = useRoles();
 
   const slug = name.trim().toLowerCase().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-");
   const nameValid = name.trim().length >= 2;
   const isDuplicate = existingTeams.some((t) => t.toLowerCase() === name.trim().toLowerCase());
 
+  // Debounced member search
+  const searchMembers = useCallback(async (query: string) => {
+    if (!query || query.length < 1) { setSuggestions([]); setShowSuggestions(false); return; }
+    setSuggestionsLoading(true);
+    try {
+      const results = await api.get<{ user_id: string; email: string; display_name: string }[]>(
+        `/orgs/${orgId}/members/search`, { q: query }
+      );
+      const addedEmails = new Set(initialMembers.map((m) => m.email));
+      setSuggestions((results ?? []).filter((r) => !addedEmails.has(r.email)));
+      setShowSuggestions(true);
+    } catch { setSuggestions([]); }
+    finally { setSuggestionsLoading(false); }
+  }, [orgId, initialMembers]);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => searchMembers(memberSearch), 300);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [memberSearch, searchMembers]);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(e.target as Node) &&
+          memberInputRef.current && !memberInputRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const addMember = (s: { email: string; display_name: string }) => {
+    setInitialMembers((prev) => [...prev, { email: s.email, display_name: s.display_name, role: "member" }]);
+    setMemberSearch("");
+    setSuggestions([]);
+    setShowSuggestions(false);
+  };
+
+  const removeMember = (email: string) => {
+    setInitialMembers((prev) => prev.filter((m) => m.email !== email));
+  };
+
+  const changeMemberRole = (email: string, role: string) => {
+    setInitialMembers((prev) => prev.map((m) => m.email === email ? { ...m, role } : m));
+  };
+
   const create = async () => {
     if (!nameValid) return;
     setCreating(true);
     try {
-      await api.post(`/orgs/${orgId}/teams`, { name: name.trim() });
+      const payload: Record<string, unknown> = { name: name.trim() };
+      if (description.trim()) payload.description = description.trim();
+      if (initialMembers.length > 0) {
+        payload.members = initialMembers.map((m) => ({ email: m.email, role: m.role }));
+      }
+      await api.post(`/orgs/${orgId}/teams`, payload);
       qc.invalidateQueries({ queryKey: ["teams"] });
       fetchTeams(orgId);
       toast.success("Team created");
       setOpen(false);
       setName("");
+      setDescription("");
+      setInitialMembers([]);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed");
     } finally {
@@ -225,11 +289,11 @@ function CreateTeamDialog({ orgId, existingTeams }: { orgId: string; existingTea
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setName(""); }}>
+    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setName(""); setDescription(""); setInitialMembers([]); setMemberSearch(""); } }}>
       <DialogTrigger asChild>
         <Button className="gap-2"><Plus className="h-4 w-4" /> Create Team</Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <div className="flex items-center gap-2">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
@@ -244,7 +308,7 @@ function CreateTeamDialog({ orgId, existingTeams }: { orgId: string; existingTea
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Team name</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Engineering, Marketing, Support" onKeyDown={(e) => e.key === "Enter" && create()} />
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Engineering, Marketing, Support" onKeyDown={(e) => e.key === "Enter" && !isDuplicate && nameValid && create()} />
             {name.trim() && !nameValid && (
               <p className="text-xs text-destructive">Name must be at least 2 characters</p>
             )}
@@ -255,8 +319,82 @@ function CreateTeamDialog({ orgId, existingTeams }: { orgId: string; existingTea
               <p className="text-xs text-muted-foreground">Slug: <span className="font-mono">{slug}</span></p>
             )}
           </div>
+
+          <div className="space-y-2">
+            <Label>Description <span className="text-muted-foreground font-normal">(optional)</span></Label>
+            <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What does this team do?" />
+          </div>
+
+          {/* Initial Members */}
+          <div className="border-t pt-4 space-y-3">
+            <div className="space-y-1">
+              <Label>Initial Members <span className="text-muted-foreground font-normal">(optional)</span></Label>
+              <p className="text-xs text-muted-foreground">You&apos;ll be added as team lead automatically. Add other members here.</p>
+            </div>
+
+            {/* Added members list */}
+            {initialMembers.length > 0 && (
+              <div className="space-y-1.5">
+                {initialMembers.map((m) => (
+                  <div key={m.email} className="flex items-center gap-2 rounded-lg border px-3 py-2">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                      {(m.display_name || m.email).charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{m.display_name || m.email}</p>
+                      <p className="text-[11px] text-muted-foreground truncate">{m.email}</p>
+                    </div>
+                    <Select value={m.role} onValueChange={(r) => changeMemberRole(m.email, r)}>
+                      <SelectTrigger className="w-24 h-7 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {teamRoles.map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive" onClick={() => removeMember(m.email)}>
+                      <XCircle className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Member search */}
+            <div className="relative">
+              <Input
+                ref={memberInputRef}
+                value={memberSearch}
+                onChange={(e) => setMemberSearch(e.target.value)}
+                onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
+                placeholder="Search org members to add..."
+                autoComplete="off"
+              />
+              {showSuggestions && (
+                <div ref={suggestionsRef} className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-lg max-h-40 overflow-auto">
+                  {suggestionsLoading ? (
+                    <div className="flex items-center justify-center py-3"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
+                  ) : suggestions.length === 0 ? (
+                    <div className="px-3 py-3 text-sm text-muted-foreground text-center">No matching members</div>
+                  ) : (
+                    suggestions.map((s) => (
+                      <button key={s.user_id} type="button" className="flex items-center gap-3 w-full px-3 py-2 text-left hover:bg-accent transition-colors cursor-pointer"
+                        onMouseDown={(e) => { e.preventDefault(); addMember(s); }}>
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                          {(s.display_name || s.email).charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">{s.display_name || "—"}</p>
+                          <p className="text-xs text-muted-foreground truncate">{s.email}</p>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
           <Button onClick={create} className="w-full" disabled={!nameValid || isDuplicate || creating}>
-            {creating ? "Creating…" : "Create Team"}
+            {creating ? "Creating…" : `Create Team${initialMembers.length > 0 ? ` with ${initialMembers.length} member${initialMembers.length !== 1 ? "s" : ""}` : ""}`}
           </Button>
         </div>
       </DialogContent>
