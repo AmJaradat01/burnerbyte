@@ -505,7 +505,7 @@ func (s *SSOManager) TestConnection(ctx context.Context, provider domain.SSOProv
 		}
 		defer resp.Body.Close()
 		return &domain.SSOTestResult{
-			Success:      resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusFound,
+			Success:      resp.StatusCode == http.StatusOK,
 			Endpoint:     endpoint,
 			StatusCode:   resp.StatusCode,
 			Message:      "GitHub OAuth2 endpoint reachable",
