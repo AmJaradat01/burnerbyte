@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { useOrgStore } from "@/stores/org-store";
@@ -267,6 +267,62 @@ function TeamMembersTab({ orgId, teamId }: { orgId: string; teamId: string }) {
   const [memberEmail, setMemberEmail] = useState("");
   const [role, setRole] = useState("member");
   const [search, setSearch] = useState("");
+  const [suggestions, setSuggestions] = useState<{ user_id: string; email: string; display_name: string; avatar_url?: string }[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Debounced search for member suggestions
+  const searchMembers = useCallback(async (query: string) => {
+    if (!query || query.length < 1) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+    setSuggestionsLoading(true);
+    try {
+      const results = await api.get<{ user_id: string; email: string; display_name: string; avatar_url?: string }[]>(
+        `/orgs/${orgId}/members/search`,
+        { q: query, exclude_team: teamId }
+      );
+      setSuggestions(results ?? []);
+      setShowSuggestions(true);
+    } catch {
+      setSuggestions([]);
+    } finally {
+      setSuggestionsLoading(false);
+    }
+  }, [orgId, teamId]);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      searchMembers(memberEmail);
+    }, 300);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [memberEmail, searchMembers]);
+
+  // Close suggestions on outside click
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(e.target as Node) &&
+          inputRef.current && !inputRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const selectSuggestion = (s: { email: string; display_name: string }) => {
+    setMemberEmail(s.email);
+    setShowSuggestions(false);
+    setSuggestions([]);
+  };
 
   const { data, isLoading } = useQuery({
     queryKey: ["team-members", teamId],
@@ -316,7 +372,7 @@ function TeamMembersTab({ orgId, teamId }: { orgId: string; teamId: string }) {
       {/* Search + Add */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {members.length > 3 && <Input placeholder="Search members…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />}
-        <Dialog open={addOpen} onOpenChange={(v) => { setAddOpen(v); if (!v) { setMemberEmail(""); setRole("member"); } }}>
+        <Dialog open={addOpen} onOpenChange={(v) => { setAddOpen(v); if (!v) { setMemberEmail(""); setRole("member"); setSuggestions([]); setShowSuggestions(false); } }}>
           <DialogTrigger asChild>
             <Button size="sm" className="gap-1.5"><UserPlus className="h-3.5 w-3.5" /> Add Member</Button>
           </DialogTrigger>
@@ -328,7 +384,51 @@ function TeamMembersTab({ orgId, teamId }: { orgId: string; teamId: string }) {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Email address</Label>
-                <Input value={memberEmail} onChange={(e) => setMemberEmail(e.target.value)} placeholder="user@example.com" type="email" onKeyDown={(e) => e.key === "Enter" && memberEmail && addMember.mutate()} />
+                <div className="relative">
+                  <Input
+                    ref={inputRef}
+                    value={memberEmail}
+                    onChange={(e) => setMemberEmail(e.target.value)}
+                    onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
+                    placeholder="Type to search org members..."
+                    type="text"
+                    autoComplete="off"
+                    onKeyDown={(e) => e.key === "Enter" && memberEmail && addMember.mutate()}
+                  />
+                  {showSuggestions && (
+                    <div
+                      ref={suggestionsRef}
+                      className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-lg max-h-56 overflow-auto"
+                    >
+                      {suggestionsLoading ? (
+                        <div className="flex items-center justify-center py-4">
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : suggestions.length === 0 ? (
+                        <div className="px-3 py-3 text-sm text-muted-foreground text-center">
+                          No matching members
+                        </div>
+                      ) : (
+                        suggestions.map((s) => (
+                          <button
+                            key={s.user_id}
+                            type="button"
+                            className="flex items-center gap-3 w-full px-3 py-2 text-left hover:bg-accent transition-colors cursor-pointer"
+                            onMouseDown={(e) => { e.preventDefault(); selectSuggestion(s); }}
+                          >
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                              {(s.display_name || s.email || "?").charAt(0).toUpperCase()}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium truncate">{s.display_name || "—"}</p>
+                              <p className="text-xs text-muted-foreground truncate">{s.email}</p>
+                            </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="space-y-2">
                 <Label>Role</Label>

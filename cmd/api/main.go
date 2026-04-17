@@ -250,6 +250,7 @@ func main() {
 			r.Put("/orgs/{orgId}/settings", orgHandler.UpdateSettings)
 			r.Post("/orgs/{orgId}/members", orgHandler.InviteMember)
 			r.Get("/orgs/{orgId}/members", orgHandler.ListMembers)
+			r.Get("/orgs/{orgId}/members/search", orgHandler.SearchMembers)
 			r.Patch("/orgs/{orgId}/members/{userId}", orgHandler.ChangeRole)
 			r.Delete("/orgs/{orgId}/members/{userId}", orgHandler.RemoveMember)
 			r.Post("/orgs/{orgId}/invites", orgHandler.InviteMember)

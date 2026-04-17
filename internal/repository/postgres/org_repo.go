@@ -294,6 +294,64 @@ func (r *OrgRepo) ListPendingInvites(ctx context.Context, orgID uuid.UUID) ([]do
 	return invites, nil
 }
 
+func (r *OrgRepo) SearchMembers(ctx context.Context, orgID uuid.UUID, query string, excludeTeamID *uuid.UUID, limit int) ([]domain.OrgMemberSuggestion, error) {
+	if limit <= 0 {
+		limit = 10
+	}
+	pattern := "%" + query + "%"
+
+	var sql string
+	var args []any
+
+	if excludeTeamID != nil {
+		sql = `SELECT u.id, u.email, u.display_name, u.avatar_url
+		       FROM org_memberships om
+		       JOIN users u ON om.user_id = u.id
+		       WHERE om.org_id = $1
+		         AND (u.email ILIKE $2 OR u.display_name ILIKE $2)
+		         AND u.id NOT IN (SELECT user_id FROM team_memberships WHERE team_id = $3)
+		       ORDER BY
+		         CASE WHEN LOWER(u.email) = LOWER($4) THEN 0 ELSE 1 END,
+		         CASE WHEN u.display_name ILIKE $2 THEN 0 ELSE 1 END,
+		         CASE WHEN u.email ILIKE $2 THEN 0 ELSE 1 END,
+		         u.display_name
+		       LIMIT $5`
+		args = []any{orgID, pattern, *excludeTeamID, query, limit}
+	} else {
+		sql = `SELECT u.id, u.email, u.display_name, u.avatar_url
+		       FROM org_memberships om
+		       JOIN users u ON om.user_id = u.id
+		       WHERE om.org_id = $1
+		         AND (u.email ILIKE $2 OR u.display_name ILIKE $2)
+		       ORDER BY
+		         CASE WHEN LOWER(u.email) = LOWER($3) THEN 0 ELSE 1 END,
+		         CASE WHEN u.display_name ILIKE $2 THEN 0 ELSE 1 END,
+		         CASE WHEN u.email ILIKE $2 THEN 0 ELSE 1 END,
+		         u.display_name
+		       LIMIT $4`
+		args = []any{orgID, pattern, query, limit}
+	}
+
+	rows, err := r.db.Query(ctx, sql, args...)
+	if err != nil {
+		return nil, fmt.Errorf("search members: %w", err)
+	}
+	defer rows.Close()
+
+	var results []domain.OrgMemberSuggestion
+	for rows.Next() {
+		var s domain.OrgMemberSuggestion
+		if err := rows.Scan(&s.UserID, &s.Email, &s.DisplayName, &s.AvatarURL); err != nil {
+			return nil, fmt.Errorf("scan member suggestion: %w", err)
+		}
+		results = append(results, s)
+	}
+	if results == nil {
+		results = []domain.OrgMemberSuggestion{}
+	}
+	return results, nil
+}
+
 func (r *OrgRepo) ListAll(ctx context.Context, page, perPage int) ([]domain.Organization, int, error) {
 	var total int
 	err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM organizations`).Scan(&total)
