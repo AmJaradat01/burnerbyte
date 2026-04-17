@@ -24,6 +24,13 @@ interface PasswordPolicy {
   require_special: boolean;
 }
 
+interface SSOStatusProvider {
+  name: string;
+  provider_type: string;
+  label: string;
+  enabled: boolean;
+}
+
 interface SSOStatus {
   enabled: boolean;
   allow_registration: boolean;
@@ -31,6 +38,7 @@ interface SSOStatus {
   provider_label?: string;
   enforce_sso?: boolean;
   password_policy?: PasswordPolicy;
+  providers?: SSOStatusProvider[];
 }
 
 const features = [
@@ -197,14 +205,18 @@ export default function RegisterPage() {
             </CardHeader>
             <form onSubmit={handleSubmit}>
               <CardContent className="space-y-4 pb-6">
-                {/* SSO button */}
-                {sso?.enabled && sso.provider && (
+                {/* SSO buttons */}
+                {sso?.enabled && sso.providers && sso.providers.filter(p => p.enabled).length > 0 && (
                   <>
-                    <Button variant="outline" className="w-full h-11" asChild>
-                      <a href={`/api/v1/auth/sso/${sso.provider}`}>
-                        Continue with {sso.provider_label}
-                      </a>
-                    </Button>
+                    <div className="space-y-2">
+                      {sso.providers.filter(p => p.enabled).map((p) => (
+                        <Button key={p.name} variant="outline" className="w-full h-11" asChild>
+                          <a href={`/api/v1/auth/sso/${p.name}`}>
+                            Continue with {p.label}
+                          </a>
+                        </Button>
+                      ))}
+                    </div>
                     <div className="relative">
                       <Separator />
                       <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-3 text-xs text-muted-foreground">
