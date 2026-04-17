@@ -21,18 +21,19 @@ import (
 )
 
 type OrgService struct {
-	pool          *pgxpool.Pool
-	orgRepo       *postgres.OrgRepo
-	mailer        *mailer.Mailer
-	baseURL       string
-	inviteExpiry  time.Duration
+	pool         *pgxpool.Pool
+	orgRepo      *postgres.OrgRepo
+	teamRepo     *postgres.TeamRepo
+	mailer       *mailer.Mailer
+	baseURL      string
+	inviteExpiry time.Duration
 }
 
-func NewOrgService(pool *pgxpool.Pool, orgRepo *postgres.OrgRepo, mailer *mailer.Mailer, baseURL string, inviteExpiry time.Duration) *OrgService {
+func NewOrgService(pool *pgxpool.Pool, orgRepo *postgres.OrgRepo, teamRepo *postgres.TeamRepo, mailer *mailer.Mailer, baseURL string, inviteExpiry time.Duration) *OrgService {
 	if inviteExpiry <= 0 {
 		inviteExpiry = 48 * time.Hour
 	}
-	return &OrgService{pool: pool, orgRepo: orgRepo, mailer: mailer, baseURL: baseURL, inviteExpiry: inviteExpiry}
+	return &OrgService{pool: pool, orgRepo: orgRepo, teamRepo: teamRepo, mailer: mailer, baseURL: baseURL, inviteExpiry: inviteExpiry}
 }
 
 var slugRe = regexp.MustCompile(`[^a-z0-9]+`)
@@ -279,6 +280,23 @@ func (s *OrgService) InviteMember(ctx context.Context, orgID uuid.UUID, input do
 			return nil, fmt.Errorf("invalid team_id")
 		}
 		teamID = &id
+
+		// Validate team belongs to this org
+		team, err := s.teamRepo.GetByID(ctx, id)
+		if err != nil {
+			return nil, fmt.Errorf("team not found")
+		}
+		if team.OrgID != orgID {
+			return nil, fmt.Errorf("team does not belong to this organization")
+		}
+
+		// Default team_role to "member" when team_id is provided but team_role is nil
+		if input.TeamRole == nil {
+			defaultRole := "member"
+			input.TeamRole = &defaultRole
+		} else if !rbac.ValidTeamRole(*input.TeamRole) {
+			return nil, fmt.Errorf("invalid team_role: %s", *input.TeamRole)
+		}
 	}
 
 	invite := &domain.Invite{
@@ -317,13 +335,22 @@ func (s *OrgService) InviteMember(ctx context.Context, orgID uuid.UUID, input do
 	return invite, nil
 }
 
-func (s *OrgService) AcceptInvite(ctx context.Context, token string, userID uuid.UUID, userEmail string) (uuid.UUID, string, error) {
+// AcceptInviteResult holds the result of accepting an invite, including optional team info.
+type AcceptInviteResult struct {
+	OrgID    uuid.UUID  `json:"org_id"`
+	OrgName  string     `json:"org_name"`
+	TeamID   *uuid.UUID `json:"team_id,omitempty"`
+	TeamName string     `json:"team_name,omitempty"`
+	TeamRole string     `json:"team_role,omitempty"`
+}
+
+func (s *OrgService) AcceptInvite(ctx context.Context, token string, userID uuid.UUID, userEmail string) (*AcceptInviteResult, error) {
 	invite, err := s.orgRepo.GetInviteByToken(ctx, token)
 	if err != nil {
 		if errors.Is(err, postgres.ErrNotFound) {
-			return uuid.Nil, "", fmt.Errorf("invite not found")
+			return nil, fmt.Errorf("invite not found")
 		}
-		return uuid.Nil, "", err
+		return nil, err
 	}
 
 	// Idempotent: already accepted
@@ -332,11 +359,11 @@ func (s *OrgService) AcceptInvite(ctx context.Context, token string, userID uuid
 		if org, err := s.orgRepo.GetByID(ctx, invite.OrgID); err == nil {
 			orgName = org.Name
 		}
-		return invite.OrgID, orgName, nil
+		return &AcceptInviteResult{OrgID: invite.OrgID, OrgName: orgName}, nil
 	}
 
 	if time.Now().After(invite.ExpiresAt) {
-		return uuid.Nil, "", fmt.Errorf("invite expired")
+		return nil, fmt.Errorf("invite expired")
 	}
 
 	// Security: verify the accepting user's email matches the invite
@@ -347,12 +374,12 @@ func (s *OrgService) AcceptInvite(ctx context.Context, token string, userID uuid
 			"user_id", userID,
 			"invite_id", invite.ID,
 		)
-		return uuid.Nil, "", fmt.Errorf("email mismatch: this invite was sent to a different email address")
+		return nil, fmt.Errorf("email mismatch: this invite was sent to a different email address")
 	}
 
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return uuid.Nil, "", err
+		return nil, err
 	}
 	defer tx.Rollback(ctx)
 
@@ -368,34 +395,78 @@ func (s *OrgService) AcceptInvite(ctx context.Context, token string, userID uuid
 	if err := orgRepoTx.CreateMembership(ctx, membership); err != nil {
 		if errors.Is(err, postgres.ErrConflict) {
 			// Already a member — just mark invite accepted
-			if err := orgRepoTx.MarkInviteAccepted(ctx, invite.ID); err != nil {
-				return uuid.Nil, "", err
-			}
-			if err := tx.Commit(ctx); err != nil {
-				return uuid.Nil, "", err
-			}
-			orgName := ""
-			if org, err := s.orgRepo.GetByID(ctx, invite.OrgID); err == nil {
-				orgName = org.Name
-			}
-			return invite.OrgID, orgName, nil
+		} else {
+			return nil, err
 		}
-		return uuid.Nil, "", err
+	}
+
+	// Team membership creation (within the same transaction)
+	var teamID *uuid.UUID
+	var teamName string
+	var teamRole string
+	if invite.TeamID != nil {
+		teamRepoTx := s.teamRepo.WithTx(tx)
+		team, err := teamRepoTx.GetByID(ctx, *invite.TeamID)
+		if err != nil {
+			if errors.Is(err, postgres.ErrNotFound) {
+				slog.Warn("team not found during invite acceptance, skipping team assignment",
+					"team_id", invite.TeamID,
+					"invite_id", invite.ID,
+					"user_id", userID,
+				)
+			} else {
+				return nil, fmt.Errorf("look up team: %w", err)
+			}
+		} else if team.IsArchived {
+			slog.Warn("team is archived during invite acceptance, skipping team assignment",
+				"team_id", invite.TeamID,
+				"team_name", team.Name,
+				"invite_id", invite.ID,
+				"user_id", userID,
+			)
+		} else {
+			role := "member"
+			if invite.TeamRole != nil {
+				role = *invite.TeamRole
+			}
+			tm := &domain.TeamMembership{
+				ID:     uuid.New(),
+				UserID: userID,
+				TeamID: *invite.TeamID,
+				Role:   role,
+			}
+			if err := teamRepoTx.CreateMembership(ctx, tm); err != nil {
+				if errors.Is(err, postgres.ErrConflict) {
+					// Already a team member — skip silently (idempotent)
+				} else {
+					return nil, fmt.Errorf("create team membership: %w", err)
+				}
+			}
+			teamID = invite.TeamID
+			teamName = team.Name
+			teamRole = role
+		}
 	}
 
 	if err := orgRepoTx.MarkInviteAccepted(ctx, invite.ID); err != nil {
-		return uuid.Nil, "", err
+		return nil, err
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return uuid.Nil, "", err
+		return nil, err
 	}
 
 	orgName := ""
 	if org, err := s.orgRepo.GetByID(ctx, invite.OrgID); err == nil {
 		orgName = org.Name
 	}
-	return invite.OrgID, orgName, nil
+	return &AcceptInviteResult{
+		OrgID:    invite.OrgID,
+		OrgName:  orgName,
+		TeamID:   teamID,
+		TeamName: teamName,
+		TeamRole: teamRole,
+	}, nil
 }
 
 func (s *OrgService) RevokeInvite(ctx context.Context, orgID, inviteID uuid.UUID) error {
@@ -421,11 +492,21 @@ func (s *OrgService) PreviewInvite(ctx context.Context, token string) (map[strin
 	if org, err := s.orgRepo.GetByID(ctx, invite.OrgID); err == nil {
 		orgName = org.Name
 	}
-	return map[string]any{
+	result := map[string]any{
 		"email":    invite.Email,
 		"org_name": orgName,
 		"org_role": invite.OrgRole,
-	}, nil
+	}
+	if invite.TeamID != nil {
+		team, err := s.teamRepo.GetByID(ctx, *invite.TeamID)
+		if err == nil {
+			result["team_name"] = team.Name
+			if invite.TeamRole != nil {
+				result["team_role"] = *invite.TeamRole
+			}
+		}
+	}
+	return result, nil
 }
 
 func (s *OrgService) GetMembership(ctx context.Context, userID, orgID uuid.UUID) (*domain.OrgMembership, error) {
@@ -437,5 +518,27 @@ func (s *OrgService) ListAll(ctx context.Context, page, perPage int) ([]domain.O
 }
 
 func (s *OrgService) ListPendingInvites(ctx context.Context, orgID uuid.UUID) ([]domain.Invite, error) {
-	return s.orgRepo.ListPendingInvites(ctx, orgID)
+	invites, err := s.orgRepo.ListPendingInvites(ctx, orgID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Enrich invites with team names
+	teamNames := make(map[uuid.UUID]string)
+	for i := range invites {
+		if invites[i].TeamID != nil {
+			tid := *invites[i].TeamID
+			if _, ok := teamNames[tid]; !ok {
+				team, err := s.teamRepo.GetByID(ctx, tid)
+				if err == nil {
+					teamNames[tid] = team.Name
+				}
+			}
+			if name, ok := teamNames[tid]; ok {
+				invites[i].TeamName = name
+			}
+		}
+	}
+
+	return invites, nil
 }
