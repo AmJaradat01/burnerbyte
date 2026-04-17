@@ -24,16 +24,17 @@ type OrgService struct {
 	pool         *pgxpool.Pool
 	orgRepo      *postgres.OrgRepo
 	teamRepo     *postgres.TeamRepo
+	userRepo     *postgres.UserRepo
 	mailer       *mailer.Mailer
 	baseURL      string
 	inviteExpiry time.Duration
 }
 
-func NewOrgService(pool *pgxpool.Pool, orgRepo *postgres.OrgRepo, teamRepo *postgres.TeamRepo, mailer *mailer.Mailer, baseURL string, inviteExpiry time.Duration) *OrgService {
+func NewOrgService(pool *pgxpool.Pool, orgRepo *postgres.OrgRepo, teamRepo *postgres.TeamRepo, userRepo *postgres.UserRepo, mailer *mailer.Mailer, baseURL string, inviteExpiry time.Duration) *OrgService {
 	if inviteExpiry <= 0 {
 		inviteExpiry = 48 * time.Hour
 	}
-	return &OrgService{pool: pool, orgRepo: orgRepo, teamRepo: teamRepo, mailer: mailer, baseURL: baseURL, inviteExpiry: inviteExpiry}
+	return &OrgService{pool: pool, orgRepo: orgRepo, teamRepo: teamRepo, userRepo: userRepo, mailer: mailer, baseURL: baseURL, inviteExpiry: inviteExpiry}
 }
 
 var slugRe = regexp.MustCompile(`[^a-z0-9]+`)
@@ -445,6 +446,21 @@ func (s *OrgService) AcceptInvite(ctx context.Context, token string, userID uuid
 			teamID = invite.TeamID
 			teamName = team.Name
 			teamRole = role
+		}
+	}
+
+	// Auto-verify email: the user proved ownership by clicking the invite link
+	// Only verify if the invite email matches the user's email (which we already checked above)
+	if s.userRepo != nil {
+		userRepoTx := s.userRepo.WithTx(tx)
+		invitedUser, err := userRepoTx.GetByID(ctx, userID)
+		if err == nil && !invitedUser.EmailVerified {
+			invitedUser.EmailVerified = true
+			if err := userRepoTx.Update(ctx, invitedUser); err != nil {
+				slog.Error("failed to auto-verify email on invite acceptance", "user_id", userID, "error", err)
+			} else {
+				slog.Info("auto-verified email on invite acceptance", "user_id", userID, "email", userEmail)
+			}
 		}
 	}
 
