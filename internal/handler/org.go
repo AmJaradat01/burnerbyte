@@ -431,6 +431,9 @@ func (h *OrgHandler) ListPendingInvites(w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusInternalServerError, "failed to list invites")
 		return
 	}
+	if invites == nil {
+		invites = []domain.Invite{}
+	}
 	writeJSON(w, http.StatusOK, map[string]any{"data": invites})
 }
 
