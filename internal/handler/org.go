@@ -434,6 +434,36 @@ func (h *OrgHandler) ListPendingInvites(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, map[string]any{"data": invites})
 }
 
+func (h *OrgHandler) SearchMembers(w http.ResponseWriter, r *http.Request) {
+	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid org ID")
+		return
+	}
+	if checkOrgRole(w, r, orgID, rbac.OrgMember) {
+		return
+	}
+
+	q := r.URL.Query().Get("q")
+	var excludeTeamID *uuid.UUID
+	if et := r.URL.Query().Get("exclude_team"); et != "" {
+		id, err := uuid.Parse(et)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid exclude_team ID")
+			return
+		}
+		excludeTeamID = &id
+	}
+
+	results, err := h.svc.SearchMembers(r.Context(), orgID, q, excludeTeamID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to search members")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, results)
+}
+
 // ── Pagination helpers ──
 
 func parsePagination(r *http.Request) (page, perPage int) {
