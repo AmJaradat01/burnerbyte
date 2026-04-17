@@ -213,6 +213,22 @@ function CreateTeamDialog({ orgId, existingTeams }: { orgId: string; existingTea
   const fetchTeams = useOrgStore((s) => s.fetchTeams);
   const { teamRoles } = useRoles();
 
+  // Domain selection state
+  const [selectedDomains, setSelectedDomains] = useState<{ id: string; name: string; accessLevel: string }[]>([]);
+  const [domainSearch, setDomainSearch] = useState("");
+
+  // Fetch verified domains
+  const { data: domainsData } = useQuery({
+    queryKey: ["domains", orgId],
+    queryFn: () => api.get<{ data: Domain[] }>(`/orgs/${orgId}/domains`, { per_page: "200" }),
+    enabled: open,
+  });
+  const verifiedDomains = (domainsData?.data ?? []).filter((d) => d.mx_verified && d.txt_verified);
+  const availableDomains = verifiedDomains.filter((d) => !selectedDomains.some((s) => s.id === d.id));
+  const filteredAvailableDomains = domainSearch
+    ? availableDomains.filter((d) => d.domain_name.toLowerCase().includes(domainSearch.toLowerCase()))
+    : availableDomains;
+
   const slug = name.trim().toLowerCase().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-");
   const nameValid = name.trim().length >= 2;
   const isDuplicate = existingTeams.some((t) => t.toLowerCase() === name.trim().toLowerCase());
@@ -273,6 +289,9 @@ function CreateTeamDialog({ orgId, existingTeams }: { orgId: string; existingTea
       if (initialMembers.length > 0) {
         payload.members = initialMembers.map((m) => ({ email: m.email, role: m.role }));
       }
+      if (selectedDomains.length > 0) {
+        payload.domains = selectedDomains.map((d) => ({ domain_id: d.id, access_level: d.accessLevel }));
+      }
       await api.post(`/orgs/${orgId}/teams`, payload);
       qc.invalidateQueries({ queryKey: ["teams"] });
       fetchTeams(orgId);
@@ -281,6 +300,7 @@ function CreateTeamDialog({ orgId, existingTeams }: { orgId: string; existingTea
       setName("");
       setDescription("");
       setInitialMembers([]);
+      setSelectedDomains([]);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed");
     } finally {
@@ -289,7 +309,7 @@ function CreateTeamDialog({ orgId, existingTeams }: { orgId: string; existingTea
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setName(""); setDescription(""); setInitialMembers([]); setMemberSearch(""); } }}>
+    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setName(""); setDescription(""); setInitialMembers([]); setSelectedDomains([]); setMemberSearch(""); setDomainSearch(""); } }}>
       <DialogTrigger asChild>
         <Button className="gap-2"><Plus className="h-4 w-4" /> Create Team</Button>
       </DialogTrigger>
@@ -393,8 +413,74 @@ function CreateTeamDialog({ orgId, existingTeams }: { orgId: string; existingTea
             </div>
           </div>
 
+          {/* Domains */}
+          <div className="border-t pt-4 space-y-3">
+            <div className="space-y-1">
+              <Label>Domains <span className="text-muted-foreground font-normal">(optional)</span></Label>
+              <p className="text-xs text-muted-foreground">Assign verified domains to this team for inbox creation.</p>
+            </div>
+
+            {/* Selected domains */}
+            {selectedDomains.length > 0 && (
+              <div className="space-y-1.5">
+                {selectedDomains.map((d) => (
+                  <div key={d.id} className="flex items-center gap-2 rounded-lg border px-3 py-2">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30">
+                      <Globe className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium font-mono truncate">{d.name}</p>
+                    </div>
+                    <Select value={d.accessLevel} onValueChange={(v) => setSelectedDomains((prev) => prev.map((s) => s.id === d.id ? { ...s, accessLevel: v } : s))}>
+                      <SelectTrigger className="w-[120px] h-7 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="full">Full</SelectItem>
+                        <SelectItem value="create_inbox">Create Inbox</SelectItem>
+                        <SelectItem value="read_only">Read Only</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive" onClick={() => setSelectedDomains((prev) => prev.filter((s) => s.id !== d.id))}>
+                      <XCircle className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Domain search / add */}
+            {availableDomains.length > 0 ? (
+              <div className="relative">
+                <Input
+                  value={domainSearch}
+                  onChange={(e) => setDomainSearch(e.target.value)}
+                  placeholder="Search verified domains to assign..."
+                  autoComplete="off"
+                />
+                {(domainSearch || filteredAvailableDomains.length <= 6) && filteredAvailableDomains.length > 0 && (
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {filteredAvailableDomains.slice(0, 8).map((d) => (
+                      <button
+                        key={d.id}
+                        type="button"
+                        className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-mono hover:bg-accent transition-colors cursor-pointer"
+                        onClick={() => { setSelectedDomains((prev) => [...prev, { id: d.id, name: d.domain_name, accessLevel: "full" }]); setDomainSearch(""); }}
+                      >
+                        <Globe className="h-3 w-3 text-emerald-500" />
+                        {d.domain_name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : verifiedDomains.length > 0 && selectedDomains.length === verifiedDomains.length ? (
+              <p className="text-xs text-muted-foreground">All verified domains have been selected.</p>
+            ) : (
+              <p className="text-xs text-muted-foreground">No verified domains available to assign.</p>
+            )}
+          </div>
+
           <Button onClick={create} className="w-full" disabled={!nameValid || isDuplicate || creating}>
-            {creating ? "Creating…" : `Create Team${initialMembers.length > 0 ? ` with ${initialMembers.length} member${initialMembers.length !== 1 ? "s" : ""}` : ""}`}
+            {creating ? "Creating…" : `Create Team${initialMembers.length > 0 || selectedDomains.length > 0 ? " with" : ""}${initialMembers.length > 0 ? ` ${initialMembers.length} member${initialMembers.length !== 1 ? "s" : ""}` : ""}${initialMembers.length > 0 && selectedDomains.length > 0 ? " and" : ""}${selectedDomains.length > 0 ? ` ${selectedDomains.length} domain${selectedDomains.length !== 1 ? "s" : ""}` : ""}`}
           </Button>
         </div>
       </DialogContent>
