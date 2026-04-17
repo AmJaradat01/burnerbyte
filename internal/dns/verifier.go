@@ -39,3 +39,18 @@ func VerifyTXT(domainName, expectedValue string) (bool, error) {
 func GenerateVerificationRecord(domainID string) string {
 	return fmt.Sprintf("burnerbyte-verify=%s", domainID)
 }
+
+// VerifySPF checks if the domain has a TXT record starting with "v=spf1"
+// that includes the expected hostname.
+func VerifySPF(domainName, expectedHost string) (bool, error) {
+	records, err := net.LookupTXT(domainName)
+	if err != nil {
+		return false, fmt.Errorf("spf lookup: %w", err)
+	}
+	for _, txt := range records {
+		if strings.HasPrefix(txt, "v=spf1") && strings.Contains(txt, expectedHost) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
