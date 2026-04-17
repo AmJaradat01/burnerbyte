@@ -51,10 +51,16 @@ type TeamMembership struct {
 }
 
 type CreateTeamInput struct {
-	Name        string             `json:"name"`
-	Description *string            `json:"description,omitempty"`
-	AvatarURL   *string            `json:"avatar_url,omitempty"`
-	Members     []AddTeamMemberInput `json:"members,omitempty"`
+	Name        string                 `json:"name"`
+	Description *string                `json:"description,omitempty"`
+	AvatarURL   *string                `json:"avatar_url,omitempty"`
+	Members     []AddTeamMemberInput   `json:"members,omitempty"`
+	Domains     []CreateTeamDomainInput `json:"domains,omitempty"`
+}
+
+type CreateTeamDomainInput struct {
+	DomainID    string `json:"domain_id"`
+	AccessLevel string `json:"access_level"`
 }
 
 type UpdateTeamInput struct {
@@ -125,6 +131,13 @@ type TransferRemoved struct {
 }
 
 type CreateTeamResult struct {
-	Team          *Team              `json:"team"`
-	FailedMembers []BulkMemberFailed `json:"failed_members,omitempty"`
+	Team            *Team              `json:"team"`
+	FailedMembers   []BulkMemberFailed `json:"failed_members,omitempty"`
+	FailedDomains   []BulkDomainFailed `json:"failed_domains,omitempty"`
+	AssignedDomains int                `json:"assigned_domains"`
+}
+
+type BulkDomainFailed struct {
+	DomainID string `json:"domain_id"`
+	Reason   string `json:"reason"`
 }
