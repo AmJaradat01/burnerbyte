@@ -65,38 +65,51 @@ func (r *SettingsResolver) ResolveAttachmentsEnabled(ctx context.Context, assign
 }
 
 // ResolveDefaultInboxTTL returns the default TTL for new inboxes.
-// Cascade: org → system default.
+// Cascade: domain → org → system default.
 func (r *SettingsResolver) ResolveDefaultInboxTTL(ctx context.Context, assignmentID uuid.UUID) time.Duration {
 	assignment, err := r.assignmentRepo.GetByID(ctx, assignmentID)
 	if err != nil {
 		return r.defaults.DefaultInboxTTL
 	}
+
+	// 1. Domain level
 	dom, err := r.domainRepo.GetByID(ctx, assignment.DomainID)
 	if err != nil {
 		return r.defaults.DefaultInboxTTL
 	}
+	if dom.Settings.DefaultInboxTTL != nil {
+		if d, err := time.ParseDuration(*dom.Settings.DefaultInboxTTL); err == nil {
+			return d
+		}
+	}
+
+	// 2. Org level
 	org, _ := r.orgRepo.GetByID(ctx, dom.OrgID)
 	if org != nil && org.Settings.DefaultInboxTTL != nil {
 		if d, err := time.ParseDuration(*org.Settings.DefaultInboxTTL); err == nil {
 			return d
 		}
 	}
+
+	// 3. System default
 	return r.defaults.DefaultInboxTTL
 }
 
 // ResolveDefaultInboxTTLWithTeam returns the default TTL for new inboxes with team-level override.
-// Cascade: team → org → system default.
+// Cascade: team → domain → org → system default.
 func (r *SettingsResolver) ResolveDefaultInboxTTLWithTeam(ctx context.Context, assignmentID uuid.UUID, teamSettings *domain.TeamSettings) time.Duration {
+	// 1. Team level
 	if teamSettings != nil && teamSettings.DefaultInboxTTL != nil {
 		if d, err := time.ParseDuration(*teamSettings.DefaultInboxTTL); err == nil {
 			return d
 		}
 	}
+	// 2. Fall through to domain → org → system default
 	return r.ResolveDefaultInboxTTL(ctx, assignmentID)
 }
 
 // ResolveMaxInboxTTL returns the maximum allowed TTL.
-// Cascade: assignment → org → system default.
+// Cascade: assignment → domain → org → system default.
 func (r *SettingsResolver) ResolveMaxInboxTTL(ctx context.Context, assignmentID uuid.UUID) time.Duration {
 	assignment, err := r.assignmentRepo.GetByID(ctx, assignmentID)
 	if err != nil {
@@ -108,17 +121,27 @@ func (r *SettingsResolver) ResolveMaxInboxTTL(ctx context.Context, assignmentID 
 			return d
 		}
 	}
-	// 2. Org level
+
+	// 2. Domain level
 	dom, err := r.domainRepo.GetByID(ctx, assignment.DomainID)
 	if err != nil {
 		return r.defaults.MaxInboxTTL
 	}
+	if dom.Settings.MaxInboxTTL != nil {
+		if d, err := time.ParseDuration(*dom.Settings.MaxInboxTTL); err == nil {
+			return d
+		}
+	}
+
+	// 3. Org level
 	org, _ := r.orgRepo.GetByID(ctx, dom.OrgID)
 	if org != nil && org.Settings.MaxInboxTTL != nil {
 		if d, err := time.ParseDuration(*org.Settings.MaxInboxTTL); err == nil {
 			return d
 		}
 	}
+
+	// 4. System default
 	return r.defaults.MaxInboxTTL
 }
 
@@ -138,4 +161,31 @@ func (r *SettingsResolver) ResolveMaxAttachmentSize(ctx context.Context, assignm
 		mb = *org.Settings.MaxAttachmentSizeMB
 	}
 	return mb * 1024 * 1024
+}
+
+// ResolveMaxInboxesPerDomain returns the max inboxes per domain.
+// Cascade: domain → org → system default.
+func (r *SettingsResolver) ResolveMaxInboxesPerDomain(ctx context.Context, assignmentID uuid.UUID) int {
+	assignment, err := r.assignmentRepo.GetByID(ctx, assignmentID)
+	if err != nil {
+		return r.defaults.MaxInboxesPerDomain
+	}
+
+	// 1. Domain level
+	dom, err := r.domainRepo.GetByID(ctx, assignment.DomainID)
+	if err != nil {
+		return r.defaults.MaxInboxesPerDomain
+	}
+	if dom.Settings.MaxInboxesPerDomain != nil {
+		return *dom.Settings.MaxInboxesPerDomain
+	}
+
+	// 2. Org level
+	org, _ := r.orgRepo.GetByID(ctx, dom.OrgID)
+	if org != nil && org.Settings.MaxInboxesPerDomain != nil {
+		return *org.Settings.MaxInboxesPerDomain
+	}
+
+	// 3. System default
+	return r.defaults.MaxInboxesPerDomain
 }
