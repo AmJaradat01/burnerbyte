@@ -71,4 +71,6 @@ type Invite struct {
 	AcceptedAt *time.Time `json:"accepted_at,omitempty"`
 	ExpiresAt  time.Time  `json:"expires_at"`
 	CreatedAt  time.Time  `json:"created_at"`
+	// Joined/enriched fields
+	TeamName string `json:"team_name,omitempty"`
 }

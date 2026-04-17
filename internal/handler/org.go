@@ -254,7 +254,14 @@ func (h *OrgHandler) InviteMember(w http.ResponseWriter, r *http.Request) {
 	if org, err := h.svc.GetOrg(r.Context(), orgID); err == nil && org != nil {
 		orgName = org.Name
 	}
-	auditRecordEnhanced(r, orgID, "member.invited", "org", orgID, input.Email, map[string]any{"email": input.Email, "role": input.OrgRole, "org_name": orgName})
+	meta := map[string]any{"email": input.Email, "role": input.OrgRole, "org_name": orgName}
+	if input.TeamID != nil {
+		meta["team_id"] = *input.TeamID
+		if invite.TeamRole != nil {
+			meta["team_role"] = *invite.TeamRole
+		}
+	}
+	auditRecordEnhanced(r, orgID, "member.invited", "org", orgID, input.Email, meta)
 	writeJSON(w, http.StatusCreated, invite)
 }
 
@@ -388,7 +395,7 @@ func (h *OrgHandler) AcceptInvite(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
 	token := chi.URLParam(r, "token")
 
-	orgID, orgName, err := h.svc.AcceptInvite(r.Context(), token, uc.UserID, uc.Email)
+	result, err := h.svc.AcceptInvite(r.Context(), token, uc.UserID, uc.Email)
 	if err != nil {
 		if err.Error() == "invite not found" || err.Error() == "invite expired" {
 			writeError(w, http.StatusNotFound, err.Error())
@@ -400,7 +407,13 @@ func (h *OrgHandler) AcceptInvite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auditRecordEnhanced(r, orgID, "invite.accepted", "invite", uc.UserID, uc.Email, map[string]any{"email": uc.Email, "org_name": orgName, "org_id": orgID.String()})
+	meta := map[string]any{"email": uc.Email, "org_name": result.OrgName, "org_id": result.OrgID.String()}
+	if result.TeamID != nil {
+		meta["team_id"] = result.TeamID.String()
+		meta["team_name"] = result.TeamName
+		meta["team_role"] = result.TeamRole
+	}
+	auditRecordEnhanced(r, result.OrgID, "invite.accepted", "invite", uc.UserID, uc.Email, meta)
 	writeJSON(w, http.StatusOK, map[string]string{"message": "invite accepted"})
 }
 
