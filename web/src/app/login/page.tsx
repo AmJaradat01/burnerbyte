@@ -64,6 +64,13 @@ export default function LoginPage() {
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
       localStorage.setItem("access_token", accessToken);
       localStorage.setItem("refresh_token", refreshToken);
+      // Check for pending invite token from SSO flow started on invite page
+      const pendingInvite = sessionStorage.getItem("pending_invite_token");
+      if (pendingInvite) {
+        sessionStorage.removeItem("pending_invite_token");
+        fetchMe().then(() => router.replace(`/invite?token=${pendingInvite}`));
+        return;
+      }
       const redirect = searchParams.get("redirect") || "/";
       fetchMe().then(() => router.replace(redirect));
     }
