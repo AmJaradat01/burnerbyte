@@ -23,9 +23,9 @@ import { RolesTab } from "@/components/settings/roles-tab";
 import type { Organization, OrgSettings, SystemStats } from "@/types";
 
 export default function SettingsPage() {
-  const { currentOrg, currentRole, fetchOrgs } = useOrgStore();
+  const { currentOrg, currentRole, fetchOrgs, hasPermission } = useOrgStore();
   const user = useAuthStore((s) => s.user);
-  const isAdmin = currentRole === "owner" || currentRole === "admin" || user?.is_system_admin;
+  const isAdmin = hasPermission("org.settings.manage") || user?.is_system_admin;
   if (!isAdmin) return <div className="flex items-center justify-center min-h-[50vh]"><p className="text-muted-foreground">You don&apos;t have permission to access settings.</p></div>;
   if (!currentOrg) return <p className="text-muted-foreground">Select an organization first.</p>;
 

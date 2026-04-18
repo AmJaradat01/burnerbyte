@@ -29,7 +29,7 @@ type StatusFilter = "all" | "verified" | "pending";
 type SortOption = "name-asc" | "name-desc" | "newest" | "oldest" | "most-inboxes";
 
 export default function DomainsPage() {
-  const { currentOrg, currentRole } = useOrgStore();
+  const { currentOrg, currentRole, hasPermission } = useOrgStore();
   const { user } = useAuthStore();
   const qc = useQueryClient();
   const [page, setPage] = useState(1);
@@ -80,7 +80,7 @@ export default function DomainsPage() {
   }, [domains, search, statusFilter, sort]);
 
   if (!currentOrg) return <p className="text-muted-foreground">Select an organization first.</p>;
-  const isAdmin = currentRole === "owner" || currentRole === "admin" || user?.is_system_admin;
+  const isAdmin = hasPermission("org.domains.manage") || user?.is_system_admin;
   if (!isAdmin) return <div className="flex items-center justify-center min-h-[50vh]"><p className="text-muted-foreground">You don&apos;t have permission to access this page.</p></div>;
 
   return (
