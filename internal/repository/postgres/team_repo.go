@@ -154,6 +154,69 @@ func (r *TeamRepo) ListByOrg(ctx context.Context, orgID uuid.UUID, opts ListTeam
 	return teams, total, nil
 }
 
+func (r *TeamRepo) ListByUserMembership(ctx context.Context, orgID, userID uuid.UUID, opts ListTeamsOpts) ([]domain.Team, int, error) {
+	if opts.Page < 1 {
+		opts.Page = 1
+	}
+	if opts.PerPage < 1 || opts.PerPage > 100 {
+		opts.PerPage = 20
+	}
+
+	// Build WHERE clause with membership join
+	where := "WHERE t.org_id = $1 AND tm.user_id = $2"
+	args := []any{orgID, userID}
+	argIdx := 3
+
+	if opts.IsArchived != nil {
+		where += fmt.Sprintf(" AND t.is_archived = $%d", argIdx)
+		args = append(args, *opts.IsArchived)
+		argIdx++
+	}
+
+	if opts.Search != "" {
+		where += fmt.Sprintf(" AND t.name ILIKE $%d", argIdx)
+		args = append(args, "%"+opts.Search+"%")
+		argIdx++
+	}
+
+	// Count
+	var total int
+	countQuery := "SELECT COUNT(*) FROM teams t JOIN team_memberships tm ON tm.team_id = t.id " + where
+	err := r.db.QueryRow(ctx, countQuery, args...).Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Data query
+	offset := (opts.Page - 1) * opts.PerPage
+	dataQuery := fmt.Sprintf(
+		`SELECT t.id, t.org_id, t.name, t.slug, t.description, t.avatar_url, t.is_archived, t.archived_at, t.settings, t.created_at, t.updated_at,
+		        (SELECT COUNT(*) FROM team_memberships tm2 WHERE tm2.team_id = t.id),
+		        (SELECT COUNT(DISTINCT da.domain_id) FROM domain_assignments da WHERE da.team_id = t.id),
+		        (SELECT COUNT(*) FROM inboxes i JOIN domain_assignments da ON i.domain_assignment_id = da.id WHERE da.team_id = t.id AND i.is_active = TRUE)
+		 FROM teams t JOIN team_memberships tm ON tm.team_id = t.id %s ORDER BY t.name LIMIT $%d OFFSET $%d`, where, argIdx, argIdx+1)
+	args = append(args, opts.PerPage, offset)
+
+	rows, err := r.db.Query(ctx, dataQuery, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var teams []domain.Team
+	for rows.Next() {
+		var t domain.Team
+		var settings []byte
+		if err := rows.Scan(&t.ID, &t.OrgID, &t.Name, &t.Slug, &t.Description, &t.AvatarURL, &t.IsArchived, &t.ArchivedAt, &settings, &t.CreatedAt, &t.UpdatedAt,
+			&t.MemberCount, &t.DomainCount, &t.ActiveInboxes); err != nil {
+			return nil, 0, err
+		}
+		_ = json.Unmarshal(settings, &t.Settings)
+		teams = append(teams, t)
+	}
+	return teams, total, nil
+}
+
 func (r *TeamRepo) Update(ctx context.Context, t *domain.Team) error {
 	settings, _ := json.Marshal(t.Settings)
 	_, err := r.db.Exec(ctx,
