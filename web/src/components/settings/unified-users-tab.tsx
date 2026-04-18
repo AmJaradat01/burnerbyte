@@ -81,7 +81,7 @@ export function UnifiedUsersTab({ orgId }: { orgId: string }) {
   const allUsers: MergedUser[] = isAdmin
     ? (usersData?.data ?? []).map((u) => {
         const m = memberMap.get(u.id);
-        return { ...u, org_role: m?.role, membership_id: m?.id, member_created_at: m?.created_at, last_login_at: m?.last_login_at };
+        return { ...u, org_role: m?.role, membership_id: m?.id, member_created_at: m?.created_at, last_login_at: u.last_login_at || m?.last_login_at };
       })
     : members.map((m) => ({
         id: m.user_id, email: m.email ?? "", display_name: m.display_name ?? "", is_system_admin: false,
@@ -362,6 +362,19 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
     }
   };
 
+  const deactivateFromOrg = async () => {
+    try {
+      await api.post(`/orgs/${orgId}/members/${u.id}/deactivate`);
+      try { await api.del(`/admin/users/${u.id}/sessions`); } catch {}
+      qc.invalidateQueries({ queryKey: ["org-members"] });
+      qc.invalidateQueries({ queryKey: ["admin-users"] });
+      toast.success(`${u.display_name || u.email} deactivated`);
+      setOpen(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={(v) => {
       setOpen(v);
@@ -420,6 +433,20 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
             <Button variant="outline" className="w-full gap-2" onClick={addToOrg}>
               <UserPlus className="h-4 w-4" /> Add to Organization
             </Button>
+          )}
+
+          {/* Deactivate button for org members */}
+          {u.org_role && !isYou && (
+            <ConfirmDialog
+              trigger={
+                <Button variant="outline" className="w-full gap-2 text-orange-600 hover:text-orange-700 border-orange-200 hover:border-orange-300 dark:text-orange-400 dark:border-orange-800">
+                  <XCircle className="h-4 w-4" /> Deactivate User
+                </Button>
+              }
+              title="Deactivate user?"
+              description={`${u.display_name || u.email} will be removed from the organization and all teams. Their sessions will be revoked. The account will be preserved for audit purposes.`}
+              onConfirm={deactivateFromOrg}
+            />
           )}
 
           {/* Editable fields */}

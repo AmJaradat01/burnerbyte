@@ -9,6 +9,7 @@ export interface User {
   timezone?: string;
   date_format?: string;
   time_format?: string;
+  last_login_at?: string;
   created_at: string;
   updated_at: string;
 }
