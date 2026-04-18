@@ -87,6 +87,15 @@ var (
 	ErrInsufficientTeam = fmt.Errorf("insufficient team permissions")
 )
 
+// GetOrgRole returns the user's role in the given org, or an error if not a member.
+func (c *Checker) GetOrgRole(ctx context.Context, userID, orgID uuid.UUID) (string, error) {
+	m, err := c.org.GetMembership(ctx, userID, orgID)
+	if err != nil {
+		return "", err
+	}
+	return m.Role, nil
+}
+
 // RequireOrgRole checks the user has at least minRole in the org. System admins bypass.
 func (c *Checker) RequireOrgRole(r *http.Request, orgID uuid.UUID, minRole string) error {
 	uc := auth.GetUser(r.Context())
