@@ -19,12 +19,11 @@ func CleanupJob(inboxRepo *postgres.InboxRepo, emailRepo *postgres.EmailRepo, at
 		// Delete expired emails and collect IDs for attachment cleanup
 		emailIDs, err := emailRepo.DeleteExpiredReturningIDs(ctx)
 		if err != nil {
-			// Fallback to simple delete if the new method doesn't exist
+			// Fallback to simple delete
 			emails, err2 := emailRepo.DeleteExpired(ctx)
 			if err2 != nil {
-				return err2
-			}
-			if emails > 0 {
+				slog.Error("cleanup: failed to delete expired emails", "error", err2)
+			} else if emails > 0 {
 				slog.Info("cleanup: expired emails deleted", "count", emails)
 			}
 		} else if len(emailIDs) > 0 && attachmentCleaner != nil {
