@@ -194,12 +194,6 @@ func (s *InboxService) GetInbox(ctx context.Context, id, userID uuid.UUID) (*dom
 	return inbox, nil
 }
 
-func (s *InboxService) ListByTeam(ctx context.Context, teamID, userID uuid.UUID, page, perPage int) ([]domain.Inbox, int, error) {
-	if page < 1 { page = 1 }
-	if perPage < 1 || perPage > 100 { perPage = 20 }
-	return s.inboxRepo.ListByTeam(ctx, teamID, userID, page, perPage)
-}
-
 func (s *InboxService) ListByTeamWithStatus(ctx context.Context, teamID, userID uuid.UUID, status string, page, perPage int) ([]domain.Inbox, int, error) {
 	if page < 1 { page = 1 }
 	if perPage < 1 || perPage > 100 { perPage = 20 }
