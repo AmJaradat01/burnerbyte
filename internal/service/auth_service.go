@@ -505,6 +505,10 @@ func (s *AuthService) SSOLogin(ctx context.Context, result *domain.SSOCallbackRe
 			if err != nil {
 				return nil, nil, fmt.Errorf("load SSO user: %w", err)
 			}
+			if !user.EmailVerified {
+				user.EmailVerified = true
+				_ = s.userRepo.Update(ctx, user)
+			}
 		}
 	}
 
