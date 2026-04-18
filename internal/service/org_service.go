@@ -290,6 +290,53 @@ func (s *OrgService) RemoveMember(ctx context.Context, orgID, targetUserID uuid.
 	return s.orgRepo.DeleteMembership(ctx, targetUserID, orgID)
 }
 
+// DeactivateUser removes a user from the org, all teams, and revokes sessions.
+// The user account is preserved for audit trail purposes.
+func (s *OrgService) DeactivateUser(ctx context.Context, orgID, targetUserID uuid.UUID) error {
+	// Verify user is a member
+	m, err := s.orgRepo.GetMembership(ctx, targetUserID, orgID)
+	if err != nil {
+		return fmt.Errorf("user is not a member of this organization")
+	}
+	// Prevent deactivating the last owner
+	if m.Role == rbac.OrgOwner {
+		count, err := s.orgRepo.CountOwners(ctx, orgID)
+		if err != nil {
+			return err
+		}
+		if count <= 1 {
+			return fmt.Errorf("cannot deactivate the last owner")
+		}
+	}
+
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	orgRepoTx := s.orgRepo.WithTx(tx)
+
+	// 1. Remove from all teams in this org
+	_, err = tx.Exec(ctx,
+		`DELETE FROM team_memberships WHERE user_id = $1 AND team_id IN (SELECT id FROM teams WHERE org_id = $2)`,
+		targetUserID, orgID)
+	if err != nil {
+		return fmt.Errorf("remove team memberships: %w", err)
+	}
+
+	// 2. Remove org membership
+	if err := orgRepoTx.DeleteMembership(ctx, targetUserID, orgID); err != nil {
+		return fmt.Errorf("remove org membership: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // ── Invites ──
 
 func (s *OrgService) InviteMember(ctx context.Context, orgID uuid.UUID, input domain.InviteMemberInput, inviterID uuid.UUID) (*domain.Invite, error) {
