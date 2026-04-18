@@ -22,45 +22,30 @@ const (
 	TeamViewer = "viewer"
 )
 
-var orgRank = map[string]int{OrgOwner: 3, OrgAdmin: 2, OrgMember: 1}
-var teamRank = map[string]int{TeamLead: 2, TeamMember: 1, TeamViewer: 0}
+// defaultCache is a package-level reference to the permission cache,
+// used by ValidOrgRole/ValidTeamRole for callers that don't have access to a Checker.
+var defaultCache *PermissionCache
 
-// OrgRoles returns the available org roles with descriptions, ordered by rank.
-func OrgRoles() []RoleInfo {
-	return []RoleInfo{
-		{Value: OrgOwner, Label: "Owner", Description: "Full control over the organization", Rank: 3},
-		{Value: OrgAdmin, Label: "Admin", Description: "Manage settings, members, and resources", Rank: 2},
-		{Value: OrgMember, Label: "Member", Description: "Standard access to assigned resources", Rank: 1},
-	}
-}
+// SetDefaultCache sets the package-level permission cache reference.
+// Call this at startup after creating the PermissionCache.
+func SetDefaultCache(pc *PermissionCache) { defaultCache = pc }
 
-// TeamRoles returns the available team roles with descriptions, ordered by rank.
-func TeamRoles() []RoleInfo {
-	return []RoleInfo{
-		{Value: TeamLead, Label: "Lead", Description: "Manage team settings, webhooks, API keys, and members", Rank: 2},
-		{Value: TeamMember, Label: "Member", Description: "Create inboxes, view emails, use team domains", Rank: 1},
-		{Value: TeamViewer, Label: "Viewer", Description: "Read-only access to team resources", Rank: 0},
-	}
-}
-
-// RoleInfo describes a role for API responses and UI rendering.
-type RoleInfo struct {
-	Value       string `json:"value"`
-	Label       string `json:"label"`
-	Description string `json:"description"`
-	Rank        int    `json:"rank"`
-}
-
-// ValidOrgRole checks if a role string is a valid org role.
+// ValidOrgRole checks if a role string is a valid org role using the permission cache.
 func ValidOrgRole(role string) bool {
-	_, ok := orgRank[role]
-	return ok
+	if defaultCache != nil {
+		return defaultCache.HasRole(role)
+	}
+	// Fallback for tests without cache
+	return role == OrgOwner || role == OrgAdmin || role == OrgMember
 }
 
-// ValidTeamRole checks if a role string is a valid team role.
+// ValidTeamRole checks if a role string is a valid team role using the permission cache.
 func ValidTeamRole(role string) bool {
-	_, ok := teamRank[role]
-	return ok
+	if defaultCache != nil {
+		return defaultCache.HasRole(role)
+	}
+	// Fallback for tests without cache
+	return role == TeamLead || role == TeamMember || role == TeamViewer
 }
 
 // ── Repository interfaces ──
@@ -157,6 +142,14 @@ func (pc *PermissionCache) GetRank(roleValue string) int {
 	return pc.ranks[roleValue]
 }
 
+// HasRole checks if a role value exists in the permission cache.
+func (pc *PermissionCache) HasRole(roleValue string) bool {
+	pc.mu.RLock()
+	defer pc.mu.RUnlock()
+	_, exists := pc.permissions[roleValue]
+	return exists
+}
+
 // TeamPermissionKeys returns all permission keys for team-scoped roles.
 func (pc *PermissionCache) TeamPermissionKeys() []string {
 	pc.mu.RLock()
@@ -203,52 +196,6 @@ func (c *Checker) GetOrgRole(ctx context.Context, userID, orgID uuid.UUID) (stri
 		return "", err
 	}
 	return m.Role, nil
-}
-
-// RequireOrgRole checks the user has at least minRole in the org. System admins bypass.
-// Kept for backward compatibility — handlers should migrate to RequireOrgPermission.
-func (c *Checker) RequireOrgRole(r *http.Request, orgID uuid.UUID, minRole string) error {
-	uc := auth.GetUser(r.Context())
-	if uc == nil {
-		return ErrUnauthorized
-	}
-	if uc.IsSystemAdmin {
-		return nil
-	}
-	m, err := c.org.GetMembership(r.Context(), uc.UserID, orgID)
-	if err != nil {
-		return ErrNotOrgMember
-	}
-	if orgRank[m.Role] < orgRank[minRole] {
-		return ErrInsufficientOrg
-	}
-	return nil
-}
-
-// RequireTeamRole checks team role OR org-level fallback. Org owners/admins can manage any team.
-// Kept for backward compatibility — handlers should migrate to RequireTeamPermission.
-func (c *Checker) RequireTeamRole(r *http.Request, orgID, teamID uuid.UUID, minOrgFallback, minTeamRole string) error {
-	uc := auth.GetUser(r.Context())
-	if uc == nil {
-		return ErrUnauthorized
-	}
-	if uc.IsSystemAdmin {
-		return nil
-	}
-	// Org-level fallback
-	m, err := c.org.GetMembership(r.Context(), uc.UserID, orgID)
-	if err == nil && orgRank[m.Role] >= orgRank[minOrgFallback] {
-		return nil
-	}
-	// Team-level check
-	tm, err := c.team.GetMembership(r.Context(), uc.UserID, teamID)
-	if err != nil {
-		return ErrNotTeamMember
-	}
-	if teamRank[tm.Role] < teamRank[minTeamRole] {
-		return ErrInsufficientTeam
-	}
-	return nil
 }
 
 // ── Permission-based methods ──

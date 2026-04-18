@@ -42,7 +42,7 @@ func (h *InboxHandler) Routes(r chi.Router) {
 
 func (h *InboxHandler) CreateInboxFlat(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
-	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "inbox:create") {
+	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "team.inboxes.create") {
 		writeError(w, http.StatusForbidden, "insufficient scope")
 		return
 	}
@@ -83,7 +83,7 @@ func (h *InboxHandler) CreateInboxFlat(w http.ResponseWriter, r *http.Request) {
 
 func (h *InboxHandler) ListMyInboxes(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
-	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "inbox:read") {
+	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "team.inboxes.view") {
 		writeError(w, http.StatusForbidden, "insufficient scope")
 		return
 	}
@@ -134,7 +134,7 @@ func (h *InboxHandler) ListInboxes(w http.ResponseWriter, r *http.Request) {
 
 func (h *InboxHandler) GetInbox(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
-	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "inbox:read") {
+	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "team.inboxes.view") {
 		writeError(w, http.StatusForbidden, "insufficient scope")
 		return
 	}
@@ -157,7 +157,7 @@ func (h *InboxHandler) GetInbox(w http.ResponseWriter, r *http.Request) {
 
 func (h *InboxHandler) ExtendTTL(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
-	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "inbox:write") {
+	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "team.inboxes.view") {
 		writeError(w, http.StatusForbidden, "insufficient scope")
 		return
 	}
@@ -187,7 +187,7 @@ func (h *InboxHandler) ExtendTTL(w http.ResponseWriter, r *http.Request) {
 
 func (h *InboxHandler) DeleteInbox(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
-	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "inbox:delete") {
+	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "team.inboxes.view") {
 		writeError(w, http.StatusForbidden, "insufficient scope")
 		return
 	}

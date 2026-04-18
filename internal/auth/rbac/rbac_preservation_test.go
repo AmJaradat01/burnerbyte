@@ -1,8 +1,8 @@
 package rbac
 
 import (
+	"context"
 	"errors"
-	"net/http"
 	"testing"
 
 	"github.com/google/uuid"
@@ -15,31 +15,29 @@ import (
 // Feature: rbac-permission-overhaul, Property 2: Preservation — System Admin Bypass and Membership Checks
 // **Validates: Requirements 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7**
 //
-// These tests capture baseline behavior that MUST be preserved after the fix.
-// They should all PASS on the current (unfixed) code.
+// These tests capture baseline behavior that MUST be preserved after the permission-based overhaul.
+// They test RequireOrgPermission and RequireTeamPermission (the new permission-based methods).
 
 // --- Generators ---
 
-// genOrgRole draws a random valid org role from the set {owner, admin, member}.
-func genOrgRole(t *rapid.T, label string) string {
-	return rapid.SampledFrom([]string{OrgOwner, OrgAdmin, OrgMember}).Draw(t, label)
-}
-
-// genTeamRole draws a random valid team role from the set {lead, member, viewer}.
-func genTeamRole(t *rapid.T, label string) string {
-	return rapid.SampledFrom([]string{TeamLead, TeamMember, TeamViewer}).Draw(t, label)
+// genPermissionKey draws a random permission key for property-based tests.
+func genPermissionKey(t *rapid.T, label string) string {
+	return rapid.SampledFrom([]string{
+		"org.view", "org.settings.manage", "org.members.view", "org.domains.manage",
+		"team.view", "team.webhooks.view", "team.inboxes.view", "team.apikeys.view",
+	}).Draw(t, label)
 }
 
 // --- Sub-property 2a: System admin bypass ---
-// For random (orgID, minRole) pairs, when UserContext.IsSystemAdmin=true,
-// RequireOrgRole returns nil. Same for RequireTeamRole.
+// For random (orgID, permissionKey) pairs, when UserContext.IsSystemAdmin=true,
+// RequireOrgPermission returns nil. Same for RequireTeamPermission.
 
-func TestPreservation_SystemAdminBypass_OrgRole(t *testing.T) {
+func TestPreservation_SystemAdminBypass_OrgPermission(t *testing.T) {
 	rapid.Check(t, func(t *rapid.T) {
 		orgID := uuid.New()
-		minRole := genOrgRole(t, "minRole")
+		permKey := genPermissionKey(t, "permissionKey")
 
-		// Even with a repo that always errors, system admin should bypass.
+		// Even with a repo that always errors and no cache, system admin should bypass.
 		orgRepo := &mockOrgMembershipRepo{err: errors.New("not found")}
 		teamRepo := &mockTeamMembershipRepo{err: errors.New("not found")}
 		checker := NewChecker(orgRepo, teamRepo, nil)
@@ -50,19 +48,18 @@ func TestPreservation_SystemAdminBypass_OrgRole(t *testing.T) {
 		}
 		r := makeRequest(uc)
 
-		err := checker.RequireOrgRole(r, orgID, minRole)
+		err := checker.RequireOrgPermission(r, orgID, permKey)
 		if err != nil {
-			t.Fatalf("system admin should bypass RequireOrgRole(minRole=%q), got: %v", minRole, err)
+			t.Fatalf("system admin should bypass RequireOrgPermission(permKey=%q), got: %v", permKey, err)
 		}
 	})
 }
 
-func TestPreservation_SystemAdminBypass_TeamRole(t *testing.T) {
+func TestPreservation_SystemAdminBypass_TeamPermission(t *testing.T) {
 	rapid.Check(t, func(t *rapid.T) {
 		orgID := uuid.New()
 		teamID := uuid.New()
-		minOrgFallback := genOrgRole(t, "minOrgFallback")
-		minTeamRole := genTeamRole(t, "minTeamRole")
+		permKey := genPermissionKey(t, "permissionKey")
 
 		orgRepo := &mockOrgMembershipRepo{err: errors.New("not found")}
 		teamRepo := &mockTeamMembershipRepo{err: errors.New("not found")}
@@ -74,22 +71,21 @@ func TestPreservation_SystemAdminBypass_TeamRole(t *testing.T) {
 		}
 		r := makeRequest(uc)
 
-		err := checker.RequireTeamRole(r, orgID, teamID, minOrgFallback, minTeamRole)
+		err := checker.RequireTeamPermission(r, orgID, teamID, permKey)
 		if err != nil {
-			t.Fatalf("system admin should bypass RequireTeamRole(minOrgFallback=%q, minTeamRole=%q), got: %v",
-				minOrgFallback, minTeamRole, err)
+			t.Fatalf("system admin should bypass RequireTeamPermission(permKey=%q), got: %v", permKey, err)
 		}
 	})
 }
 
 // --- Sub-property 2b: Unauthenticated denial ---
 // For random org/team IDs, when request has no UserContext (nil),
-// both RequireOrgRole and RequireTeamRole return ErrUnauthorized.
+// both RequireOrgPermission and RequireTeamPermission return ErrUnauthorized.
 
-func TestPreservation_UnauthenticatedDenial_OrgRole(t *testing.T) {
+func TestPreservation_UnauthenticatedDenial_OrgPermission(t *testing.T) {
 	rapid.Check(t, func(t *rapid.T) {
 		orgID := uuid.New()
-		minRole := genOrgRole(t, "minRole")
+		permKey := genPermissionKey(t, "permissionKey")
 
 		orgRepo := &mockOrgMembershipRepo{}
 		teamRepo := &mockTeamMembershipRepo{}
@@ -98,19 +94,18 @@ func TestPreservation_UnauthenticatedDenial_OrgRole(t *testing.T) {
 		// No UserContext in request
 		r := makeRequest(nil)
 
-		err := checker.RequireOrgRole(r, orgID, minRole)
+		err := checker.RequireOrgPermission(r, orgID, permKey)
 		if err != ErrUnauthorized {
-			t.Fatalf("unauthenticated request should get ErrUnauthorized from RequireOrgRole, got: %v", err)
+			t.Fatalf("unauthenticated request should get ErrUnauthorized from RequireOrgPermission, got: %v", err)
 		}
 	})
 }
 
-func TestPreservation_UnauthenticatedDenial_TeamRole(t *testing.T) {
+func TestPreservation_UnauthenticatedDenial_TeamPermission(t *testing.T) {
 	rapid.Check(t, func(t *rapid.T) {
 		orgID := uuid.New()
 		teamID := uuid.New()
-		minOrgFallback := genOrgRole(t, "minOrgFallback")
-		minTeamRole := genTeamRole(t, "minTeamRole")
+		permKey := genPermissionKey(t, "permissionKey")
 
 		orgRepo := &mockOrgMembershipRepo{}
 		teamRepo := &mockTeamMembershipRepo{}
@@ -118,22 +113,22 @@ func TestPreservation_UnauthenticatedDenial_TeamRole(t *testing.T) {
 
 		r := makeRequest(nil)
 
-		err := checker.RequireTeamRole(r, orgID, teamID, minOrgFallback, minTeamRole)
+		err := checker.RequireTeamPermission(r, orgID, teamID, permKey)
 		if err != ErrUnauthorized {
-			t.Fatalf("unauthenticated request should get ErrUnauthorized from RequireTeamRole, got: %v", err)
+			t.Fatalf("unauthenticated request should get ErrUnauthorized from RequireTeamPermission, got: %v", err)
 		}
 	})
 }
 
 // --- Sub-property 2c: Non-member denial ---
-// When GetMembership returns error, RequireOrgRole returns ErrNotOrgMember.
+// When GetMembership returns error, RequireOrgPermission returns ErrNotOrgMember.
 // For team checks where both org fallback and team membership fail,
-// RequireTeamRole returns ErrNotTeamMember.
+// RequireTeamPermission returns ErrNotTeamMember.
 
-func TestPreservation_NonMemberDenial_OrgRole(t *testing.T) {
+func TestPreservation_NonMemberDenial_OrgPermission(t *testing.T) {
 	rapid.Check(t, func(t *rapid.T) {
 		orgID := uuid.New()
-		minRole := genOrgRole(t, "minRole")
+		permKey := genPermissionKey(t, "permissionKey")
 
 		// Org repo returns error (user not a member)
 		orgRepo := &mockOrgMembershipRepo{err: errors.New("not found")}
@@ -145,19 +140,18 @@ func TestPreservation_NonMemberDenial_OrgRole(t *testing.T) {
 		}
 		r := makeRequest(uc)
 
-		err := checker.RequireOrgRole(r, orgID, minRole)
+		err := checker.RequireOrgPermission(r, orgID, permKey)
 		if err != ErrNotOrgMember {
-			t.Fatalf("non-member should get ErrNotOrgMember from RequireOrgRole, got: %v", err)
+			t.Fatalf("non-member should get ErrNotOrgMember from RequireOrgPermission, got: %v", err)
 		}
 	})
 }
 
-func TestPreservation_NonMemberDenial_TeamRole(t *testing.T) {
+func TestPreservation_NonMemberDenial_TeamPermission(t *testing.T) {
 	rapid.Check(t, func(t *rapid.T) {
 		orgID := uuid.New()
 		teamID := uuid.New()
-		minOrgFallback := genOrgRole(t, "minOrgFallback")
-		minTeamRole := genTeamRole(t, "minTeamRole")
+		permKey := genPermissionKey(t, "permissionKey")
 
 		// Both org and team repos return errors (user not a member of either)
 		orgRepo := &mockOrgMembershipRepo{err: errors.New("not found")}
@@ -169,16 +163,16 @@ func TestPreservation_NonMemberDenial_TeamRole(t *testing.T) {
 		}
 		r := makeRequest(uc)
 
-		err := checker.RequireTeamRole(r, orgID, teamID, minOrgFallback, minTeamRole)
+		err := checker.RequireTeamPermission(r, orgID, teamID, permKey)
 		if err != ErrNotTeamMember {
-			t.Fatalf("non-member should get ErrNotTeamMember from RequireTeamRole, got: %v", err)
+			t.Fatalf("non-member should get ErrNotTeamMember from RequireTeamPermission, got: %v", err)
 		}
 	})
 }
 
 // --- Sub-property 2d: Org-level fallback for teams ---
-// When user is NOT a team member but IS an org admin/owner
-// (rank >= minOrgFallback rank), RequireTeamRole returns nil.
+// When user is NOT a team member but IS an org admin/owner (rank >= 2),
+// RequireTeamPermission returns nil (implicit access to all team operations).
 
 func TestPreservation_OrgFallbackForTeams(t *testing.T) {
 	rapid.Check(t, func(t *rapid.T) {
@@ -186,29 +180,29 @@ func TestPreservation_OrgFallbackForTeams(t *testing.T) {
 		orgID := uuid.New()
 		teamID := uuid.New()
 
-		// Pick an org role and a minOrgFallback such that the user's org rank >= fallback rank.
-		// We draw the user's org role, then pick a fallback role with rank <= user's rank.
-		userOrgRole := genOrgRole(t, "userOrgRole")
-		userRank := orgRank[userOrgRole]
+		// Pick an org role with rank >= 2 (admin or owner) for fallback
+		userOrgRole := rapid.SampledFrom([]string{OrgOwner, OrgAdmin}).Draw(t, "userOrgRole")
+		permKey := genPermissionKey(t, "permissionKey")
 
-		// Build list of valid fallback roles (those with rank <= userRank)
-		var validFallbacks []string
-		for role, rank := range orgRank {
-			if rank <= userRank {
-				validFallbacks = append(validFallbacks, role)
-			}
+		repo := &mockRolePermissionRepo{
+			orgRoles: []Role{
+				{Value: OrgOwner, Rank: 3, Permissions: []string{"org.view", "org.settings.manage"}},
+				{Value: OrgAdmin, Rank: 2, Permissions: []string{"org.view"}},
+				{Value: OrgMember, Rank: 1, Permissions: []string{"org.view"}},
+			},
+			teamRoles: []Role{
+				{Value: TeamLead, Rank: 2, Permissions: []string{"team.view", "team.webhooks.view"}},
+				{Value: TeamMember, Rank: 1, Permissions: []string{"team.view"}},
+				{Value: TeamViewer, Rank: 0, Permissions: []string{"team.view"}},
+			},
 		}
-		// Sort for determinism in rapid
-		if len(validFallbacks) == 0 {
-			// Should not happen since userRank >= 1 and OrgMember has rank 1
-			t.Skip("no valid fallback roles")
+
+		cache, err := NewPermissionCache(context.Background(), repo)
+		if err != nil {
+			t.Fatalf("failed to create permission cache: %v", err)
 		}
-		minOrgFallback := rapid.SampledFrom(validFallbacks).Draw(t, "minOrgFallback")
 
-		// Any team role for minTeamRole (doesn't matter since org fallback should kick in)
-		minTeamRole := genTeamRole(t, "minTeamRole")
-
-		// Org repo: user IS an org member with the drawn role
+		// Org repo: user IS an org member with admin or owner role
 		orgRepo := &mockOrgMembershipRepo{
 			membership: &domain.OrgMembership{
 				UserID: userID,
@@ -218,30 +212,47 @@ func TestPreservation_OrgFallbackForTeams(t *testing.T) {
 		}
 		// Team repo: user is NOT a team member
 		teamRepo := &mockTeamMembershipRepo{err: errors.New("not found")}
-		checker := NewChecker(orgRepo, teamRepo, nil)
+		checker := NewChecker(orgRepo, teamRepo, cache)
 
 		uc := &auth.UserContext{
 			UserID: userID,
 		}
 		r := makeRequest(uc)
 
-		err := checker.RequireTeamRole(r, orgID, teamID, minOrgFallback, minTeamRole)
+		err = checker.RequireTeamPermission(r, orgID, teamID, permKey)
 		if err != nil {
-			t.Fatalf("org fallback should grant access: userOrgRole=%q (rank %d) >= minOrgFallback=%q (rank %d), but got: %v",
-				userOrgRole, userRank, minOrgFallback, orgRank[minOrgFallback], err)
+			t.Fatalf("org fallback should grant access: userOrgRole=%q (rank >= 2) for permKey=%q, but got: %v",
+				userOrgRole, permKey, err)
 		}
 	})
 }
 
 // --- Sub-property 2e: Owner full access ---
-// For all minRole values {owner, admin, member}, when user has org role "owner",
-// RequireOrgRole returns nil.
+// For all permission keys, when user has org role "owner" with all permissions,
+// RequireOrgPermission returns nil.
 
 func TestPreservation_OwnerFullAccess(t *testing.T) {
 	rapid.Check(t, func(t *rapid.T) {
 		userID := uuid.New()
 		orgID := uuid.New()
-		minRole := genOrgRole(t, "minRole")
+		permKey := genPermissionKey(t, "permissionKey")
+
+		repo := &mockRolePermissionRepo{
+			orgRoles: []Role{
+				{Value: OrgOwner, Rank: 3, Permissions: []string{
+					"org.view", "org.settings.manage", "org.members.view", "org.domains.manage",
+					"team.view", "team.webhooks.view", "team.inboxes.view", "team.apikeys.view",
+				}},
+				{Value: OrgAdmin, Rank: 2, Permissions: []string{"org.view"}},
+				{Value: OrgMember, Rank: 1, Permissions: []string{"org.view"}},
+			},
+			teamRoles: []Role{},
+		}
+
+		cache, err := NewPermissionCache(context.Background(), repo)
+		if err != nil {
+			t.Fatalf("failed to create permission cache: %v", err)
+		}
 
 		orgRepo := &mockOrgMembershipRepo{
 			membership: &domain.OrgMembership{
@@ -251,25 +262,17 @@ func TestPreservation_OwnerFullAccess(t *testing.T) {
 			},
 		}
 		teamRepo := &mockTeamMembershipRepo{}
-		checker := NewChecker(orgRepo, teamRepo, nil)
+		checker := NewChecker(orgRepo, teamRepo, cache)
 
 		uc := &auth.UserContext{
 			UserID: userID,
 		}
 		r := makeRequest(uc)
 
-		err := checker.RequireOrgRole(r, orgID, minRole)
+		err = checker.RequireOrgPermission(r, orgID, permKey)
 		if err != nil {
-			t.Fatalf("owner should have full access for minRole=%q, but got: %v", minRole, err)
+			t.Fatalf("owner should have full access for permKey=%q, but got: %v", permKey, err)
 		}
 	})
 }
 
-// makeRequestWithUser is a helper that creates a request with a non-admin UserContext.
-// (Kept here for clarity; the main makeRequest from rbac_test.go is reused above.)
-func makeRequestWithUser(userID uuid.UUID) *http.Request {
-	uc := &auth.UserContext{
-		UserID: userID,
-	}
-	return makeRequest(uc)
-}
