@@ -509,6 +509,11 @@ func (s *AuthService) SSOLogin(ctx context.Context, result *domain.SSOCallbackRe
 				user.EmailVerified = true
 				_ = s.userRepo.Update(ctx, user)
 			}
+			// Update legacy sso_provider field so admin UI shows correct auth method
+			if user.SSOProvider == nil || *user.SSOProvider != result.Provider {
+				user.SSOProvider = &result.Provider
+				_ = s.userRepo.Update(ctx, user)
+			}
 		}
 	}
 
@@ -517,9 +522,11 @@ func (s *AuthService) SSOLogin(ctx context.Context, result *domain.SSOCallbackRe
 		var err error
 		user, err = s.userRepo.GetByEmail(ctx, email)
 		if err != nil {
-			// New user — create (without legacy SSO fields)
+			// New user — create with SSO provider info
+			provider := result.Provider
 			user = &domain.User{
 				ID: uuid.New(), Email: email, DisplayName: result.DisplayName,
+				SSOProvider:   &provider,
 				IsSystemAdmin: false, EmailVerified: true,
 				PasswordChangedAt: func() *time.Time { t := time.Now(); return &t }(),
 			}
@@ -535,6 +542,7 @@ func (s *AuthService) SSOLogin(ctx context.Context, result *domain.SSOCallbackRe
 			// The email from the SSO provider is verified by the provider (GitHub, Google, etc.),
 			// so it's safe to trust it as proof of identity.
 			user.EmailVerified = true
+			user.SSOProvider = &result.Provider
 			if err := s.userRepo.Update(ctx, user); err != nil {
 				return nil, nil, fmt.Errorf("link SSO: %w", err)
 			}
