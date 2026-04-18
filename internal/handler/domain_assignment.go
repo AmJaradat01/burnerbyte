@@ -126,7 +126,7 @@ func (h *DomainAssignmentHandler) UpdateAssignment(w http.ResponseWriter, r *htt
 
 	a, err := h.svc.UpdateAssignment(r.Context(), teamID, domainID, input)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 
@@ -159,7 +159,7 @@ func (h *DomainAssignmentHandler) Unassign(w http.ResponseWriter, r *http.Reques
 	// Look up assignment to get its ID for inbox count check
 	assignment, err := h.svc.GetByTeamAndDomain(r.Context(), teamID, domainID)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 
@@ -177,7 +177,7 @@ func (h *DomainAssignmentHandler) Unassign(w http.ResponseWriter, r *http.Reques
 	}
 
 	if err := h.svc.Unassign(r.Context(), teamID, domainID); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 	domainName := assignment.DomainName

@@ -79,7 +79,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusConflict, err.Error())
 			return
 		}
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 
@@ -166,7 +166,7 @@ func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 
 	userID, userEmail, err := h.svc.ResetPassword(r.Context(), input)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 
@@ -264,7 +264,7 @@ func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	// remains valid until expiry; the middleware's password_changed_at check
 	// ensures tokens issued before the change are rejected on next refresh.
 	if err := h.svc.ChangePassword(r.Context(), uc.UserID, input, uuid.Nil); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 
@@ -287,7 +287,7 @@ func (h *AuthHandler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.svc.DeleteAccount(r.Context(), uc.UserID, input.Password); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 
@@ -511,7 +511,7 @@ func (h *AuthHandler) SSOCallback(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if err := h.svc.LinkSSOIdentity(r.Context(), userID, result); err != nil {
-			writeError(w, http.StatusBadRequest, err.Error())
+			writeServiceError(w, err)
 			return
 		}
 		auditRecordEnhanced(r, uuid.Nil, "user.sso_linked", "user", userID, result.Email, map[string]any{
@@ -564,7 +564,7 @@ func (h *AuthHandler) UnlinkSSO(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.svc.UnlinkSSOIdentity(r.Context(), uc.UserID, provider); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 

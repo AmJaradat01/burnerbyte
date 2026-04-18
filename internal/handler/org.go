@@ -63,7 +63,7 @@ func (h *OrgHandler) CreateOrg(w http.ResponseWriter, r *http.Request) {
 
 	org, err := h.svc.CreateOrg(r.Context(), input, uc.UserID)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 
@@ -128,7 +128,7 @@ func (h *OrgHandler) UpdateOrg(w http.ResponseWriter, r *http.Request) {
 
 	org, err := h.svc.UpdateOrg(r.Context(), orgID, input)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 
@@ -209,7 +209,7 @@ func (h *OrgHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 
 	org, err := h.svc.UpdateSettings(r.Context(), orgID, settings)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 
@@ -258,7 +258,7 @@ func (h *OrgHandler) DirectAddMember(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusConflict, err.Error())
 			return
 		}
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 
@@ -291,7 +291,7 @@ func (h *OrgHandler) InviteMember(w http.ResponseWriter, r *http.Request) {
 
 	invite, err := h.svc.InviteMember(r.Context(), orgID, input, uc.UserID)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 
@@ -360,7 +360,7 @@ func (h *OrgHandler) ChangeRole(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.svc.ChangeRole(r.Context(), orgID, userID, input.Role); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 
@@ -393,7 +393,7 @@ func (h *OrgHandler) DeactivateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.svc.DeactivateUser(r.Context(), orgID, userID); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 
@@ -425,7 +425,7 @@ func (h *OrgHandler) RevokeInvite(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.svc.RevokeInvite(r.Context(), orgID, inviteID); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 	auditRecordEnhanced(r, orgID, "invite.revoked", "invite", inviteID, inviteEmail, map[string]any{"invite_id": inviteID.String(), "invite_email": inviteEmail})
@@ -443,7 +443,7 @@ func (h *OrgHandler) AcceptInvite(w http.ResponseWriter, r *http.Request) {
 		} else if err.Error() == "email mismatch: this invite was sent to a different email address" {
 			writeError(w, http.StatusForbidden, err.Error())
 		} else {
-			writeError(w, http.StatusBadRequest, err.Error())
+			writeServiceError(w, err)
 		}
 		return
 	}

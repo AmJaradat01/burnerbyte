@@ -47,7 +47,7 @@ func (h *WebhookHandler) Create(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid request body"); return
 	}
 	wh, err := h.svc.Create(r.Context(), teamID, uc.UserID, input)
-	if err != nil { writeError(w, http.StatusBadRequest, err.Error()); return }
+	if err != nil { writeServiceError(w, err); return }
 	auditRecordEnhanced(r, orgID, "webhook.created", "webhook", wh.ID, input.URL, map[string]any{"url": input.URL})
 	writeJSON(w, http.StatusCreated, wh)
 }
@@ -95,7 +95,7 @@ func (h *WebhookHandler) Update(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid request body"); return
 	}
 	wh, err := h.svc.Update(r.Context(), teamID, id, input)
-	if err != nil { writeError(w, http.StatusBadRequest, err.Error()); return }
+	if err != nil { writeServiceError(w, err); return }
 
 	meta := map[string]any{"url": input.URL, "events": input.Events, "active": input.Active}
 	if beforeWh != nil {
