@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"github.com/google/uuid"
 
@@ -66,5 +67,22 @@ func auditRecord(r *http.Request, orgID uuid.UUID, action, resourceType string, 
 func auditRecordEnhanced(r *http.Request, orgID uuid.UUID, action, resourceType string, resourceID uuid.UUID, resourceName string, meta map[string]any) {
 	if Audit != nil {
 		Audit.RecordEnhanced(r, orgID, action, resourceType, resourceID, resourceName, meta)
+	}
+}
+
+// writeServiceError maps common service-layer error messages to appropriate HTTP status codes.
+// It checks for known error patterns (forbidden, not found, conflict) and falls back to 400
+// for validation-like errors. Use this instead of writeError(w, http.StatusBadRequest, err.Error()).
+func writeServiceError(w http.ResponseWriter, err error) {
+	msg := err.Error()
+	switch {
+	case strings.Contains(msg, "forbidden"):
+		writeError(w, http.StatusForbidden, msg)
+	case strings.Contains(msg, "not found"):
+		writeError(w, http.StatusNotFound, msg)
+	case strings.Contains(msg, "already taken") || strings.Contains(msg, "already exists") || strings.Contains(msg, "already assigned"):
+		writeError(w, http.StatusConflict, msg)
+	default:
+		writeError(w, http.StatusBadRequest, msg)
 	}
 }

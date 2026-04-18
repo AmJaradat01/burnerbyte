@@ -53,7 +53,7 @@ func (h *TeamHandler) CreateTeam(w http.ResponseWriter, r *http.Request) {
 	}
 	result, err := h.svc.CreateTeam(r.Context(), orgID, input, uc.UserID)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 	auditRecordEnhanced(r, orgID, "team.created", "team", result.Team.ID, result.Team.Name, map[string]any{"name": result.Team.Name})
@@ -153,7 +153,7 @@ func (h *TeamHandler) UpdateTeam(w http.ResponseWriter, r *http.Request) {
 	}
 	team, err := h.svc.UpdateTeam(r.Context(), orgID, id, input)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 	meta := map[string]any{"name": input.Name}
@@ -274,7 +274,7 @@ func (h *TeamHandler) ChangeRole(w http.ResponseWriter, r *http.Request) {
 		oldRole = membership.Role
 	}
 	if err := h.svc.ChangeRole(r.Context(), teamID, userID, input.Role); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 	teamName := ""
@@ -306,7 +306,7 @@ func (h *TeamHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.svc.RemoveMember(r.Context(), teamID, userID); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 	teamName := ""
@@ -342,7 +342,7 @@ func (h *TeamHandler) ArchiveTeam(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusNotFound, "team not found")
 			return
 		}
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 	auditRecordEnhanced(r, orgID, "team.archived", "team", teamID, team.Name, map[string]any{"team_name": team.Name})
@@ -369,7 +369,7 @@ func (h *TeamHandler) RestoreTeam(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusNotFound, "team not found")
 			return
 		}
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 	auditRecordEnhanced(r, orgID, "team.restored", "team", teamID, team.Name, map[string]any{"team_name": team.Name})
@@ -418,7 +418,7 @@ func (h *TeamHandler) LeaveTeam(w http.ResponseWriter, r *http.Request) {
 	}
 	uc := auth.GetUser(r.Context())
 	if err := h.svc.LeaveTeam(r.Context(), orgID, teamID, uc.UserID); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 	teamName := ""
@@ -453,7 +453,7 @@ func (h *TeamHandler) BulkAddMembers(w http.ResponseWriter, r *http.Request) {
 	}
 	result, err := h.svc.BulkAddMembers(r.Context(), teamID, input.Members)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 	teamName := ""
@@ -488,7 +488,7 @@ func (h *TeamHandler) BulkRemoveMembers(w http.ResponseWriter, r *http.Request) 
 	}
 	result, err := h.svc.BulkRemoveMembers(r.Context(), teamID, input.UserIDs)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 	teamName := ""
@@ -521,7 +521,7 @@ func (h *TeamHandler) TransferTeam(w http.ResponseWriter, r *http.Request) {
 	}
 	result, err := h.svc.TransferTeam(r.Context(), orgID, teamID, input.TargetOrgID)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 	// Audit in source org
