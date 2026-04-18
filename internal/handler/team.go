@@ -10,7 +10,6 @@ import (
 	"github.com/google/uuid"
 
 	"gitlab.com/burnerbyte/burnerbyte/internal/auth"
-	"gitlab.com/burnerbyte/burnerbyte/internal/auth/rbac"
 	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
 	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
 	"gitlab.com/burnerbyte/burnerbyte/internal/service"
@@ -43,7 +42,7 @@ func (h *TeamHandler) CreateTeam(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid org ID")
 		return
 	}
-	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+	if checkOrgPermission(w, r, orgID, "org.teams.create") {
 		return
 	}
 	var input domain.CreateTeamInput
@@ -66,7 +65,7 @@ func (h *TeamHandler) ListTeams(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid org ID")
 		return
 	}
-	if checkOrgRole(w, r, orgID, rbac.OrgMember) {
+	if checkOrgPermission(w, r, orgID, "org.view") {
 		return
 	}
 
@@ -84,12 +83,15 @@ func (h *TeamHandler) ListTeams(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Check if user is admin/owner - if not, filter by membership
+	// Check if user is admin/owner using permission cache rank instead of hardcoded role string comparison
 	isAdmin := uc.IsSystemAdmin
-	if !isAdmin {
+	if !isAdmin && RBAC != nil && RBAC.Cache() != nil {
 		membership, err := RBAC.GetOrgRole(r.Context(), uc.UserID, orgID)
-		if err == nil && (membership == rbac.OrgOwner || membership == rbac.OrgAdmin) {
-			isAdmin = true
+		if err == nil {
+			rank := RBAC.Cache().GetRank(membership)
+			if rank >= 2 { // admin rank or higher
+				isAdmin = true
+			}
 		}
 	}
 
@@ -119,7 +121,7 @@ func (h *TeamHandler) GetTeam(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid team ID")
 		return
 	}
-	if checkTeamRole(w, r, orgID, id, rbac.OrgMember, rbac.TeamViewer) {
+	if checkTeamPermission(w, r, orgID, id, "team.view") {
 		return
 	}
 	detail, err := h.svc.GetTeamDetail(r.Context(), orgID, id)
@@ -141,7 +143,7 @@ func (h *TeamHandler) UpdateTeam(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid team ID")
 		return
 	}
-	if checkTeamRole(w, r, orgID, id, rbac.OrgAdmin, rbac.TeamLead) {
+	if checkTeamPermission(w, r, orgID, id, "team.settings.manage") {
 		return
 	}
 	beforeTeam, _ := h.svc.GetTeam(r.Context(), orgID, id)
@@ -172,7 +174,7 @@ func (h *TeamHandler) DeleteTeam(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid team ID")
 		return
 	}
-	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+	if checkOrgPermission(w, r, orgID, "org.teams.delete") {
 		return
 	}
 	beforeTeam, _ := h.svc.GetTeam(r.Context(), orgID, id)
@@ -195,7 +197,7 @@ func (h *TeamHandler) AddMember(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid team ID")
 		return
 	}
-	if checkTeamRole(w, r, orgID, teamID, rbac.OrgAdmin, rbac.TeamLead) {
+	if checkTeamPermission(w, r, orgID, teamID, "team.members.manage") {
 		return
 	}
 	var input domain.AddTeamMemberInput
@@ -231,7 +233,7 @@ func (h *TeamHandler) ListMembers(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid team ID")
 		return
 	}
-	if checkTeamRole(w, r, orgID, teamID, rbac.OrgMember, rbac.TeamViewer) {
+	if checkTeamPermission(w, r, orgID, teamID, "team.members.view") {
 		return
 	}
 	page, perPage := parsePagination(r)
@@ -256,12 +258,16 @@ func (h *TeamHandler) ChangeRole(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid team ID")
 		return
 	}
-	if checkTeamRole(w, r, orgID, teamID, rbac.OrgAdmin, rbac.TeamLead) {
+	if checkTeamPermission(w, r, orgID, teamID, "team.members.role") {
 		return
 	}
 	userID, err := uuid.Parse(chi.URLParam(r, "userId"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid user ID")
+		return
+	}
+	// Self-protection: prevent modifying users at the same or higher rank
+	if checkTeamRankAbove(w, r, teamID, userID) {
 		return
 	}
 	var input domain.ChangeTeamRoleInput
@@ -297,7 +303,7 @@ func (h *TeamHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid team ID")
 		return
 	}
-	if checkTeamRole(w, r, orgID, teamID, rbac.OrgAdmin, rbac.TeamLead) {
+	if checkTeamPermission(w, r, orgID, teamID, "team.members.manage") {
 		return
 	}
 	userID, err := uuid.Parse(chi.URLParam(r, "userId"))
@@ -333,7 +339,7 @@ func (h *TeamHandler) ArchiveTeam(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid team ID")
 		return
 	}
-	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+	if checkOrgPermission(w, r, orgID, "org.teams.manage") {
 		return
 	}
 	team, err := h.svc.ArchiveTeam(r.Context(), orgID, teamID)
@@ -360,7 +366,7 @@ func (h *TeamHandler) RestoreTeam(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid team ID")
 		return
 	}
-	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+	if checkOrgPermission(w, r, orgID, "org.teams.manage") {
 		return
 	}
 	team, err := h.svc.RestoreTeam(r.Context(), orgID, teamID)
@@ -387,7 +393,7 @@ func (h *TeamHandler) GetImpact(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid team ID")
 		return
 	}
-	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+	if checkOrgPermission(w, r, orgID, "org.teams.manage") {
 		return
 	}
 	impact, err := h.svc.GetImpact(r.Context(), orgID, teamID)
@@ -413,7 +419,7 @@ func (h *TeamHandler) LeaveTeam(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid team ID")
 		return
 	}
-	if checkTeamRole(w, r, orgID, teamID, rbac.OrgMember, rbac.TeamViewer) {
+	if checkTeamPermission(w, r, orgID, teamID, "team.view") {
 		return
 	}
 	uc := auth.GetUser(r.Context())
@@ -443,7 +449,7 @@ func (h *TeamHandler) BulkAddMembers(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid team ID")
 		return
 	}
-	if checkTeamRole(w, r, orgID, teamID, rbac.OrgAdmin, rbac.TeamLead) {
+	if checkTeamPermission(w, r, orgID, teamID, "team.members.manage") {
 		return
 	}
 	var input domain.BulkAddMembersInput
@@ -478,7 +484,7 @@ func (h *TeamHandler) BulkRemoveMembers(w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusBadRequest, "invalid team ID")
 		return
 	}
-	if checkTeamRole(w, r, orgID, teamID, rbac.OrgAdmin, rbac.TeamLead) {
+	if checkTeamPermission(w, r, orgID, teamID, "team.members.manage") {
 		return
 	}
 	var input domain.BulkRemoveMembersInput

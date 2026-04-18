@@ -140,12 +140,20 @@ func main() {
 	emailSvc := service.NewEmailService(emailRepo, inboxRepo, attachmentRepo, emailAttachmentCleaner)
 	webhookSvc := service.NewWebhookService(webhookRepo)
 	webhookDispatcher := webhook.NewDispatcher(webhookRepo, cfg.Defaults.WebhookTimeout, cfg.Defaults.WebhookMaxRetries)
-	apikeySvc := service.NewAPIKeyService(apikeyRepo)
+	// Permission cache & RBAC
+	roleRepo := postgres.NewRoleRepo(pool)
+	roleAdapter := &roleRepoAdapter{repo: roleRepo}
+	permCache, err := rbac.NewPermissionCache(ctx, roleAdapter)
+	if err != nil {
+		slog.Error("failed to initialize permission cache", "error", err)
+		os.Exit(1)
+	}
+	apikeySvc := service.NewAPIKeyService(apikeyRepo, service.WithScopesProvider(permCache.TeamPermissionKeys))
 	auditSvc := service.NewAuditService(auditRepo)
 	analyticsSvc := service.NewAnalyticsService(analyticsRepo)
 
 	// RBAC & Audit
-	handler.InitRBAC(rbac.NewChecker(orgRepo, teamRepo))
+	handler.InitRBAC(rbac.NewChecker(orgRepo, teamRepo, permCache))
 	handler.InitAudit(audit.NewRecorder(auditSvc))
 	handler.InitWebhookDispatch(webhookDispatcher)
 
@@ -225,7 +233,6 @@ func main() {
 		r.Get("/invites/{token}/preview", orgHandler.PreviewInvite)
 
 		// Roles (public — returns role definitions from DB)
-		roleRepo := postgres.NewRoleRepo(pool)
 		r.Get("/roles", func(w http.ResponseWriter, r *http.Request) {
 			orgRoles, _ := roleRepo.ListRoles(r.Context(), "org")
 			teamRoles, _ := roleRepo.ListRoles(r.Context(), "team")
@@ -440,6 +447,10 @@ func main() {
 						json.NewEncoder(w).Encode(map[string]string{"error": "failed to update permissions"})
 						return
 					}
+					// Refresh permission cache after role permission changes
+					if err := handler.RBAC.RefreshCache(r.Context()); err != nil {
+						slog.Error("failed to refresh permission cache", "error", err)
+					}
 				}
 
 				afterLabel := input.Label
@@ -496,6 +507,10 @@ func main() {
 				}
 				if len(input.Permissions) > 0 {
 					_ = roleRepo.SetRolePermissions(r.Context(), role.ID, input.Permissions)
+					// Refresh permission cache after new role with permissions
+					if err := handler.RBAC.RefreshCache(r.Context()); err != nil {
+						slog.Error("failed to refresh permission cache", "error", err)
+					}
 				}
 				handler.Audit.RecordEnhanced(r, uuid.Nil, "admin.role_created", "role", role.ID, input.Label, map[string]any{
 					"scope": input.Scope, "value": input.Value, "label": input.Label, "permissions": input.Permissions,
@@ -721,4 +736,25 @@ func requestLogger(logger *slog.Logger) func(http.Handler) http.Handler {
 			)
 		})
 	}
+}
+
+// roleRepoAdapter adapts postgres.RoleRepo to the rbac.RolePermissionRepo interface.
+type roleRepoAdapter struct {
+	repo *postgres.RoleRepo
+}
+
+func (a *roleRepoAdapter) ListRoles(ctx context.Context, scope string) ([]rbac.Role, error) {
+	pgRoles, err := a.repo.ListRoles(ctx, scope)
+	if err != nil {
+		return nil, err
+	}
+	roles := make([]rbac.Role, len(pgRoles))
+	for i, r := range pgRoles {
+		roles[i] = rbac.Role{
+			Value:       r.Value,
+			Rank:        r.Rank,
+			Permissions: r.Permissions,
+		}
+	}
+	return roles, nil
 }

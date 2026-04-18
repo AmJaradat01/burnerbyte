@@ -45,10 +45,11 @@ function actionDotColor(action: string): string {
 
 export default function DashboardPage() {
   const org = useOrgStore((s) => s.currentOrg);
-  const currentRole = useOrgStore((s) => s.currentRole);
   const user = useAuthStore((s) => s.user);
 
-  const isAdmin = currentRole === "owner" || currentRole === "admin" || user?.is_system_admin;
+  const { hasPermission } = useOrgStore();
+
+  const isAdmin = hasPermission("org.analytics.view") || user?.is_system_admin;
 
   const greeting = (() => {
     const h = new Date().getHours();

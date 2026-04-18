@@ -10,7 +10,6 @@ import (
 	"github.com/google/uuid"
 
 	"gitlab.com/burnerbyte/burnerbyte/internal/auth"
-	"gitlab.com/burnerbyte/burnerbyte/internal/auth/rbac"
 	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
 	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
 	"gitlab.com/burnerbyte/burnerbyte/internal/service"
@@ -42,7 +41,7 @@ func (h *DomainHandler) CreateDomain(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid org ID")
 		return
 	}
-	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+	if checkOrgPermission(w, r, orgID, "org.domains.manage") {
 		return
 	}
 
@@ -72,7 +71,7 @@ func (h *DomainHandler) ListDomains(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid org ID")
 		return
 	}
-	if checkOrgRole(w, r, orgID, rbac.OrgMember) {
+	if checkOrgPermission(w, r, orgID, "org.domains.view") {
 		return
 	}
 
@@ -104,7 +103,7 @@ func (h *DomainHandler) GetDomain(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid org ID")
 		return
 	}
-	if checkOrgRole(w, r, orgID, rbac.OrgMember) {
+	if checkOrgPermission(w, r, orgID, "org.domains.view") {
 		return
 	}
 	id, err := uuid.Parse(chi.URLParam(r, "domainId"))
@@ -135,7 +134,7 @@ func (h *DomainHandler) UpdateDomain(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid org ID")
 		return
 	}
-	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+	if checkOrgPermission(w, r, orgID, "org.domains.manage") {
 		return
 	}
 	id, err := uuid.Parse(chi.URLParam(r, "domainId"))
@@ -184,7 +183,7 @@ func (h *DomainHandler) DeleteDomain(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid org ID")
 		return
 	}
-	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+	if checkOrgPermission(w, r, orgID, "org.domains.manage") {
 		return
 	}
 	id, err := uuid.Parse(chi.URLParam(r, "domainId"))
@@ -226,7 +225,7 @@ func (h *DomainHandler) VerifyDomain(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid org ID")
 		return
 	}
-	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+	if checkOrgPermission(w, r, orgID, "org.domains.manage") {
 		return
 	}
 	id, err := uuid.Parse(chi.URLParam(r, "domainId"))
@@ -251,7 +250,7 @@ func (h *DomainHandler) GetDomainImpact(w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusBadRequest, "invalid org ID")
 		return
 	}
-	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+	if checkOrgPermission(w, r, orgID, "org.domains.manage") {
 		return
 	}
 	domainID, err := uuid.Parse(chi.URLParam(r, "domainId"))
@@ -303,7 +302,7 @@ func (h *DomainHandler) GetVerificationHistory(w http.ResponseWriter, r *http.Re
 		writeError(w, http.StatusBadRequest, "invalid org ID")
 		return
 	}
-	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+	if checkOrgPermission(w, r, orgID, "org.domains.manage") {
 		return
 	}
 	domainID, err := uuid.Parse(chi.URLParam(r, "domainId"))
@@ -336,7 +335,7 @@ func (h *DomainHandler) BulkVerify(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid org ID")
 		return
 	}
-	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+	if checkOrgPermission(w, r, orgID, "org.domains.manage") {
 		return
 	}
 
@@ -374,7 +373,7 @@ func (h *DomainHandler) BulkDelete(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid org ID")
 		return
 	}
-	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+	if checkOrgPermission(w, r, orgID, "org.domains.manage") {
 		return
 	}
 

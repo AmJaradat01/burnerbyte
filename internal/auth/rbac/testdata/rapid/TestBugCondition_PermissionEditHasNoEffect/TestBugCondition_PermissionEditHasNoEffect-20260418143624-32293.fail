@@ -1,0 +1,16 @@
+# 2026/04/18 14:36:24.412411 [TestBugCondition_PermissionEditHasNoEffect] [rapid] draw permissionKey: "org.a.a"
+# 2026/04/18 14:36:24.412416 [TestBugCondition_PermissionEditHasNoEffect] permission key "org.a.a" is never checked by the rank-based RBAC checker — RequireOrgRole and RequireTeamRole only compare hardcoded rank integers, confirming that admin UI permission edits have zero effect on enforcement
+# 
+v0.4.8#6814603446420973134
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0

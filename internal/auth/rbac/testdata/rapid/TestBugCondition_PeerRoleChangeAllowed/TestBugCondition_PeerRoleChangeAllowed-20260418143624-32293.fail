@@ -1,0 +1,3 @@
+# 2026/04/18 14:36:24.411002 [TestBugCondition_PeerRoleChangeAllowed] peer role change should be denied: actor rank (2) <= target rank (2), but no self-protection check exists in the current code
+# 
+v0.4.8#13960455332237754664

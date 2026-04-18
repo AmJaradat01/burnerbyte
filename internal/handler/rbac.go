@@ -31,6 +31,7 @@ type webhookDispatcher interface {
 func InitWebhookDispatch(d webhookDispatcher) { WebhookDispatch = d }
 
 // checkOrgRole returns true if the RBAC check fails (and writes the error response).
+// Deprecated: use checkOrgPermission instead.
 func checkOrgRole(w http.ResponseWriter, r *http.Request, orgID uuid.UUID, minRole string) bool {
 	if RBAC == nil {
 		writeError(w, http.StatusInternalServerError, "RBAC not initialized")
@@ -44,12 +45,67 @@ func checkOrgRole(w http.ResponseWriter, r *http.Request, orgID uuid.UUID, minRo
 }
 
 // checkTeamRole returns true if the RBAC check fails (and writes the error response).
+// Deprecated: use checkTeamPermission instead.
 func checkTeamRole(w http.ResponseWriter, r *http.Request, orgID, teamID uuid.UUID, minOrgFallback, minTeamRole string) bool {
 	if RBAC == nil {
 		writeError(w, http.StatusInternalServerError, "RBAC not initialized")
 		return true
 	}
 	if err := RBAC.RequireTeamRole(r, orgID, teamID, minOrgFallback, minTeamRole); err != nil {
+		writeError(w, http.StatusForbidden, err.Error())
+		return true
+	}
+	return false
+}
+
+// checkOrgPermission returns true if the permission check fails (and writes the error response).
+func checkOrgPermission(w http.ResponseWriter, r *http.Request, orgID uuid.UUID, permissionKey string) bool {
+	if RBAC == nil {
+		writeError(w, http.StatusInternalServerError, "RBAC not initialized")
+		return true
+	}
+	if err := RBAC.RequireOrgPermission(r, orgID, permissionKey); err != nil {
+		writeError(w, http.StatusForbidden, err.Error())
+		return true
+	}
+	return false
+}
+
+// checkTeamPermission returns true if the permission check fails (and writes the error response).
+func checkTeamPermission(w http.ResponseWriter, r *http.Request, orgID, teamID uuid.UUID, permissionKey string) bool {
+	if RBAC == nil {
+		writeError(w, http.StatusInternalServerError, "RBAC not initialized")
+		return true
+	}
+	if err := RBAC.RequireTeamPermission(r, orgID, teamID, permissionKey); err != nil {
+		writeError(w, http.StatusForbidden, err.Error())
+		return true
+	}
+	return false
+}
+
+// checkOrgRankAbove returns true if the rank check fails (and writes the error response).
+// Used for self-protection on org role change operations.
+func checkOrgRankAbove(w http.ResponseWriter, r *http.Request, orgID, targetUserID uuid.UUID) bool {
+	if RBAC == nil {
+		writeError(w, http.StatusInternalServerError, "RBAC not initialized")
+		return true
+	}
+	if err := RBAC.RequireRankAbove(r, orgID, targetUserID); err != nil {
+		writeError(w, http.StatusForbidden, err.Error())
+		return true
+	}
+	return false
+}
+
+// checkTeamRankAbove returns true if the rank check fails (and writes the error response).
+// Used for self-protection on team role change operations.
+func checkTeamRankAbove(w http.ResponseWriter, r *http.Request, teamID, targetUserID uuid.UUID) bool {
+	if RBAC == nil {
+		writeError(w, http.StatusInternalServerError, "RBAC not initialized")
+		return true
+	}
+	if err := RBAC.RequireTeamRankAbove(r, teamID, targetUserID); err != nil {
 		writeError(w, http.StatusForbidden, err.Error())
 		return true
 	}
