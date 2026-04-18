@@ -4,7 +4,8 @@ import { useState, useCallback, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useInboxSocket } from "@/hooks/use-inbox-socket";
+import { useInboxSocket, type SocketStatus } from "@/hooks/use-inbox-socket";
+import { useDebounce } from "@/hooks/use-debounce";
 import { copyToClipboard } from "@/lib/clipboard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +15,7 @@ import { EmailList } from "@/components/inbox/email-list";
 import { EmailPreview } from "@/components/inbox/email-preview";
 import { InboxEmptyPreview } from "@/components/inbox/inbox-empty-preview";
 import {
-  ArrowLeft, Check, Clock, Copy, Mail, MailOpen, CheckCheck, Timer, Trash2,
+  ArrowLeft, Check, Clock, Copy, Mail, MailOpen, CheckCheck, Timer, Trash2, Wifi, WifiOff,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { EmailSummary, Email, Inbox, PaginatedResponse } from "@/types";
@@ -67,6 +68,36 @@ function Countdown({ expiresAt }: { expiresAt: string }) {
   );
 }
 
+/* ── WebSocket status indicator ── */
+
+function SocketIndicator({ status }: { status: SocketStatus }) {
+  if (status === "connected") {
+    return (
+      <span className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400" title="Live — listening for new emails">
+        <span className="relative flex h-1.5 w-1.5">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+        </span>
+        <Wifi className="h-3 w-3" />
+      </span>
+    );
+  }
+  if (status === "connecting") {
+    return (
+      <span className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400" title="Connecting…">
+        <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+        <Wifi className="h-3 w-3 opacity-50" />
+      </span>
+    );
+  }
+  return (
+    <span className="flex items-center gap-1 text-xs text-muted-foreground" title="Disconnected — reconnecting…">
+      <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50" />
+      <WifiOff className="h-3 w-3 opacity-50" />
+    </span>
+  );
+}
+
 /* ── Main page ── */
 
 export default function InboxDetailPage() {
@@ -75,6 +106,7 @@ export default function InboxDetailPage() {
   const qc = useQueryClient();
   const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 300);
   const [page, setPage] = useState(1);
   const [copied, setCopied] = useState(false);
 
@@ -98,10 +130,10 @@ export default function InboxDetailPage() {
   }, [inboxError, router]);
 
   const { data: emailsData, isLoading: emailsLoading, isError: emailsError, refetch: refetchEmails } = useQuery({
-    queryKey: ["emails", id, search, page],
+    queryKey: ["emails", id, debouncedSearch, page],
     queryFn: () => {
       const params: Record<string, string> = { page: String(page), per_page: "30" };
-      if (search) params.q = search;
+      if (debouncedSearch) params.q = debouncedSearch;
       return api.get<PaginatedResponse<EmailSummary>>(`/inboxes/${id}/emails`, params);
     },
   });
@@ -160,7 +192,7 @@ export default function InboxDetailPage() {
     toast.info("📬 New email received!");
   }, [qc, id]);
 
-  useInboxSocket(id, onNewEmail);
+  const socketStatus = useInboxSocket(id, onNewEmail);
 
   /* Keyboard navigation */
   useEffect(() => {
@@ -236,6 +268,7 @@ export default function InboxDetailPage() {
                         <Badge variant={inbox?.is_active ? "default" : "secondary"} className="text-[10px] px-1.5 py-0">
                           {inbox?.is_active ? "Active" : "Expired"}
                         </Badge>
+                        <SocketIndicator status={socketStatus} />
                       </div>
                     </div>
                   </div>
