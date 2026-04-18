@@ -37,7 +37,6 @@ func (h *OrgHandler) Routes(r chi.Router) {
 	r.Post("/orgs/{orgId}/members", h.InviteMember)
 	r.Get("/orgs/{orgId}/members", h.ListMembers)
 	r.Patch("/orgs/{orgId}/members/{userId}", h.ChangeRole)
-	r.Delete("/orgs/{orgId}/members/{userId}", h.RemoveMember)
 	r.Post("/orgs/{orgId}/invites", h.InviteMember)
 	r.Get("/orgs/{orgId}/invites", h.ListPendingInvites)
 	r.Delete("/orgs/{orgId}/invites/{inviteId}", h.RevokeInvite)
@@ -368,44 +367,6 @@ func (h *OrgHandler) ChangeRole(w http.ResponseWriter, r *http.Request) {
 	meta := map[string]any{"old_role": oldRole, "new_role": input.Role, "target_user_id": userID.String(), "target_user_email": targetEmail}
 	auditRecordEnhanced(r, orgID, "member.role_changed", "org", userID, targetEmail, meta)
 	writeJSON(w, http.StatusOK, map[string]string{"message": "role updated"})
-}
-
-func (h *OrgHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
-	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid org ID")
-		return
-	}
-	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
-		return
-	}
-	userID, err := uuid.Parse(chi.URLParam(r, "userId"))
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid user ID")
-		return
-	}
-
-	// Fetch target user info before removal
-	targetEmail := ""
-	meta := map[string]any{"user_id": userID.String()}
-	if membership, err := h.svc.GetMembership(r.Context(), userID, orgID); err == nil {
-		targetEmail = membership.Email
-		meta["target_user_email"] = membership.Email
-		meta["target_user_display_name"] = membership.DisplayName
-	}
-	orgName := ""
-	if org, err := h.svc.GetOrg(r.Context(), orgID); err == nil && org != nil {
-		orgName = org.Name
-	}
-	meta["org_name"] = orgName
-
-	if err := h.svc.RemoveMember(r.Context(), orgID, userID); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	auditRecordEnhanced(r, orgID, "member.removed", "org", userID, targetEmail, meta)
-	writeJSON(w, http.StatusOK, map[string]string{"message": "member removed"})
 }
 
 func (h *OrgHandler) DeactivateUser(w http.ResponseWriter, r *http.Request) {
