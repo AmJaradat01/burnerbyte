@@ -153,6 +153,7 @@ func main() {
 	analyticsSvc := service.NewAnalyticsService(analyticsRepo)
 
 	// RBAC & Audit
+	rbac.SetDefaultCache(permCache)
 	handler.InitRBAC(rbac.NewChecker(orgRepo, teamRepo, permCache))
 	handler.InitAudit(audit.NewRecorder(auditSvc))
 	handler.InitWebhookDispatch(webhookDispatcher)
