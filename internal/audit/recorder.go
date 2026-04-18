@@ -33,6 +33,7 @@ var SeverityMap = map[string]string{
 	"team.transferred":                "critical",
 	// warning
 	"member.removed":              "warning",
+	"member.deactivated":          "warning",
 	"member.invited":              "warning",
 	"team.deleted":                "warning",
 	"team.archived":               "warning",
@@ -88,6 +89,7 @@ var CategoryMap = map[string]string{
 	"member.invited":      "member",
 	"member.role_changed": "member",
 	"member.removed":      "member",
+	"member.deactivated":  "member",
 	"invite.revoked":      "member",
 	"invite.accepted":     "member",
 	// team

@@ -267,6 +267,7 @@ func main() {
 			r.Get("/orgs/{orgId}/members/search", orgHandler.SearchMembers)
 			r.Patch("/orgs/{orgId}/members/{userId}", orgHandler.ChangeRole)
 			r.Delete("/orgs/{orgId}/members/{userId}", orgHandler.RemoveMember)
+			r.Post("/orgs/{orgId}/members/{userId}/deactivate", orgHandler.DeactivateUser)
 			r.Post("/orgs/{orgId}/invites", orgHandler.InviteMember)
 			r.Get("/orgs/{orgId}/invites", orgHandler.ListPendingInvites)
 			r.Delete("/orgs/{orgId}/invites/{inviteId}", orgHandler.RevokeInvite)
