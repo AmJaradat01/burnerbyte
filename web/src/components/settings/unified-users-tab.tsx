@@ -112,9 +112,13 @@ export function UnifiedUsersTab({ orgId }: { orgId: string }) {
     onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
   });
 
-  const removeMember = useMutation({
-    mutationFn: (userId: string) => api.del(`/orgs/${orgId}/members/${userId}`),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["org-members"] }); qc.invalidateQueries({ queryKey: ["admin-users"] }); toast.success("Removed from organization"); },
+  const deactivateUser = useMutation({
+    mutationFn: async (userId: string) => {
+      await api.post(`/orgs/${orgId}/members/${userId}/deactivate`);
+      // Also revoke all sessions so they're logged out immediately
+      try { await api.del(`/admin/users/${userId}/sessions`); } catch {}
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["org-members"] }); qc.invalidateQueries({ queryKey: ["admin-users"] }); toast.success("User deactivated"); },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
   });
 
@@ -231,10 +235,10 @@ export function UnifiedUsersTab({ orgId }: { orgId: string }) {
                           <div className="flex items-center justify-end gap-1">
                             {!isYou && u.org_role && canInvite && (
                               <ConfirmDialog
-                                trigger={<Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-orange-500" title="Remove from org"><XCircle className="h-3.5 w-3.5" /></Button>}
-                                title="Remove from organization?"
-                                description={`${u.display_name || u.email} will lose access to this organization.`}
-                                onConfirm={() => removeMember.mutate(u.id)}
+                                trigger={<Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-orange-500" title="Deactivate user"><XCircle className="h-3.5 w-3.5" /></Button>}
+                                title="Deactivate user?"
+                                description={`${u.display_name || u.email} will be removed from the organization and all teams. Their sessions will be revoked. The account will be preserved for audit purposes.`}
+                                onConfirm={() => deactivateUser.mutate(u.id)}
                               />
                             )}
                             {!isYou && isAdmin && (
