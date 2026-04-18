@@ -408,6 +408,40 @@ func (h *OrgHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"message": "member removed"})
 }
 
+func (h *OrgHandler) DeactivateUser(w http.ResponseWriter, r *http.Request) {
+	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid org ID")
+		return
+	}
+	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+		return
+	}
+	userID, err := uuid.Parse(chi.URLParam(r, "userId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid user ID")
+		return
+	}
+
+	// Fetch user info for audit before deactivation
+	targetEmail := ""
+	targetDisplayName := ""
+	if membership, err := h.svc.GetMembership(r.Context(), userID, orgID); err == nil {
+		targetEmail = membership.Email
+		targetDisplayName = membership.DisplayName
+	}
+
+	if err := h.svc.DeactivateUser(r.Context(), orgID, userID); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	auditRecordEnhanced(r, orgID, "member.deactivated", "org", userID, targetEmail, map[string]any{
+		"user_id": userID.String(), "email": targetEmail, "display_name": targetDisplayName,
+	})
+	writeJSON(w, http.StatusOK, map[string]string{"message": "user deactivated"})
+}
+
 func (h *OrgHandler) RevokeInvite(w http.ResponseWriter, r *http.Request) {
 	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
 	if err != nil {
