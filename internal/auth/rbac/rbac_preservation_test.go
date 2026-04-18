@@ -193,7 +193,6 @@ func TestPreservation_OrgFallbackForTeams(t *testing.T) {
 			teamRoles: []Role{
 				{Value: TeamLead, Rank: 2, Permissions: []string{"team.view", "team.webhooks.view"}},
 				{Value: TeamMember, Rank: 1, Permissions: []string{"team.view"}},
-				{Value: TeamViewer, Rank: 0, Permissions: []string{"team.view"}},
 			},
 		}
 

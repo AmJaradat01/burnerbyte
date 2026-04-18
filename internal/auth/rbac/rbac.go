@@ -19,7 +19,6 @@ const (
 
 	TeamLead   = "lead"
 	TeamMember = "member"
-	TeamViewer = "viewer"
 )
 
 // defaultCache is a package-level reference to the permission cache,
@@ -45,7 +44,7 @@ func ValidTeamRole(role string) bool {
 		return defaultCache.HasRole(role)
 	}
 	// Fallback for tests without cache
-	return role == TeamLead || role == TeamMember || role == TeamViewer
+	return role == TeamLead || role == TeamMember
 }
 
 // ── Repository interfaces ──

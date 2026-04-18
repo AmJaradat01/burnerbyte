@@ -135,9 +135,9 @@ func TestFixVerification_CustomRoleWithPermission(t *testing.T) {
 	}
 }
 
-// --- Test Case: Viewer can read team resources via RequireTeamPermission ---
+// --- Test Case: Member can read team resources via RequireTeamPermission ---
 
-func TestFixVerification_ViewerCanReadTeamResources(t *testing.T) {
+func TestFixVerification_MemberCanReadTeamResources(t *testing.T) {
 	userID := uuid.New()
 	orgID := uuid.New()
 	teamID := uuid.New()
@@ -148,8 +148,7 @@ func TestFixVerification_ViewerCanReadTeamResources(t *testing.T) {
 		},
 		teamRoles: []Role{
 			{Value: "lead", Rank: 2, Permissions: []string{"team.webhooks.view", "team.webhooks.manage"}},
-			{Value: "member", Rank: 1, Permissions: []string{"team.webhooks.view"}},
-			{Value: "viewer", Rank: 0, Permissions: []string{"team.webhooks.view", "team.view", "team.inboxes.view"}},
+			{Value: "member", Rank: 1, Permissions: []string{"team.webhooks.view", "team.view", "team.inboxes.view"}},
 		},
 	}
 
@@ -167,12 +166,12 @@ func TestFixVerification_ViewerCanReadTeamResources(t *testing.T) {
 		},
 	}
 
-	// Team membership: viewer role
+	// Team membership: member role with view permissions
 	teamRepo := &mockTeamMembershipRepo{
 		membership: &domain.TeamMembership{
 			UserID: userID,
 			TeamID: teamID,
-			Role:   "viewer",
+			Role:   "member",
 		},
 	}
 
@@ -181,10 +180,10 @@ func TestFixVerification_ViewerCanReadTeamResources(t *testing.T) {
 	uc := &auth.UserContext{UserID: userID}
 	r := makeRequest(uc)
 
-	// RequireTeamPermission should grant access because "viewer" has "team.webhooks.view"
+	// RequireTeamPermission should grant access because "member" has "team.webhooks.view"
 	err = checker.RequireTeamPermission(r, orgID, teamID, "team.webhooks.view")
 	if err != nil {
-		t.Fatalf("viewer with team.webhooks.view permission should be granted access, but got: %v", err)
+		t.Fatalf("member with team.webhooks.view permission should be granted access, but got: %v", err)
 	}
 }
 
