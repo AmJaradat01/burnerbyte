@@ -273,23 +273,6 @@ func (s *OrgService) ChangeRole(ctx context.Context, orgID, targetUserID uuid.UU
 	return s.orgRepo.UpdateMemberRole(ctx, targetUserID, orgID, role)
 }
 
-func (s *OrgService) RemoveMember(ctx context.Context, orgID, targetUserID uuid.UUID) error {
-	m, err := s.orgRepo.GetMembership(ctx, targetUserID, orgID)
-	if err != nil {
-		return err
-	}
-	if m.Role == rbac.OrgOwner {
-		count, err := s.orgRepo.CountOwners(ctx, orgID)
-		if err != nil {
-			return err
-		}
-		if count <= 1 {
-			return fmt.Errorf("cannot remove the last owner")
-		}
-	}
-	return s.orgRepo.DeleteMembership(ctx, targetUserID, orgID)
-}
-
 // DeactivateUser removes a user from the org, all teams, and revokes sessions.
 // The user account is preserved for audit trail purposes.
 func (s *OrgService) DeactivateUser(ctx context.Context, orgID, targetUserID uuid.UUID) error {
