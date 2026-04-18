@@ -7,49 +7,61 @@ import (
 	"pgregory.net/rapid"
 )
 
-// Feature: enhanced-api-keys, Property 1: Scope Map Completeness
+// Feature: enhanced-api-keys, Property 1: Scope Validation via Provider
 // Validates: Requirements 1.3
 //
-// For any scope string in the defined set, legacyScopes returns true.
-// For any string not in this set, legacyScopes returns false.
-func TestProperty_ScopeMapCompleteness(t *testing.T) {
+// Scope validation now uses a dynamic provider. These tests verify the
+// isValidScope method works correctly with a configured provider.
+func TestProperty_ScopeValidationViaProvider(t *testing.T) {
 	knownScopes := []string{
-		"inbox:create", "inbox:read", "inbox:write", "inbox:delete",
-		"email:read", "email:write", "email:delete",
-		"webhook:read", "webhook:write",
+		"team.inboxes.view", "team.inboxes.create", "team.emails.view",
+		"team.webhooks.view", "team.webhooks.manage",
+		"team.apikeys.view", "team.apikeys.manage",
+		"team.domains.view", "team.domains.manage",
 	}
 
-	// Sub-test: all known valid scopes are present in the map
-	t.Run("valid_scopes_return_true", func(t *testing.T) {
+	scopeSet := make(map[string]bool, len(knownScopes))
+	for _, s := range knownScopes {
+		scopeSet[s] = true
+	}
+
+	svc := NewAPIKeyService(nil, WithScopesProvider(func() []string {
+		return knownScopes
+	}))
+
+	// Sub-test: all known valid scopes are accepted
+	t.Run("valid_scopes_accepted", func(t *testing.T) {
 		rapid.Check(t, func(t *rapid.T) {
 			scope := rapid.SampledFrom(knownScopes).Draw(t, "scope")
-			if !legacyScopes[scope] {
-				t.Fatalf("expected legacyScopes[%q] to be true, got false", scope)
+			if !svc.isValidScope(scope) {
+				t.Fatalf("expected scope %q to be valid, got false", scope)
 			}
 		})
 	})
 
 	// Sub-test: random strings that are NOT in the known set return false
-	t.Run("invalid_scopes_return_false", func(t *testing.T) {
+	t.Run("invalid_scopes_rejected", func(t *testing.T) {
 		rapid.Check(t, func(t *rapid.T) {
 			s := rapid.String().Draw(t, "randomString")
 			// Skip if the random string happens to be a valid scope
-			for _, vs := range knownScopes {
-				if s == vs {
-					return
-				}
+			if scopeSet[s] {
+				return
 			}
-			if legacyScopes[s] {
-				t.Fatalf("expected legacyScopes[%q] to be false, got true", s)
+			if svc.isValidScope(s) {
+				t.Fatalf("expected scope %q to be invalid, got true", s)
 			}
 		})
 	})
 
-	// Sub-test: the map contains exactly 9 entries
-	t.Run("map_has_exactly_nine_entries", func(t *testing.T) {
-		if len(legacyScopes) != 9 {
-			t.Fatalf("expected legacyScopes to have 9 entries, got %d", len(legacyScopes))
-		}
+	// Sub-test: without a provider, all scopes are rejected
+	t.Run("no_provider_rejects_all", func(t *testing.T) {
+		svcNoProvider := NewAPIKeyService(nil)
+		rapid.Check(t, func(t *rapid.T) {
+			scope := rapid.SampledFrom(knownScopes).Draw(t, "scope")
+			if svcNoProvider.isValidScope(scope) {
+				t.Fatalf("expected scope %q to be rejected without provider, got true", scope)
+			}
+		})
 	})
 }
 
@@ -57,20 +69,30 @@ func TestProperty_ScopeMapCompleteness(t *testing.T) {
 // Validates: Requirements 4.3, 4.4
 //
 // For any set of scope strings provided during create or update,
-// if all scopes are in the legacyScopes map the operation succeeds.
-// If any scope is not in the map, the operation fails with an error
+// if all scopes are recognized by the provider the operation succeeds.
+// If any scope is not recognized, the operation fails with an error
 // identifying the invalid scope.
 func TestProperty_ScopeValidationOnMutation(t *testing.T) {
 	knownScopes := []string{
-		"inbox:create", "inbox:read", "inbox:write", "inbox:delete",
-		"email:read", "email:write", "email:delete",
-		"webhook:read", "webhook:write",
+		"team.inboxes.view", "team.inboxes.create", "team.emails.view",
+		"team.webhooks.view", "team.webhooks.manage",
+		"team.apikeys.view", "team.apikeys.manage",
+		"team.domains.view", "team.domains.manage",
 	}
+
+	scopeSet := make(map[string]bool, len(knownScopes))
+	for _, s := range knownScopes {
+		scopeSet[s] = true
+	}
+
+	svc := NewAPIKeyService(nil, WithScopesProvider(func() []string {
+		return knownScopes
+	}))
 
 	// validateScopesLocal mirrors the inline validation logic used in Generate and Update.
 	validateScopesLocal := func(scopes []string) error {
 		for _, sc := range scopes {
-			if !legacyScopes[sc] {
+			if !svc.isValidScope(sc) {
 				return fmt.Errorf("invalid scope: %s", sc)
 			}
 		}
@@ -80,7 +102,7 @@ func TestProperty_ScopeValidationOnMutation(t *testing.T) {
 	// Helper: returns true if every element in the slice is a valid scope.
 	allValid := func(scopes []string) bool {
 		for _, sc := range scopes {
-			if !legacyScopes[sc] {
+			if !scopeSet[sc] {
 				return false
 			}
 		}
@@ -90,7 +112,7 @@ func TestProperty_ScopeValidationOnMutation(t *testing.T) {
 	// Helper: returns the first invalid scope in the slice, or "" if all valid.
 	firstInvalid := func(scopes []string) string {
 		for _, sc := range scopes {
-			if !legacyScopes[sc] {
+			if !scopeSet[sc] {
 				return sc
 			}
 		}
@@ -111,7 +133,7 @@ func TestProperty_ScopeValidationOnMutation(t *testing.T) {
 	invalidScopeGen := func(t *rapid.T) string {
 		for {
 			s := rapid.StringMatching(`[a-z:_]{1,30}`).Draw(t, "invalidScope")
-			if !legacyScopes[s] {
+			if !scopeSet[s] {
 				return s
 			}
 		}
