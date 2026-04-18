@@ -93,7 +93,11 @@ func (h *InboxHandler) ListMyInboxes(w http.ResponseWriter, r *http.Request) {
 	if status == "" { status = "active" }
 	inboxes, total, err := h.svc.ListByUserWithStatus(r.Context(), uc.UserID, status, page, perPage)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list inboxes")
+		if strings.Contains(err.Error(), "forbidden") {
+			writeError(w, http.StatusForbidden, err.Error())
+		} else {
+			writeError(w, http.StatusInternalServerError, "failed to list inboxes")
+		}
 		return
 	}
 	writeJSON(w, http.StatusOK, paginatedResponse(inboxes, total, page, perPage))
@@ -119,7 +123,11 @@ func (h *InboxHandler) ListInboxes(w http.ResponseWriter, r *http.Request) {
 	if status == "" { status = "active" }
 	inboxes, total, err := h.svc.ListByTeamWithStatus(r.Context(), teamID, uc.UserID, status, page, perPage)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list inboxes")
+		if strings.Contains(err.Error(), "forbidden") {
+			writeError(w, http.StatusForbidden, err.Error())
+		} else {
+			writeError(w, http.StatusInternalServerError, "failed to list inboxes")
+		}
 		return
 	}
 	writeJSON(w, http.StatusOK, paginatedResponse(inboxes, total, page, perPage))

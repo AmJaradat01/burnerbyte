@@ -74,11 +74,6 @@ func (r *InboxRepo) GetByFullAddress(ctx context.Context, addr string) (*domain.
 	return &i, nil
 }
 
-func (r *InboxRepo) ListByUser(ctx context.Context, userID uuid.UUID, page, perPage int) ([]domain.Inbox, int, error) {
-	status := "active" // default kept for backward compat
-	return r.listByUser(ctx, userID, status, page, perPage)
-}
-
 func (r *InboxRepo) ListByUserWithStatus(ctx context.Context, userID uuid.UUID, status string, page, perPage int) ([]domain.Inbox, int, error) {
 	return r.listByUser(ctx, userID, status, page, perPage)
 }
