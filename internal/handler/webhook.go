@@ -8,7 +8,6 @@ import (
 	"github.com/google/uuid"
 
 	"gitlab.com/burnerbyte/burnerbyte/internal/auth"
-	"gitlab.com/burnerbyte/burnerbyte/internal/auth/rbac"
 	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
 	"gitlab.com/burnerbyte/burnerbyte/internal/service"
 )
@@ -31,7 +30,7 @@ func (h *WebhookHandler) Routes(r chi.Router) {
 
 func (h *WebhookHandler) Create(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
-	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "webhook:write") {
+	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "team.webhooks.manage") {
 		writeError(w, http.StatusForbidden, "insufficient scope")
 		return
 	}
@@ -39,7 +38,7 @@ func (h *WebhookHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if err != nil { writeError(w, http.StatusBadRequest, "invalid org ID"); return }
 	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
 	if err != nil { writeError(w, http.StatusBadRequest, "invalid team ID"); return }
-	if checkTeamRole(w, r, orgID, teamID, rbac.OrgAdmin, rbac.TeamLead) {
+	if checkTeamPermission(w, r, orgID, teamID, "team.webhooks.manage") {
 		return
 	}
 	var input domain.CreateWebhookInput
@@ -54,7 +53,7 @@ func (h *WebhookHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 func (h *WebhookHandler) List(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
-	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "webhook:read") {
+	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "team.webhooks.view") {
 		writeError(w, http.StatusForbidden, "insufficient scope")
 		return
 	}
@@ -62,7 +61,7 @@ func (h *WebhookHandler) List(w http.ResponseWriter, r *http.Request) {
 	if err != nil { writeError(w, http.StatusBadRequest, "invalid org ID"); return }
 	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
 	if err != nil { writeError(w, http.StatusBadRequest, "invalid team ID"); return }
-	if checkTeamRole(w, r, orgID, teamID, rbac.OrgMember, rbac.TeamMember) {
+	if checkTeamPermission(w, r, orgID, teamID, "team.webhooks.view") {
 		return
 	}
 	page, perPage := parsePagination(r)
@@ -73,7 +72,7 @@ func (h *WebhookHandler) List(w http.ResponseWriter, r *http.Request) {
 
 func (h *WebhookHandler) Update(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
-	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "webhook:write") {
+	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "team.webhooks.manage") {
 		writeError(w, http.StatusForbidden, "insufficient scope")
 		return
 	}
@@ -81,7 +80,7 @@ func (h *WebhookHandler) Update(w http.ResponseWriter, r *http.Request) {
 	if err != nil { writeError(w, http.StatusBadRequest, "invalid org ID"); return }
 	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
 	if err != nil { writeError(w, http.StatusBadRequest, "invalid team ID"); return }
-	if checkTeamRole(w, r, orgID, teamID, rbac.OrgAdmin, rbac.TeamLead) {
+	if checkTeamPermission(w, r, orgID, teamID, "team.webhooks.manage") {
 		return
 	}
 	id, err := uuid.Parse(chi.URLParam(r, "webhookId"))
@@ -108,7 +107,7 @@ func (h *WebhookHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 func (h *WebhookHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
-	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "webhook:write") {
+	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "team.webhooks.manage") {
 		writeError(w, http.StatusForbidden, "insufficient scope")
 		return
 	}
@@ -116,7 +115,7 @@ func (h *WebhookHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	if err != nil { writeError(w, http.StatusBadRequest, "invalid org ID"); return }
 	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
 	if err != nil { writeError(w, http.StatusBadRequest, "invalid team ID"); return }
-	if checkTeamRole(w, r, orgID, teamID, rbac.OrgAdmin, rbac.TeamLead) {
+	if checkTeamPermission(w, r, orgID, teamID, "team.webhooks.manage") {
 		return
 	}
 	id, err := uuid.Parse(chi.URLParam(r, "webhookId"))
@@ -139,7 +138,7 @@ func (h *WebhookHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 func (h *WebhookHandler) ListDeliveryLogs(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
-	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "webhook:read") {
+	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "team.webhooks.view") {
 		writeError(w, http.StatusForbidden, "insufficient scope")
 		return
 	}
@@ -147,7 +146,7 @@ func (h *WebhookHandler) ListDeliveryLogs(w http.ResponseWriter, r *http.Request
 	if err != nil { writeError(w, http.StatusBadRequest, "invalid org ID"); return }
 	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
 	if err != nil { writeError(w, http.StatusBadRequest, "invalid team ID"); return }
-	if checkTeamRole(w, r, orgID, teamID, rbac.OrgMember, rbac.TeamMember) {
+	if checkTeamPermission(w, r, orgID, teamID, "team.webhooks.view") {
 		return
 	}
 	webhookID, err := uuid.Parse(chi.URLParam(r, "webhookId"))

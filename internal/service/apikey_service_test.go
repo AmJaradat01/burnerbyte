@@ -10,8 +10,8 @@ import (
 // Feature: enhanced-api-keys, Property 1: Scope Map Completeness
 // Validates: Requirements 1.3
 //
-// For any scope string in the defined set, validScopes returns true.
-// For any string not in this set, validScopes returns false.
+// For any scope string in the defined set, legacyScopes returns true.
+// For any string not in this set, legacyScopes returns false.
 func TestProperty_ScopeMapCompleteness(t *testing.T) {
 	knownScopes := []string{
 		"inbox:create", "inbox:read", "inbox:write", "inbox:delete",
@@ -23,8 +23,8 @@ func TestProperty_ScopeMapCompleteness(t *testing.T) {
 	t.Run("valid_scopes_return_true", func(t *testing.T) {
 		rapid.Check(t, func(t *rapid.T) {
 			scope := rapid.SampledFrom(knownScopes).Draw(t, "scope")
-			if !validScopes[scope] {
-				t.Fatalf("expected validScopes[%q] to be true, got false", scope)
+			if !legacyScopes[scope] {
+				t.Fatalf("expected legacyScopes[%q] to be true, got false", scope)
 			}
 		})
 	})
@@ -39,16 +39,16 @@ func TestProperty_ScopeMapCompleteness(t *testing.T) {
 					return
 				}
 			}
-			if validScopes[s] {
-				t.Fatalf("expected validScopes[%q] to be false, got true", s)
+			if legacyScopes[s] {
+				t.Fatalf("expected legacyScopes[%q] to be false, got true", s)
 			}
 		})
 	})
 
 	// Sub-test: the map contains exactly 9 entries
 	t.Run("map_has_exactly_nine_entries", func(t *testing.T) {
-		if len(validScopes) != 9 {
-			t.Fatalf("expected validScopes to have 9 entries, got %d", len(validScopes))
+		if len(legacyScopes) != 9 {
+			t.Fatalf("expected legacyScopes to have 9 entries, got %d", len(legacyScopes))
 		}
 	})
 }
@@ -57,7 +57,7 @@ func TestProperty_ScopeMapCompleteness(t *testing.T) {
 // Validates: Requirements 4.3, 4.4
 //
 // For any set of scope strings provided during create or update,
-// if all scopes are in the validScopes map the operation succeeds.
+// if all scopes are in the legacyScopes map the operation succeeds.
 // If any scope is not in the map, the operation fails with an error
 // identifying the invalid scope.
 func TestProperty_ScopeValidationOnMutation(t *testing.T) {
@@ -70,7 +70,7 @@ func TestProperty_ScopeValidationOnMutation(t *testing.T) {
 	// validateScopesLocal mirrors the inline validation logic used in Generate and Update.
 	validateScopesLocal := func(scopes []string) error {
 		for _, sc := range scopes {
-			if !validScopes[sc] {
+			if !legacyScopes[sc] {
 				return fmt.Errorf("invalid scope: %s", sc)
 			}
 		}
@@ -80,7 +80,7 @@ func TestProperty_ScopeValidationOnMutation(t *testing.T) {
 	// Helper: returns true if every element in the slice is a valid scope.
 	allValid := func(scopes []string) bool {
 		for _, sc := range scopes {
-			if !validScopes[sc] {
+			if !legacyScopes[sc] {
 				return false
 			}
 		}
@@ -90,7 +90,7 @@ func TestProperty_ScopeValidationOnMutation(t *testing.T) {
 	// Helper: returns the first invalid scope in the slice, or "" if all valid.
 	firstInvalid := func(scopes []string) string {
 		for _, sc := range scopes {
-			if !validScopes[sc] {
+			if !legacyScopes[sc] {
 				return sc
 			}
 		}
@@ -111,7 +111,7 @@ func TestProperty_ScopeValidationOnMutation(t *testing.T) {
 	invalidScopeGen := func(t *rapid.T) string {
 		for {
 			s := rapid.StringMatching(`[a-z:_]{1,30}`).Draw(t, "invalidScope")
-			if !validScopes[s] {
+			if !legacyScopes[s] {
 				return s
 			}
 		}

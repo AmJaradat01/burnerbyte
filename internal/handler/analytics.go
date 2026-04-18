@@ -7,7 +7,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
-	"gitlab.com/burnerbyte/burnerbyte/internal/auth/rbac"
 	"gitlab.com/burnerbyte/burnerbyte/internal/service"
 )
 
@@ -36,7 +35,7 @@ func (h *AnalyticsHandler) OrgAnalytics(w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusBadRequest, "invalid org id")
 		return
 	}
-	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+	if checkOrgPermission(w, r, orgID, "org.analytics.view") {
 		return
 	}
 	stats, err := h.svc.GetOrgAnalytics(r.Context(), orgID)
@@ -53,7 +52,7 @@ func (h *AnalyticsHandler) OrgEmailsPerDay(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusBadRequest, "invalid org id")
 		return
 	}
-	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+	if checkOrgPermission(w, r, orgID, "org.analytics.view") {
 		return
 	}
 	days := h.defaultDays
@@ -74,7 +73,7 @@ func (h *AnalyticsHandler) OrgInsights(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid org id")
 		return
 	}
-	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+	if checkOrgPermission(w, r, orgID, "org.analytics.view") {
 		return
 	}
 	days := h.defaultDays
@@ -114,7 +113,7 @@ func (h *AnalyticsHandler) TeamAnalytics(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusBadRequest, "invalid team id")
 		return
 	}
-	if checkTeamRole(w, r, orgID, teamID, rbac.OrgMember, rbac.TeamMember) {
+	if checkTeamPermission(w, r, orgID, teamID, "team.analytics.view") {
 		return
 	}
 	stats, err := h.svc.GetTeamAnalytics(r.Context(), teamID)
@@ -136,7 +135,7 @@ func (h *AnalyticsHandler) TeamEmailsPerDay(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusBadRequest, "invalid team id")
 		return
 	}
-	if checkTeamRole(w, r, orgID, teamID, rbac.OrgMember, rbac.TeamMember) {
+	if checkTeamPermission(w, r, orgID, teamID, "team.analytics.view") {
 		return
 	}
 	days := h.defaultDays

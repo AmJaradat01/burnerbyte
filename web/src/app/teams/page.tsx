@@ -34,7 +34,7 @@ interface DomainAssignment {
 }
 
 export default function TeamsPage() {
-  const { currentOrg, currentRole } = useOrgStore();
+  const { currentOrg, currentRole, hasPermission } = useOrgStore();
   const { user } = useAuthStore();
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
 
@@ -47,7 +47,7 @@ export default function TeamsPage() {
   if (!currentOrg) return <p className="text-muted-foreground">Select an organization first.</p>;
 
   const isOrgMember = !!currentRole;
-  const isAdmin = currentRole === "owner" || currentRole === "admin" || user?.is_system_admin;
+  const isAdmin = hasPermission("org.teams.create") || user?.is_system_admin;
   if (!isOrgMember) return <div className="flex items-center justify-center min-h-[50vh]"><p className="text-muted-foreground">You don&apos;t have permission to access this page.</p></div>;
 
   // Team detail view
