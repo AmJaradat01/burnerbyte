@@ -60,7 +60,7 @@ function exportCSV(entries: AuditEntry[]) {
 }
 
 export default function AuditPage() {
-  const { currentOrg, currentRole } = useOrgStore();
+  const { currentOrg, currentRole, hasPermission } = useOrgStore();
   const { user } = useAuthStore();
   const [action, setAction] = useState("");
   const [resource, setResource] = useState("");
@@ -110,7 +110,7 @@ export default function AuditPage() {
 
   if (!currentOrg) return <p className="text-muted-foreground">Select an organization first.</p>;
 
-  const isAdmin = currentRole === "owner" || currentRole === "admin" || user?.is_system_admin;
+  const isAdmin = hasPermission("org.audit.view") || user?.is_system_admin;
   if (!isAdmin) return <div className="flex items-center justify-center min-h-[50vh]"><p className="text-muted-foreground">You don&apos;t have permission to access this page.</p></div>;
 
   return (

@@ -58,9 +58,10 @@ func applyUpdate(original domain.APIKey, input domain.UpdateAPIKeyInput) domain.
 
 // validScopes mirrors the service-layer valid scopes for generator use.
 var testValidScopes = []string{
-	"inbox:create", "inbox:read", "inbox:write", "inbox:delete",
-	"email:read", "email:write", "email:delete",
-	"webhook:read", "webhook:write",
+	"team.inboxes.create", "team.inboxes.view", "team.emails.view",
+	"team.webhooks.view", "team.webhooks.manage",
+	"team.apikeys.view", "team.apikeys.manage",
+	"team.domains.view", "team.domains.manage",
 }
 
 // genBaseAPIKey generates a random valid APIKey with realistic field values.
@@ -1075,22 +1076,22 @@ var endpointScopeMapping = []struct {
 	RequiredScope string
 }{
 	// Inbox endpoints
-	{"InboxCreate", "inbox:create"},
-	{"InboxListMyInboxes", "inbox:read"},
-	{"InboxGetInbox", "inbox:read"},
-	{"InboxDelete", "inbox:delete"},
+	{"InboxCreate", "team.inboxes.create"},
+	{"InboxListMyInboxes", "team.inboxes.view"},
+	{"InboxGetInbox", "team.inboxes.view"},
+	{"InboxDelete", "team.inboxes.view"},
 	// Email endpoints
-	{"EmailListEmails", "email:read"},
-	{"EmailGetEmail", "email:read"},
-	{"EmailMarkAllRead", "email:write"},
-	{"EmailMarkReadUnread", "email:write"},
-	{"EmailDeleteEmail", "email:delete"},
+	{"EmailListEmails", "team.emails.view"},
+	{"EmailGetEmail", "team.emails.view"},
+	{"EmailMarkAllRead", "team.emails.view"},
+	{"EmailMarkReadUnread", "team.emails.view"},
+	{"EmailDeleteEmail", "team.emails.view"},
 	// Webhook endpoints
-	{"WebhookCreate", "webhook:write"},
-	{"WebhookUpdate", "webhook:write"},
-	{"WebhookDelete", "webhook:write"},
-	{"WebhookList", "webhook:read"},
-	{"WebhookListDeliveryLogs", "webhook:read"},
+	{"WebhookCreate", "team.webhooks.manage"},
+	{"WebhookUpdate", "team.webhooks.manage"},
+	{"WebhookDelete", "team.webhooks.manage"},
+	{"WebhookList", "team.webhooks.view"},
+	{"WebhookListDeliveryLogs", "team.webhooks.view"},
 }
 
 // scopeEnforcementCheck mirrors the handler-level scope guard pattern:
