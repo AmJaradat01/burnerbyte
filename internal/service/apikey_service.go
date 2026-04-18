@@ -39,13 +39,6 @@ func WithScopesProvider(provider ValidScopesProvider) func(*APIKeyService) {
 	}
 }
 
-// validScopes is the legacy hardcoded scope set, kept as fallback.
-var legacyScopes = map[string]bool{
-	"inbox:create": true, "inbox:read": true, "inbox:write": true, "inbox:delete": true,
-	"email:read": true, "email:write": true, "email:delete": true,
-	"webhook:read": true, "webhook:write": true,
-}
-
 func (s *APIKeyService) isValidScope(scope string) bool {
 	if s.scopesProvider != nil {
 		for _, valid := range s.scopesProvider() {
@@ -53,10 +46,8 @@ func (s *APIKeyService) isValidScope(scope string) bool {
 				return true
 			}
 		}
-		return false
 	}
-	// Fallback to legacy scopes
-	return legacyScopes[scope]
+	return false
 }
 
 // ValidateIPs validates that each entry is a valid IPv4, IPv6, or CIDR string.

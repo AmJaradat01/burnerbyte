@@ -32,7 +32,7 @@ func (h *EmailHandler) Routes(r chi.Router) {
 
 func (h *EmailHandler) ListEmails(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
-	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "email:read") {
+	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "team.emails.view") {
 		writeError(w, http.StatusForbidden, "insufficient scope")
 		return
 	}
@@ -76,7 +76,7 @@ func (h *EmailHandler) ListEmails(w http.ResponseWriter, r *http.Request) {
 
 func (h *EmailHandler) GetEmail(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
-	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "email:read") {
+	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "team.emails.view") {
 		writeError(w, http.StatusForbidden, "insufficient scope")
 		return
 	}
@@ -99,7 +99,7 @@ func (h *EmailHandler) GetEmail(w http.ResponseWriter, r *http.Request) {
 
 func (h *EmailHandler) MarkAllRead(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
-	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "email:write") {
+	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "team.emails.view") {
 		writeError(w, http.StatusForbidden, "insufficient scope")
 		return
 	}
@@ -135,7 +135,7 @@ func (h *EmailHandler) MarkAllRead(w http.ResponseWriter, r *http.Request) {
 
 func (h *EmailHandler) MarkReadUnread(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
-	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "email:write") {
+	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "team.emails.view") {
 		writeError(w, http.StatusForbidden, "insufficient scope")
 		return
 	}
@@ -164,7 +164,7 @@ func (h *EmailHandler) MarkReadUnread(w http.ResponseWriter, r *http.Request) {
 
 func (h *EmailHandler) DeleteEmail(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
-	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "email:delete") {
+	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "team.emails.view") {
 		writeError(w, http.StatusForbidden, "insufficient scope")
 		return
 	}
