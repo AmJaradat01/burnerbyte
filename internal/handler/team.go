@@ -69,6 +69,8 @@ func (h *TeamHandler) ListTeams(w http.ResponseWriter, r *http.Request) {
 	if checkOrgRole(w, r, orgID, rbac.OrgMember) {
 		return
 	}
+
+	uc := auth.GetUser(r.Context())
 	page, perPage := parsePagination(r)
 	opts := postgres.ListTeamsOpts{
 		Page:    page,
@@ -81,12 +83,33 @@ func (h *TeamHandler) ListTeams(w http.ResponseWriter, r *http.Request) {
 			opts.IsArchived = &val
 		}
 	}
-	teams, total, err := h.svc.ListByOrg(r.Context(), orgID, opts)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list teams")
-		return
+
+	// Check if user is admin/owner - if not, filter by membership
+	isAdmin := uc.IsSystemAdmin
+	if !isAdmin {
+		membership, err := RBAC.GetOrgRole(r.Context(), uc.UserID, orgID)
+		if err == nil && (membership == rbac.OrgOwner || membership == rbac.OrgAdmin) {
+			isAdmin = true
+		}
 	}
-	writeJSON(w, http.StatusOK, paginatedResponse(teams, total, page, perPage))
+
+	if isAdmin {
+		// Admins see all teams
+		teams, total, err := h.svc.ListByOrg(r.Context(), orgID, opts)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to list teams")
+			return
+		}
+		writeJSON(w, http.StatusOK, paginatedResponse(teams, total, page, perPage))
+	} else {
+		// Normal members see only their teams
+		teams, total, err := h.svc.ListByUserMembership(r.Context(), orgID, uc.UserID, opts)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to list teams")
+			return
+		}
+		writeJSON(w, http.StatusOK, paginatedResponse(teams, total, page, perPage))
+	}
 }
 
 func (h *TeamHandler) GetTeam(w http.ResponseWriter, r *http.Request) {

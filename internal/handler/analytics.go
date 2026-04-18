@@ -36,7 +36,7 @@ func (h *AnalyticsHandler) OrgAnalytics(w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusBadRequest, "invalid org id")
 		return
 	}
-	if checkOrgRole(w, r, orgID, rbac.OrgMember) {
+	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
 		return
 	}
 	stats, err := h.svc.GetOrgAnalytics(r.Context(), orgID)
@@ -53,7 +53,7 @@ func (h *AnalyticsHandler) OrgEmailsPerDay(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusBadRequest, "invalid org id")
 		return
 	}
-	if checkOrgRole(w, r, orgID, rbac.OrgMember) {
+	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
 		return
 	}
 	days := h.defaultDays
@@ -74,7 +74,7 @@ func (h *AnalyticsHandler) OrgInsights(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid org id")
 		return
 	}
-	if checkOrgRole(w, r, orgID, rbac.OrgMember) {
+	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
 		return
 	}
 	days := h.defaultDays
