@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -44,9 +45,17 @@ func (h *EmailHandler) ListEmails(w http.ResponseWriter, r *http.Request) {
 
 	q := r.URL.Query().Get("q")
 	if q != "" {
+		if len(q) > 200 {
+			writeError(w, http.StatusBadRequest, "search query too long (max 200 characters)")
+			return
+		}
 		emails, total, err := h.svc.Search(r.Context(), inboxID, uc.UserID, q, page, perPage)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, err.Error())
+			if strings.Contains(err.Error(), "forbidden") {
+				writeError(w, http.StatusForbidden, err.Error())
+			} else {
+				writeError(w, http.StatusInternalServerError, err.Error())
+			}
 			return
 		}
 		writeJSON(w, http.StatusOK, paginatedResponse(emails, total, page, perPage))
@@ -55,7 +64,11 @@ func (h *EmailHandler) ListEmails(w http.ResponseWriter, r *http.Request) {
 
 	emails, total, err := h.svc.ListByInbox(r.Context(), inboxID, uc.UserID, page, perPage)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		if strings.Contains(err.Error(), "forbidden") {
+			writeError(w, http.StatusForbidden, err.Error())
+		} else {
+			writeError(w, http.StatusInternalServerError, err.Error())
+		}
 		return
 	}
 	writeJSON(w, http.StatusOK, paginatedResponse(emails, total, page, perPage))
@@ -97,7 +110,11 @@ func (h *EmailHandler) MarkAllRead(w http.ResponseWriter, r *http.Request) {
 	}
 	count, err := h.svc.MarkAllRead(r.Context(), inboxID, uc.UserID)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		if strings.Contains(err.Error(), "forbidden") {
+			writeError(w, http.StatusForbidden, err.Error())
+		} else {
+			writeError(w, http.StatusInternalServerError, err.Error())
+		}
 		return
 	}
 
@@ -135,7 +152,11 @@ func (h *EmailHandler) MarkReadUnread(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.svc.MarkReadUnread(r.Context(), id, uc.UserID, body.IsRead); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		if strings.Contains(err.Error(), "forbidden") {
+			writeError(w, http.StatusForbidden, err.Error())
+		} else {
+			writeError(w, http.StatusInternalServerError, err.Error())
+		}
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"message": "updated"})
@@ -156,12 +177,20 @@ func (h *EmailHandler) DeleteEmail(w http.ResponseWriter, r *http.Request) {
 	// Fetch email before delete for audit
 	email, err := h.svc.GetEmail(r.Context(), id, uc.UserID)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		if strings.Contains(err.Error(), "forbidden") {
+			writeError(w, http.StatusForbidden, err.Error())
+		} else {
+			writeError(w, http.StatusNotFound, "email not found")
+		}
 		return
 	}
 
 	if err := h.svc.DeleteEmail(r.Context(), id, uc.UserID); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		if strings.Contains(err.Error(), "forbidden") {
+			writeError(w, http.StatusForbidden, err.Error())
+		} else {
+			writeError(w, http.StatusInternalServerError, "failed to delete email")
+		}
 		return
 	}
 
