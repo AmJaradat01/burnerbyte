@@ -356,17 +356,6 @@ func (h *AuthHandler) SSOStatus(w http.ResponseWriter, r *http.Request) {
 		"providers":          providers,
 	}
 
-	if enabled && len(providers) > 0 {
-		// Backward compatibility: set provider/provider_label from first enabled provider
-		for _, p := range providers {
-			if p.Enabled {
-				resp["provider"] = p.Name
-				resp["provider_label"] = p.Label
-				break
-			}
-		}
-	}
-
 	// Check if org enforces SSO
 	resp["enforce_sso"] = false
 	orgs, _, err := h.svc.ListAllOrgs(r.Context(), 1, 1)

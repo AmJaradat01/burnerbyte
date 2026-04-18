@@ -16,7 +16,6 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"gitlab.com/burnerbyte/burnerbyte/internal/auth"
-	"gitlab.com/burnerbyte/burnerbyte/internal/auth/rbac"
 	"gitlab.com/burnerbyte/burnerbyte/internal/config"
 	appcrypto "gitlab.com/burnerbyte/burnerbyte/internal/crypto"
 	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
@@ -194,16 +193,6 @@ func (h *AdminHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, user)
 }
 
-func (h *AdminHandler) GetSSOConfig(w http.ResponseWriter, r *http.Request) {
-	h.cfgMu.RLock()
-	masked := h.cfg.SSO
-	h.cfgMu.RUnlock()
-	if masked.ClientSecret != "" {
-		masked.ClientSecret = "••••••••"
-	}
-	writeJSON(w, http.StatusOK, masked)
-}
-
 type PlatformSettings struct {
 	AllowRegistration    bool   `json:"allow_registration"`
 	EmailVerification    bool   `json:"email_verification"`
@@ -342,63 +331,6 @@ func (h *AdminHandler) UpdatePlatformSettings(w http.ResponseWriter, r *http.Req
 		"after":                 after,
 	})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "platform settings updated"})
-}
-
-func (h *AdminHandler) UpdateSSOConfig(w http.ResponseWriter, r *http.Request) {
-	var input config.SSOConfig
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
-		return
-	}
-
-	// Capture before state (excluding client_secret)
-	h.cfgMu.RLock()
-	before := map[string]any{
-		"provider":         h.cfg.SSO.Provider,
-		"client_id":        h.cfg.SSO.ClientID,
-		"issuer_url":       h.cfg.SSO.IssuerURL,
-		"allowed_domains":  h.cfg.SSO.AllowedDomains,
-		"auto_provision":   h.cfg.SSO.AutoProvision,
-		"default_org_role": h.cfg.SSO.DefaultOrgRole,
-	}
-	h.cfgMu.RUnlock()
-
-	h.cfgMu.Lock()
-	// If secret is masked, keep the existing one
-	if input.ClientSecret == "••••••••" {
-		input.ClientSecret = h.cfg.SSO.ClientSecret
-	}
-	h.cfgMu.Unlock()
-	// Validate default org role if set
-	if input.DefaultOrgRole != "" && !rbac.ValidOrgRole(input.DefaultOrgRole) {
-		writeError(w, http.StatusBadRequest, "invalid default_org_role")
-		return
-	}
-	// Cap auto-provision role to member or admin (never owner)
-	if input.DefaultOrgRole == rbac.OrgOwner {
-		writeError(w, http.StatusBadRequest, "default_org_role cannot be owner")
-		return
-	}
-	if err := h.sysConfig.Set(r.Context(), "sso", input); err != nil {
-		slog.Error("failed to save SSO config", "error", err)
-		writeError(w, http.StatusInternalServerError, "failed to save SSO config")
-		return
-	}
-	h.cfgMu.Lock()
-	h.cfg.SSO = input
-	h.cfgMu.Unlock()
-
-	after := map[string]any{
-		"provider":         input.Provider,
-		"client_id":        input.ClientID,
-		"issuer_url":       input.IssuerURL,
-		"allowed_domains":  input.AllowedDomains,
-		"auto_provision":   input.AutoProvision,
-		"default_org_role": input.DefaultOrgRole,
-	}
-
-	auditRecordEnhanced(r, uuid.Nil, "admin.sso_config_updated", "sso", uuid.Nil, "sso", map[string]any{"provider": input.Provider, "before": before, "after": after})
-	writeJSON(w, http.StatusOK, map[string]string{"message": "SSO config updated"})
 }
 
 // ── SSO Provider CRUD ──
