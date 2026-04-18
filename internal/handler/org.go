@@ -11,7 +11,6 @@ import (
 	"github.com/google/uuid"
 
 	"gitlab.com/burnerbyte/burnerbyte/internal/auth"
-	"gitlab.com/burnerbyte/burnerbyte/internal/auth/rbac"
 	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
 	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
 	"gitlab.com/burnerbyte/burnerbyte/internal/service"
@@ -90,7 +89,7 @@ func (h *OrgHandler) GetOrg(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid org ID")
 		return
 	}
-	if checkOrgRole(w, r, orgID, rbac.OrgMember) {
+	if checkOrgPermission(w, r, orgID, "org.view") {
 		return
 	}
 
@@ -113,7 +112,7 @@ func (h *OrgHandler) UpdateOrg(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid org ID")
 		return
 	}
-	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+	if checkOrgPermission(w, r, orgID, "org.settings.manage") {
 		return
 	}
 
@@ -148,7 +147,7 @@ func (h *OrgHandler) DeleteOrg(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid org ID")
 		return
 	}
-	if checkOrgRole(w, r, orgID, rbac.OrgOwner) {
+	if checkOrgPermission(w, r, orgID, "org.delete") {
 		return
 	}
 
@@ -174,7 +173,7 @@ func (h *OrgHandler) GetSettings(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid org ID")
 		return
 	}
-	if checkOrgRole(w, r, orgID, rbac.OrgMember) {
+	if checkOrgPermission(w, r, orgID, "org.settings.view") {
 		return
 	}
 
@@ -193,7 +192,7 @@ func (h *OrgHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid org ID")
 		return
 	}
-	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+	if checkOrgPermission(w, r, orgID, "org.settings.manage") {
 		return
 	}
 
@@ -232,7 +231,7 @@ func (h *OrgHandler) DirectAddMember(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid org ID")
 		return
 	}
-	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+	if checkOrgPermission(w, r, orgID, "org.members.add") {
 		return
 	}
 	var input struct {
@@ -279,7 +278,7 @@ func (h *OrgHandler) InviteMember(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid org ID")
 		return
 	}
-	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+	if checkOrgPermission(w, r, orgID, "org.members.invite") {
 		return
 	}
 
@@ -316,7 +315,7 @@ func (h *OrgHandler) ListMembers(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid org ID")
 		return
 	}
-	if checkOrgRole(w, r, orgID, rbac.OrgMember) {
+	if checkOrgPermission(w, r, orgID, "org.members.view") {
 		return
 	}
 
@@ -336,12 +335,16 @@ func (h *OrgHandler) ChangeRole(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid org ID")
 		return
 	}
-	if checkOrgRole(w, r, orgID, rbac.OrgOwner) {
+	if checkOrgPermission(w, r, orgID, "org.members.role") {
 		return
 	}
 	userID, err := uuid.Parse(chi.URLParam(r, "userId"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid user ID")
+		return
+	}
+	// Self-protection: prevent modifying users at the same or higher rank
+	if checkOrgRankAbove(w, r, orgID, userID) {
 		return
 	}
 
@@ -375,7 +378,7 @@ func (h *OrgHandler) DeactivateUser(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid org ID")
 		return
 	}
-	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+	if checkOrgPermission(w, r, orgID, "org.members.remove") {
 		return
 	}
 	userID, err := uuid.Parse(chi.URLParam(r, "userId"))
@@ -409,7 +412,7 @@ func (h *OrgHandler) RevokeInvite(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid org ID")
 		return
 	}
-	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+	if checkOrgPermission(w, r, orgID, "org.members.invite") {
 		return
 	}
 	inviteID, err := uuid.Parse(chi.URLParam(r, "inviteId"))
@@ -464,7 +467,7 @@ func (h *OrgHandler) ListPendingInvites(w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusBadRequest, "invalid org ID")
 		return
 	}
-	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+	if checkOrgPermission(w, r, orgID, "org.members.invite") {
 		return
 	}
 	invites, err := h.svc.ListPendingInvites(r.Context(), orgID)
@@ -484,7 +487,7 @@ func (h *OrgHandler) SearchMembers(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid org ID")
 		return
 	}
-	if checkOrgRole(w, r, orgID, rbac.OrgMember) {
+	if checkOrgPermission(w, r, orgID, "org.members.view") {
 		return
 	}
 

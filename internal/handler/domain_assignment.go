@@ -8,7 +8,6 @@ import (
 	"github.com/google/uuid"
 
 	"gitlab.com/burnerbyte/burnerbyte/internal/auth"
-	"gitlab.com/burnerbyte/burnerbyte/internal/auth/rbac"
 	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
 	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
 	"gitlab.com/burnerbyte/burnerbyte/internal/service"
@@ -53,7 +52,7 @@ func (h *DomainAssignmentHandler) AssignDomain(w http.ResponseWriter, r *http.Re
 		writeError(w, http.StatusBadRequest, "invalid team ID")
 		return
 	}
-	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+	if checkOrgPermission(w, r, orgID, "org.domains.manage") {
 		return
 	}
 	var input domain.CreateAssignmentInput
@@ -88,7 +87,7 @@ func (h *DomainAssignmentHandler) ListAssignments(w http.ResponseWriter, r *http
 		writeError(w, http.StatusBadRequest, "invalid team ID")
 		return
 	}
-	if checkTeamRole(w, r, orgID, teamID, rbac.OrgMember, rbac.TeamMember) {
+	if checkTeamPermission(w, r, orgID, teamID, "team.domains.view") {
 		return
 	}
 	page, perPage := parsePagination(r)
@@ -107,7 +106,7 @@ func (h *DomainAssignmentHandler) UpdateAssignment(w http.ResponseWriter, r *htt
 		writeError(w, http.StatusBadRequest, "invalid team ID")
 		return
 	}
-	if checkTeamRole(w, r, orgID, teamID, rbac.OrgAdmin, rbac.TeamLead) {
+	if checkTeamPermission(w, r, orgID, teamID, "team.domains.manage") {
 		return
 	}
 	domainID, err := uuid.Parse(chi.URLParam(r, "domainId"))
@@ -147,7 +146,7 @@ func (h *DomainAssignmentHandler) Unassign(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusBadRequest, "invalid team ID")
 		return
 	}
-	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+	if checkOrgPermission(w, r, orgID, "org.domains.manage") {
 		return
 	}
 	domainID, err := uuid.Parse(chi.URLParam(r, "domainId"))
