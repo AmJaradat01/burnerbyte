@@ -17,6 +17,7 @@ import { useOrgBootstrap } from "@/hooks/use-org-bootstrap";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { api } from "@/lib/api";
+import { useQuery } from "@tanstack/react-query";
 
 /**
  * Paths accessible without authentication.
@@ -139,19 +140,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   // Auth/public pages for unauthenticated users — shared header & footer
   if (isPublic && !user) return (
-    <div className="flex flex-col min-h-screen bg-mesh">
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
-          <Link href="/" className="text-lg font-bold">🔥 BurnerByte</Link>
-          <nav className="flex items-center gap-4 text-sm">
-            <Link href="/login" className="text-muted-foreground hover:text-foreground">Sign In</Link>
-            <Link href="/register" className="text-muted-foreground hover:text-foreground">Get Started</Link>
-          </nav>
-        </div>
-      </header>
-      <main className="flex-1">{children}</main>
-      <footer className="border-t py-6 text-center text-xs text-muted-foreground">© {new Date().getFullYear()} BurnerByte</footer>
-    </div>
+    <UnauthPublicLayout>{children}</UnauthPublicLayout>
   );
 
   // Authenticated user on public pages (onboarding, invite, docs) — minimal layout
@@ -203,6 +192,33 @@ export function AppShell({ children }: { children: ReactNode }) {
       <Footer />
       <CommandPalette />
       <ShortcutHelp open={shortcutHelp.open} onOpenChange={shortcutHelp.setOpen} />
+    </div>
+  );
+}
+
+function UnauthPublicLayout({ children }: { children: ReactNode }) {
+  const { data: sso } = useQuery({
+    queryKey: ["sso-status"],
+    queryFn: () => api.get<{ allow_registration: boolean }>("/auth/sso-status"),
+    staleTime: 60000,
+  });
+  const allowRegistration = sso?.allow_registration ?? true;
+
+  return (
+    <div className="flex flex-col min-h-screen bg-mesh">
+      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
+        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
+          <Link href="/" className="text-lg font-bold">🔥 BurnerByte</Link>
+          <nav className="flex items-center gap-4 text-sm">
+            <Link href="/login" className="text-muted-foreground hover:text-foreground">Sign In</Link>
+            {allowRegistration && (
+              <Link href="/register" className="text-muted-foreground hover:text-foreground">Get Started</Link>
+            )}
+          </nav>
+        </div>
+      </header>
+      <main className="flex-1">{children}</main>
+      <footer className="border-t py-6 text-center text-xs text-muted-foreground">© {new Date().getFullYear()} BurnerByte</footer>
     </div>
   );
 }
