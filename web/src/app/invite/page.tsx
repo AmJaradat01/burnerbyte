@@ -16,7 +16,8 @@ import { toast } from "sonner";
 import { Loader2, Shield } from "lucide-react";
 
 interface InvitePreview { email: string; org_name: string; org_role: string; }
-interface SSOStatus { enabled: boolean; allow_registration: boolean; provider?: string; provider_label?: string; enforce_sso?: boolean; }
+interface SSOStatusProvider { name: string; provider_type: string; label: string; enabled: boolean; }
+interface SSOStatus { enabled: boolean; allow_registration: boolean; enforce_sso?: boolean; providers?: SSOStatusProvider[]; }
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
 const REDIRECT_DELAY_MS = 3000;
@@ -137,10 +138,12 @@ export default function InvitePage() {
     }
   };
 
+  const ssoProviders = (sso?.providers ?? []).filter(p => p.enabled);
+
   const handleSSO = () => {
     // Store token in sessionStorage so we can accept after SSO callback
     if (token) sessionStorage.setItem("pending_invite_token", token);
-    window.location.href = `${API_BASE}/auth/sso/${sso!.provider}`;
+    window.location.href = `${API_BASE}/auth/sso/${ssoProviders[0]?.name}`;
   };
 
   // Check for pending invite after SSO callback
@@ -269,7 +272,7 @@ export default function InvitePage() {
                 </div>
               )}
               <Button className="w-full gap-2" variant={enforceSSO ? "default" : "outline"} onClick={handleSSO}>
-                <Shield className="h-4 w-4" /> Continue with {sso?.provider_label ?? "SSO"}
+                <Shield className="h-4 w-4" /> Continue with {ssoProviders[0]?.label ?? "SSO"}
               </Button>
             </>
           )}

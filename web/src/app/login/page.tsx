@@ -26,8 +26,6 @@ interface SSOStatusProvider {
 interface SSOStatus {
   enabled: boolean;
   allow_registration: boolean;
-  provider?: string;
-  provider_label?: string;
   enforce_sso?: boolean;
   providers?: SSOStatusProvider[];
 }
