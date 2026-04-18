@@ -485,9 +485,23 @@ const featureIcons = [
   { icon: Server, bg: "bg-rose-100 dark:bg-rose-900/30", fg: "text-rose-600 dark:text-rose-400" },
 ];
 
+interface SSOStatus {
+  enabled: boolean;
+  allow_registration: boolean;
+  enforce_sso?: boolean;
+}
+
 function LandingPage() {
   const t = useTranslations("landing");
   const tc = useTranslations("common");
+
+  const { data: sso } = useQuery({
+    queryKey: ["sso-status"],
+    queryFn: () => api.get<SSOStatus>("/auth/sso-status"),
+    staleTime: 60000,
+  });
+
+  const allowRegistration = sso?.allow_registration ?? true;
 
   return (
     <div className="min-h-screen bg-background">
@@ -496,7 +510,11 @@ function LandingPage() {
           <span className="text-xl font-bold tracking-tight">🔥 BurnerByte</span>
           <div className="flex items-center gap-3">
             <Link href="/login" className="rounded-md px-4 py-2 text-sm font-medium hover:bg-muted transition-colors">{tc("signIn")}</Link>
-            <Link href="/register" className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 transition-opacity">{tc("getStarted")}</Link>
+            {allowRegistration ? (
+              <Link href="/register" className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 transition-opacity">{tc("getStarted")}</Link>
+            ) : (
+              <Link href="/login" className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 transition-opacity">{tc("signIn")}</Link>
+            )}
           </div>
         </div>
       </header>
@@ -511,7 +529,11 @@ function LandingPage() {
             <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text">{t("headline")}</h1>
             <p className="mt-6 text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">{t("subtitle")}</p>
             <div className="mt-10 flex justify-center gap-4">
-              <Link href="/register" className="rounded-lg bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity shadow-lg shadow-primary/25">{t("getStartedFree")}</Link>
+              {allowRegistration ? (
+                <Link href="/register" className="rounded-lg bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity shadow-lg shadow-primary/25">{t("getStartedFree")}</Link>
+              ) : (
+                <Link href="/login" className="rounded-lg bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity shadow-lg shadow-primary/25">{tc("signIn")}</Link>
+              )}
               <Link href="/login" className="rounded-lg border px-8 py-3 text-sm font-semibold hover:bg-muted transition-colors">{tc("signIn")}</Link>
             </div>
           </div>
@@ -538,7 +560,11 @@ function LandingPage() {
           <div className="mx-auto max-w-3xl px-6 py-20 text-center">
             <h2 className="text-3xl font-bold tracking-tight">{t("readyToStart")}</h2>
             <p className="mt-3 text-muted-foreground">{t("deployInMinutes")}</p>
-            <Link href="/register" className="mt-6 inline-block rounded-lg bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity">{t("createAccount")}</Link>
+            {allowRegistration ? (
+              <Link href="/register" className="mt-6 inline-block rounded-lg bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity">{t("createAccount")}</Link>
+            ) : (
+              <Link href="/login" className="mt-6 inline-block rounded-lg bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity">{tc("signIn")}</Link>
+            )}
           </div>
         </section>
       </main>
