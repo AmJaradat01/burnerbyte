@@ -477,12 +477,12 @@ function InboxGridSkeleton() {
 
 const featureKeys = ["inboxes", "multiTeam", "realTime", "webhooks", "apiKeys", "selfHosted"] as const;
 const featureIcons = [
-  { icon: Mail, bg: "bg-orange-100 dark:bg-orange-900/30", fg: "text-orange-600 dark:text-orange-400" },
-  { icon: Users, bg: "bg-blue-100 dark:bg-blue-900/30", fg: "text-blue-600 dark:text-blue-400" },
-  { icon: Zap, bg: "bg-amber-100 dark:bg-amber-900/30", fg: "text-amber-600 dark:text-amber-400" },
-  { icon: LinkIcon, bg: "bg-violet-100 dark:bg-violet-900/30", fg: "text-violet-600 dark:text-violet-400" },
-  { icon: Key, bg: "bg-emerald-100 dark:bg-emerald-900/30", fg: "text-emerald-600 dark:text-emerald-400" },
-  { icon: Server, bg: "bg-rose-100 dark:bg-rose-900/30", fg: "text-rose-600 dark:text-rose-400" },
+  { icon: Mail, bg: "bg-orange-100 dark:bg-orange-900/30", fg: "text-orange-600 dark:text-orange-400", accent: "group-hover:border-orange-300 dark:group-hover:border-orange-700", glow: "group-hover:shadow-orange-100/50 dark:group-hover:shadow-orange-900/20" },
+  { icon: Users, bg: "bg-blue-100 dark:bg-blue-900/30", fg: "text-blue-600 dark:text-blue-400", accent: "group-hover:border-blue-300 dark:group-hover:border-blue-700", glow: "group-hover:shadow-blue-100/50 dark:group-hover:shadow-blue-900/20" },
+  { icon: Zap, bg: "bg-amber-100 dark:bg-amber-900/30", fg: "text-amber-600 dark:text-amber-400", accent: "group-hover:border-amber-300 dark:group-hover:border-amber-700", glow: "group-hover:shadow-amber-100/50 dark:group-hover:shadow-amber-900/20" },
+  { icon: LinkIcon, bg: "bg-violet-100 dark:bg-violet-900/30", fg: "text-violet-600 dark:text-violet-400", accent: "group-hover:border-violet-300 dark:group-hover:border-violet-700", glow: "group-hover:shadow-violet-100/50 dark:group-hover:shadow-violet-900/20" },
+  { icon: Key, bg: "bg-emerald-100 dark:bg-emerald-900/30", fg: "text-emerald-600 dark:text-emerald-400", accent: "group-hover:border-emerald-300 dark:group-hover:border-emerald-700", glow: "group-hover:shadow-emerald-100/50 dark:group-hover:shadow-emerald-900/20" },
+  { icon: Server, bg: "bg-rose-100 dark:bg-rose-900/30", fg: "text-rose-600 dark:text-rose-400", accent: "group-hover:border-rose-300 dark:group-hover:border-rose-700", glow: "group-hover:shadow-rose-100/50 dark:group-hover:shadow-rose-900/20" },
 ];
 
 interface SSOStatus {
@@ -546,17 +546,17 @@ function LandingPage() {
           </div>
         </section>
         <section id="features" className="mx-auto max-w-5xl px-6 pb-28">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold tracking-tight">{t("everythingYouNeed")}</h2>
-            <p className="mt-2 text-muted-foreground">{t("builtFor")}</p>
+          <div className="text-center mb-14">
+            <p className="text-sm font-medium text-primary mb-2 uppercase tracking-wider">{t("builtFor")}</p>
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">{t("everythingYouNeed")}</h2>
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {featureKeys.map((key, i) => {
-              const { icon: Icon, bg, fg } = featureIcons[i];
+              const { icon: Icon, bg, fg, accent, glow } = featureIcons[i];
               return (
-              <div key={key} className="group rounded-xl border bg-background/60 backdrop-blur-sm p-6 transition-all hover:border-primary/50 hover:bg-background/80 hover:shadow-lg">
-                <div className={`h-10 w-10 rounded-lg flex items-center justify-center mb-3 ${bg}`}><Icon className={`h-5 w-5 ${fg}`} /></div>
-                <h3 className="font-semibold">{t(`features.${key}.title`)}</h3>
+              <div key={key} className={`group relative rounded-xl border bg-background/60 backdrop-blur-sm p-6 transition-all duration-300 hover:bg-background/80 hover:shadow-xl hover:-translate-y-1 ${accent} ${glow}`}>
+                <div className={`h-12 w-12 rounded-xl flex items-center justify-center mb-4 ${bg} transition-transform duration-300 group-hover:scale-110`}><Icon className={`h-6 w-6 ${fg}`} /></div>
+                <h3 className="font-semibold text-base">{t(`features.${key}.title`)}</h3>
                 <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{t(`features.${key}.desc`)}</p>
               </div>
               );
