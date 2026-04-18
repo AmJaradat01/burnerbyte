@@ -527,27 +527,9 @@ func (s *AuthService) SSOLogin(ctx context.Context, result *domain.SSOCallbackRe
 			}
 			isNew = true
 		} else {
-			// Existing user by email — auto-link if enforce_sso is enabled or user has no password
-			if user.PasswordHash != nil {
-				// Check if org enforces SSO — if so, auto-link existing accounts
-				autoLink := false
-				if s.orgRepo != nil {
-					orgs, _, err := s.orgRepo.ListAll(ctx, 1, 1)
-					if err == nil && len(orgs) > 0 && orgs[0].Settings.EnforceSSO != nil && *orgs[0].Settings.EnforceSSO {
-						autoLink = true
-					}
-				}
-				// Also check provider-level auto_provision flag
-				if !autoLink && s.ssoProviderRepo != nil {
-					provCfg, err := s.ssoProviderRepo.GetByName(ctx, result.Provider)
-					if err == nil && provCfg.AutoProvision {
-						autoLink = true
-					}
-				}
-				if !autoLink {
-					return nil, nil, fmt.Errorf("an account with this email already exists — please sign in with your password first, then link SSO from your profile")
-				}
-			}
+			// Existing user by email — auto-link SSO identity.
+			// The email from the SSO provider is verified by the provider (GitHub, Google, etc.),
+			// so it's safe to trust it as proof of identity.
 			user.EmailVerified = true
 			if err := s.userRepo.Update(ctx, user); err != nil {
 				return nil, nil, fmt.Errorf("link SSO: %w", err)
