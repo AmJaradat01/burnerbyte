@@ -31,21 +31,7 @@ WHERE permission_id IN (
 );
 
 -- ============================================================
--- 2. Delete role_permissions for the viewer role
---    (covers any permissions assigned to viewer, including pre-existing ones like team.emails.view)
--- ============================================================
-DELETE FROM role_permissions
-WHERE role_id IN (
-    SELECT id FROM roles WHERE scope = 'team' AND value = 'viewer'
-);
-
--- ============================================================
--- 3. Delete the viewer team role
--- ============================================================
-DELETE FROM roles WHERE scope = 'team' AND value = 'viewer';
-
--- ============================================================
--- 4. Delete newly added permission keys
+-- 2. Delete newly added permission keys
 -- ============================================================
 DELETE FROM permissions WHERE key IN (
     'org.analytics.view',
