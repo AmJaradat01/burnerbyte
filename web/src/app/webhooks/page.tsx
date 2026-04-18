@@ -21,7 +21,7 @@ import { Pagination } from "@/components/pagination";
 import { ErrorState } from "@/components/error-state";
 import { EmptyState } from "@/components/empty-state";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { AlertCircle, AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Clock, Copy, ExternalLink, Globe, Link2, Pencil, Plus, Trash2, XCircle } from "lucide-react";
+import { AlertCircle, AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Clock, Code2, Copy, ExternalLink, Globe, Info, Link2, Pencil, Plus, Trash2, XCircle } from "lucide-react";
 import type { Webhook, PaginatedResponse } from "@/types";
 
 interface DeliveryLog {
@@ -36,8 +36,37 @@ interface DeliveryLog {
 
 const ALL_EVENTS = ["email.received", "inbox.created", "inbox.expired"];
 
+const EVENT_INFO = [
+  {
+    key: "email.received",
+    label: "Email Received",
+    description: "Fires when a new email arrives at any inbox in this team.",
+    icon: "📬",
+    example: '{ "email_id": "...", "inbox_id": "...", "from": "sender@example.com", "subject": "..." }',
+  },
+  {
+    key: "inbox.created",
+    label: "Inbox Created",
+    description: "Fires when a new temporary inbox is created by a team member.",
+    icon: "📥",
+    example: '{ "inbox_id": "...", "address": "abc@domain.com", "domain_assignment_id": "..." }',
+  },
+  {
+    key: "inbox.expired",
+    label: "Inbox Expired",
+    description: "Fires when an inbox reaches its TTL and expires.",
+    icon: "⏰",
+    example: '{ "inbox_id": "...", "address": "abc@domain.com", "expired_at": "..." }',
+  },
+];
+
+function isValidWebhookUrl(url: string): boolean {
+  if (!url) return false;
+  return url.startsWith("https://") || url.startsWith("http://localhost");
+}
+
 export default function WebhooksPage() {
-  const { currentOrg, currentTeam, currentRole, hasPermission } = useOrgStore();
+  const { currentOrg, currentTeam, hasPermission } = useOrgStore();
   const { user } = useAuthStore();
   const qc = useQueryClient();
   const [page, setPage] = useState(1);
@@ -277,6 +306,114 @@ function WebhookListSkeleton() {
   );
 }
 
+function EventCard({ info, selected, onToggle }: { info: typeof EVENT_INFO[number]; selected: boolean; onToggle: () => void }) {
+  const [showExample, setShowExample] = useState(false);
+
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={`w-full text-left rounded-lg border p-3 transition-all ${
+        selected
+          ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+          : "border-border hover:border-muted-foreground/30 hover:bg-muted/50"
+      }`}
+    >
+      <div className="flex items-start gap-3">
+        <div className="flex items-center justify-center h-8 w-8 rounded-md bg-muted text-lg shrink-0 mt-0.5">
+          {info.icon}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <div
+              className={`h-4 w-4 rounded border shrink-0 flex items-center justify-center transition-colors ${
+                selected
+                  ? "bg-primary border-primary text-primary-foreground"
+                  : "border-muted-foreground/30"
+              }`}
+            >
+              {selected && (
+                <svg className="h-3 w-3" viewBox="0 0 12 12" fill="none">
+                  <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
+            </div>
+            <span className="text-sm font-medium">{info.label}</span>
+            <Badge variant="outline" className="text-[10px] font-mono ml-auto shrink-0">{info.key}</Badge>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1 ml-6">{info.description}</p>
+          <div className="ml-6 mt-2">
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setShowExample(!showExample); }}
+              className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Code2 className="h-3 w-3" />
+              {showExample ? "Hide" : "Show"} example payload
+              {showExample ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+            </button>
+            {showExample && (
+              <pre className="mt-1.5 rounded-md bg-muted p-2 text-[11px] font-mono text-muted-foreground overflow-x-auto whitespace-pre-wrap break-all">
+                {info.example}
+              </pre>
+            )}
+          </div>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function UrlInput({ url, onChange }: { url: string; onChange: (v: string) => void }) {
+  const showError = url.length > 0 && !isValidWebhookUrl(url);
+
+  return (
+    <div className="space-y-2">
+      <Label>Endpoint URL</Label>
+      <Input
+        value={url}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="https://example.com/webhook"
+        type="url"
+        className={showError ? "border-destructive focus-visible:ring-destructive" : ""}
+      />
+      {showError && (
+        <p className="text-xs text-destructive flex items-center gap-1">
+          <AlertCircle className="h-3 w-3" />
+          URL must start with https:// or http://localhost
+        </p>
+      )}
+    </div>
+  );
+}
+
+function EventSelector({ events, onToggle }: { events: string[]; onToggle: (event: string) => void }) {
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-sm font-medium">Select Events</Label>
+        <p className="text-xs text-muted-foreground mt-0.5">Choose which events should trigger a delivery to your endpoint.</p>
+      </div>
+      <div className="space-y-2">
+        {EVENT_INFO.map((info) => (
+          <EventCard
+            key={info.key}
+            info={info}
+            selected={events.includes(info.key)}
+            onToggle={() => onToggle(info.key)}
+          />
+        ))}
+      </div>
+      {events.length === 0 && (
+        <p className="text-xs text-destructive flex items-center gap-1">
+          <AlertCircle className="h-3 w-3" />
+          Select at least one event
+        </p>
+      )}
+    </div>
+  );
+}
+
 function CreateWebhookDialog({ orgId, teamId }: { orgId: string; teamId: string }) {
   const [url, setUrl] = useState("");
   const [events, setEvents] = useState<string[]>(["email.received"]);
@@ -292,8 +429,11 @@ function CreateWebhookDialog({ orgId, teamId }: { orgId: string; teamId: string 
     if (secret) { copyToClipboard(secret); toast.success("Secret copied"); }
   };
 
+  const urlValid = isValidWebhookUrl(url);
+  const canSubmit = urlValid && events.length > 0 && !creating;
+
   const create = async () => {
-    if (!url || events.length === 0) return;
+    if (!canSubmit) return;
     setCreating(true);
     try {
       const res = await api.post<{ secret: string }>(`/orgs/${orgId}/teams/${teamId}/webhooks`, { url, events });
@@ -313,7 +453,7 @@ function CreateWebhookDialog({ orgId, teamId }: { orgId: string; teamId: string 
       <DialogTrigger asChild>
         <Button className="gap-2"><Plus className="h-4 w-4" /> Add Webhook</Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{secret ? "Webhook Created" : "Create a webhook"}</DialogTitle>
           {!secret && <DialogDescription>We&apos;ll send an HTTP POST to your URL when selected events occur. Payloads are signed with HMAC-SHA256.</DialogDescription>}
@@ -328,30 +468,29 @@ function CreateWebhookDialog({ orgId, teamId }: { orgId: string; teamId: string 
             <Button onClick={close} className="w-full">Done</Button>
           </div>
         ) : (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Endpoint URL</Label>
-              <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://example.com/webhook" type="url" />
-            </div>
-            <div className="space-y-2">
-              <Label>Events</Label>
-              <div className="flex flex-wrap gap-2">
-                {ALL_EVENTS.map((e) => (
-                  <Badge
-                    key={e}
-                    variant={events.includes(e) ? "default" : "outline"}
-                    className="cursor-pointer select-none"
-                    onClick={() => toggleEvent(e)}
-                  >
-                    {e}
-                  </Badge>
-                ))}
-              </div>
-              {events.length === 0 && <p className="text-xs text-destructive">Select at least one event</p>}
-            </div>
-            <Button onClick={create} className="w-full" disabled={!url || events.length === 0 || creating}>
+          <div className="space-y-5">
+            <UrlInput url={url} onChange={setUrl} />
+
+            <EventSelector events={events} onToggle={toggleEvent} />
+
+            <Button onClick={create} className="w-full" disabled={!canSubmit}>
               {creating ? "Creating…" : "Create Webhook"}
             </Button>
+
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/30">
+              <div className="flex items-start gap-2">
+                <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-xs font-medium text-blue-800 dark:text-blue-300">Use Cases</p>
+                  <ul className="text-xs text-blue-700 dark:text-blue-400 mt-1 space-y-0.5 list-disc list-inside">
+                    <li>Forward incoming emails to Slack or Discord</li>
+                    <li>Trigger CI/CD pipelines on new test emails</li>
+                    <li>Log inbox activity to an external dashboard</li>
+                    <li>Auto-archive expired inboxes in your system</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </DialogContent>
@@ -369,8 +508,11 @@ function EditWebhookDialog({ orgId, teamId, webhook }: { orgId: string; teamId: 
   const toggleEvent = (event: string) =>
     setEvents((prev) => prev.includes(event) ? prev.filter((e) => e !== event) : [...prev, event]);
 
+  const urlValid = isValidWebhookUrl(url);
+  const canSubmit = urlValid && events.length > 0 && !saving;
+
   const save = async () => {
-    if (!url || events.length === 0) return;
+    if (!canSubmit) return;
     setSaving(true);
     try {
       await api.patch(`/orgs/${orgId}/teams/${teamId}/webhooks/${webhook.id}`, { url, events });
@@ -384,33 +526,38 @@ function EditWebhookDialog({ orgId, teamId, webhook }: { orgId: string; teamId: 
     }
   };
 
+  const statusInfo = !webhook.active
+    ? { label: "Disabled", color: "bg-muted text-muted-foreground", icon: XCircle }
+    : webhook.failure_count > 0
+      ? { label: "Failing", color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400", icon: AlertTriangle }
+      : webhook.last_status && webhook.last_status >= 200 && webhook.last_status < 300
+        ? { label: "Healthy", color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400", icon: CheckCircle2 }
+        : { label: "No deliveries", color: "bg-muted text-muted-foreground", icon: Globe };
+
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (v) { setUrl(webhook.url); setEvents(webhook.events ?? []); } }}>
       <DialogTrigger asChild>
         <Button variant="ghost" size="sm"><Pencil className="h-4 w-4" /></Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit webhook</DialogTitle>
           <DialogDescription>Update the endpoint URL or subscribed events.</DialogDescription>
         </DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>Endpoint URL</Label>
-            <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://example.com/webhook" type="url" />
+        <div className="space-y-5">
+          <div className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${statusInfo.color}`}>
+            <statusInfo.icon className="h-4 w-4" />
+            <span className="font-medium">Status: {statusInfo.label}</span>
+            {webhook.failure_count > 0 && (
+              <span className="text-xs ml-auto">{webhook.failure_count} consecutive failure{webhook.failure_count !== 1 ? "s" : ""}</span>
+            )}
           </div>
-          <div className="space-y-2">
-            <Label>Events</Label>
-            <div className="flex flex-wrap gap-2">
-              {ALL_EVENTS.map((e) => (
-                <Badge key={e} variant={events.includes(e) ? "default" : "outline"} className="cursor-pointer select-none" onClick={() => toggleEvent(e)}>
-                  {e}
-                </Badge>
-              ))}
-            </div>
-            {events.length === 0 && <p className="text-xs text-destructive">Select at least one event</p>}
-          </div>
-          <Button onClick={save} className="w-full" disabled={!url || events.length === 0 || saving}>
+
+          <UrlInput url={url} onChange={setUrl} />
+
+          <EventSelector events={events} onToggle={toggleEvent} />
+
+          <Button onClick={save} className="w-full" disabled={!canSubmit}>
             {saving ? "Saving…" : "Save"}
           </Button>
         </div>
