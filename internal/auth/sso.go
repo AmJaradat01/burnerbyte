@@ -232,14 +232,14 @@ func (s *SSOManager) RedirectURL(ctx context.Context, providerName, state string
 
 	if ps.config.ProviderType == "github" {
 		// Build GitHub OAuth2 authorize URL manually
-		// Include prompt=login to force GitHub to show the login/account picker
+		// Include prompt=select_account to force GitHub to show the account picker
 		// instead of silently reusing a cached session
 		params := url.Values{
 			"client_id":    {ps.config.ClientID},
 			"redirect_uri": {ps.config.RedirectURL},
 			"scope":        {"user:email read:user"},
 			"state":        {state},
-			"prompt":       {"login"},
+			"prompt":       {"select_account"},
 		}
 		return "https://github.com/login/oauth/authorize?" + params.Encode(), nil
 	}
