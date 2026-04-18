@@ -21,7 +21,6 @@ BurnerByte uses a two-level, permission-based RBAC system. Every API endpoint ch
 |---|---|---|
 | `lead` | 2 | Full control of team settings, members, domain assignments, webhooks, API keys, and inboxes |
 | `member` | 1 | Create and manage inboxes, view emails, plus all view permissions |
-| `viewer` | 0 | Read-only access to all team resources |
 
 ## Permission Keys
 
@@ -94,24 +93,24 @@ BurnerByte uses a two-level, permission-based RBAC system. Every API endpoint ch
 
 ### Team Roles
 
-| Permission | Lead | Member | Viewer |
-|---|---|---|---|
-| `team.view` | ✅ | ✅ | ✅ |
-| `team.settings.manage` | ✅ | ❌ | ❌ |
-| `team.members.view` | ✅ | ✅ | ✅ |
-| `team.members.manage` | ✅ | ❌ | ❌ |
-| `team.members.role` | ✅ | ❌ | ❌ |
-| `team.domains.view` | ✅ | ✅ | ✅ |
-| `team.domains.manage` | ✅ | ❌ | ❌ |
-| `team.webhooks.view` | ✅ | ✅ | ✅ |
-| `team.webhooks.manage` | ✅ | ❌ | ❌ |
-| `team.apikeys.view` | ✅ | ✅ | ✅ |
-| `team.apikeys.manage` | ✅ | ❌ | ❌ |
-| `team.inboxes.view` | ✅ | ✅ | ✅ |
-| `team.inboxes.create` | ✅ | ✅ | ❌ |
-| `team.inboxes.manage` | ✅ | ✅ | ❌ |
-| `team.emails.view` | ✅ | ✅ | ✅ |
-| `team.analytics.view` | ✅ | ✅ | ✅ |
+| Permission | Lead | Member |
+|---|---|---|
+| `team.view` | ✅ | ✅ |
+| `team.settings.manage` | ✅ | ❌ |
+| `team.members.view` | ✅ | ✅ |
+| `team.members.manage` | ✅ | ❌ |
+| `team.members.role` | ✅ | ❌ |
+| `team.domains.view` | ✅ | ✅ |
+| `team.domains.manage` | ✅ | ❌ |
+| `team.webhooks.view` | ✅ | ✅ |
+| `team.webhooks.manage` | ✅ | ❌ |
+| `team.apikeys.view` | ✅ | ✅ |
+| `team.apikeys.manage` | ✅ | ❌ |
+| `team.inboxes.view` | ✅ | ✅ |
+| `team.inboxes.create` | ✅ | ✅ |
+| `team.inboxes.manage` | ✅ | ✅ |
+| `team.emails.view` | ✅ | ✅ |
+| `team.analytics.view` | ✅ | ✅ |
 
 ## Enforcement
 

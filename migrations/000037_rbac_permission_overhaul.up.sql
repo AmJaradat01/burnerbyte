@@ -34,14 +34,7 @@ INSERT INTO permissions (scope, key, label, description) VALUES
 ON CONFLICT DO NOTHING;
 
 -- ============================================================
--- 3. Add viewer team role
--- ============================================================
-INSERT INTO roles (scope, value, label, description, rank, is_system)
-VALUES ('team', 'viewer', 'Viewer', 'Read-only access to team resources', 0, TRUE)
-ON CONFLICT DO NOTHING;
-
--- ============================================================
--- 4. Assign ALL org permissions to owner role (owner gets everything)
+-- 3. Assign ALL org permissions to owner role (owner gets everything)
 -- ============================================================
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
@@ -50,7 +43,7 @@ WHERE r.scope = 'org' AND r.value = 'owner'
 ON CONFLICT DO NOTHING;
 
 -- ============================================================
--- 5. Assign appropriate org permissions to admin role (all except org.delete)
+-- 4. Assign appropriate org permissions to admin role (all except org.delete)
 -- ============================================================
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
@@ -60,7 +53,7 @@ WHERE r.scope = 'org' AND r.value = 'admin'
 ON CONFLICT DO NOTHING;
 
 -- ============================================================
--- 6. Assign read-only org permissions to member role
+-- 5. Assign read-only org permissions to member role
 -- ============================================================
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
@@ -70,7 +63,7 @@ WHERE r.scope = 'org' AND r.value = 'member'
 ON CONFLICT DO NOTHING;
 
 -- ============================================================
--- 7. Assign ALL team permissions to lead role
+-- 6. Assign ALL team permissions to lead role
 -- ============================================================
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
@@ -79,7 +72,7 @@ WHERE r.scope = 'team' AND r.value = 'lead'
 ON CONFLICT DO NOTHING;
 
 -- ============================================================
--- 8. Assign team permissions to member role:
+-- 7. Assign team permissions to member role:
 --    all view permissions + team.inboxes.create, team.inboxes.manage, team.emails.view
 -- ============================================================
 INSERT INTO role_permissions (role_id, permission_id)
@@ -95,25 +88,6 @@ WHERE r.scope = 'team' AND r.value = 'member'
     'team.inboxes.view',
     'team.inboxes.create',
     'team.inboxes.manage',
-    'team.emails.view',
-    'team.analytics.view'
-  )
-ON CONFLICT DO NOTHING;
-
--- ============================================================
--- 9. Assign read-only team permissions to viewer role
--- ============================================================
-INSERT INTO role_permissions (role_id, permission_id)
-SELECT r.id, p.id FROM roles r, permissions p
-WHERE r.scope = 'team' AND r.value = 'viewer'
-  AND p.scope = 'team'
-  AND p.key IN (
-    'team.view',
-    'team.members.view',
-    'team.domains.view',
-    'team.webhooks.view',
-    'team.apikeys.view',
-    'team.inboxes.view',
     'team.emails.view',
     'team.analytics.view'
   )
