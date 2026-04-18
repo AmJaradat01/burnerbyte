@@ -185,6 +185,15 @@ burnerbyte.com {
     handle /ws/* {
         reverse_proxy localhost:8080
     }
+    handle /healthz {
+        reverse_proxy localhost:8080
+    }
+    handle /readyz {
+        reverse_proxy localhost:8080
+    }
+    handle /metrics {
+        reverse_proxy localhost:8080
+    }
     handle {
         reverse_proxy localhost:3000
     }
