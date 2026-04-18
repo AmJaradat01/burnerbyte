@@ -31,9 +31,10 @@ export default function InvitePage() {
   const login = useAuthStore((s) => s.login);
   const register = useAuthStore((s) => s.register);
   const fetchMe = useAuthStore((s) => s.fetchMe);
+  const logout = useAuthStore((s) => s.logout);
   const { fetchOrgs } = useOrgStore();
 
-  const [status, setStatus] = useState<"loading" | "auth" | "accepting" | "accepted" | "error">("loading");
+  const [status, setStatus] = useState<"loading" | "auth" | "accepting" | "accepted" | "mismatch" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState("");
   const [mode, setMode] = useState<"login" | "register">("register");
   const acceptingRef = useRef(false);
@@ -96,6 +97,10 @@ export default function InvitePage() {
       toast.success("Welcome to the organization!");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to accept invite";
+      if (msg.toLowerCase().includes("email mismatch") || msg.toLowerCase().includes("different email")) {
+        setStatus("mismatch");
+        return;
+      }
       setStatus("error");
       if (msg.toLowerCase().includes("expired")) {
         setErrorMsg("This invite has expired.");
@@ -173,6 +178,37 @@ export default function InvitePage() {
         <CardFooter>
           <Link href="/" className="text-sm text-primary hover:underline">Go to dashboard</Link>
         </CardFooter>
+      </CenteredCard>
+    );
+  }
+
+  // Email mismatch — logged in as wrong account
+  if (status === "mismatch") {
+    const handleLogoutAndRetry = async () => {
+      await logout();
+      acceptingRef.current = false;
+      setStatus("auth");
+    };
+    return (
+      <CenteredCard>
+        <CardHeader className="text-center">
+          <div className="text-3xl mb-2">⚠️</div>
+          <CardTitle>Wrong account</CardTitle>
+          <CardDescription>
+            This invite was sent to <strong className="font-mono">{preview?.email}</strong>, but you&apos;re signed in as <strong className="font-mono">{user?.email}</strong>.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground text-center">
+            Sign out and log in with the correct account to accept this invite.
+          </p>
+          <Button className="w-full" onClick={handleLogoutAndRetry}>
+            Sign out &amp; try again
+          </Button>
+          <Link href="/" className="block text-center text-sm text-muted-foreground hover:underline">
+            Go to dashboard instead
+          </Link>
+        </CardContent>
       </CenteredCard>
     );
   }
