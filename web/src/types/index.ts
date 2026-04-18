@@ -147,10 +147,19 @@ export interface APIKey {
   team_id: string;
   name: string;
   key_prefix: string;
+  description?: string;
   scopes: string[];
+  is_active: boolean;
+  allowed_ips?: string[];
+  request_count?: number;
   last_used_at?: string;
+  last_used_ip?: string;
   expires_at?: string;
+  revoked_at?: string;
   created_at: string;
+  created_by_email?: string;
+  created_by_name?: string;
+  raw_key?: string;
 }
 
 export interface AuditEntry {
