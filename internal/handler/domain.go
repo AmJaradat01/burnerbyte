@@ -155,7 +155,7 @@ func (h *DomainHandler) UpdateDomain(w http.ResponseWriter, r *http.Request) {
 
 	d, err := h.svc.UpdateDomain(r.Context(), orgID, id, input)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 
@@ -356,7 +356,7 @@ func (h *DomainHandler) BulkVerify(w http.ResponseWriter, r *http.Request) {
 
 	result, err := h.svc.BulkVerify(r.Context(), orgID, input.DomainIDs)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 
@@ -394,7 +394,7 @@ func (h *DomainHandler) BulkDelete(w http.ResponseWriter, r *http.Request) {
 
 	result, err := h.svc.BulkDelete(r.Context(), orgID, input.DomainIDs, input.Force)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 
@@ -447,7 +447,7 @@ func (h *DomainHandler) TransferDomain(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusNotFound, "target organization not found")
 			return
 		}
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 
