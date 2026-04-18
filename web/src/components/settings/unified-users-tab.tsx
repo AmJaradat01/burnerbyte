@@ -175,6 +175,7 @@ export function UnifiedUsersTab({ orgId }: { orgId: string }) {
                 <tr className="border-b bg-muted/50">
                   <th className="text-left font-medium text-xs text-muted-foreground px-4 py-3">User</th>
                   <th className="text-left font-medium text-xs text-muted-foreground px-4 py-3">Org Role</th>
+                  {isAdmin && <th className="text-left font-medium text-xs text-muted-foreground px-4 py-3 hidden md:table-cell">Auth</th>}
                   {isAdmin && <th className="text-left font-medium text-xs text-muted-foreground px-4 py-3 hidden md:table-cell">Status</th>}
                   <th className="text-left font-medium text-xs text-muted-foreground px-4 py-3 hidden lg:table-cell">Last Active</th>
                   <th className="text-left font-medium text-xs text-muted-foreground px-4 py-3 hidden lg:table-cell">Joined</th>
@@ -218,6 +219,13 @@ export function UnifiedUsersTab({ orgId }: { orgId: string }) {
                             <span className="text-xs text-muted-foreground italic">Not a member</span>
                           )}
                         </td>
+                        {isAdmin && (
+                          <td className="px-4 py-3 hidden md:table-cell">
+                            <Badge variant={u.sso_provider ? "outline" : "default"} className="text-[10px]">
+                              {u.sso_provider ?? "Password"}
+                            </Badge>
+                          </td>
+                        )}
                         {isAdmin && (
                           <td className="px-4 py-3 hidden md:table-cell">
                             <Badge variant={u.email_verified ? "default" : "outline"} className="text-[10px]">
@@ -264,7 +272,7 @@ export function UnifiedUsersTab({ orgId }: { orgId: string }) {
                   );
                 })}
                 {filtered.length === 0 && (
-                  <tr><td colSpan={6} className="text-center py-12 text-sm font-medium text-muted-foreground">{search || filter !== "all" ? "No matching users" : "No users yet"}</td></tr>
+                  <tr><td colSpan={7} className="text-center py-12 text-sm font-medium text-muted-foreground">{search || filter !== "all" ? "No matching users" : "No users yet"}</td></tr>
                 )}
               </tbody>
             </table>
@@ -381,7 +389,7 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
       if (v) { setDisplayName(u.display_name); setIsAdminFlag(u.is_system_admin); setVerified(u.email_verified); setAvatarURL(u.avatar_url ?? ""); setTimezone(u.timezone ?? ""); setDateFormat(u.date_format ?? ""); setTimeFormat(u.time_format ?? ""); }
     }}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>User Details</DialogTitle>
           <DialogDescription>View and manage this user account.</DialogDescription>
