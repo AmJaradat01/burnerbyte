@@ -44,7 +44,7 @@ func TestProperty_MiddlewareRejectsDisabledAndRevokedKeys(t *testing.T) {
 			KeyHash:   "somehash",
 			KeyPrefix: "bb_abc1234",
 			Name:      rapid.StringMatching(`[a-zA-Z0-9]{3,20}`).Draw(t, "name"),
-			Scopes:    []string{"inbox:read"},
+			Scopes:    []string{"team.inboxes.view"},
 			IsActive:  true,
 			CreatedAt: time.Now().Add(-24 * time.Hour),
 		}
@@ -390,7 +390,7 @@ func TestProperty_IPAllowlistEnforcement(t *testing.T) {
 				KeyHash:    "somehash",
 				KeyPrefix:  "bb_abc1234",
 				Name:       "test-key",
-				Scopes:     []string{"inbox:read"},
+				Scopes:     []string{"team.inboxes.view"},
 				IsActive:   true,
 				AllowedIPs: []string{allowedIP},
 			}
@@ -574,7 +574,7 @@ func TestProperty_RequestCountMonotonicIncrement(t *testing.T) {
 				KeyHash:      "somehash",
 				KeyPrefix:    "bb_abc1234",
 				Name:         rapid.StringMatching(`[a-zA-Z0-9]{3,20}`).Draw(t, "name"),
-				Scopes:       []string{"inbox:read"},
+				Scopes:       []string{"team.inboxes.view"},
 				IsActive:     true,
 				RequestCount: initialCount,
 			}

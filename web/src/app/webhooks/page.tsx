@@ -37,7 +37,7 @@ interface DeliveryLog {
 const ALL_EVENTS = ["email.received", "inbox.created", "inbox.expired"];
 
 export default function WebhooksPage() {
-  const { currentOrg, currentTeam, currentRole } = useOrgStore();
+  const { currentOrg, currentTeam, currentRole, hasPermission } = useOrgStore();
   const { user } = useAuthStore();
   const qc = useQueryClient();
   const [page, setPage] = useState(1);
@@ -77,7 +77,7 @@ export default function WebhooksPage() {
 
   if (!currentTeam) return <div className="text-center py-12 space-y-3"><p className="text-muted-foreground">Select a team to manage webhooks.</p><Link href="/teams"><Button variant="outline" size="sm">Go to Teams</Button></Link></div>;
 
-  const isAdmin = currentRole === "owner" || currentRole === "admin" || user?.is_system_admin;
+  const isAdmin = hasPermission("org.settings.manage") || user?.is_system_admin;
   if (!isAdmin) return <div className="flex items-center justify-center min-h-[50vh]"><p className="text-muted-foreground">You don&apos;t have permission to access this page.</p></div>;
 
   return (
