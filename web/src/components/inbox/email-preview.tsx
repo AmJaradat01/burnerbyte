@@ -4,7 +4,7 @@ import { useState } from "react";
 import { timeAgo } from "@/lib/time";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import {
@@ -68,7 +68,6 @@ export function EmailPreview({ email, onBack, onToggleRead, onDelete }: EmailPre
   const color = avatarColor(email.from_address);
   const initial = email.from_address.charAt(0).toUpperCase();
   const name = senderName(email.from_address);
-  const domain = email.from_address.split("@")[1] || "";
   const hasHtml = !!email.body_html;
   const [activeTab, setActiveTab] = useState(hasHtml ? "html" : "text");
 
