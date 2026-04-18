@@ -509,9 +509,11 @@ function LandingPage() {
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
           <span className="text-xl font-bold tracking-tight">🔥 BurnerByte</span>
           <div className="flex items-center gap-3">
-            <Link href="/login" className="rounded-md px-4 py-2 text-sm font-medium hover:bg-muted transition-colors">{tc("signIn")}</Link>
             {allowRegistration ? (
-              <Link href="/register" className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 transition-opacity">{tc("getStarted")}</Link>
+              <>
+                <Link href="/login" className="rounded-md px-4 py-2 text-sm font-medium hover:bg-muted transition-colors">{tc("signIn")}</Link>
+                <Link href="/register" className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 transition-opacity">{tc("getStarted")}</Link>
+              </>
             ) : (
               <Link href="/login" className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 transition-opacity">{tc("signIn")}</Link>
             )}
@@ -530,15 +532,20 @@ function LandingPage() {
             <p className="mt-6 text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">{t("subtitle")}</p>
             <div className="mt-10 flex justify-center gap-4">
               {allowRegistration ? (
-                <Link href="/register" className="rounded-lg bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity shadow-lg shadow-primary/25">{t("getStartedFree")}</Link>
+                <>
+                  <Link href="/register" className="rounded-lg bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity shadow-lg shadow-primary/25">{t("getStartedFree")}</Link>
+                  <Link href="/login" className="rounded-lg border px-8 py-3 text-sm font-semibold hover:bg-muted transition-colors">{tc("signIn")}</Link>
+                </>
               ) : (
-                <Link href="/login" className="rounded-lg bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity shadow-lg shadow-primary/25">{tc("signIn")}</Link>
+                <>
+                  <Link href="/login" className="rounded-lg bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity shadow-lg shadow-primary/25">{tc("signIn")}</Link>
+                  <a href="#features" className="rounded-lg border px-8 py-3 text-sm font-semibold hover:bg-muted transition-colors">{t("learnMore")}</a>
+                </>
               )}
-              <Link href="/login" className="rounded-lg border px-8 py-3 text-sm font-semibold hover:bg-muted transition-colors">{tc("signIn")}</Link>
             </div>
           </div>
         </section>
-        <section className="mx-auto max-w-5xl px-6 pb-28">
+        <section id="features" className="mx-auto max-w-5xl px-6 pb-28">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold tracking-tight">{t("everythingYouNeed")}</h2>
             <p className="mt-2 text-muted-foreground">{t("builtFor")}</p>
