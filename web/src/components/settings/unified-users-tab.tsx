@@ -19,7 +19,7 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ErrorState } from "@/components/error-state";
 import { Pagination } from "@/components/pagination";
 import { useRoles } from "@/hooks/use-roles";
-import { AlertTriangle, CheckCircle2, Clock, LogOut, RefreshCw, Trash2, UserPlus, Users, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock, Copy, KeyRound, LogOut, Mail, RefreshCw, Shield, Trash2, UserPlus, Users, XCircle } from "lucide-react";
 import type { User, Membership, Invite, PaginatedResponse } from "@/types";
 
 const ROLE_COLORS: Record<string, string> = {
@@ -326,8 +326,15 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
   const [dateFormat, setDateFormat] = useState(u.date_format ?? "");
   const [timeFormat, setTimeFormat] = useState(u.time_format ?? "");
   const [saving, setSaving] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const dirty = displayName !== u.display_name || isAdminFlag !== u.is_system_admin || verified !== u.email_verified || avatarURL !== (u.avatar_url ?? "") || timezone !== (u.timezone ?? "") || dateFormat !== (u.date_format ?? "") || timeFormat !== (u.time_format ?? "");
+
+  const copyId = () => {
+    navigator.clipboard.writeText(u.id);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const save = async () => {
     setSaving(true);
@@ -383,103 +390,145 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
     }
   };
 
+  const forceLogoutUser = async () => {
+    try {
+      await api.del(`/admin/users/${u.id}/sessions`);
+      qc.invalidateQueries({ queryKey: ["admin-users"] });
+      toast.success(`All sessions revoked for ${u.display_name || u.email}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+    }
+  };
+
+  const deleteUser = async () => {
+    try {
+      await api.del(`/admin/users/${u.id}`);
+      qc.invalidateQueries({ queryKey: ["admin-users"] });
+      qc.invalidateQueries({ queryKey: ["org-members"] });
+      toast.success(`${u.email} deleted`);
+      setOpen(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={(v) => {
       setOpen(v);
-      if (v) { setDisplayName(u.display_name); setIsAdminFlag(u.is_system_admin); setVerified(u.email_verified); setAvatarURL(u.avatar_url ?? ""); setTimezone(u.timezone ?? ""); setDateFormat(u.date_format ?? ""); setTimeFormat(u.time_format ?? ""); }
+      if (v) { setDisplayName(u.display_name); setIsAdminFlag(u.is_system_admin); setVerified(u.email_verified); setAvatarURL(u.avatar_url ?? ""); setTimezone(u.timezone ?? ""); setDateFormat(u.date_format ?? ""); setTimeFormat(u.time_format ?? ""); setCopied(false); }
     }}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>User Details</DialogTitle>
+          <DialogTitle className="text-xl">User Details</DialogTitle>
           <DialogDescription>View and manage this user account.</DialogDescription>
         </DialogHeader>
-        <div className="space-y-5">
-          {/* Header */}
-          <div className="flex items-center gap-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-2xl font-bold text-primary">
+
+        <div className="space-y-6">
+          {/* ── Profile Header ── */}
+          <div className="flex items-start gap-5 p-4 rounded-xl bg-muted/40 border">
+            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-primary/10 text-3xl font-bold text-primary">
               {(u.display_name || u.email).charAt(0).toUpperCase()}
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold text-lg truncate">{u.display_name || "—"}</p>
-              <p className="text-sm text-muted-foreground font-mono truncate">{u.email}</p>
-              <div className="flex flex-wrap gap-1.5 mt-1.5">
+            <div className="min-w-0 flex-1 space-y-2">
+              <div>
+                <p className="font-semibold text-xl truncate">{u.display_name || "—"}</p>
+                <p className="text-sm text-muted-foreground font-mono truncate">{u.email}</p>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
                 {u.org_role && <Badge variant="outline" className={`capitalize text-[10px] ${ROLE_COLORS[u.org_role] ?? ""}`}>{u.org_role}</Badge>}
-                {!u.org_role && <Badge variant="outline" className="text-[10px] text-orange-600">Not a member</Badge>}
-                {u.is_system_admin && <Badge variant="default" className="text-[10px]">System Admin</Badge>}
+                {!u.org_role && <Badge variant="outline" className="text-[10px] text-orange-600 border-orange-200 dark:border-orange-800">Not a member</Badge>}
+                {u.is_system_admin && <Badge variant="default" className="text-[10px]"><Shield className="h-3 w-3 mr-0.5" />System Admin</Badge>}
                 <Badge variant={u.email_verified ? "default" : "outline"} className="text-[10px]">
-                  {u.email_verified ? "Verified" : "Unverified"}
+                  {u.email_verified ? <><CheckCircle2 className="h-3 w-3 mr-0.5" />Verified</> : <><XCircle className="h-3 w-3 mr-0.5" />Unverified</>}
                 </Badge>
-                {u.sso_provider && <Badge variant="outline" className="text-[10px]">{u.sso_provider}</Badge>}
-                {isYou && <Badge variant="outline" className="text-[10px]">You</Badge>}
+                <Badge variant="outline" className="text-[10px]">
+                  <KeyRound className="h-3 w-3 mr-0.5" />{u.sso_provider ?? "Password"}
+                </Badge>
+                {isYou && <Badge variant="outline" className="text-[10px] bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400">You</Badge>}
               </div>
             </div>
           </div>
 
-          {/* Info grid */}
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div className="rounded-lg border p-3">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">User ID</p>
-              <p className="font-mono text-xs truncate">{u.id}</p>
-            </div>
-            <div className="rounded-lg border p-3">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Auth Method</p>
-              <p className="text-xs">{u.sso_provider ?? "Password"}</p>
-            </div>
-            <div className="rounded-lg border p-3">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Registered</p>
-              <p className="text-xs">{new Date(u.created_at).toLocaleString()}</p>
-            </div>
-            <div className="rounded-lg border p-3">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Last Active</p>
-              <p className="text-xs">{u.last_login_at ? timeAgo(u.last_login_at) : "Never"}</p>
+          {/* ── Account Information ── */}
+          <div>
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Account Information</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="rounded-lg border p-3 space-y-1">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Copy className="h-3 w-3" />User ID</p>
+                <button onClick={copyId} className="font-mono text-xs truncate block w-full text-left hover:text-primary transition-colors" title="Click to copy">
+                  {copied ? "Copied!" : u.id.slice(0, 8) + "…"}
+                </button>
+              </div>
+              <div className="rounded-lg border p-3 space-y-1">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><KeyRound className="h-3 w-3" />Auth Method</p>
+                <p className="text-xs font-medium">{u.sso_provider ?? "Password"}</p>
+              </div>
+              <div className="rounded-lg border p-3 space-y-1">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Clock className="h-3 w-3" />Registered</p>
+                <p className="text-xs">{new Date(u.created_at).toLocaleDateString()}</p>
+                <p className="text-[10px] text-muted-foreground">{new Date(u.created_at).toLocaleTimeString()}</p>
+              </div>
+              <div className="rounded-lg border p-3 space-y-1">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Clock className="h-3 w-3" />Last Active</p>
+                <p className="text-xs font-medium">{u.last_login_at ? timeAgo(u.last_login_at) : "Never"}</p>
+                {u.last_login_at && <p className="text-[10px] text-muted-foreground">{new Date(u.last_login_at).toLocaleDateString()}</p>}
+              </div>
             </div>
           </div>
 
-          {/* Add to org button for non-members */}
-          {!u.org_role && (
-            <Button variant="outline" className="w-full gap-2" onClick={addToOrg}>
-              <UserPlus className="h-4 w-4" /> Add to Organization
-            </Button>
-          )}
-
-          {/* Deactivate button for org members */}
-          {u.org_role && !isYou && (
-            <ConfirmDialog
-              trigger={
-                <Button variant="outline" className="w-full gap-2 text-orange-600 hover:text-orange-700 border-orange-200 hover:border-orange-300 dark:text-orange-400 dark:border-orange-800">
-                  <XCircle className="h-4 w-4" /> Deactivate User
-                </Button>
-              }
-              title="Deactivate user?"
-              description={`${u.display_name || u.email} will be removed from the organization and all teams. Their sessions will be revoked. The account will be preserved for audit purposes.`}
-              onConfirm={deactivateFromOrg}
-            />
-          )}
-
-          {/* Editable fields */}
-          <div className="space-y-4 border-t pt-4">
-            <div className="space-y-2">
-              <Label>Display Name</Label>
-              <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>Email</Label>
-              <Input value={u.email} disabled className="bg-muted font-mono text-sm" />
-            </div>
-            {isAdmin && (
-              <div className="space-y-2">
-                <Label>Avatar URL</Label>
-                <Input value={avatarURL} onChange={(e) => setAvatarURL(e.target.value)} placeholder="https://..." />
+          {/* ── Organization Actions ── */}
+          {(!u.org_role || (u.org_role && !isYou)) && (
+            <div>
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Organization</h3>
+              <div className="flex gap-2">
+                {!u.org_role && (
+                  <Button variant="outline" className="gap-2" onClick={addToOrg}>
+                    <UserPlus className="h-4 w-4" /> Add to Organization
+                  </Button>
+                )}
+                {u.org_role && !isYou && (
+                  <ConfirmDialog
+                    trigger={
+                      <Button variant="outline" className="gap-2 text-orange-600 hover:text-orange-700 border-orange-200 hover:border-orange-300 dark:text-orange-400 dark:border-orange-800">
+                        <XCircle className="h-4 w-4" /> Deactivate
+                      </Button>
+                    }
+                    title="Deactivate user?"
+                    description={`${u.display_name || u.email} will be removed from the organization and all teams. Their sessions will be revoked. The account will be preserved for audit purposes.`}
+                    onConfirm={deactivateFromOrg}
+                  />
+                )}
               </div>
-            )}
-            {(isAdmin || isYou) && (
-              <>
+            </div>
+          )}
+
+          {/* ── Edit Profile ── */}
+          <div>
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Edit Profile</h3>
+            <div className="space-y-4 rounded-lg border p-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Timezone</Label>
-                  <Input value={timezone} onChange={(e) => setTimezone(e.target.value)} placeholder="e.g. America/New_York, UTC" />
+                  <Label>Display Name</Label>
+                  <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Email</Label>
+                  <Input value={u.email} disabled className="bg-muted font-mono text-sm" />
+                </div>
+              </div>
+              {isAdmin && (
+                <div className="space-y-2">
+                  <Label>Avatar URL</Label>
+                  <Input value={avatarURL} onChange={(e) => setAvatarURL(e.target.value)} placeholder="https://..." />
+                </div>
+              )}
+              {(isAdmin || isYou) && (
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>Timezone</Label>
+                    <Input value={timezone} onChange={(e) => setTimezone(e.target.value)} placeholder="e.g. UTC" />
+                  </div>
                   <div className="space-y-2">
                     <Label>Date Format</Label>
                     <Select value={dateFormat || "YYYY-MM-DD"} onValueChange={setDateFormat}>
@@ -502,33 +551,78 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
                     </Select>
                   </div>
                 </div>
-              </>
-            )}
-            {isAdmin && (
-              <>
+              )}
+            </div>
+          </div>
+
+          {/* ── Admin Controls ── */}
+          {isAdmin && (
+            <div>
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Admin Controls</h3>
+              <div className="space-y-3 rounded-lg border p-4">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <Label>Email Verified</Label>
-                    <p className="text-xs text-muted-foreground">Manually verify or unverify this user&apos;s email.</p>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/30">
+                      <Mail className="h-4 w-4 text-green-600 dark:text-green-400" />
+                    </div>
+                    <div>
+                      <Label className="text-sm">Email Verified</Label>
+                      <p className="text-xs text-muted-foreground">Manually verify or unverify this user&apos;s email address.</p>
+                    </div>
                   </div>
                   <Switch checked={verified} onCheckedChange={setVerified} />
                 </div>
+                <div className="border-t" />
                 <div className="flex items-center justify-between">
-                  <div>
-                    <Label>System Admin</Label>
-                    <p className="text-xs text-muted-foreground">Grant full platform administration privileges.</p>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                      <Shield className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div>
+                      <Label className="text-sm">System Admin</Label>
+                      <p className="text-xs text-muted-foreground">Grant full platform administration privileges.</p>
+                    </div>
                   </div>
                   <Switch checked={isAdminFlag} onCheckedChange={setIsAdminFlag} disabled={isYou} />
                 </div>
-              </>
+              </div>
+            </div>
+          )}
+
+          {/* ── Save + Danger Zone ── */}
+          <div className="flex items-center justify-between pt-2 border-t">
+            <div className="flex gap-2">
+              {isAdmin && !isYou && (
+                <>
+                  <ConfirmDialog
+                    trigger={
+                      <Button variant="outline" size="sm" className="gap-1.5 text-orange-600 hover:text-orange-700 border-orange-200 hover:border-orange-300 dark:text-orange-400 dark:border-orange-800">
+                        <LogOut className="h-3.5 w-3.5" /> Force Logout
+                      </Button>
+                    }
+                    title="Force logout?"
+                    description={`Revoke all active sessions for ${u.display_name || u.email}? They will be signed out everywhere.`}
+                    onConfirm={forceLogoutUser}
+                  />
+                  <ConfirmDialog
+                    trigger={
+                      <Button variant="outline" size="sm" className="gap-1.5 text-destructive hover:text-destructive border-destructive/30 hover:border-destructive/50">
+                        <Trash2 className="h-3.5 w-3.5" /> Delete User
+                      </Button>
+                    }
+                    title="Delete user permanently?"
+                    description={`This will permanently delete ${u.email} and all their data. This action cannot be undone.`}
+                    onConfirm={deleteUser}
+                  />
+                </>
+              )}
+            </div>
+            {dirty && (
+              <Button onClick={save} disabled={saving} className="gap-2">
+                {saving ? "Saving…" : "Save Changes"}
+              </Button>
             )}
           </div>
-
-          {dirty && (
-            <Button onClick={save} disabled={saving} className="w-full">
-              {saving ? "Saving…" : "Save Changes"}
-            </Button>
-          )}
         </div>
       </DialogContent>
     </Dialog>
