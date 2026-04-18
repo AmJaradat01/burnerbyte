@@ -41,7 +41,7 @@ func (h *APIKeyHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	key, err := h.svc.Generate(r.Context(), teamID, uc.UserID, input)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 	auditRecordEnhanced(r, orgID, "apikey.created", "api_key", key.ID, input.Name, map[string]any{"name": input.Name})
@@ -109,7 +109,7 @@ func (h *APIKeyHandler) Update(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusNotFound, err.Error())
 			return
 		}
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 
@@ -181,7 +181,7 @@ func (h *APIKeyHandler) Rotate(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusNotFound, err.Error())
 			return
 		}
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 	auditRecordEnhanced(r, orgID, "apikey.rotated", "api_key", keyID, key.Name, map[string]any{"key_id": keyID.String(), "key_name": key.Name})
@@ -215,7 +215,7 @@ func (h *APIKeyHandler) BulkRevoke(w http.ResponseWriter, r *http.Request) {
 
 	result, err := h.svc.BulkRevoke(r.Context(), teamID, uc.UserID, input)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 	auditRecordEnhanced(r, orgID, "apikey.bulk_revoked", "api_key", uuid.Nil, "", map[string]any{
