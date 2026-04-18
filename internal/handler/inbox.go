@@ -158,6 +158,10 @@ func (h *InboxHandler) GetInbox(w http.ResponseWriter, r *http.Request) {
 
 func (h *InboxHandler) ExtendTTL(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
+	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "inbox:write") {
+		writeError(w, http.StatusForbidden, "insufficient scope")
+		return
+	}
 	id, err := uuid.Parse(chi.URLParam(r, "inboxId"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid inbox ID")
@@ -169,7 +173,13 @@ func (h *InboxHandler) ExtendTTL(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewDecoder(r.Body).Decode(&body)
 	inbox, err := h.svc.ExtendTTL(r.Context(), id, uc.UserID, body.Duration)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		if strings.Contains(err.Error(), "forbidden") {
+			writeError(w, http.StatusForbidden, err.Error())
+		} else if strings.Contains(err.Error(), "not found") {
+			writeError(w, http.StatusNotFound, err.Error())
+		} else {
+			writeError(w, http.StatusBadRequest, err.Error())
+		}
 		return
 	}
 	auditRecordEnhanced(r, inbox.OrgID, "inbox.extended", "inbox", id, inbox.FullAddress, map[string]any{"address": inbox.FullAddress, "new_expires_at": inbox.ExpiresAt.Format(time.RFC3339)})
@@ -189,11 +199,19 @@ func (h *InboxHandler) DeleteInbox(w http.ResponseWriter, r *http.Request) {
 	}
 	inbox, err := h.svc.GetInbox(r.Context(), id, uc.UserID)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		if strings.Contains(err.Error(), "forbidden") {
+			writeError(w, http.StatusForbidden, err.Error())
+		} else {
+			writeError(w, http.StatusNotFound, "inbox not found")
+		}
 		return
 	}
 	if err := h.svc.DeleteInbox(r.Context(), id, uc.UserID); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		if strings.Contains(err.Error(), "forbidden") {
+			writeError(w, http.StatusForbidden, err.Error())
+		} else {
+			writeError(w, http.StatusInternalServerError, "failed to delete inbox")
+		}
 		return
 	}
 	auditRecordEnhanced(r, inbox.OrgID, "inbox.deleted", "inbox", id, inbox.FullAddress, map[string]any{"address": inbox.FullAddress, "email_count": inbox.EmailCount})

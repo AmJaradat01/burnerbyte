@@ -128,10 +128,6 @@ func statusClause(status string) string {
 	}
 }
 
-func (r *InboxRepo) ListByTeam(ctx context.Context, teamID, userID uuid.UUID, page, perPage int) ([]domain.Inbox, int, error) {
-	return r.listByTeam(ctx, teamID, userID, "active", page, perPage)
-}
-
 func (r *InboxRepo) ListByTeamWithStatus(ctx context.Context, teamID, userID uuid.UUID, status string, page, perPage int) ([]domain.Inbox, int, error) {
 	return r.listByTeam(ctx, teamID, userID, status, page, perPage)
 }
