@@ -509,38 +509,31 @@ func (s *AuthService) SSOLogin(ctx context.Context, result *domain.SSOCallbackRe
 	}
 
 	if user == nil {
-		// Try legacy lookup
+		// Try by email
 		var err error
-		user, err = s.userRepo.GetBySSO(ctx, result.Provider, result.Subject)
+		user, err = s.userRepo.GetByEmail(ctx, email)
 		if err != nil {
-			// Try by email
-			user, err = s.userRepo.GetByEmail(ctx, email)
-			if err != nil {
-				// New user — create
-				user = &domain.User{
-					ID: uuid.New(), Email: email, DisplayName: result.DisplayName,
-					SSOProvider: &result.Provider, SSOSubject: &result.Subject,
-					IsSystemAdmin: false, EmailVerified: true,
-					PasswordChangedAt: func() *time.Time { t := time.Now(); return &t }(),
-				}
-				if result.AvatarURL != "" {
-					user.AvatarURL = &result.AvatarURL
-				}
-				if err := s.userRepo.Create(ctx, user); err != nil {
-					return nil, nil, fmt.Errorf("create SSO user: %w", err)
-				}
-				isNew = true
-			} else {
-				// Existing user by email — only link if no password
-				if user.PasswordHash != nil {
-					return nil, nil, fmt.Errorf("an account with this email already exists — please sign in with your password first, then link SSO from your profile")
-				}
-				user.SSOProvider = &result.Provider
-				user.SSOSubject = &result.Subject
-				user.EmailVerified = true
-				if err := s.userRepo.Update(ctx, user); err != nil {
-					return nil, nil, fmt.Errorf("link SSO: %w", err)
-				}
+			// New user — create (without legacy SSO fields)
+			user = &domain.User{
+				ID: uuid.New(), Email: email, DisplayName: result.DisplayName,
+				IsSystemAdmin: false, EmailVerified: true,
+				PasswordChangedAt: func() *time.Time { t := time.Now(); return &t }(),
+			}
+			if result.AvatarURL != "" {
+				user.AvatarURL = &result.AvatarURL
+			}
+			if err := s.userRepo.Create(ctx, user); err != nil {
+				return nil, nil, fmt.Errorf("create SSO user: %w", err)
+			}
+			isNew = true
+		} else {
+			// Existing user by email — only link if no password
+			if user.PasswordHash != nil {
+				return nil, nil, fmt.Errorf("an account with this email already exists — please sign in with your password first, then link SSO from your profile")
+			}
+			user.EmailVerified = true
+			if err := s.userRepo.Update(ctx, user); err != nil {
+				return nil, nil, fmt.Errorf("link SSO: %w", err)
 			}
 		}
 

@@ -189,8 +189,6 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
             </CardContent>
           </Card>
 
-          {user?.is_system_admin && <SSOCard />}
-
           <DangerZone org={org} onDeleted={onSaved} />
         </div>
       </div>
@@ -203,185 +201,6 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
         </div>
       )}
     </div>
-  );
-}
-
-interface SSOConfigData {
-  provider: string;
-  client_id: string;
-  client_secret: string;
-  redirect_url: string;
-  tenant_id?: string;
-  issuer_url?: string;
-  auto_provision?: boolean;
-  default_org_role?: string;
-  default_team_role?: string;
-  allowed_domains?: string;
-}
-
-function SSOCard() {
-  const { data, isLoading, refetch } = useQuery({
-    queryKey: ["admin-sso"],
-    queryFn: () => api.get<SSOConfigData>("/admin/sso"),
-  });
-
-  const [form, setForm] = useState({
-    provider: "", client_id: "", client_secret: "", redirect_url: "",
-    tenant_id: "", issuer_url: "",
-    auto_provision: false, default_org_role: "member", default_team_role: "member", allowed_domains: "",
-  });
-  const [saving, setSaving] = useState(false);
-  const [syncKey, setSyncKey] = useState("");
-
-  const dataKey = data ? JSON.stringify(data) : "";
-  if (dataKey && dataKey !== syncKey) {
-    setForm({
-      provider: data!.provider || "",
-      client_id: data!.client_id || "",
-      client_secret: data!.client_secret || "",
-      redirect_url: data!.redirect_url || "",
-      tenant_id: data!.tenant_id || "",
-      issuer_url: data!.issuer_url || "",
-      auto_provision: data!.auto_provision ?? false,
-      default_org_role: data!.default_org_role || "member",
-      default_team_role: data!.default_team_role || "member",
-      allowed_domains: data!.allowed_domains || "",
-    });
-    setSyncKey(dataKey);
-  }
-
-  const set = (key: string, val: string | boolean) => setForm((f) => ({ ...f, [key]: val }));
-
-  const dirty = data !== undefined && (
-    form.provider !== (data?.provider || "") ||
-    form.client_id !== (data?.client_id || "") ||
-    form.client_secret !== (data?.client_secret || "") ||
-    form.redirect_url !== (data?.redirect_url || "") ||
-    form.tenant_id !== (data?.tenant_id || "") ||
-    form.issuer_url !== (data?.issuer_url || "") ||
-    form.auto_provision !== (data?.auto_provision ?? false) ||
-    form.default_org_role !== (data?.default_org_role || "member") ||
-    form.default_team_role !== (data?.default_team_role || "member") ||
-    form.allowed_domains !== (data?.allowed_domains || "")
-  );
-
-  const configured = data && data.provider && data.client_id;
-
-  const save = async () => {
-    setSaving(true);
-    try {
-      await api.put("/admin/sso", form);
-      toast.success("SSO config saved — changes take effect immediately");
-      setSyncKey("");
-      refetch();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Save failed");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  if (isLoading) return <Card><CardContent className="pt-6"><Skeleton className="h-32 w-full" /></CardContent></Card>;
-
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2 text-base"><Shield className="h-4 w-4" /> SSO / OIDC</CardTitle>
-            <CardDescription>Configure single sign-on for your organization.</CardDescription>
-          </div>
-          {configured
-            ? <Badge className="bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800">Configured</Badge>
-            : <Badge variant="secondary">Not configured</Badge>
-          }
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="space-y-1">
-          <Label className="text-xs">Provider</Label>
-          <Select value={form.provider} onValueChange={(v) => set("provider", v)}>
-            <SelectTrigger className="h-8"><SelectValue placeholder="Select provider" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="google">Google</SelectItem>
-              <SelectItem value="github">GitHub</SelectItem>
-              <SelectItem value="azure">Azure AD</SelectItem>
-              <SelectItem value="okta">Okta</SelectItem>
-              <SelectItem value="oidc">Generic OIDC</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        {form.provider === "azure" && (
-          <div className="space-y-1">
-            <Label className="text-xs">Tenant ID</Label>
-            <Input value={form.tenant_id} onChange={(e) => set("tenant_id", e.target.value)} placeholder="your-tenant-id (or 'common' for multi-tenant)" className="h-8 font-mono text-xs" />
-            <p className="text-[11px] text-muted-foreground">Found in Azure Portal → Azure Active Directory → Overview</p>
-          </div>
-        )}
-        {(form.provider === "okta" || form.provider === "oidc") && (
-          <div className="space-y-1">
-            <Label className="text-xs">Issuer URL</Label>
-            <Input value={form.issuer_url} onChange={(e) => set("issuer_url", e.target.value)} placeholder={form.provider === "okta" ? "https://your-org.okta.com" : "https://your-idp.com"} className="h-8 font-mono text-xs" />
-            <p className="text-[11px] text-muted-foreground">The OIDC issuer URL (must support .well-known/openid-configuration)</p>
-          </div>
-        )}
-        <div className="space-y-1">
-          <Label className="text-xs">Client ID</Label>
-          <Input value={form.client_id} onChange={(e) => set("client_id", e.target.value)} placeholder="your-client-id" className="h-8 font-mono text-xs" />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Client Secret</Label>
-          <Input type="password" value={form.client_secret} onChange={(e) => set("client_secret", e.target.value)} placeholder="your-client-secret" className="h-8 font-mono text-xs" />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Redirect URL</Label>
-          <Input value={form.redirect_url} onChange={(e) => set("redirect_url", e.target.value)} placeholder="https://your-domain/api/v1/auth/sso/callback" className="h-8 font-mono text-xs" />
-        </div>
-
-        {/* Provisioning */}
-        <div className="border-t pt-3 space-y-3">
-          <div className="flex items-center justify-between rounded-lg border p-3">
-            <div>
-              <Label>Auto-provision users</Label>
-              <p className="text-xs text-muted-foreground">Automatically add new SSO users to the organization</p>
-            </div>
-            <Switch checked={form.auto_provision} onCheckedChange={(v) => set("auto_provision", v)} />
-          </div>
-          {form.auto_provision && (
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs">Default Org Role</Label>
-                <Select value={form.default_org_role} onValueChange={(v) => set("default_org_role", v)}>
-                  <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="member">Member</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Default Team Role</Label>
-                <Select value={form.default_team_role} onValueChange={(v) => set("default_team_role", v)}>
-                  <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="member">Member</SelectItem>
-                    <SelectItem value="lead">Lead</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1 col-span-2">
-                <Label className="text-xs">Allowed Email Domains</Label>
-                <Input value={form.allowed_domains} onChange={(e) => set("allowed_domains", e.target.value)} placeholder="company.com, corp.com" className="h-8 text-xs" />
-              </div>
-            </div>
-          )}
-        </div>
-
-        <Button onClick={save} disabled={saving || !dirty} className="w-full">
-          {saving ? "Saving…" : "Save SSO Config"}
-        </Button>
-      </CardContent>
-    </Card>
   );
 }
 
@@ -1100,8 +919,6 @@ function SSOProvidersTab() {
         </Card>
       )}
 
-      {/* Legacy SSO Config (backward compatibility) */}
-      <SSOCard />
     </div>
   );
 }

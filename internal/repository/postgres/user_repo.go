@@ -58,13 +58,6 @@ func (r *UserRepo) GetByEmail(ctx context.Context, email string) (*domain.User, 
 		 FROM users WHERE email = $1`, email)
 }
 
-func (r *UserRepo) GetBySSO(ctx context.Context, provider, subject string) (*domain.User, error) {
-	return r.scanOne(ctx,
-		`SELECT id, email, display_name, avatar_url, password_hash, sso_provider, sso_subject,
-		        is_system_admin, email_verified, password_changed_at, timezone, date_format, time_format, created_at, updated_at
-		 FROM users WHERE sso_provider = $1 AND sso_subject = $2`, provider, subject)
-}
-
 func (r *UserRepo) Update(ctx context.Context, u *domain.User) error {
 	_, err := r.db.Exec(ctx,
 		`UPDATE users SET email=$1, display_name=$2, avatar_url=$3, password_hash=$4,
