@@ -10,7 +10,6 @@ import (
 	"github.com/google/uuid"
 
 	"gitlab.com/burnerbyte/burnerbyte/internal/auth"
-	"gitlab.com/burnerbyte/burnerbyte/internal/auth/rbac"
 	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
 	"gitlab.com/burnerbyte/burnerbyte/internal/service"
 )
@@ -115,7 +114,7 @@ func (h *InboxHandler) ListInboxes(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid team ID")
 		return
 	}
-	if checkTeamRole(w, r, orgID, teamID, rbac.OrgMember, rbac.TeamMember) {
+	if checkTeamPermission(w, r, orgID, teamID, "team.inboxes.view") {
 		return
 	}
 	page, perPage := parsePagination(r)

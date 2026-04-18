@@ -42,10 +42,10 @@ type MergedUser = User & { org_role?: string; membership_id?: string; member_cre
 export function UnifiedUsersTab({ orgId }: { orgId: string }) {
   const qc = useQueryClient();
   const currentUser = useAuthStore((s) => s.user);
-  const { currentRole } = useOrgStore();
+  const { hasPermission } = useOrgStore();
   const isAdmin = currentUser?.is_system_admin ?? false;
-  const canManageMembers = currentRole === "owner" || isAdmin;
-  const canInvite = currentRole === "owner" || currentRole === "admin" || isAdmin;
+  const canManageMembers = hasPermission("org.members.role") || isAdmin;
+  const canInvite = hasPermission("org.members.invite") || isAdmin;
   const { orgRoles } = useRoles();
   const [page, setPage] = useState(1);
   const [membersPage, setMembersPage] = useState(1);

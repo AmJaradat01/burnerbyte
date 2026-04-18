@@ -49,7 +49,7 @@ const authBouncePaths = [
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, loading } = useAuthStore();
-  const { currentRole } = useOrgStore();
+  const { currentRole, hasPermission } = useOrgStore();
   const pathname = usePathname();
   const router = useRouter();
   const isPublic = publicPaths.some((p) => pathname.startsWith(p));
@@ -72,7 +72,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     });
   };
 
-  const isOrgAdmin = currentRole === "owner" || currentRole === "admin" || user?.is_system_admin;
+  const isOrgAdmin = hasPermission("org.settings.manage") || user?.is_system_admin;
   const roleResolved = currentRole !== null || user?.is_system_admin || !user;
 
   useOrgBootstrap();

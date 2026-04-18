@@ -1,0 +1,3 @@
+# 2026/04/18 14:36:24.408047 [TestBugCondition_ViewerBlockedFromReads] viewer should have read access to team resources, but got: insufficient team permissions
+# 
+v0.4.8#12422067368590423060

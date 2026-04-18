@@ -8,7 +8,6 @@ import (
 	"github.com/google/uuid"
 
 	"gitlab.com/burnerbyte/burnerbyte/internal/auth"
-	"gitlab.com/burnerbyte/burnerbyte/internal/auth/rbac"
 	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
 	"gitlab.com/burnerbyte/burnerbyte/internal/service"
 )
@@ -31,7 +30,7 @@ func (h *APIKeyHandler) Create(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
 	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
 	teamID, _ := uuid.Parse(chi.URLParam(r, "teamId"))
-	if checkTeamRole(w, r, orgID, teamID, rbac.OrgAdmin, rbac.TeamLead) {
+	if checkTeamPermission(w, r, orgID, teamID, "team.apikeys.manage") {
 		return
 	}
 	var input domain.CreateAPIKeyInput
@@ -51,7 +50,7 @@ func (h *APIKeyHandler) Create(w http.ResponseWriter, r *http.Request) {
 func (h *APIKeyHandler) List(w http.ResponseWriter, r *http.Request) {
 	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
 	teamID, _ := uuid.Parse(chi.URLParam(r, "teamId"))
-	if checkTeamRole(w, r, orgID, teamID, rbac.OrgMember, rbac.TeamMember) {
+	if checkTeamPermission(w, r, orgID, teamID, "team.apikeys.view") {
 		return
 	}
 	page, perPage := parsePagination(r)
@@ -67,7 +66,7 @@ func (h *APIKeyHandler) List(w http.ResponseWriter, r *http.Request) {
 func (h *APIKeyHandler) Get(w http.ResponseWriter, r *http.Request) {
 	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
 	teamID, _ := uuid.Parse(chi.URLParam(r, "teamId"))
-	if checkTeamRole(w, r, orgID, teamID, rbac.OrgMember, rbac.TeamMember) {
+	if checkTeamPermission(w, r, orgID, teamID, "team.apikeys.view") {
 		return
 	}
 	keyID, err := uuid.Parse(chi.URLParam(r, "keyId"))
@@ -86,7 +85,7 @@ func (h *APIKeyHandler) Get(w http.ResponseWriter, r *http.Request) {
 func (h *APIKeyHandler) Update(w http.ResponseWriter, r *http.Request) {
 	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
 	teamID, _ := uuid.Parse(chi.URLParam(r, "teamId"))
-	if checkTeamRole(w, r, orgID, teamID, rbac.OrgAdmin, rbac.TeamLead) {
+	if checkTeamPermission(w, r, orgID, teamID, "team.apikeys.manage") {
 		return
 	}
 	keyID, err := uuid.Parse(chi.URLParam(r, "keyId"))
@@ -133,7 +132,7 @@ func (h *APIKeyHandler) Revoke(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
 	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
 	teamID, _ := uuid.Parse(chi.URLParam(r, "teamId"))
-	if checkTeamRole(w, r, orgID, teamID, rbac.OrgAdmin, rbac.TeamLead) {
+	if checkTeamPermission(w, r, orgID, teamID, "team.apikeys.manage") {
 		return
 	}
 	id, err := uuid.Parse(chi.URLParam(r, "keyId"))
@@ -167,7 +166,7 @@ func (h *APIKeyHandler) Revoke(w http.ResponseWriter, r *http.Request) {
 func (h *APIKeyHandler) Rotate(w http.ResponseWriter, r *http.Request) {
 	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
 	teamID, _ := uuid.Parse(chi.URLParam(r, "teamId"))
-	if checkTeamRole(w, r, orgID, teamID, rbac.OrgAdmin, rbac.TeamLead) {
+	if checkTeamPermission(w, r, orgID, teamID, "team.apikeys.manage") {
 		return
 	}
 	keyID, err := uuid.Parse(chi.URLParam(r, "keyId"))
@@ -192,7 +191,7 @@ func (h *APIKeyHandler) BulkRevoke(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
 	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))
 	teamID, _ := uuid.Parse(chi.URLParam(r, "teamId"))
-	if checkTeamRole(w, r, orgID, teamID, rbac.OrgAdmin, rbac.TeamLead) {
+	if checkTeamPermission(w, r, orgID, teamID, "team.apikeys.manage") {
 		return
 	}
 	var input domain.BulkRevokeInput

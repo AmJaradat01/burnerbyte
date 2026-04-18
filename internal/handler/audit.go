@@ -10,7 +10,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
-	"gitlab.com/burnerbyte/burnerbyte/internal/auth/rbac"
 	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
 	"gitlab.com/burnerbyte/burnerbyte/internal/service"
 )
@@ -104,7 +103,7 @@ func (h *AuditHandler) List(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid org ID")
 		return
 	}
-	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+	if checkOrgPermission(w, r, orgID, "org.audit.view") {
 		return
 	}
 	page, perPage := parsePagination(r)
@@ -128,7 +127,7 @@ func (h *AuditHandler) Export(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid org ID")
 		return
 	}
-	if checkOrgRole(w, r, orgID, rbac.OrgAdmin) {
+	if checkOrgPermission(w, r, orgID, "org.audit.export") {
 		return
 	}
 

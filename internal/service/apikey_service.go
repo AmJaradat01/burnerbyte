@@ -15,18 +15,48 @@ import (
 	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
 )
 
+// ValidScopesProvider returns the set of valid API key scopes.
+// When nil, the hardcoded legacy scopes are used as fallback.
+type ValidScopesProvider func() []string
+
 type APIKeyService struct {
-	repo *postgres.APIKeyRepo
+	repo           *postgres.APIKeyRepo
+	scopesProvider ValidScopesProvider
 }
 
-func NewAPIKeyService(repo *postgres.APIKeyRepo) *APIKeyService {
-	return &APIKeyService{repo: repo}
+func NewAPIKeyService(repo *postgres.APIKeyRepo, opts ...func(*APIKeyService)) *APIKeyService {
+	s := &APIKeyService{repo: repo}
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
 }
 
-var validScopes = map[string]bool{
+// WithScopesProvider sets a dynamic scopes provider for API key validation.
+func WithScopesProvider(provider ValidScopesProvider) func(*APIKeyService) {
+	return func(s *APIKeyService) {
+		s.scopesProvider = provider
+	}
+}
+
+// validScopes is the legacy hardcoded scope set, kept as fallback.
+var legacyScopes = map[string]bool{
 	"inbox:create": true, "inbox:read": true, "inbox:write": true, "inbox:delete": true,
 	"email:read": true, "email:write": true, "email:delete": true,
 	"webhook:read": true, "webhook:write": true,
+}
+
+func (s *APIKeyService) isValidScope(scope string) bool {
+	if s.scopesProvider != nil {
+		for _, valid := range s.scopesProvider() {
+			if valid == scope {
+				return true
+			}
+		}
+		return false
+	}
+	// Fallback to legacy scopes
+	return legacyScopes[scope]
 }
 
 // ValidateIPs validates that each entry is a valid IPv4, IPv6, or CIDR string.
@@ -51,7 +81,7 @@ func (s *APIKeyService) Generate(ctx context.Context, teamID, userID uuid.UUID, 
 		return nil, fmt.Errorf("at least one scope is required")
 	}
 	for _, sc := range input.Scopes {
-		if !validScopes[sc] {
+		if !s.isValidScope(sc) {
 			return nil, fmt.Errorf("invalid scope: %s", sc)
 		}
 	}
@@ -138,7 +168,7 @@ func (s *APIKeyService) Update(ctx context.Context, teamID, keyID uuid.UUID, inp
 	// Validate scopes if provided
 	if len(input.Scopes) > 0 {
 		for _, sc := range input.Scopes {
-			if !validScopes[sc] {
+			if !s.isValidScope(sc) {
 				return nil, fmt.Errorf("invalid scope: %s", sc)
 			}
 		}
