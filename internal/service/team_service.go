@@ -308,6 +308,20 @@ func (s *TeamService) ListByOrg(ctx context.Context, orgID uuid.UUID, opts postg
 	return s.teamRepo.ListByOrg(ctx, orgID, opts)
 }
 
+func (s *TeamService) ListByUserMembership(ctx context.Context, orgID, userID uuid.UUID, opts postgres.ListTeamsOpts) ([]domain.Team, int, error) {
+	if opts.Page < 1 {
+		opts.Page = 1
+	}
+	if opts.PerPage < 1 || opts.PerPage > 100 {
+		opts.PerPage = 20
+	}
+	if opts.IsArchived == nil {
+		f := false
+		opts.IsArchived = &f
+	}
+	return s.teamRepo.ListByUserMembership(ctx, orgID, userID, opts)
+}
+
 func (s *TeamService) UpdateTeam(ctx context.Context, orgID, id uuid.UUID, input domain.UpdateTeamInput) (*domain.Team, error) {
 	team, err := s.teamRepo.GetByID(ctx, id)
 	if err != nil {

@@ -75,11 +75,11 @@ export default function TeamsPage() {
           <TabsList>
             <TabsTrigger value="members" className="gap-1.5"><Users className="h-3.5 w-3.5" /> Members</TabsTrigger>
             <TabsTrigger value="domains" className="gap-1.5"><Globe className="h-3.5 w-3.5" /> Domains</TabsTrigger>
-            <TabsTrigger value="settings" className="gap-1.5"><Settings className="h-3.5 w-3.5" /> Settings</TabsTrigger>
+            {isAdmin && <TabsTrigger value="settings" className="gap-1.5"><Settings className="h-3.5 w-3.5" /> Settings</TabsTrigger>}
           </TabsList>
-          <TabsContent value="members"><TeamMembersTab orgId={currentOrg.id} teamId={selectedTeam.id} /></TabsContent>
-          <TabsContent value="domains"><DomainAssignmentsTab orgId={currentOrg.id} teamId={selectedTeam.id} /></TabsContent>
-          <TabsContent value="settings"><TeamSettingsTab orgId={currentOrg.id} team={selectedTeam} onDeleted={() => setSelectedTeam(null)} /></TabsContent>
+          <TabsContent value="members"><TeamMembersTab orgId={currentOrg.id} teamId={selectedTeam.id} isAdmin={!!isAdmin} /></TabsContent>
+          <TabsContent value="domains"><DomainAssignmentsTab orgId={currentOrg.id} teamId={selectedTeam.id} isAdmin={!!isAdmin} /></TabsContent>
+          {isAdmin && <TabsContent value="settings"><TeamSettingsTab orgId={currentOrg.id} team={selectedTeam} onDeleted={() => setSelectedTeam(null)} /></TabsContent>}
         </Tabs>
       </div>
     );
@@ -91,7 +91,7 @@ export default function TeamsPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Teams</h1>
-          {teamsData?.data && teamsData.data.length > 0 && (
+          {isAdmin && teamsData?.data && teamsData.data.length > 0 && (
             <p className="text-sm text-muted-foreground mt-0.5">
               {teamsData.data.length} team{teamsData.data.length !== 1 ? "s" : ""} · {teamsData.data.reduce((s, t) => s + (t.member_count ?? 0), 0)} members
             </p>
@@ -100,7 +100,7 @@ export default function TeamsPage() {
         {isAdmin && <CreateTeamDialog orgId={currentOrg.id} existingTeams={(teamsData?.data ?? []).map((t) => t.name)} />}
       </div>
 
-      {teamsData?.data && teamsData.data.length > 0 && (
+      {isAdmin && teamsData?.data && teamsData.data.length > 0 && (
         <div className="grid grid-cols-3 gap-3">
           <MiniStat icon={Users} label="Total Teams" value={teamsData.data.length} accent="text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400" />
           <MiniStat icon={Users} label="Total Members" value={teamsData.data.reduce((s, t) => s + (t.member_count ?? 0), 0)} accent="text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400" />
@@ -488,7 +488,7 @@ function CreateTeamDialog({ orgId, existingTeams }: { orgId: string; existingTea
   );
 }
 
-function TeamMembersTab({ orgId, teamId }: { orgId: string; teamId: string }) {
+function TeamMembersTab({ orgId, teamId, isAdmin }: { orgId: string; teamId: string; isAdmin: boolean }) {
   const qc = useQueryClient();
   const { teamRoles } = useRoles();
   const [addOpen, setAddOpen] = useState(false);
@@ -601,7 +601,7 @@ function TeamMembersTab({ orgId, teamId }: { orgId: string; teamId: string }) {
       {/* Search + Add */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {members.length > 3 && <Input placeholder="Search members…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />}
-        <Dialog open={addOpen} onOpenChange={(v) => { setAddOpen(v); if (!v) { setMemberEmail(""); setRole("member"); setSuggestions([]); setShowSuggestions(false); } }}>
+        {isAdmin && <Dialog open={addOpen} onOpenChange={(v) => { setAddOpen(v); if (!v) { setMemberEmail(""); setRole("member"); setSuggestions([]); setShowSuggestions(false); } }}>
           <DialogTrigger asChild>
             <Button size="sm" className="gap-1.5"><UserPlus className="h-3.5 w-3.5" /> Add Member</Button>
           </DialogTrigger>
@@ -673,7 +673,7 @@ function TeamMembersTab({ orgId, teamId }: { orgId: string; teamId: string }) {
               </Button>
             </div>
           </DialogContent>
-        </Dialog>
+        </Dialog>}
       </div>
 
       {/* Table */}
@@ -707,7 +707,7 @@ function TeamMembersTab({ orgId, teamId }: { orgId: string; teamId: string }) {
                       <TableHead className="font-medium">Member</TableHead>
                       <TableHead className="font-medium">Role</TableHead>
                       <TableHead className="font-medium hidden sm:table-cell">Joined</TableHead>
-                      <TableHead className="text-right font-medium">Actions</TableHead>
+                      {isAdmin && <TableHead className="text-right font-medium">Actions</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -725,16 +725,21 @@ function TeamMembersTab({ orgId, teamId }: { orgId: string; teamId: string }) {
                     </div>
                   </TableCell>
                   <TableCell>
+                    {isAdmin ? (
                     <Select value={m.role} onValueChange={(r) => changeRole.mutate({ uid: m.user_id, role: r })}>
                       <SelectTrigger className="w-28 h-8 text-xs"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {teamRoles.map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
                       </SelectContent>
                     </Select>
+                    ) : (
+                      <Badge variant="secondary" className="text-xs">{m.role}</Badge>
+                    )}
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground hidden sm:table-cell">
                     {m.created_at ? new Date(m.created_at).toLocaleDateString() : "—"}
                   </TableCell>
+                  {isAdmin && (
                   <TableCell className="text-right">
                     <ConfirmDialog
                       trigger={<Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button>}
@@ -743,6 +748,7 @@ function TeamMembersTab({ orgId, teamId }: { orgId: string; teamId: string }) {
                       onConfirm={() => removeMember.mutate(m.user_id)}
                     />
                   </TableCell>
+                  )}
                 </TableRow>
               ))}
                   </TableBody>
@@ -755,7 +761,7 @@ function TeamMembersTab({ orgId, teamId }: { orgId: string; teamId: string }) {
   );
 }
 
-function DomainAssignmentsTab({ orgId, teamId }: { orgId: string; teamId: string }) {
+function DomainAssignmentsTab({ orgId, teamId, isAdmin }: { orgId: string; teamId: string; isAdmin: boolean }) {
   const qc = useQueryClient();
   const [assignOpen, setAssignOpen] = useState(false);
   const [selectedDomain, setSelectedDomain] = useState("");
@@ -813,7 +819,7 @@ function DomainAssignmentsTab({ orgId, teamId }: { orgId: string; teamId: string
           </div>
         )}
         <div className="ml-auto">
-          {available.length > 0 && (
+          {isAdmin && available.length > 0 && (
             <Dialog open={assignOpen} onOpenChange={(v) => { setAssignOpen(v); if (!v) setSelectedDomain(""); }}>
               <DialogTrigger asChild>
                 <Button size="sm" className="gap-1.5"><Plus className="h-3.5 w-3.5" /> Assign Domain</Button>
@@ -863,7 +869,7 @@ function DomainAssignmentsTab({ orgId, teamId }: { orgId: string; teamId: string
               <TableRow className="bg-muted/50">
                 <TableHead className="font-medium">Domain</TableHead>
                 <TableHead className="font-medium hidden sm:table-cell">Assigned</TableHead>
-                <TableHead className="text-right font-medium">Actions</TableHead>
+                {isAdmin && <TableHead className="text-right font-medium">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -880,6 +886,7 @@ function DomainAssignmentsTab({ orgId, teamId }: { orgId: string; teamId: string
                   <TableCell className="text-xs text-muted-foreground hidden sm:table-cell">
                     {a.created_at ? new Date(a.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "—"}
                   </TableCell>
+                  {isAdmin && (
                   <TableCell className="text-right">
                     <UnassignDomainDialog
                       orgId={orgId}
@@ -888,6 +895,7 @@ function DomainAssignmentsTab({ orgId, teamId }: { orgId: string; teamId: string
                       onConfirm={() => unassign.mutate(a.domain_id)}
                     />
                   </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>
