@@ -3,72 +3,158 @@ title: Roles & Permissions
 description: BurnerByte's dynamic RBAC system with DB-backed roles and permissions.
 ---
 
-## Role Hierarchy
+## Overview
 
-BurnerByte uses a two-level RBAC system with 3 org-level roles and 2 team-level roles. Roles and their permissions are stored in the database and can be managed via the admin API and Settings → Roles tab.
+BurnerByte uses a two-level, permission-based RBAC system. Every API endpoint checks a specific permission key from the `role_permissions` table in the database — there are no hardcoded rank checks. Roles and their permissions are stored in the `roles`, `permissions`, and `role_permissions` tables and can be managed via the admin API or **Settings → Roles** in the UI.
+
+## Org Roles
+
+| Role | Rank | Description |
+|---|---|---|
+| `owner` | 3 | Full control over the organization, including deletion |
+| `admin` | 2 | Manage members, domains, teams, and settings. Cannot delete the org |
+| `member` | 1 | Read-only access to org resources. Access to teams they belong to |
+
+## Team Roles
+
+| Role | Rank | Description |
+|---|---|---|
+| `lead` | 2 | Full control of team settings, members, domain assignments, webhooks, API keys, and inboxes |
+| `member` | 1 | Create and manage inboxes, view emails, plus all view permissions |
+| `viewer` | 0 | Read-only access to all team resources |
+
+## Permission Keys
+
+### Org Permissions
+
+| Key | Description |
+|---|---|
+| `org.view` | View organization info |
+| `org.settings.view` | View organization settings |
+| `org.settings.manage` | Edit organization settings |
+| `org.delete` | Delete the organization |
+| `org.members.view` | View member list |
+| `org.members.invite` | Invite new members |
+| `org.members.add` | Directly add existing users |
+| `org.members.remove` | Deactivate members |
+| `org.members.role` | Change member roles |
+| `org.domains.view` | View domains list |
+| `org.domains.manage` | Create, verify, delete domains |
+| `org.teams.create` | Create teams |
+| `org.teams.delete` | Delete teams |
+| `org.teams.manage` | Archive, restore, view impact |
+| `org.audit.view` | View audit logs |
+| `org.audit.export` | Export audit logs |
+| `org.analytics.view` | View org analytics |
+
+### Team Permissions
+
+| Key | Description |
+|---|---|
+| `team.view` | View team info |
+| `team.settings.manage` | Edit team settings |
+| `team.members.view` | View team members |
+| `team.members.manage` | Add/remove team members |
+| `team.members.role` | Change team member roles |
+| `team.domains.view` | View domain assignments |
+| `team.domains.manage` | Update domain assignment settings |
+| `team.webhooks.view` | View webhooks and delivery logs |
+| `team.webhooks.manage` | Create/edit/delete webhooks |
+| `team.apikeys.view` | View API keys |
+| `team.apikeys.manage` | Create/revoke/rotate API keys |
+| `team.inboxes.view` | View team inboxes |
+| `team.inboxes.create` | Create inboxes |
+| `team.inboxes.manage` | Manage inboxes |
+| `team.emails.view` | View emails |
+| `team.analytics.view` | View team analytics |
+
+## Default Role Assignments
 
 ### Org Roles
 
-| Role | Description |
-|---|---|
-| `owner` | Full control. Can delete org, manage billing, transfer ownership |
-| `admin` | Can manage members, domains, teams, settings. Cannot delete org |
-| `member` | Can view org resources. Access to teams they belong to |
+| Permission | Owner | Admin | Member |
+|---|---|---|---|
+| `org.view` | ✅ | ✅ | ✅ |
+| `org.settings.view` | ✅ | ✅ | ✅ |
+| `org.settings.manage` | ✅ | ✅ | ❌ |
+| `org.delete` | ✅ | ❌ | ❌ |
+| `org.members.view` | ✅ | ✅ | ✅ |
+| `org.members.invite` | ✅ | ✅ | ❌ |
+| `org.members.add` | ✅ | ✅ | ❌ |
+| `org.members.remove` | ✅ | ✅ | ❌ |
+| `org.members.role` | ✅ | ✅ | ❌ |
+| `org.domains.view` | ✅ | ✅ | ✅ |
+| `org.domains.manage` | ✅ | ✅ | ❌ |
+| `org.teams.create` | ✅ | ✅ | ❌ |
+| `org.teams.delete` | ✅ | ✅ | ❌ |
+| `org.teams.manage` | ✅ | ✅ | ❌ |
+| `org.audit.view` | ✅ | ✅ | ❌ |
+| `org.audit.export` | ✅ | ✅ | ❌ |
+| `org.analytics.view` | ✅ | ✅ | ✅ |
 
 ### Team Roles
 
-| Role | Description |
-|---|---|
-| `lead` | Full control of team settings, members, domain assignments, webhooks, API keys |
-| `member` | Can create inboxes, view emails, manage own resources |
+| Permission | Lead | Member | Viewer |
+|---|---|---|---|
+| `team.view` | ✅ | ✅ | ✅ |
+| `team.settings.manage` | ✅ | ❌ | ❌ |
+| `team.members.view` | ✅ | ✅ | ✅ |
+| `team.members.manage` | ✅ | ❌ | ❌ |
+| `team.members.role` | ✅ | ❌ | ❌ |
+| `team.domains.view` | ✅ | ✅ | ✅ |
+| `team.domains.manage` | ✅ | ❌ | ❌ |
+| `team.webhooks.view` | ✅ | ✅ | ✅ |
+| `team.webhooks.manage` | ✅ | ❌ | ❌ |
+| `team.apikeys.view` | ✅ | ✅ | ✅ |
+| `team.apikeys.manage` | ✅ | ❌ | ❌ |
+| `team.inboxes.view` | ✅ | ✅ | ✅ |
+| `team.inboxes.create` | ✅ | ✅ | ❌ |
+| `team.inboxes.manage` | ✅ | ✅ | ❌ |
+| `team.emails.view` | ✅ | ✅ | ✅ |
+| `team.analytics.view` | ✅ | ✅ | ✅ |
 
-## Permission Matrix
+## Enforcement
 
-| Action | Owner | Admin | Member | Team Lead | Team Member |
-|---|---|---|---|---|---|
-| Delete org | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Manage org settings | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Invite members | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Change member roles | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Manage domains | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Create teams | ✅ | ✅ | ❌ | ❌ | ❌ |
-| View audit log | ✅ | ✅ | ❌ | ❌ | ❌ |
-| View organization | ✅ | ✅ | ✅ | ❌ | ❌ |
-| Manage team settings | ❌ | ❌ | ❌ | ✅ | ❌ |
-| Manage team members | ❌ | ❌ | ❌ | ✅ | ❌ |
-| Manage webhooks | ❌ | ❌ | ❌ | ✅ | ❌ |
-| Manage API keys | ❌ | ❌ | ❌ | ✅ | ❌ |
-| Manage domain assignments | ❌ | ❌ | ❌ | ✅ | ❌ |
-| Create/manage inboxes | ❌ | ❌ | ❌ | ✅ | ✅ |
-| View emails | ❌ | ❌ | ❌ | ✅ | ✅ |
+Every API endpoint checks a specific permission key via the `checkOrgPermission` or `checkTeamPermission` helpers. These look up the user's role, then query the in-memory permission cache to verify the role has the required key. No hardcoded rank comparisons are used for permission checks.
 
-## Dynamic Role Management
+### Self-Protection
 
-Roles and permissions are stored in the `roles`, `permissions`, and `role_permissions` database tables. System admins can create, edit, and delete roles via:
+Users cannot modify peers at the same or higher rank. Role change and deactivation endpoints use `RequireRankAbove` to enforce this — the acting user's role rank must be strictly higher than the target user's.
 
-- **UI**: Settings → Roles tab — full CRUD (create, edit, delete)
-- **API**:
-  - `POST /admin/roles` — create a new role with `{ name, label, description, scope, permissions: ["key1", "key2"] }`
-  - `PATCH /admin/roles/{roleId}` — update label, description, or permissions
-  - `DELETE /admin/roles/{roleId}` — remove a custom role
+### Org-Level Fallback
 
-### Permission Keys
+Org admins and owners (rank ≥ 2) can access any team's resources without being an explicit team member. The `RequireTeamPermission` check falls back to the user's org role when no team membership exists.
 
-Org permissions: `org.settings.manage`, `org.delete`, `org.members.invite`, `org.members.remove`, `org.members.role`, `org.domains.manage`, `org.teams.manage`, `org.audit.view`, `org.view`
+## Permission Cache
 
-Team permissions: `team.settings.manage`, `team.members.manage`, `team.webhooks.manage`, `team.apikeys.manage`, `team.domains.manage`, `team.inboxes.manage`, `team.emails.view`
+Permissions are loaded into an in-memory cache at startup from the `role_permissions` table. The cache is thread-safe (`sync.RWMutex`) and is refreshed automatically when roles are updated via the admin API (role create, update, or delete triggers a cache refresh).
+
+## Custom Roles
+
+Admins can create custom roles with specific permissions via **Settings → Roles** or the admin API:
+
+- `POST /admin/roles` — create a new role with scope, value, label, description, rank, and permissions
+- `PATCH /admin/roles/:id` — update label, description, or permissions
+- `DELETE /admin/roles/:id` — remove a custom role
+
+Custom roles appear in the permission cache alongside system roles and can be assigned to org members or team members.
 
 ## System Admin
 
-The `is_system_admin` flag on the user record grants access to all `/admin` routes including:
+The `is_system_admin` flag on the user record bypasses all RBAC checks and grants access to all `/admin` routes, including:
+
 - System stats and health checks
 - User management (list, edit, delete platform users)
 - Platform settings (registration, email verification, password policy, lockout)
-- SSO configuration
+- SSO provider management
 - Role and permission management
 
 This flag is set during the initial setup wizard for the platform owner.
 
 ## Encryption at Rest
 
-Sensitive configuration values (SSO client secrets, SMTP passwords) are encrypted with AES-256-GCM before storage in the `system_configs` database table. To enable, set the `encryption.key` config value to a 64-character hex string (32 bytes). Generate with: `openssl rand -hex 32`.
+Sensitive configuration values (SSO client secrets, SMTP passwords) are encrypted with AES-256-GCM before storage in the `system_configs` table. To enable, set `encryption.key` to a 64-character hex string (32 bytes). Generate with:
+
+```bash
+openssl rand -hex 32
+```
