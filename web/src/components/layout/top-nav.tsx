@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { useAuthStore } from "@/stores/auth-store";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { useTranslations } from "next-intl";
 import { LogOut } from "lucide-react";
 
@@ -51,8 +50,6 @@ export function TopNav() {
 
         {/* Right: actions + profile */}
         <div className="flex items-center gap-1">
-          <ThemeToggle />
-          <div className="h-5 w-px bg-border mx-1" />
           <Link
             href="/profile"
             className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted transition-colors"
