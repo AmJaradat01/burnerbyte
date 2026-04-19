@@ -43,16 +43,16 @@ function DnsRecordSection({ title, icon: Icon, description, verified, records }:
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
-        <div className={`h-7 w-7 rounded-md flex items-center justify-center shrink-0 ${verified ? "bg-emerald-100 dark:bg-emerald-900/30" : "bg-amber-100 dark:bg-amber-900/30"}`}>
-          <Icon className={`h-3.5 w-3.5 ${verified ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`} />
+        <div className={`h-7 w-7 rounded-md flex items-center justify-center shrink-0 ${verified ? "bg-emerald-100" : "bg-amber-100"}`}>
+          <Icon className={`h-3.5 w-3.5 ${verified ? "text-emerald-600" : "text-amber-600"}`} />
         </div>
         <span className="text-sm font-semibold">{title}</span>
         {verified ? (
-          <Badge className="gap-1 text-[10px] bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800">
+          <Badge className="gap-1 text-[10px] bg-emerald-100 text-emerald-700 border-emerald-200">
             <CheckCircle2 className="h-2.5 w-2.5" /> Verified
           </Badge>
         ) : (
-          <Badge className="gap-1 text-[10px] bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800">
+          <Badge className="gap-1 text-[10px] bg-amber-100 text-amber-700 border-amber-200">
             <Circle className="h-2.5 w-2.5" /> Pending
           </Badge>
         )}
@@ -128,11 +128,11 @@ export default function DomainDetailPage() {
               <div className="flex items-center gap-2">
                 <h1 className="text-3xl font-bold tracking-tight">{domain?.domain_name}</h1>
                 {allVerified ? (
-                  <Badge className="gap-1 bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800">
+                  <Badge className="gap-1 bg-emerald-100 text-emerald-700 border-emerald-200">
                     <CheckCircle2 className="h-3 w-3" /> Verified
                   </Badge>
                 ) : (
-                  <Badge className="gap-1 bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800">
+                  <Badge className="gap-1 bg-amber-100 text-amber-700 border-amber-200">
                     <Clock className="h-3 w-3" /> Setup Required
                   </Badge>
                 )}
@@ -150,10 +150,10 @@ export default function DomainDetailPage() {
         <>
           {/* Quick stats */}
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <QuickStat icon={Inbox} label="Active Inboxes" value={domain.active_inboxes ?? 0} accent="text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400" />
-            <QuickStat icon={Globe} label="Total Created" value={domain.inboxes_created_count ?? 0} accent="text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400" />
-            <QuickStat icon={Users} label="Teams" value={domain.team_count ?? 0} accent="text-violet-600 bg-violet-100 dark:bg-violet-900/30 dark:text-violet-400" />
-            <QuickStat icon={Shield} label="DNS Status" value={allVerified ? "✓ OK" : `${[domain.mx_verified, domain.txt_verified].filter(Boolean).length}/2`} accent={allVerified ? "text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400" : "text-amber-600 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400"} />
+            <QuickStat icon={Inbox} label="Active Inboxes" value={domain.active_inboxes ?? 0} accent="text-emerald-600 bg-emerald-100" />
+            <QuickStat icon={Globe} label="Total Created" value={domain.inboxes_created_count ?? 0} accent="text-blue-600 bg-blue-100" />
+            <QuickStat icon={Users} label="Teams" value={domain.team_count ?? 0} accent="text-violet-600 bg-violet-100" />
+            <QuickStat icon={Shield} label="DNS Status" value={allVerified ? "✓ OK" : `${[domain.mx_verified, domain.txt_verified].filter(Boolean).length}/2`} accent={allVerified ? "text-emerald-600 bg-emerald-100" : "text-amber-600 bg-amber-100"} />
           </div>
 
           {/* Two-column layout */}
@@ -164,8 +164,8 @@ export default function DomainDetailPage() {
               <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-blue-100 dark:bg-blue-900/30">
-                  <Globe className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-blue-100">
+                  <Globe className="h-4 w-4 text-blue-600" />
                 </div>
                 <div>
                   <CardTitle className="text-base">DNS Configuration</CardTitle>
@@ -231,8 +231,8 @@ export default function DomainDetailPage() {
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-violet-100 dark:bg-violet-900/30">
-                  <Users className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-violet-100">
+                  <Users className="h-4 w-4 text-violet-600" />
                 </div>
                 <div>
                   <CardTitle className="text-base">Assigned Teams</CardTitle>
@@ -270,8 +270,8 @@ export default function DomainDetailPage() {
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-slate-100 dark:bg-slate-900/30">
-                  <Info className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-slate-100">
+                  <Info className="h-4 w-4 text-slate-600" />
                 </div>
                 <CardTitle className="text-base">Details</CardTitle>
               </div>
@@ -349,8 +349,8 @@ function DomainSettingsCard({ domain: d, orgId }: { domain: Domain; orgId: strin
     <Card>
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-amber-100 dark:bg-amber-900/30">
-            <Settings2 className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+          <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-amber-100">
+            <Settings2 className="h-4 w-4 text-amber-600" />
           </div>
           <div>
             <CardTitle className="text-base">Domain Settings</CardTitle>
