@@ -64,8 +64,8 @@ export default function SessionsPage() {
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-muted-foreground">Active Sessions</span>
-              <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-blue-100 dark:bg-blue-900/30">
-                <Monitor className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-blue-100">
+                <Monitor className="h-4 w-4 text-blue-600" />
               </div>
             </div>
             <p className="text-2xl font-bold tabular-nums">{sessions?.length ?? 0}</p>
@@ -75,8 +75,8 @@ export default function SessionsPage() {
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-muted-foreground">Current Session</span>
-              <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-emerald-100 dark:bg-emerald-900/30">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-emerald-100">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
               </div>
             </div>
             <p className="text-2xl font-bold tabular-nums">Active</p>
@@ -109,11 +109,11 @@ export default function SessionsPage() {
                     new Date(a.last_used_at) > new Date(b.last_used_at) ? a : b
                   ).id;
                   return (
-                  <TableRow key={s.id} className={isCurrent ? "bg-emerald-50 dark:bg-emerald-900/10 border-l-2 border-l-emerald-500" : ""}>
+                  <TableRow key={s.id} className={isCurrent ? "bg-emerald-50 border-l-2 border-l-emerald-500" : ""}>
                     <TableCell className="font-mono text-sm">
                       <div className="flex items-center gap-2">
                         {s.ip_address ?? "—"}
-                        {isCurrent && <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800 text-[10px] px-1">Current</Badge>}
+                        {isCurrent && <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[10px] px-1">Current</Badge>}
                       </div>
                     </TableCell>
                     <TableCell className="max-w-[200px] truncate text-sm">{s.user_agent ?? "—"}</TableCell>
