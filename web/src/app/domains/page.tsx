@@ -99,10 +99,10 @@ export default function DomainsPage() {
       {/* Summary cards — 4 cards */}
       {totalDomains > 0 && (
         <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
-          <MiniStat icon={Globe} label="Total" value={totalDomains} accent="text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400" />
-          <MiniStat icon={CheckCircle2} label="Verified" value={verifiedCount} accent="text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400" />
-          <MiniStat icon={Shield} label="Pending" value={pendingCount} accent="text-amber-600 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400" />
-          <MiniStat icon={Inbox} label="Total Inboxes" value={totalInboxes} accent="text-violet-600 bg-violet-100 dark:bg-violet-900/30 dark:text-violet-400" />
+          <MiniStat icon={Globe} label="Total" value={totalDomains} accent="text-blue-600 bg-blue-100" />
+          <MiniStat icon={CheckCircle2} label="Verified" value={verifiedCount} accent="text-emerald-600 bg-emerald-100" />
+          <MiniStat icon={Shield} label="Pending" value={pendingCount} accent="text-amber-600 bg-amber-100" />
+          <MiniStat icon={Inbox} label="Total Inboxes" value={totalInboxes} accent="text-violet-600 bg-violet-100" />
         </div>
       )}
 
@@ -215,13 +215,13 @@ function DomainCard({ domain: d, onVerify, onDelete, verifying }: {
   };
 
   return (
-    <Card className={`group hover:shadow-md transition-all duration-200 ${fullyVerified ? "hover:border-emerald-200 dark:hover:border-emerald-800" : "hover:border-amber-200 dark:hover:border-amber-800 border-dashed"}`}>
+    <Card className={`group hover:shadow-md transition-all duration-200 ${fullyVerified ? "hover:border-emerald-200" : "hover:border-amber-200 border-dashed"}`}>
 
       {/* Header with icon + domain name */}
       <CardContent className="pt-5 pb-0 pl-10">
         <div className="flex items-start gap-3">
-          <div className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${fullyVerified ? "bg-emerald-100 dark:bg-emerald-900/30" : "bg-amber-100 dark:bg-amber-900/30"}`}>
-            <Globe className={`h-5 w-5 ${fullyVerified ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`} />
+          <div className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${fullyVerified ? "bg-emerald-100" : "bg-amber-100"}`}>
+            <Globe className={`h-5 w-5 ${fullyVerified ? "text-emerald-600" : "text-amber-600"}`} />
           </div>
           <div className="min-w-0 flex-1">
             <Link href={`/domains/${d.id}`} className="group/link">
@@ -233,11 +233,11 @@ function DomainCard({ domain: d, onVerify, onDelete, verifying }: {
           </div>
           <div className="flex flex-col items-end gap-1 shrink-0">
             {fullyVerified ? (
-              <Badge className="gap-1 text-[10px] bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800">
+              <Badge className="gap-1 text-[10px] bg-emerald-100 text-emerald-700 border-emerald-200">
                 <CheckCircle2 className="h-2.5 w-2.5" /> Verified
               </Badge>
             ) : (
-              <Badge className="gap-1 text-[10px] bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800">
+              <Badge className="gap-1 text-[10px] bg-amber-100 text-amber-700 border-amber-200">
                 <Circle className="h-2.5 w-2.5" /> Pending
               </Badge>
             )}
@@ -325,7 +325,7 @@ function DnsChipWithCopy({ verified, label, value }: { verified: boolean; label:
   return (
     <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
       verified
-        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+        ? "bg-emerald-100 text-emerald-700"
         : "bg-muted text-muted-foreground"
     }`}>
       {verified ? <CheckCircle2 className="h-3 w-3" /> : <Circle className="h-3 w-3" />}
@@ -416,7 +416,7 @@ function DeleteDomainDialog({ domain: d, onConfirm }: { domain: Domain; onConfir
             </div>
           ) : impact && impact.active_inboxes > 0 ? (
             <>
-              <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20 p-3 text-sm text-amber-800 dark:text-amber-300 flex items-start gap-2">
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 flex items-start gap-2">
                 <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
                 <span>This domain has <strong>{impact.active_inboxes}</strong> active inbox{impact.active_inboxes !== 1 ? "es" : ""} receiving email ({impact.total_emails} total email{impact.total_emails !== 1 ? "s" : ""})</span>
               </div>
@@ -455,7 +455,7 @@ function DeleteDomainDialog({ domain: d, onConfirm }: { domain: Domain; onConfir
               </div>
             </>
           ) : impact ? (
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/20 p-3 text-sm text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 shrink-0" />
               No active inboxes on this domain
             </div>

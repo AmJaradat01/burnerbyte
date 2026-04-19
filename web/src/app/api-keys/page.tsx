@@ -206,7 +206,7 @@ export default function ApiKeysPage() {
               label: "Total",
               value: data.total,
               icon: Key,
-              bg: "bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400",
+              bg: "bg-violet-100 text-violet-600",
             },
             {
               label: "Active",
@@ -214,7 +214,7 @@ export default function ApiKeysPage() {
                 (k) => k.is_active && (!k.expires_at || new Date(k.expires_at) >= new Date()),
               ).length,
               icon: CheckCircle2,
-              bg: "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400",
+              bg: "bg-emerald-100 text-emerald-600",
             },
             {
               label: "Expired / Inactive",
@@ -222,7 +222,7 @@ export default function ApiKeysPage() {
                 (k) => !k.is_active || (k.expires_at && new Date(k.expires_at) < new Date()),
               ).length,
               icon: Clock,
-              bg: "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400",
+              bg: "bg-red-100 text-red-600",
             },
           ].map((s) => (
             <Card key={s.label}>
@@ -328,8 +328,8 @@ function ApiKeyCard({
             <div
               className={`flex items-center justify-center h-10 w-10 rounded-lg shrink-0 ${
                 dimmed
-                  ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"
-                  : "bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400"
+                  ? "bg-red-100 text-red-600"
+                  : "bg-violet-100 text-violet-600"
               }`}
             >
               <Key className="h-5 w-5" />
@@ -351,7 +351,7 @@ function ApiKeyCard({
                   <Badge variant="secondary" className="gap-1 shrink-0">Inactive</Badge>
                 )}
                 {!isRevoked && !isExpired && k.is_active && (
-                  <Badge className="gap-1 shrink-0 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 hover:bg-emerald-100">
+                  <Badge className="gap-1 shrink-0 bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
                     <CheckCircle2 className="h-3 w-3" /> Active
                   </Badge>
                 )}
@@ -955,7 +955,7 @@ function KeyDetailDialog({
                   <AlertTriangle className="h-3 w-3" /> Expired
                 </Badge>
               ) : key.is_active ? (
-                <Badge className="gap-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 hover:bg-emerald-100">
+                <Badge className="gap-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
                   <CheckCircle2 className="h-3 w-3" /> Active
                 </Badge>
               ) : (
