@@ -23,9 +23,9 @@ import { AlertTriangle, CheckCircle2, Clock, Copy, KeyRound, LogOut, Mail, Refre
 import type { User, Membership, Invite, PaginatedResponse } from "@/types";
 
 const ROLE_COLORS: Record<string, string> = {
-  owner: "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800",
-  admin: "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800",
-  member: "bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800/30 dark:text-gray-400 dark:border-gray-700",
+  owner: "bg-amber-100 text-amber-700 border-amber-200",
+  admin: "bg-blue-100 text-blue-700 border-blue-200",
+  member: "bg-gray-100 text-gray-700 border-gray-200",
 };
 
 function timeAgo(date: string) {
@@ -437,7 +437,7 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {u.org_role && <Badge variant="outline" className={`capitalize text-[10px] ${ROLE_COLORS[u.org_role] ?? ""}`}>{u.org_role}</Badge>}
-                {!u.org_role && <Badge variant="outline" className="text-[10px] text-orange-600 border-orange-200 dark:border-orange-800">Not a member</Badge>}
+                {!u.org_role && <Badge variant="outline" className="text-[10px] text-orange-600 border-orange-200">Not a member</Badge>}
                 {u.is_system_admin && <Badge variant="default" className="text-[10px]"><Shield className="h-3 w-3 mr-0.5" />System Admin</Badge>}
                 <Badge variant={u.email_verified ? "default" : "outline"} className="text-[10px]">
                   {u.email_verified ? <><CheckCircle2 className="h-3 w-3 mr-0.5" />Verified</> : <><XCircle className="h-3 w-3 mr-0.5" />Unverified</>}
@@ -445,7 +445,7 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
                 <Badge variant="outline" className="text-[10px]">
                   <KeyRound className="h-3 w-3 mr-0.5" />{u.sso_provider ?? "Password"}
                 </Badge>
-                {isYou && <Badge variant="outline" className="text-[10px] bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400">You</Badge>}
+                {isYou && <Badge variant="outline" className="text-[10px] bg-blue-50 border-blue-200 text-blue-700">You</Badge>}
               </div>
             </div>
           </div>
@@ -490,7 +490,7 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
                 {u.org_role && !isYou && (
                   <ConfirmDialog
                     trigger={
-                      <Button variant="outline" className="gap-2 text-orange-600 hover:text-orange-700 border-orange-200 hover:border-orange-300 dark:text-orange-400 dark:border-orange-800">
+                      <Button variant="outline" className="gap-2 text-orange-600 hover:text-orange-700 border-orange-200 hover:border-orange-300">
                         <XCircle className="h-4 w-4" /> Deactivate
                       </Button>
                     }
@@ -562,8 +562,8 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
               <div className="space-y-3 rounded-lg border p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/30">
-                      <Mail className="h-4 w-4 text-green-600 dark:text-green-400" />
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-100">
+                      <Mail className="h-4 w-4 text-green-600" />
                     </div>
                     <div>
                       <Label className="text-sm">Email Verified</Label>
@@ -575,8 +575,8 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
                 <div className="border-t" />
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
-                      <Shield className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100">
+                      <Shield className="h-4 w-4 text-blue-600" />
                     </div>
                     <div>
                       <Label className="text-sm">System Admin</Label>
@@ -596,7 +596,7 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
                 <>
                   <ConfirmDialog
                     trigger={
-                      <Button variant="outline" size="sm" className="gap-1.5 text-orange-600 hover:text-orange-700 border-orange-200 hover:border-orange-300 dark:text-orange-400 dark:border-orange-800">
+                      <Button variant="outline" size="sm" className="gap-1.5 text-orange-600 hover:text-orange-700 border-orange-200 hover:border-orange-300">
                         <LogOut className="h-3.5 w-3.5" /> Force Logout
                       </Button>
                     }
@@ -777,7 +777,7 @@ function PendingInviteRow({ invite: inv, orgId }: { invite: Invite; orgId: strin
       <div className="flex items-center gap-2">
         <Badge variant="outline" className={`capitalize text-xs ${ROLE_COLORS[inv.org_role] ?? ""}`}>{inv.org_role}</Badge>
         {inv.team_name && (
-          <Badge variant="outline" className="text-xs text-violet-600 border-violet-200 dark:text-violet-400 dark:border-violet-800">
+          <Badge variant="outline" className="text-xs text-violet-600 border-violet-200">
             {inv.team_name}{inv.team_role ? ` · ${inv.team_role}` : ""}
           </Badge>
         )}

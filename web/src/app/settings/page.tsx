@@ -265,16 +265,16 @@ function OverviewTab() {
   if (!data) return null;
 
   const stats: { icon: typeof Mail; label: string; value: string; desc?: string; accent: string; href?: string }[] = [
-    { icon: Users, label: "Users", value: data.total_users.toLocaleString(), accent: "text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400" },
-    { icon: UsersRound, label: "Teams", value: (data.total_teams ?? 0).toLocaleString(), accent: "text-indigo-600 bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-400", href: "/teams" },
-    { icon: Globe, label: "Domains", value: data.total_domains.toLocaleString(), accent: "text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400", href: "/domains" },
-    { icon: Inbox, label: "Active Inboxes", value: (data.active_inboxes ?? 0).toLocaleString(), desc: `${(data.total_inboxes ?? 0).toLocaleString()} total created`, accent: "text-amber-600 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400", href: "/" },
-    { icon: Archive, label: "Total Created", value: (data.total_inboxes_created ?? 0).toLocaleString(), accent: "text-violet-600 bg-violet-100 dark:bg-violet-900/30 dark:text-violet-400" },
-    { icon: Mail, label: "Total Emails", value: data.total_emails.toLocaleString(), accent: "text-rose-600 bg-rose-100 dark:bg-rose-900/30 dark:text-rose-400", href: "/analytics" },
-    { icon: HardDrive, label: "Storage", value: formatBytes(data.storage_used_bytes ?? 0), accent: "text-slate-600 bg-slate-100 dark:bg-slate-900/30 dark:text-slate-400" },
-    { icon: Monitor, label: "Active Sessions", value: (data.total_sessions ?? 0).toLocaleString(), accent: "text-cyan-600 bg-cyan-100 dark:bg-cyan-900/30 dark:text-cyan-400", href: "/profile/sessions" },
-    { icon: LinkIcon, label: "Webhooks", value: (data.total_webhooks ?? 0).toLocaleString(), accent: "text-orange-600 bg-orange-100 dark:bg-orange-900/30 dark:text-orange-400" },
-    { icon: Key, label: "API Keys", value: (data.total_api_keys ?? 0).toLocaleString(), accent: "text-purple-600 bg-purple-100 dark:bg-purple-900/30 dark:text-purple-400" },
+    { icon: Users, label: "Users", value: data.total_users.toLocaleString(), accent: "text-blue-600 bg-blue-100" },
+    { icon: UsersRound, label: "Teams", value: (data.total_teams ?? 0).toLocaleString(), accent: "text-indigo-600 bg-indigo-100", href: "/teams" },
+    { icon: Globe, label: "Domains", value: data.total_domains.toLocaleString(), accent: "text-emerald-600 bg-emerald-100", href: "/domains" },
+    { icon: Inbox, label: "Active Inboxes", value: (data.active_inboxes ?? 0).toLocaleString(), desc: `${(data.total_inboxes ?? 0).toLocaleString()} total created`, accent: "text-amber-600 bg-amber-100", href: "/" },
+    { icon: Archive, label: "Total Created", value: (data.total_inboxes_created ?? 0).toLocaleString(), accent: "text-violet-600 bg-violet-100" },
+    { icon: Mail, label: "Total Emails", value: data.total_emails.toLocaleString(), accent: "text-rose-600 bg-rose-100", href: "/analytics" },
+    { icon: HardDrive, label: "Storage", value: formatBytes(data.storage_used_bytes ?? 0), accent: "text-slate-600 bg-slate-100" },
+    { icon: Monitor, label: "Active Sessions", value: (data.total_sessions ?? 0).toLocaleString(), accent: "text-cyan-600 bg-cyan-100", href: "/profile/sessions" },
+    { icon: LinkIcon, label: "Webhooks", value: (data.total_webhooks ?? 0).toLocaleString(), accent: "text-orange-600 bg-orange-100" },
+    { icon: Key, label: "API Keys", value: (data.total_api_keys ?? 0).toLocaleString(), accent: "text-purple-600 bg-purple-100" },
   ];
 
   return (
@@ -538,7 +538,7 @@ function HealthTab() {
         <div className="flex items-center gap-4 text-sm">
           <div className="flex items-center gap-2">
             {allHealthy
-              ? <Badge className="gap-1 bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800"><CheckCircle2 className="h-3 w-3" /> All systems operational</Badge>
+              ? <Badge className="gap-1 bg-green-100 text-green-700 border-green-200"><CheckCircle2 className="h-3 w-3" /> All systems operational</Badge>
               : <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3" /> Degraded</Badge>
             }
           </div>
@@ -560,8 +560,8 @@ function HealthTab() {
                 <CardContent className="pt-6">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                      <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${ok ? "bg-green-100 dark:bg-green-900/30" : "bg-red-100 dark:bg-red-900/30"}`}>
-                        <Icon className={`h-5 w-5 ${ok ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`} />
+                      <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${ok ? "bg-green-100" : "bg-red-100"}`}>
+                        <Icon className={`h-5 w-5 ${ok ? "text-green-600" : "text-red-600"}`} />
                       </div>
                       <div>
                         <p className="font-medium capitalize">{name}</p>
@@ -708,8 +708,8 @@ function SSOProvidersTab() {
           <CardContent className="pt-5 pb-4">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
-                <div className={`h-10 w-10 rounded-lg flex items-center justify-center shadow-sm ${p.enabled ? "bg-green-100 dark:bg-green-900/30" : "bg-gray-100 dark:bg-gray-900/30"}`}>
-                  <Shield className={`h-5 w-5 ${p.enabled ? "text-green-600 dark:text-green-400" : "text-gray-400"}`} />
+                <div className={`h-10 w-10 rounded-lg flex items-center justify-center shadow-sm ${p.enabled ? "bg-green-100" : "bg-gray-100"}`}>
+                  <Shield className={`h-5 w-5 ${p.enabled ? "text-green-600" : "text-gray-400"}`} />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
@@ -735,7 +735,7 @@ function SSOProvidersTab() {
 
             {/* Test result */}
             {testResults[p.id] && (
-              <div className={`mt-3 p-2 rounded text-xs ${testResults[p.id].success ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400" : "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400"}`}>
+              <div className={`mt-3 p-2 rounded text-xs ${testResults[p.id].success ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
                 {testResults[p.id].success ? "✓" : "✗"} {testResults[p.id].message}
                 {testResults[p.id].endpoint && <span className="ml-2 font-mono">{testResults[p.id].endpoint}</span>}
                 {testResults[p.id].response_time && <span className="ml-2">({testResults[p.id].response_time})</span>}

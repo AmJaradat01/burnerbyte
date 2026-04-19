@@ -291,12 +291,12 @@ function TeamAnalytics({ orgId, teamId }: { orgId: string; teamId: string }) {
 }
 
 const STAT_COLORS: Record<string, { bg: string; text: string }> = {
-  blue: { bg: "bg-blue-100 dark:bg-blue-900/30", text: "text-blue-600 dark:text-blue-400" },
-  emerald: { bg: "bg-emerald-100 dark:bg-emerald-900/30", text: "text-emerald-600 dark:text-emerald-400" },
-  violet: { bg: "bg-violet-100 dark:bg-violet-900/30", text: "text-violet-600 dark:text-violet-400" },
-  amber: { bg: "bg-amber-100 dark:bg-amber-900/30", text: "text-amber-600 dark:text-amber-400" },
-  orange: { bg: "bg-orange-100 dark:bg-orange-900/30", text: "text-orange-600 dark:text-orange-400" },
-  slate: { bg: "bg-slate-100 dark:bg-slate-900/30", text: "text-slate-600 dark:text-slate-400" },
+  blue: { bg: "bg-blue-100", text: "text-blue-600" },
+  emerald: { bg: "bg-emerald-100", text: "text-emerald-600" },
+  violet: { bg: "bg-violet-100", text: "text-violet-600" },
+  amber: { bg: "bg-amber-100", text: "text-amber-600" },
+  orange: { bg: "bg-orange-100", text: "text-orange-600" },
+  slate: { bg: "bg-slate-100", text: "text-slate-600" },
 };
 
 function StatCard({ icon: Icon, label, value, subtitle, color = "blue", link }: { icon: typeof Mail; label: string; value: number | string; subtitle?: string; color?: keyof typeof STAT_COLORS; link?: string }) {

@@ -124,9 +124,9 @@ export default function WebhooksPage() {
       {data?.data && data.data.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-3">
           {[
-            { label: "Total", value: data.total, icon: Globe, bg: "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" },
-            { label: "Active", value: data.data.filter(w => w.active).length, icon: CheckCircle2, bg: "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400" },
-            { label: "Failing", value: data.data.filter(w => w.failure_count > 0).length, icon: AlertCircle, bg: "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400" },
+            { label: "Total", value: data.total, icon: Globe, bg: "bg-blue-100 text-blue-600" },
+            { label: "Active", value: data.data.filter(w => w.active).length, icon: CheckCircle2, bg: "bg-emerald-100 text-emerald-600" },
+            { label: "Failing", value: data.data.filter(w => w.failure_count > 0).length, icon: AlertCircle, bg: "bg-red-100 text-red-600" },
           ].map((s) => (
             <Card key={s.label}>
               <CardContent className="pt-5 pb-4">
@@ -172,7 +172,7 @@ export default function WebhooksPage() {
 function WebhookStatusIndicator({ webhook: w }: { webhook: Webhook }) {
   if (!w.active) return <Badge variant="secondary">Disabled</Badge>;
   if (w.failure_count > 0) return <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3" /> {w.failure_count} failures</Badge>;
-  if (w.last_status && w.last_status >= 200 && w.last_status < 300) return <Badge className="gap-1 bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800"><CheckCircle2 className="h-3 w-3" /> Healthy</Badge>;
+  if (w.last_status && w.last_status >= 200 && w.last_status < 300) return <Badge className="gap-1 bg-green-100 text-green-700 border-green-200"><CheckCircle2 className="h-3 w-3" /> Healthy</Badge>;
   return <Badge variant="outline">No deliveries</Badge>;
 }
 
@@ -184,9 +184,9 @@ function WebhookCard({ webhook: w, expanded, onToggleExpand, onToggleActive, onD
   const pillColor = !w.active
     ? "bg-muted text-muted-foreground"
     : isFailing
-      ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"
+      ? "bg-red-100 text-red-600"
       : isHealthy
-        ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
+        ? "bg-emerald-100 text-emerald-600"
         : "bg-muted text-muted-foreground";
 
   return (
@@ -477,12 +477,12 @@ function CreateWebhookDialog({ orgId, teamId }: { orgId: string; teamId: string 
               {creating ? "Creating…" : "Create Webhook"}
             </Button>
 
-            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/30">
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
               <div className="flex items-start gap-2">
-                <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
+                <Info className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
                 <div>
-                  <p className="text-xs font-medium text-blue-800 dark:text-blue-300">Use Cases</p>
-                  <ul className="text-xs text-blue-700 dark:text-blue-400 mt-1 space-y-0.5 list-disc list-inside">
+                  <p className="text-xs font-medium text-blue-800">Use Cases</p>
+                  <ul className="text-xs text-blue-700 mt-1 space-y-0.5 list-disc list-inside">
                     <li>Forward incoming emails to Slack or Discord</li>
                     <li>Trigger CI/CD pipelines on new test emails</li>
                     <li>Log inbox activity to an external dashboard</li>
@@ -529,9 +529,9 @@ function EditWebhookDialog({ orgId, teamId, webhook }: { orgId: string; teamId: 
   const statusInfo = !webhook.active
     ? { label: "Disabled", color: "bg-muted text-muted-foreground", icon: XCircle }
     : webhook.failure_count > 0
-      ? { label: "Failing", color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400", icon: AlertTriangle }
+      ? { label: "Failing", color: "bg-red-100 text-red-700", icon: AlertTriangle }
       : webhook.last_status && webhook.last_status >= 200 && webhook.last_status < 300
-        ? { label: "Healthy", color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400", icon: CheckCircle2 }
+        ? { label: "Healthy", color: "bg-emerald-100 text-emerald-700", icon: CheckCircle2 }
         : { label: "No deliveries", color: "bg-muted text-muted-foreground", icon: Globe };
 
   return (
