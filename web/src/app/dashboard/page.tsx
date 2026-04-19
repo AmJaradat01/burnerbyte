@@ -88,7 +88,7 @@ function MemberDashboard({ org, user, greeting }: { org: { id: string; name: str
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-medium text-muted-foreground">Active Inboxes</span>
-              <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400">
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm text-emerald-600 bg-emerald-100">
                 <InboxIcon className="h-4 w-4" />
               </div>
             </div>
@@ -183,7 +183,7 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
           label="Total Emails"
           value={stats?.total_emails_received ?? stats?.total_emails}
           loading={isLoading}
-          accent="text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400"
+          accent="text-blue-600 bg-blue-100"
           footer={
             <span className="text-xs text-muted-foreground">
               {formatBytes(stats?.total_storage_bytes ?? stats?.storage_used_bytes ?? 0)} all-time storage
@@ -195,7 +195,7 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
           label="Active Inboxes"
           value={stats?.active_inboxes}
           loading={isLoading}
-          accent="text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400"
+          accent="text-emerald-600 bg-emerald-100"
           footer={
             <Link href="/" className="text-xs text-primary hover:underline">
               Create inbox →
@@ -207,7 +207,7 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
           label="Domains"
           value={stats?.total_domains}
           loading={isLoading}
-          accent="text-violet-600 bg-violet-100 dark:bg-violet-900/30 dark:text-violet-400"
+          accent="text-violet-600 bg-violet-100"
           footer={
             <Link href="/domains" className="text-xs text-primary hover:underline">
               Manage →
@@ -219,7 +219,7 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
           label="Members"
           value={stats?.total_members}
           loading={isLoading}
-          accent="text-amber-600 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400"
+          accent="text-amber-600 bg-amber-100"
           footer={<span className="text-xs text-muted-foreground">{stats?.total_teams ?? 0} teams</span>}
         />
       </div>

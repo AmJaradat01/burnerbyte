@@ -23,13 +23,13 @@ import type { EmailSummary, Email, Inbox, PaginatedResponse } from "@/types";
 /* ── Countdown Pill ── */
 
 function CountdownPill({ expiresAt }: { expiresAt: string }) {
-  const [colors, setColors] = useState("bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400");
+  const [colors, setColors] = useState("bg-emerald-100 text-emerald-600");
   useEffect(() => {
     const update = () => {
       const diff = new Date(expiresAt).getTime() - Date.now();
-      if (diff < 600000) setColors("bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400");
-      else if (diff < 1800000) setColors("bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400");
-      else setColors("bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400");
+      if (diff < 600000) setColors("bg-red-100 text-red-600");
+      else if (diff < 1800000) setColors("bg-amber-100 text-amber-600");
+      else setColors("bg-emerald-100 text-emerald-600");
     };
     update();
     const iv = setInterval(update, 10000);
@@ -73,7 +73,7 @@ function Countdown({ expiresAt }: { expiresAt: string }) {
 function SocketIndicator({ status }: { status: SocketStatus }) {
   if (status === "connected") {
     return (
-      <span className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400" title="Live — listening for new emails">
+      <span className="flex items-center gap-1 text-xs text-emerald-600" title="Live — listening for new emails">
         <span className="relative flex h-1.5 w-1.5">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
           <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
@@ -84,7 +84,7 @@ function SocketIndicator({ status }: { status: SocketStatus }) {
   }
   if (status === "connecting") {
     return (
-      <span className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400" title="Connecting…">
+      <span className="flex items-center gap-1 text-xs text-amber-600" title="Connecting…">
         <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
         <Wifi className="h-3 w-3 opacity-50" />
       </span>
@@ -244,8 +244,8 @@ export default function InboxDetailPage() {
               {address ? (
                 <>
                   <div className="flex items-center gap-2">
-                    <div className="h-8 w-8 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center shrink-0">
-                      <Mail className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                    <div className="h-8 w-8 rounded-lg bg-orange-100 flex items-center justify-center shrink-0">
+                      <Mail className="h-4 w-4 text-orange-600" />
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
@@ -256,7 +256,7 @@ export default function InboxDetailPage() {
                       </div>
                       <div className="flex items-center gap-3 mt-0.5">
                         <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <span className="h-5 w-5 rounded-md bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center"><MailOpen className="h-2.5 w-2.5 text-blue-600 dark:text-blue-400" /></span>
+                          <span className="h-5 w-5 rounded-md bg-blue-100 flex items-center justify-center"><MailOpen className="h-2.5 w-2.5 text-blue-600" /></span>
                           {totalEmails} emails
                         </span>
                         {inbox?.is_active && inbox?.expires_at && (
