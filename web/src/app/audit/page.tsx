@@ -23,11 +23,11 @@ import type { AuditEntry, PaginatedResponse } from "@/types";
 const RESOURCE_TYPES = ["user", "org", "team", "domain", "domain_assignment", "inbox", "email", "webhook", "api_key"];
 
 const ACTION_COLORS: Record<string, string> = {
-  created: "bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800",
-  updated: "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800",
-  deleted: "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800",
-  revoked: "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800",
-  verified: "bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800",
+  created: "bg-green-100 text-green-700 border-green-200",
+  updated: "bg-blue-100 text-blue-700 border-blue-200",
+  deleted: "bg-red-100 text-red-700 border-red-200",
+  revoked: "bg-red-100 text-red-700 border-red-200",
+  verified: "bg-green-100 text-green-700 border-green-200",
 };
 
 function getActionColor(action: string): string {
@@ -130,8 +130,8 @@ export default function AuditPage() {
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-muted-foreground">Total Entries</span>
-              <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-blue-100 dark:bg-blue-900/30">
-                <Shield className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-blue-100">
+                <Shield className="h-4 w-4 text-blue-600" />
               </div>
             </div>
             <p className="text-2xl font-bold tabular-nums">{data?.total ?? 0}</p>
@@ -141,8 +141,8 @@ export default function AuditPage() {
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-muted-foreground">Actions (page)</span>
-              <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-emerald-100 dark:bg-emerald-900/30">
-                <Activity className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-emerald-100">
+                <Activity className="h-4 w-4 text-emerald-600" />
               </div>
             </div>
             <p className="text-2xl font-bold tabular-nums">{new Set(data?.data?.map(e => e.action)).size ?? 0}</p>
@@ -152,8 +152,8 @@ export default function AuditPage() {
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-muted-foreground">Actors (page)</span>
-              <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-amber-100 dark:bg-amber-900/30">
-                <Users className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-amber-100">
+                <Users className="h-4 w-4 text-amber-600" />
               </div>
             </div>
             <p className="text-2xl font-bold tabular-nums">{new Set(data?.data?.map(e => e.actor_email)).size ?? 0}</p>

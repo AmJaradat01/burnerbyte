@@ -232,7 +232,7 @@ function QuickCreateCard() {
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
           </span>
-          <span className="text-xs font-medium text-green-700 dark:text-green-400">{t("addressReady")}</span>
+          <span className="text-xs font-medium text-green-700">{t("addressReady")}</span>
         </div>
 
         <div>
@@ -374,15 +374,15 @@ function InboxCard({ inbox, onExtend, onDelete }: { inbox: Inbox; onExtend: () =
 
   return (
     <Card
-      className={`transition-all hover:shadow-md hover:border-primary/30 cursor-pointer group ${!inbox.is_active ? "opacity-60" : ""} ${expiringSoon ? "border-dashed border-amber-200 dark:border-amber-800" : ""}`}
+      className={`transition-all hover:shadow-md hover:border-primary/30 cursor-pointer group ${!inbox.is_active ? "opacity-60" : ""} ${expiringSoon ? "border-dashed border-amber-200" : ""}`}
       onClick={() => router.push(`/inboxes/${inbox.id}`)}
     >
       <CardContent className="pt-4 pb-3 space-y-2.5">
         {/* Address */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="h-10 w-10 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center shrink-0">
-              <Mail className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+            <div className="h-10 w-10 rounded-lg bg-orange-100 flex items-center justify-center shrink-0">
+              <Mail className="h-5 w-5 text-orange-600" />
             </div>
             <p className="font-mono text-sm font-medium truncate group-hover:text-primary transition-colors">
             <span>{localPart}</span>
@@ -477,12 +477,12 @@ function InboxGridSkeleton() {
 
 const featureKeys = ["inboxes", "multiTeam", "realTime", "webhooks", "apiKeys", "selfHosted"] as const;
 const featureIcons = [
-  { icon: Mail, bg: "bg-orange-100 dark:bg-orange-900/30", fg: "text-orange-600 dark:text-orange-400", accent: "group-hover:border-orange-300 dark:group-hover:border-orange-700", glow: "group-hover:shadow-orange-100/50 dark:group-hover:shadow-orange-900/20" },
-  { icon: Users, bg: "bg-blue-100 dark:bg-blue-900/30", fg: "text-blue-600 dark:text-blue-400", accent: "group-hover:border-blue-300 dark:group-hover:border-blue-700", glow: "group-hover:shadow-blue-100/50 dark:group-hover:shadow-blue-900/20" },
-  { icon: Zap, bg: "bg-amber-100 dark:bg-amber-900/30", fg: "text-amber-600 dark:text-amber-400", accent: "group-hover:border-amber-300 dark:group-hover:border-amber-700", glow: "group-hover:shadow-amber-100/50 dark:group-hover:shadow-amber-900/20" },
-  { icon: LinkIcon, bg: "bg-violet-100 dark:bg-violet-900/30", fg: "text-violet-600 dark:text-violet-400", accent: "group-hover:border-violet-300 dark:group-hover:border-violet-700", glow: "group-hover:shadow-violet-100/50 dark:group-hover:shadow-violet-900/20" },
-  { icon: Key, bg: "bg-emerald-100 dark:bg-emerald-900/30", fg: "text-emerald-600 dark:text-emerald-400", accent: "group-hover:border-emerald-300 dark:group-hover:border-emerald-700", glow: "group-hover:shadow-emerald-100/50 dark:group-hover:shadow-emerald-900/20" },
-  { icon: Server, bg: "bg-rose-100 dark:bg-rose-900/30", fg: "text-rose-600 dark:text-rose-400", accent: "group-hover:border-rose-300 dark:group-hover:border-rose-700", glow: "group-hover:shadow-rose-100/50 dark:group-hover:shadow-rose-900/20" },
+  { icon: Mail, bg: "bg-orange-100", fg: "text-orange-600", accent: "group-hover:border-orange-300", glow: "group-hover:shadow-orange-100/50" },
+  { icon: Users, bg: "bg-blue-100", fg: "text-blue-600", accent: "group-hover:border-blue-300", glow: "group-hover:shadow-blue-100/50" },
+  { icon: Zap, bg: "bg-amber-100", fg: "text-amber-600", accent: "group-hover:border-amber-300", glow: "group-hover:shadow-amber-100/50" },
+  { icon: LinkIcon, bg: "bg-violet-100", fg: "text-violet-600", accent: "group-hover:border-violet-300", glow: "group-hover:shadow-violet-100/50" },
+  { icon: Key, bg: "bg-emerald-100", fg: "text-emerald-600", accent: "group-hover:border-emerald-300", glow: "group-hover:shadow-emerald-100/50" },
+  { icon: Server, bg: "bg-rose-100", fg: "text-rose-600", accent: "group-hover:border-rose-300", glow: "group-hover:shadow-rose-100/50" },
 ];
 
 interface SSOStatus {
