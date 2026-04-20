@@ -724,6 +724,7 @@ interface SSOProviderData {
   auto_provision: boolean;
   default_org_role: string;
   default_team_role: string;
+  default_team_id?: string;
   allowed_domains?: string;
   claim_mappings?: { claim_name: string; claim_value: string; org_role: string; team_id?: string; team_role?: string }[];
   custom_claims?: string[];
@@ -766,7 +767,7 @@ interface DomainMappingPreviewResult {
 const emptyProvider: Partial<SSOProviderData> = {
   name: "", provider_type: "google", client_id: "", client_secret: "", redirect_url: "",
   issuer_url: "", tenant_id: "", auto_provision: false, default_org_role: "member",
-  default_team_role: "member", allowed_domains: "", claim_mappings: [], custom_claims: [], enabled: true,
+  default_team_role: "member", default_team_id: "", allowed_domains: "", claim_mappings: [], custom_claims: [], enabled: true,
 };
 
 function SSOProvidersTab() {
@@ -783,6 +784,7 @@ function SSOProvidersTab() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const teams = useOrgStore((s) => s.teams);
 
   const validateUrl = (value: string): boolean => {
     if (!value) return false;
@@ -1047,6 +1049,20 @@ function SSOProvidersTab() {
                     <SelectContent>
                       <SelectItem value="member">Member</SelectItem>
                       <SelectItem value="lead">Lead</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className={`${!editing.auto_provision ? "opacity-60" : ""}`}>
+                <div className="space-y-1">
+                  <Label className="text-xs">Default Team</Label>
+                  <Select value={editing.default_team_id ?? ""} onValueChange={(v) => set("default_team_id", v || undefined)}>
+                    <SelectTrigger className="h-8"><SelectValue placeholder="No default team" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">None</SelectItem>
+                      {teams.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

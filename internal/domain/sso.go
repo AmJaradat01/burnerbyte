@@ -33,6 +33,7 @@ type SSOProvider struct {
 	AutoProvision         bool           `json:"auto_provision"`
 	DefaultOrgRole        string         `json:"default_org_role,omitempty"`
 	DefaultTeamRole       string         `json:"default_team_role,omitempty"`
+	DefaultTeamID         *uuid.UUID     `json:"default_team_id,omitempty"`
 	AllowedDomains        string         `json:"allowed_domains,omitempty"`
 	ClaimMappings         []ClaimMapping `json:"claim_mappings,omitempty"`
 	CustomClaims          []string       `json:"custom_claims,omitempty"`
