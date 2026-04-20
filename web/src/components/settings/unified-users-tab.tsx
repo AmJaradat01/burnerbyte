@@ -463,7 +463,7 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
       if (v) { setDisplayName(u.display_name); setIsAdminFlag(u.is_system_admin); setVerified(u.email_verified); setAvatarURL(u.avatar_url ?? ""); setTimezone(u.timezone ?? ""); setDateFormat(u.date_format ?? ""); setTimeFormat(u.time_format ?? ""); setCopied(false); setAuthMethodLock(u.auth_method_lock ?? "any"); setMigratePasswordOpen(false); setMigratePassword(""); }
     }}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto">
+      <DialogContent className="w-[95vw] max-w-6xl max-h-[92vh] overflow-y-auto">
         <DialogHeader className="pb-2">
           <DialogTitle className="text-xl">User Details</DialogTitle>
           <DialogDescription>View and manage this user account.</DialogDescription>
