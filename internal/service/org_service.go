@@ -764,12 +764,20 @@ func (s *OrgService) BulkInviteMembers(ctx context.Context, orgID uuid.UUID, inp
 	}
 
 	// Phase 1: Validate ALL emails upfront
+	seen := make(map[string]bool)
 	var validEmails []string
 	for _, rawEmail := range input.Emails {
 		email := strings.ToLower(strings.TrimSpace(rawEmail))
 		if email == "" {
 			continue // skip blank lines
 		}
+
+		// Deduplicate within the request
+		if seen[email] {
+			result.Skipped = append(result.Skipped, domain.BulkInviteSkipped{Email: email, Reason: "duplicate_in_request"})
+			continue
+		}
+		seen[email] = true
 
 		// RFC email validation
 		if _, err := mail.ParseAddress(email); err != nil {
@@ -1043,14 +1051,6 @@ func (s *OrgService) isOrgMember(ctx context.Context, orgID uuid.UUID, email str
 
 // hasPendingInvite checks if an email already has a pending invite for the org.
 func (s *OrgService) hasPendingInvite(ctx context.Context, orgID uuid.UUID, email string) bool {
-	invites, err := s.orgRepo.ListPendingInvites(ctx, orgID)
-	if err != nil {
-		return false
-	}
-	for _, inv := range invites {
-		if strings.EqualFold(inv.Email, email) {
-			return true
-		}
-	}
-	return false
+	_, err := s.orgRepo.GetPendingInviteByEmail(ctx, email)
+	return err == nil
 }
