@@ -85,7 +85,7 @@ X-RateLimit-Reset: 1709251200
 | Orgs | `POST /orgs`, `GET /orgs`, `GET /orgs/:id`, `PATCH /orgs/:id`, `DELETE /orgs/:id` |
 | Org Settings | `GET /orgs/:id/settings`, `PATCH /orgs/:id/settings`, `PUT /orgs/:id/settings` |
 | Members | `POST /orgs/:id/members`, `POST /orgs/:id/members/add`, `GET /orgs/:id/members`, `GET /orgs/:id/members/search`, `PATCH /orgs/:id/members/:uid`, `POST /orgs/:id/members/:uid/deactivate` |
-| Invites | `POST /orgs/:id/invites`, `GET /orgs/:id/invites`, `DELETE /orgs/:id/invites/:iid`, `GET /invites/:token/preview`, `POST /invites/:token/accept` |
+| Invites | `POST /orgs/:id/invites`, `POST /orgs/:id/invites/bulk`, `GET /orgs/:id/invites`, `DELETE /orgs/:id/invites/:iid`, `GET /invites/:token/preview`, `POST /invites/:token/accept` |
 | Domains | `POST /orgs/:id/domains`, `GET /orgs/:id/domains`, `GET /orgs/:id/domains/:did`, `PATCH /orgs/:id/domains/:did`, `DELETE /orgs/:id/domains/:did`, `POST /orgs/:id/domains/:did/verify`, `GET /orgs/:id/domains/:did/impact`, `GET /orgs/:id/domains/:did/verification-history`, `POST /orgs/:id/domains/:did/transfer`, `POST /orgs/:id/domains/bulk-verify`, `POST /orgs/:id/domains/bulk-delete` |
 | Teams | `POST /orgs/:id/teams`, `GET /orgs/:id/teams`, `GET /orgs/:id/teams/:tid`, `PATCH /orgs/:id/teams/:tid`, `DELETE /orgs/:id/teams/:tid`, `POST .../teams/:tid/archive`, `POST .../teams/:tid/restore`, `GET .../teams/:tid/impact`, `POST .../teams/:tid/leave`, `POST .../teams/:tid/transfer` |
 | Team Members | `POST .../teams/:tid/members`, `GET .../teams/:tid/members`, `POST .../teams/:tid/members/bulk-add`, `POST .../teams/:tid/members/bulk-remove`, `PATCH .../teams/:tid/members/:uid`, `DELETE .../teams/:tid/members/:uid` |
@@ -96,8 +96,8 @@ X-RateLimit-Reset: 1709251200
 | API Keys | `POST .../api-keys`, `GET .../api-keys`, `GET .../api-keys/:kid`, `PATCH .../api-keys/:kid`, `DELETE .../api-keys/:kid`, `POST .../api-keys/:kid/rotate`, `POST .../api-keys/bulk-revoke` |
 | Analytics | `GET /orgs/:id/analytics`, `GET /orgs/:id/analytics/emails-per-day`, `GET /orgs/:id/analytics/insights`, `GET .../teams/:tid/analytics`, `GET .../teams/:tid/analytics/emails-per-day` |
 | Audit | `GET /orgs/:id/audit`, `GET /orgs/:id/audit/export` |
-| Admin | `GET /admin/stats`, `GET /admin/orgs`, `GET /admin/health`, `GET /admin/users`, `PATCH /admin/users/:id`, `DELETE /admin/users/:id`, `DELETE /admin/users/:id/sessions`, `GET /admin/platform`, `PUT /admin/platform`, `GET /admin/version` |
-| Admin SSO | `GET /admin/sso/providers`, `POST /admin/sso/providers`, `GET /admin/sso/providers/:pid`, `PUT /admin/sso/providers/:pid`, `DELETE /admin/sso/providers/:pid`, `POST /admin/sso/test` |
+| Admin | `GET /admin/stats`, `GET /admin/orgs`, `GET /admin/health`, `GET /admin/users`, `PATCH /admin/users/:id`, `DELETE /admin/users/:id`, `DELETE /admin/users/:id/sessions`, `POST /admin/users/:id/migrate-auth`, `GET /admin/platform`, `PUT /admin/platform`, `GET /admin/version` |
+| Admin SSO | `GET /admin/sso/providers`, `POST /admin/sso/providers`, `GET /admin/sso/providers/:pid`, `PUT /admin/sso/providers/:pid`, `DELETE /admin/sso/providers/:pid`, `POST /admin/sso/test`, `POST /admin/sso/providers/:pid/domain-mappings`, `GET /admin/sso/providers/:pid/domain-mappings`, `PUT /admin/sso/providers/:pid/domain-mappings/:mid`, `DELETE /admin/sso/providers/:pid/domain-mappings/:mid`, `POST /admin/sso/domain-mappings/preview` |
 | Admin Roles | `POST /admin/roles`, `PATCH /admin/roles/:id`, `DELETE /admin/roles/:id` |
 | Notifications | `GET /notifications`, `POST /notifications/mark-all-read`, `PATCH /notifications/:id/read`, `DELETE /notifications`, `DELETE /notifications/:id` |
 | Roles | `GET /roles` |
