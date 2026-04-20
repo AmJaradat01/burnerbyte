@@ -674,55 +674,83 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
                   </Select>
                 </div>
                 <div className="border-t" />
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <div className="flex items-center gap-3">
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100">
                       <RefreshCw className="h-4 w-4 text-amber-600" />
                     </div>
                     <div>
                       <Label className="text-sm">Auth Migration</Label>
-                      <p className="text-xs text-muted-foreground">Migrate this user between authentication methods. This revokes all sessions.</p>
+                      <p className="text-xs text-muted-foreground">Migrate between authentication methods. All sessions will be revoked.</p>
                     </div>
                   </div>
-                  <div className="flex gap-2 ml-11">
-                    <ConfirmDialog
-                      trigger={
-                        <Button variant="outline" size="sm" className="text-xs gap-1.5" disabled={migrating}>
-                          <Shield className="h-3.5 w-3.5" /> Migrate to SSO
-                        </Button>
-                      }
-                      title="Migrate to SSO?"
-                      description={`This will clear ${u.display_name || u.email}'s password, lock them to SSO-only login, and revoke all active sessions. They must have a linked SSO identity.`}
-                      onConfirm={migrateToSSO}
-                    />
-                    {!migratePasswordOpen ? (
-                      <Button variant="outline" size="sm" className="text-xs gap-1.5" disabled={migrating} onClick={() => setMigratePasswordOpen(true)}>
-                        <KeyRound className="h-3.5 w-3.5" /> Migrate to Password
-                      </Button>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="password"
-                          placeholder="New password"
-                          value={migratePassword}
-                          onChange={(e) => setMigratePassword(e.target.value)}
-                          className="h-8 w-40 text-xs"
-                        />
+                  <div className="ml-11 space-y-3">
+                    {/* Migrate to SSO */}
+                    <div className="rounded-lg border p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Shield className="h-4 w-4 text-blue-600" />
+                          <div>
+                            <p className="text-sm font-medium">Migrate to SSO</p>
+                            <p className="text-[11px] text-muted-foreground">Clear password, lock to SSO-only. Requires linked SSO identity.</p>
+                          </div>
+                        </div>
                         <ConfirmDialog
                           trigger={
-                            <Button variant="outline" size="sm" className="text-xs" disabled={!migratePassword || migrating}>
-                              Confirm
+                            <Button variant="outline" size="sm" className="text-xs gap-1.5 shrink-0" disabled={migrating}>
+                              {migrating ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Shield className="h-3.5 w-3.5" />}
+                              Migrate
                             </Button>
                           }
-                          title="Migrate to Password?"
-                          description={`This will set a new password for ${u.display_name || u.email}, lock them to password-only login, and revoke all active sessions.`}
-                          onConfirm={migrateToPassword}
+                          title="Migrate to SSO?"
+                          description={`This will clear ${u.display_name || u.email}'s password, lock them to SSO-only login, and revoke all active sessions. They must have a linked SSO identity.`}
+                          onConfirm={migrateToSSO}
                         />
-                        <Button variant="ghost" size="sm" className="text-xs h-8 w-8 p-0" onClick={() => { setMigratePasswordOpen(false); setMigratePassword(""); }}>
-                          <XCircle className="h-3.5 w-3.5" />
-                        </Button>
                       </div>
-                    )}
+                    </div>
+
+                    {/* Migrate to Password */}
+                    <div className="rounded-lg border p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <KeyRound className="h-4 w-4 text-amber-600" />
+                          <div>
+                            <p className="text-sm font-medium">Migrate to Password</p>
+                            <p className="text-[11px] text-muted-foreground">Set a new password, lock to password-only.</p>
+                          </div>
+                        </div>
+                        {!migratePasswordOpen && (
+                          <Button variant="outline" size="sm" className="text-xs gap-1.5 shrink-0" disabled={migrating} onClick={() => setMigratePasswordOpen(true)}>
+                            <KeyRound className="h-3.5 w-3.5" /> Migrate
+                          </Button>
+                        )}
+                      </div>
+                      {migratePasswordOpen && (
+                        <div className="flex items-center gap-2 pt-1">
+                          <Input
+                            type="password"
+                            placeholder="Enter new password"
+                            value={migratePassword}
+                            onChange={(e) => setMigratePassword(e.target.value)}
+                            className="h-9 flex-1 text-sm"
+                            autoFocus
+                          />
+                          <ConfirmDialog
+                            trigger={
+                              <Button size="sm" className="text-xs shrink-0" disabled={!migratePassword || migrating}>
+                                {migrating ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : "Confirm"}
+                              </Button>
+                            }
+                            title="Migrate to Password?"
+                            description={`This will set a new password for ${u.display_name || u.email}, lock them to password-only login, and revoke all active sessions.`}
+                            onConfirm={migrateToPassword}
+                          />
+                          <Button variant="ghost" size="sm" className="h-9 w-9 p-0 shrink-0" onClick={() => { setMigratePasswordOpen(false); setMigratePassword(""); }}>
+                            <XCircle className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
