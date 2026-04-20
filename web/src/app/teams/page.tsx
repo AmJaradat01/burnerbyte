@@ -88,17 +88,28 @@ export default function TeamsPage() {
   // Team list view
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Teams</h1>
-          {isAdmin && teamsData?.data && teamsData.data.length > 0 && (
-            <p className="text-sm text-muted-foreground mt-0.5">
-              {teamsData.data.length} team{teamsData.data.length !== 1 ? "s" : ""} · {teamsData.data.reduce((s, t) => s + (t.member_count ?? 0), 0)} members
-            </p>
-          )}
-        </div>
-        {isAdmin && <CreateTeamDialog orgId={currentOrg.id} existingTeams={(teamsData?.data ?? []).map((t) => t.name)} />}
-      </div>
+      {/* Header */}
+      <Card className="overflow-hidden">
+        <div className="h-2 bg-gradient-to-r from-indigo-500/80 to-indigo-500/20" />
+        <CardContent className="pt-5 pb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-7 w-7 rounded-md bg-indigo-500/10 flex items-center justify-center">
+                <Users className="h-4 w-4 text-indigo-600" />
+              </div>
+              <div>
+                <h1 className="text-base font-semibold">Teams</h1>
+                <p className="text-sm text-muted-foreground">
+                  {teamsData?.data && teamsData.data.length > 0
+                    ? `${teamsData.data.length} team${teamsData.data.length !== 1 ? "s" : ""} · ${teamsData.data.reduce((s, t) => s + (t.member_count ?? 0), 0)} members · Organize domains and inboxes by team.`
+                    : "Organize your domains and inboxes by team."}
+                </p>
+              </div>
+            </div>
+            {isAdmin && <CreateTeamDialog orgId={currentOrg.id} existingTeams={(teamsData?.data ?? []).map((t) => t.name)} />}
+          </div>
+        </CardContent>
+      </Card>
 
       {isAdmin && teamsData?.data && teamsData.data.length > 0 && (
         <div className="grid grid-cols-3 gap-3">
@@ -182,7 +193,7 @@ function TeamGridSkeleton() {
 
 function MiniStat({ icon: Icon, label, value, accent }: { icon: typeof Users; label: string; value: number; accent: string }) {
   return (
-    <Card>
+    <Card className="transition-all hover:shadow-md hover:-translate-y-0.5">
       <CardContent className="pt-5 pb-4">
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-medium text-muted-foreground">{label}</span>
