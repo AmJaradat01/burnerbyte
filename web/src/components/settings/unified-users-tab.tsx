@@ -145,27 +145,28 @@ export function UnifiedUsersTab({ orgId }: { orgId: string }) {
   return (
     <div className="space-y-6">
       {/* Stats */}
-      <div className={`grid gap-4 ${isAdmin ? "grid-cols-2 md:grid-cols-4" : "grid-cols-3"}`}>
-        <StatCard label="Total" value={isAdmin ? (usersData?.total ?? 0) : members.length} icon={<Users className="h-4 w-4 text-muted-foreground" />} active={filter === "all"} onClick={() => setFilter("all")} />
-        <StatCard label="Members" value={memberCount} icon={<CheckCircle2 className="h-4 w-4 text-emerald-500" />} active={filter === "members"} onClick={() => setFilter(filter === "members" ? "all" : "members")} />
-        {isAdmin && <StatCard label="No Org" value={nonMemberCount} icon={<AlertTriangle className="h-4 w-4 text-orange-500" />} active={filter === "non-members"} onClick={() => setFilter(filter === "non-members" ? "all" : "non-members")} />}
-        <StatCard label="Pending Invites" value={pendingInvites.length} icon={<Clock className="h-4 w-4 text-blue-500" />} active={false} onClick={() => {}} />
-        {isAdmin && <StatCard label="Unverified" value={unverifiedCount} icon={<XCircle className="h-4 w-4 text-red-500" />} active={filter === "unverified"} onClick={() => setFilter(filter === "unverified" ? "all" : "unverified")} />}
+      <div className={`grid gap-4 ${isAdmin ? "grid-cols-2 md:grid-cols-5" : "grid-cols-3"}`}>
+        <StatCard label="Total Users" value={isAdmin ? (usersData?.total ?? 0) : members.length} icon={<Users className="h-4 w-4" />} accent="text-slate-600 bg-slate-100" active={filter === "all"} onClick={() => setFilter("all")} />
+        <StatCard label="Members" value={memberCount} icon={<CheckCircle2 className="h-4 w-4" />} accent="text-emerald-600 bg-emerald-100" active={filter === "members"} onClick={() => setFilter(filter === "members" ? "all" : "members")} />
+        {isAdmin && <StatCard label="No Org" value={nonMemberCount} icon={<AlertTriangle className="h-4 w-4" />} accent="text-orange-600 bg-orange-100" active={filter === "non-members"} onClick={() => setFilter(filter === "non-members" ? "all" : "non-members")} />}
+        <StatCard label="Pending" value={pendingInvites.length} icon={<Clock className="h-4 w-4" />} accent="text-blue-600 bg-blue-100" active={false} onClick={() => {}} />
+        {isAdmin && <StatCard label="Unverified" value={unverifiedCount} icon={<XCircle className="h-4 w-4" />} accent="text-red-600 bg-red-100" active={filter === "unverified"} onClick={() => setFilter(filter === "unverified" ? "all" : "unverified")} />}
       </div>
 
       {/* Search + Invite */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2 flex-1 max-w-lg">
-          <Input placeholder="Search by name, email, or ID…" value={search} onChange={(e) => { setSearch(e.target.value); }} />
+        <div className="relative flex-1 max-w-md">
+          <Input placeholder="Search by name, email, or ID…" value={search} onChange={(e) => { setSearch(e.target.value); }} className="pl-9" />
+          <Users className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           {(search || filter !== "all") && (
-            <Button variant="ghost" size="sm" className="shrink-0 text-xs" onClick={() => { setSearch(""); setFilter("all"); }}>Clear</Button>
+            <Button variant="ghost" size="sm" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 text-xs" onClick={() => { setSearch(""); setFilter("all"); }}>Clear</Button>
           )}
         </div>
         <div className="flex items-center gap-2">
           {filter !== "all" && (
-            <Badge variant="secondary" className="gap-1 text-xs">{filter} <button onClick={() => setFilter("all")} className="ml-1 hover:text-foreground">×</button></Badge>
+            <Badge variant="secondary" className="gap-1 text-xs capitalize">{filter.replace("-", " ")} <button onClick={() => setFilter("all")} className="ml-1 hover:text-foreground">×</button></Badge>
           )}
-          <span className="text-xs text-muted-foreground">{filtered.length} result{filtered.length !== 1 ? "s" : ""}</span>
+          <span className="text-xs text-muted-foreground tabular-nums">{filtered.length} result{filtered.length !== 1 ? "s" : ""}</span>
           {canInvite && <InviteDialog orgId={orgId} />}
           {canInvite && <BulkInviteDialog orgId={orgId} />}
         </div>
@@ -194,19 +195,19 @@ export function UnifiedUsersTab({ orgId }: { orgId: string }) {
                   const isYou = u.id === currentUser?.id;
                   return (
                     <UserDetailDialog key={u.id} user={u} orgId={orgId} isYou={isYou} isAdmin={isAdmin}>
-                      <tr className="border-b last:border-0 hover:bg-muted/30 cursor-pointer transition-colors">
-                        <td className="px-4 py-3">
+                      <tr className="border-b last:border-0 hover:bg-primary/[0.03] cursor-pointer transition-all duration-150 group">
+                        <td className="px-4 py-3.5">
                           <div className="flex items-center gap-3">
-                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/15 to-primary/5 text-sm font-bold text-primary shadow-sm transition-transform group-hover:scale-105">
                               {(u.display_name || u.email).charAt(0).toUpperCase()}
                             </div>
                             <div className="min-w-0">
                               <div className="flex items-center gap-1.5">
-                                <p className="font-medium truncate text-sm">{u.display_name || "—"}</p>
-                                {isYou && <Badge variant="outline" className="text-[10px] px-1 py-0">you</Badge>}
-                                {u.is_system_admin && <Badge variant="default" className="text-[10px] px-1 py-0">Admin</Badge>}
+                                <p className="font-semibold truncate text-sm">{u.display_name || "—"}</p>
+                                {isYou && <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-blue-50 border-blue-200 text-blue-600">you</Badge>}
+                                {u.is_system_admin && <Badge variant="default" className="text-[10px] px-1.5 py-0"><Shield className="h-2.5 w-2.5 mr-0.5" />Admin</Badge>}
                               </div>
-                              <p className="text-xs text-muted-foreground font-mono truncate">{u.email}</p>
+                              <p className="text-xs text-muted-foreground font-mono truncate mt-0.5">{u.email}</p>
                             </div>
                           </div>
                         </td>
@@ -308,15 +309,17 @@ export function UnifiedUsersTab({ orgId }: { orgId: string }) {
   );
 }
 
-function StatCard({ label, value, icon, active, onClick }: { label: string; value: number; icon: React.ReactNode; active: boolean; onClick: () => void }) {
+function StatCard({ label, value, icon, accent, active, onClick }: { label: string; value: number; icon: React.ReactNode; accent: string; active: boolean; onClick: () => void }) {
   return (
-    <Card className={`cursor-pointer transition-shadow hover:shadow-md ${active ? "ring-2 ring-primary" : ""}`} onClick={onClick}>
+    <Card className={`cursor-pointer transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${active ? "ring-2 ring-primary shadow-md" : ""}`} onClick={onClick}>
       <CardContent className="pt-5 pb-4">
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-xs text-muted-foreground">{label}</span>
-          {icon}
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-medium text-muted-foreground">{label}</span>
+          <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${accent}`}>
+            {icon}
+          </div>
         </div>
-        <p className="text-2xl font-bold">{value}</p>
+        <p className="text-2xl font-bold tabular-nums">{value}</p>
       </CardContent>
     </Card>
   );
