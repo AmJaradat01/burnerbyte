@@ -19,8 +19,14 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ErrorState } from "@/components/error-state";
 import { Pagination } from "@/components/pagination";
 import { useRoles } from "@/hooks/use-roles";
-import { AlertTriangle, CheckCircle2, Clock, Copy, KeyRound, LogOut, Mail, RefreshCw, Shield, Trash2, UserPlus, Users, XCircle } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { AlertTriangle, CheckCircle2, Clock, Copy, KeyRound, LogOut, Mail, Minus, Plus, RefreshCw, Shield, Trash2, Upload, UserPlus, Users, XCircle } from "lucide-react";
 import type { User, Membership, Invite, PaginatedResponse } from "@/types";
+
+interface SSOStatusProvider { name: string; provider_type: string; label: string; enabled: boolean; }
+interface SSOStatus { enabled: boolean; allow_registration: boolean; enforce_sso?: boolean; providers?: SSOStatusProvider[]; }
+interface TeamAssignmentRow { team_id: string; team_role: string; }
+interface BulkInviteResult { created: number; skipped: { email: string; reason: string }[]; failed: { email: string; reason: string }[]; }
 
 const ROLE_COLORS: Record<string, string> = {
   owner: "bg-amber-100 text-amber-700 border-amber-200",
@@ -161,6 +167,7 @@ export function UnifiedUsersTab({ orgId }: { orgId: string }) {
           )}
           <span className="text-xs text-muted-foreground">{filtered.length} result{filtered.length !== 1 ? "s" : ""}</span>
           {canInvite && <InviteDialog orgId={orgId} />}
+          {canInvite && <BulkInviteDialog orgId={orgId} />}
         </div>
       </div>
 
@@ -635,30 +642,84 @@ function InviteDialog({ orgId }: { orgId: string }) {
   const teams = useOrgStore((s) => s.teams);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("member");
-  const [teamId, setTeamId] = useState("none");
-  const [teamRole, setTeamRole] = useState("member");
   const [open, setOpen] = useState(false);
   const [sending, setSending] = useState(false);
 
+  // Auth method state
+  const [authAny, setAuthAny] = useState(true);
+  const [authPassword, setAuthPassword] = useState(false);
+  const [authSSO, setAuthSSO] = useState<Record<string, boolean>>({});
+
+  // Multi-team assignments
+  const [teamAssignments, setTeamAssignments] = useState<TeamAssignmentRow[]>([]);
+
+  // Fetch SSO providers
+  const { data: ssoStatus } = useQuery({
+    queryKey: ["sso-status"],
+    queryFn: () => api.get<SSOStatus>("/auth/sso-status"),
+    staleTime: 60000,
+  });
+  const ssoProviders = (ssoStatus?.providers ?? []).filter(p => p.enabled);
+
   const emailValid = /^[^\s@]+@[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/.test(email);
+
+  const buildAllowedAuth = (): string[] => {
+    if (authAny) return ["any"];
+    const methods: string[] = [];
+    if (authPassword) methods.push("password");
+    for (const p of ssoProviders) {
+      if (authSSO[p.name]) methods.push(`sso:${p.name}`);
+    }
+    return methods.length > 0 ? methods : ["any"];
+  };
+
+  const addTeamAssignment = () => {
+    const usedTeamIds = new Set(teamAssignments.map(ta => ta.team_id));
+    const available = teams.find(t => !usedTeamIds.has(t.id));
+    if (available) {
+      setTeamAssignments([...teamAssignments, { team_id: available.id, team_role: "member" }]);
+    }
+  };
+
+  const removeTeamAssignment = (index: number) => {
+    setTeamAssignments(teamAssignments.filter((_, i) => i !== index));
+  };
+
+  const updateTeamAssignment = (index: number, field: keyof TeamAssignmentRow, value: string) => {
+    const updated = [...teamAssignments];
+    updated[index] = { ...updated[index], [field]: value };
+    setTeamAssignments(updated);
+  };
+
+  const resetForm = () => {
+    setEmail("");
+    setRole("member");
+    setAuthAny(true);
+    setAuthPassword(false);
+    setAuthSSO({});
+    setTeamAssignments([]);
+  };
 
   const invite = async () => {
     if (!email || !emailValid) return;
     setSending(true);
     try {
-      const payload: Record<string, string> = { email, org_role: role };
-      if (teamId && teamId !== "none") {
-        payload.team_id = teamId;
-        payload.team_role = teamRole;
+      const payload: Record<string, unknown> = {
+        email,
+        org_role: role,
+        allowed_auth: buildAllowedAuth(),
+      };
+      if (teamAssignments.length > 0) {
+        payload.team_assignments = teamAssignments.map(ta => ({
+          team_id: ta.team_id,
+          team_role: ta.team_role,
+        }));
       }
       await api.post(`/orgs/${orgId}/invites`, payload);
       toast.success(`Invite sent to ${email}`);
       qc.invalidateQueries({ queryKey: ["org-invites", orgId] });
       setOpen(false);
-      setEmail("");
-      setRole("member");
-      setTeamId("none");
-      setTeamRole("member");
+      resetForm();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Invite failed");
     } finally {
@@ -666,15 +727,18 @@ function InviteDialog({ orgId }: { orgId: string }) {
     }
   };
 
+  const usedTeamIds = new Set(teamAssignments.map(ta => ta.team_id));
+  const canAddTeam = teams.length > 0 && teamAssignments.length < teams.length;
+
   return (
-    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEmail(""); setRole("member"); setTeamId("none"); setTeamRole("member"); } }}>
+    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
       <DialogTrigger asChild>
         <Button size="sm" className="gap-1.5"><UserPlus className="h-3.5 w-3.5" /> Invite User</Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Invite a user</DialogTitle>
-          <DialogDescription>They&apos;ll receive an email with a link to join your organization{teamId && teamId !== "none" ? " and be added to the selected team" : ""}.</DialogDescription>
+          <DialogDescription>They&apos;ll receive an email with a link to join your organization.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
@@ -696,40 +760,333 @@ function InviteDialog({ orgId }: { orgId: string }) {
             </Select>
           </div>
 
+          {/* Auth Method Selector */}
+          <div className="border-t pt-4 space-y-3">
+            <div className="space-y-1">
+              <Label>Allowed Auth Methods</Label>
+              <p className="text-xs text-muted-foreground">Choose which authentication methods this user can use to accept the invite.</p>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between rounded-lg border p-2.5">
+                <span className="text-sm">Any method</span>
+                <Switch checked={authAny} onCheckedChange={(v) => {
+                  setAuthAny(v);
+                  if (v) { setAuthPassword(false); setAuthSSO({}); }
+                }} />
+              </div>
+              <div className="flex items-center justify-between rounded-lg border p-2.5">
+                <span className="text-sm">Password</span>
+                <Switch checked={authAny || authPassword} disabled={authAny} onCheckedChange={setAuthPassword} />
+              </div>
+              {ssoProviders.map((p) => (
+                <div key={p.name} className="flex items-center justify-between rounded-lg border p-2.5">
+                  <span className="text-sm capitalize">{p.label || p.name}</span>
+                  <Switch checked={authAny || (authSSO[p.name] ?? false)} disabled={authAny} onCheckedChange={(v) => setAuthSSO({ ...authSSO, [p.name]: v })} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Multi-Team Selector */}
           {teams.length > 0 && (
             <div className="border-t pt-4 space-y-3">
-              <div className="space-y-1">
-                <Label>Assign to Team <span className="text-muted-foreground font-normal">(optional)</span></Label>
-                <p className="text-xs text-muted-foreground">The user will be automatically added to this team when they accept the invite.</p>
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Label>Team Assignments <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                  <p className="text-xs text-muted-foreground">Assign the user to one or more teams when they accept.</p>
+                </div>
+                {canAddTeam && (
+                  <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={addTeamAssignment}>
+                    <Plus className="h-3 w-3" /> Add Team
+                  </Button>
+                )}
               </div>
-              <Select value={teamId} onValueChange={setTeamId}>
-                <SelectTrigger><SelectValue placeholder="No team — org only" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No team — org only</SelectItem>
-                  {teams.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {teamId && teamId !== "none" && (
-                <div className="space-y-2">
-                  <Label>Team Role</Label>
-                  <Select value={teamRole} onValueChange={setTeamRole}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+              {teamAssignments.map((ta, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <Select value={ta.team_id} onValueChange={(v) => updateTeamAssignment(i, "team_id", v)}>
+                    <SelectTrigger className="flex-1 h-8 text-xs"><SelectValue placeholder="Select team" /></SelectTrigger>
                     <SelectContent>
-                      {teamRoles.map((r) => (
-                        <SelectItem key={r.value} value={r.value}>{r.label}{r.description ? ` — ${r.description}` : ""}</SelectItem>
+                      {teams.filter(t => t.id === ta.team_id || !usedTeamIds.has(t.id)).map((t) => (
+                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  <Select value={ta.team_role} onValueChange={(v) => updateTeamAssignment(i, "team_role", v)}>
+                    <SelectTrigger className="w-28 h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {teamRoles.map((r) => (
+                        <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive" onClick={() => removeTeamAssignment(i)}>
+                    <Minus className="h-3.5 w-3.5" />
+                  </Button>
                 </div>
-              )}
+              ))}
             </div>
           )}
 
           <Button onClick={invite} className="w-full" disabled={!email || !emailValid || sending}>
             {sending ? "Sending…" : "Send Invite"}
           </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function BulkInviteDialog({ orgId }: { orgId: string }) {
+  const qc = useQueryClient();
+  const { orgRoles, teamRoles } = useRoles();
+  const teams = useOrgStore((s) => s.teams);
+  const [open, setOpen] = useState(false);
+  const [emailsText, setEmailsText] = useState("");
+  const [role, setRole] = useState("member");
+  const [sending, setSending] = useState(false);
+  const [result, setResult] = useState<BulkInviteResult | null>(null);
+
+  // Auth method state
+  const [authAny, setAuthAny] = useState(true);
+  const [authPassword, setAuthPassword] = useState(false);
+  const [authSSO, setAuthSSO] = useState<Record<string, boolean>>({});
+
+  // Multi-team assignments
+  const [teamAssignments, setTeamAssignments] = useState<TeamAssignmentRow[]>([]);
+
+  // Fetch SSO providers
+  const { data: ssoStatus } = useQuery({
+    queryKey: ["sso-status"],
+    queryFn: () => api.get<SSOStatus>("/auth/sso-status"),
+    staleTime: 60000,
+  });
+  const ssoProviders = (ssoStatus?.providers ?? []).filter(p => p.enabled);
+
+  const buildAllowedAuth = (): string[] => {
+    if (authAny) return ["any"];
+    const methods: string[] = [];
+    if (authPassword) methods.push("password");
+    for (const p of ssoProviders) {
+      if (authSSO[p.name]) methods.push(`sso:${p.name}`);
+    }
+    return methods.length > 0 ? methods : ["any"];
+  };
+
+  const parseEmails = (): string[] => {
+    return emailsText
+      .split(/[\n,;]+/)
+      .map(e => e.trim())
+      .filter(e => e.length > 0);
+  };
+
+  const addTeamAssignment = () => {
+    const usedTeamIds = new Set(teamAssignments.map(ta => ta.team_id));
+    const available = teams.find(t => !usedTeamIds.has(t.id));
+    if (available) {
+      setTeamAssignments([...teamAssignments, { team_id: available.id, team_role: "member" }]);
+    }
+  };
+
+  const removeTeamAssignment = (index: number) => {
+    setTeamAssignments(teamAssignments.filter((_, i) => i !== index));
+  };
+
+  const updateTeamAssignment = (index: number, field: keyof TeamAssignmentRow, value: string) => {
+    const updated = [...teamAssignments];
+    updated[index] = { ...updated[index], [field]: value };
+    setTeamAssignments(updated);
+  };
+
+  const resetForm = () => {
+    setEmailsText("");
+    setRole("member");
+    setAuthAny(true);
+    setAuthPassword(false);
+    setAuthSSO({});
+    setTeamAssignments([]);
+    setResult(null);
+  };
+
+  const sendBulk = async () => {
+    const emails = parseEmails();
+    if (emails.length === 0) return;
+    setSending(true);
+    setResult(null);
+    try {
+      const payload: Record<string, unknown> = {
+        emails,
+        org_role: role,
+        allowed_auth: buildAllowedAuth(),
+      };
+      if (teamAssignments.length > 0) {
+        payload.team_assignments = teamAssignments.map(ta => ({
+          team_id: ta.team_id,
+          team_role: ta.team_role,
+        }));
+      }
+      const res = await api.post<BulkInviteResult>(`/orgs/${orgId}/invites/bulk`, payload);
+      setResult(res);
+      qc.invalidateQueries({ queryKey: ["org-invites", orgId] });
+      if (res.created > 0) {
+        toast.success(`${res.created} invite${res.created !== 1 ? "s" : ""} sent`);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Bulk invite failed");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const emailCount = parseEmails().length;
+  const usedTeamIds = new Set(teamAssignments.map(ta => ta.team_id));
+  const canAddTeam = teams.length > 0 && teamAssignments.length < teams.length;
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline" className="gap-1.5"><Upload className="h-3.5 w-3.5" /> Bulk Invite</Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Bulk Invite</DialogTitle>
+          <DialogDescription>Invite multiple users at once. All invites share the same role, auth methods, and team assignments.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          {/* Email textarea */}
+          <div className="space-y-2">
+            <Label>Email Addresses</Label>
+            <Textarea
+              value={emailsText}
+              onChange={(e) => setEmailsText(e.target.value)}
+              placeholder={"user1@example.com\nuser2@example.com\nuser3@example.com"}
+              rows={5}
+              className="font-mono text-sm"
+            />
+            <p className="text-xs text-muted-foreground">
+              Enter one email per line, or separate with commas. {emailCount > 0 && <span className="font-medium">{emailCount} email{emailCount !== 1 ? "s" : ""}</span>}
+              {emailCount > 100 && <span className="text-destructive ml-1">(max 100)</span>}
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Organization Role</Label>
+            <Select value={role} onValueChange={setRole}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {orgRoles.map((r) => (
+                  <SelectItem key={r.value} value={r.value}>{r.label} — {r.description}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Auth Method Selector */}
+          <div className="border-t pt-4 space-y-3">
+            <div className="space-y-1">
+              <Label>Allowed Auth Methods</Label>
+              <p className="text-xs text-muted-foreground">Applied to all invites in this batch.</p>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between rounded-lg border p-2.5">
+                <span className="text-sm">Any method</span>
+                <Switch checked={authAny} onCheckedChange={(v) => {
+                  setAuthAny(v);
+                  if (v) { setAuthPassword(false); setAuthSSO({}); }
+                }} />
+              </div>
+              <div className="flex items-center justify-between rounded-lg border p-2.5">
+                <span className="text-sm">Password</span>
+                <Switch checked={authAny || authPassword} disabled={authAny} onCheckedChange={setAuthPassword} />
+              </div>
+              {ssoProviders.map((p) => (
+                <div key={p.name} className="flex items-center justify-between rounded-lg border p-2.5">
+                  <span className="text-sm capitalize">{p.label || p.name}</span>
+                  <Switch checked={authAny || (authSSO[p.name] ?? false)} disabled={authAny} onCheckedChange={(v) => setAuthSSO({ ...authSSO, [p.name]: v })} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Multi-Team Selector */}
+          {teams.length > 0 && (
+            <div className="border-t pt-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Label>Team Assignments <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                  <p className="text-xs text-muted-foreground">Applied to all invites in this batch.</p>
+                </div>
+                {canAddTeam && (
+                  <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={addTeamAssignment}>
+                    <Plus className="h-3 w-3" /> Add Team
+                  </Button>
+                )}
+              </div>
+              {teamAssignments.map((ta, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <Select value={ta.team_id} onValueChange={(v) => updateTeamAssignment(i, "team_id", v)}>
+                    <SelectTrigger className="flex-1 h-8 text-xs"><SelectValue placeholder="Select team" /></SelectTrigger>
+                    <SelectContent>
+                      {teams.filter(t => t.id === ta.team_id || !usedTeamIds.has(t.id)).map((t) => (
+                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={ta.team_role} onValueChange={(v) => updateTeamAssignment(i, "team_role", v)}>
+                    <SelectTrigger className="w-28 h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {teamRoles.map((r) => (
+                        <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive" onClick={() => removeTeamAssignment(i)}>
+                    <Minus className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <Button onClick={sendBulk} className="w-full" disabled={emailCount === 0 || emailCount > 100 || sending}>
+            {sending ? "Sending…" : `Send ${emailCount} Invite${emailCount !== 1 ? "s" : ""}`}
+          </Button>
+
+          {/* Results summary */}
+          {result && (
+            <div className="border-t pt-4 space-y-3">
+              <p className="text-sm font-medium">Results</p>
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="rounded-lg border p-2">
+                  <p className="text-lg font-bold text-green-600">{result.created}</p>
+                  <p className="text-xs text-muted-foreground">Created</p>
+                </div>
+                <div className="rounded-lg border p-2">
+                  <p className="text-lg font-bold text-amber-600">{result.skipped?.length ?? 0}</p>
+                  <p className="text-xs text-muted-foreground">Skipped</p>
+                </div>
+                <div className="rounded-lg border p-2">
+                  <p className="text-lg font-bold text-red-600">{result.failed?.length ?? 0}</p>
+                  <p className="text-xs text-muted-foreground">Failed</p>
+                </div>
+              </div>
+              {result.skipped && result.skipped.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-amber-600">Skipped</p>
+                  {result.skipped.map((s, i) => (
+                    <p key={i} className="text-xs text-muted-foreground">{s.email} — {s.reason}</p>
+                  ))}
+                </div>
+              )}
+              {result.failed && result.failed.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-red-600">Failed</p>
+                  {result.failed.map((f, i) => (
+                    <p key={i} className="text-xs text-muted-foreground">{f.email} — {f.reason}</p>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
@@ -776,11 +1133,17 @@ function PendingInviteRow({ invite: inv, orgId }: { invite: Invite; orgId: strin
       </div>
       <div className="flex items-center gap-2">
         <Badge variant="outline" className={`capitalize text-xs ${ROLE_COLORS[inv.org_role] ?? ""}`}>{inv.org_role}</Badge>
-        {inv.team_name && (
+        {inv.team_assignments && inv.team_assignments.length > 0 ? (
+          inv.team_assignments.map((ta: { team_id: string; team_name: string; team_role: string }) => (
+            <Badge key={ta.team_id} variant="outline" className="text-xs text-violet-600 border-violet-200">
+              {ta.team_name} · {ta.team_role}
+            </Badge>
+          ))
+        ) : inv.team_name ? (
           <Badge variant="outline" className="text-xs text-violet-600 border-violet-200">
             {inv.team_name}{inv.team_role ? ` · ${inv.team_role}` : ""}
           </Badge>
-        )}
+        ) : null}
         <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={resend} disabled={resending}>
           <RefreshCw className={`h-3 w-3 ${resending ? "animate-spin" : ""}`} /> Resend
         </Button>

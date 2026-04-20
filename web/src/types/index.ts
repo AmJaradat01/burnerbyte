@@ -241,9 +241,11 @@ export interface Invite {
   org_id: string;
   email: string;
   org_role: string;
+  allowed_auth?: string[];
   team_id?: string;
   team_name?: string;
   team_role?: string;
+  team_assignments?: { team_id: string; team_name: string; team_role: string }[];
   expires_at: string;
   created_at: string;
 }
