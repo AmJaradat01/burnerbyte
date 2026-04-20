@@ -146,7 +146,8 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
 
         <div className="space-y-6">
           {/* Policies */}
-          <Card>
+          <Card className="overflow-hidden">
+            <div className="h-2 bg-gradient-to-r from-violet-500/80 to-violet-500/20" />
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <div className="h-7 w-7 rounded-md bg-violet-100 flex items-center justify-center">
@@ -157,7 +158,7 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
               <CardDescription>Security and feature policies for this organization.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex items-center justify-between rounded-lg border p-3">
+              <div className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50">
                 <div className="flex items-center gap-3">
                   <div className="h-8 w-8 rounded-md bg-green-100 flex items-center justify-center shrink-0">
                     <Paperclip className="h-4 w-4 text-green-600" />
@@ -169,7 +170,7 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
                 </div>
                 <Switch checked={settings.attachments_enabled ?? true} onCheckedChange={(v) => set("attachments_enabled", v)} />
               </div>
-              <div className="flex items-center justify-between rounded-lg border p-3">
+              <div className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50">
                 <div className="flex items-center gap-3">
                   <div className="h-8 w-8 rounded-md bg-blue-100 flex items-center justify-center shrink-0">
                     <Lock className="h-4 w-4 text-blue-600" />
@@ -181,7 +182,7 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
                 </div>
                 <Switch checked={settings.enforce_sso ?? false} onCheckedChange={(v) => set("enforce_sso", v)} />
               </div>
-              <div className="flex items-center justify-between rounded-lg border p-3">
+              <div className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50">
                 <div className="flex items-center gap-3">
                   <div className="h-8 w-8 rounded-md bg-amber-100 flex items-center justify-center shrink-0">
                     <Clock className="h-4 w-4 text-amber-600" />
@@ -191,9 +192,9 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
                     <p className="text-xs text-muted-foreground">Override platform default for this org</p>
                   </div>
                 </div>
-                <Input value={settings.default_inbox_ttl ?? ""} onChange={(e) => set("default_inbox_ttl", e.target.value)} placeholder="1h" className="h-8 w-24 text-xs text-right" />
+                <Input value={settings.default_inbox_ttl ?? ""} onChange={(e) => set("default_inbox_ttl", e.target.value)} placeholder="1h" className="h-8 w-24 text-xs text-right font-mono" />
               </div>
-              <div className="flex items-center justify-between rounded-lg border p-3">
+              <div className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50">
                 <div className="flex items-center gap-3">
                   <div className="h-8 w-8 rounded-md bg-amber-100 flex items-center justify-center shrink-0">
                     <Clock className="h-4 w-4 text-amber-600" />
@@ -203,7 +204,7 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
                     <p className="text-xs text-muted-foreground">Maximum inbox lifetime for this org</p>
                   </div>
                 </div>
-                <Input value={settings.max_inbox_ttl ?? ""} onChange={(e) => set("max_inbox_ttl", e.target.value)} placeholder="24h" className="h-8 w-24 text-xs text-right" />
+                <Input value={settings.max_inbox_ttl ?? ""} onChange={(e) => set("max_inbox_ttl", e.target.value)} placeholder="24h" className="h-8 w-24 text-xs text-right font-mono" />
               </div>
             </CardContent>
           </Card>
@@ -243,13 +244,21 @@ function DangerZone({ org, onDeleted }: { org: Organization; onDeleted: () => vo
   };
 
   return (
-    <Card className="border-destructive/50">
+    <Card className="overflow-hidden border-destructive/40">
+      <div className="h-2 bg-gradient-to-r from-destructive/80 to-destructive/20" />
       <CardHeader>
-        <CardTitle className="text-base text-destructive">Danger Zone</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-base text-destructive">
+          <div className="h-7 w-7 rounded-md bg-red-100 flex items-center justify-center">
+            <AlertTriangle className="h-4 w-4 text-destructive" />
+          </div>
+          Danger Zone
+        </CardTitle>
         <CardDescription>Permanently delete this organization and all its data.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        <p className="text-sm text-muted-foreground">This removes all teams, domains, inboxes, emails, and members. This cannot be undone.</p>
+        <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3">
+          <p className="text-sm text-muted-foreground">This removes all teams, domains, inboxes, emails, and members. This action cannot be undone.</p>
+        </div>
         <div className="space-y-2">
           <Label className="text-xs">Type &quot;{org.name}&quot; to confirm</Label>
           <Input value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder={org.name} className="max-w-xs" />
@@ -323,16 +332,29 @@ function OverviewTab() {
         })}
       </div>
       <PlatformSettingsCard />
-      <Card>
+      <Card className="overflow-hidden">
+        <div className="h-2 bg-gradient-to-r from-blue-500/80 to-blue-500/20" />
         <CardContent className="pt-5 pb-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Info className="h-4 w-4 text-muted-foreground" />
+          <div className="flex items-center gap-2 mb-3">
+            <div className="h-6 w-6 rounded-md bg-blue-100 flex items-center justify-center">
+              <Info className="h-3.5 w-3.5 text-blue-600" />
+            </div>
             <span className="text-sm font-medium">About</span>
           </div>
           <div className="grid grid-cols-3 gap-4 text-sm">
-            <div><p className="text-muted-foreground text-xs">Version</p><p className="font-mono">{versionData?.version ?? "—"}</p></div>
-            <div><p className="text-muted-foreground text-xs">Platform</p><p>BurnerByte — Self-hosted temporary email</p></div>
-            <div><p className="text-muted-foreground text-xs">License</p><p>Apache 2.0</p></div>
+            <div className="rounded-lg border p-3">
+              <p className="text-muted-foreground text-xs mb-1">Version</p>
+              <p className="font-mono font-medium">{versionData?.version ?? "—"}</p>
+            </div>
+            <div className="rounded-lg border p-3">
+              <p className="text-muted-foreground text-xs mb-1">Platform</p>
+              <p className="font-medium">BurnerByte</p>
+              <p className="text-xs text-muted-foreground">Self-hosted temporary email</p>
+            </div>
+            <div className="rounded-lg border p-3">
+              <p className="text-muted-foreground text-xs mb-1">License</p>
+              <p className="font-medium">Apache 2.0</p>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -386,7 +408,8 @@ function PlatformSettingsCard() {
   if (isLoading) return <Card><CardContent className="pt-6"><Skeleton className="h-40 w-full" /></CardContent></Card>;
 
   return (
-    <Card>
+    <Card className="overflow-hidden">
+      <div className="h-2 bg-gradient-to-r from-slate-500/80 to-slate-500/20" />
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <div className="h-7 w-7 rounded-md bg-slate-100 flex items-center justify-center">
@@ -405,12 +428,28 @@ function PlatformSettingsCard() {
             </div>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Access</p>
           </div>
-          <div className="flex items-center justify-between">
-            <div><Label>Allow public registration</Label><p className="text-xs text-muted-foreground">When disabled, only invited users can join.</p></div>
+          <div className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-md bg-emerald-100 flex items-center justify-center shrink-0">
+                <Users className="h-4 w-4 text-emerald-600" />
+              </div>
+              <div>
+                <Label>Allow public registration</Label>
+                <p className="text-xs text-muted-foreground">When disabled, only invited users can join.</p>
+              </div>
+            </div>
             <Switch checked={form.allow_registration} onCheckedChange={(v) => set("allow_registration", v)} />
           </div>
-          <div className="flex items-center justify-between">
-            <div><Label>Require email verification</Label><p className="text-xs text-muted-foreground">New users must verify their email before accessing the platform.</p></div>
+          <div className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-md bg-emerald-100 flex items-center justify-center shrink-0">
+                <Mail className="h-4 w-4 text-emerald-600" />
+              </div>
+              <div>
+                <Label>Require email verification</Label>
+                <p className="text-xs text-muted-foreground">New users must verify their email before accessing the platform.</p>
+              </div>
+            </div>
             <Switch checked={form.email_verification} onCheckedChange={(v) => set("email_verification", v)} />
           </div>
         </div>
@@ -423,17 +462,19 @@ function PlatformSettingsCard() {
             </div>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Password Policy</p>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label className="text-xs">Min length</Label>
-              <Input type="number" min={6} max={128} value={form.password_min_length} onChange={(e) => set("password_min_length", Number(e.target.value) || 8)} className="h-8" />
+          <div className="rounded-lg border p-4 space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Min length</Label>
+                <Input type="number" min={6} max={128} value={form.password_min_length} onChange={(e) => set("password_min_length", Number(e.target.value) || 8)} className="h-8" />
+              </div>
             </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex items-center justify-between"><Label className="text-xs">Uppercase</Label><Switch checked={form.password_require_upper} onCheckedChange={(v) => set("password_require_upper", v)} /></div>
-            <div className="flex items-center justify-between"><Label className="text-xs">Lowercase</Label><Switch checked={form.password_require_lower} onCheckedChange={(v) => set("password_require_lower", v)} /></div>
-            <div className="flex items-center justify-between"><Label className="text-xs">Number</Label><Switch checked={form.password_require_number} onCheckedChange={(v) => set("password_require_number", v)} /></div>
-            <div className="flex items-center justify-between"><Label className="text-xs">Special char</Label><Switch checked={form.password_require_special} onCheckedChange={(v) => set("password_require_special", v)} /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex items-center justify-between rounded-md border px-3 py-2 transition-colors hover:bg-muted/50"><Label className="text-xs">Uppercase</Label><Switch checked={form.password_require_upper} onCheckedChange={(v) => set("password_require_upper", v)} /></div>
+              <div className="flex items-center justify-between rounded-md border px-3 py-2 transition-colors hover:bg-muted/50"><Label className="text-xs">Lowercase</Label><Switch checked={form.password_require_lower} onCheckedChange={(v) => set("password_require_lower", v)} /></div>
+              <div className="flex items-center justify-between rounded-md border px-3 py-2 transition-colors hover:bg-muted/50"><Label className="text-xs">Number</Label><Switch checked={form.password_require_number} onCheckedChange={(v) => set("password_require_number", v)} /></div>
+              <div className="flex items-center justify-between rounded-md border px-3 py-2 transition-colors hover:bg-muted/50"><Label className="text-xs">Special char</Label><Switch checked={form.password_require_special} onCheckedChange={(v) => set("password_require_special", v)} /></div>
+            </div>
           </div>
         </div>
 
@@ -445,14 +486,16 @@ function PlatformSettingsCard() {
             </div>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Account Lockout</p>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label className="text-xs">Max failed attempts</Label>
-              <Input type="number" min={1} max={50} value={form.lockout_max_attempts} onChange={(e) => set("lockout_max_attempts", Number(e.target.value) || 5)} className="h-8" />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Lockout duration (min)</Label>
-              <Input type="number" min={1} max={1440} value={form.lockout_duration_mins} onChange={(e) => set("lockout_duration_mins", Number(e.target.value) || 15)} className="h-8" />
+          <div className="rounded-lg border p-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Max failed attempts</Label>
+                <Input type="number" min={1} max={50} value={form.lockout_max_attempts} onChange={(e) => set("lockout_max_attempts", Number(e.target.value) || 5)} className="h-8" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Lockout duration (min)</Label>
+                <Input type="number" min={1} max={1440} value={form.lockout_duration_mins} onChange={(e) => set("lockout_duration_mins", Number(e.target.value) || 15)} className="h-8" />
+              </div>
             </div>
           </div>
         </div>
@@ -465,38 +508,40 @@ function PlatformSettingsCard() {
             </div>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Date & Time Defaults</p>
           </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Timezone</Label>
-            <Select value={form.timezone} onValueChange={(v) => set("timezone", v)}>
-              <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {["UTC","America/New_York","America/Chicago","America/Denver","America/Los_Angeles","Europe/London","Europe/Berlin","Europe/Paris","Asia/Amman","Asia/Dubai","Asia/Tokyo","Asia/Shanghai","Australia/Sydney"].map((t) => (
-                  <SelectItem key={t} value={t}>{t.replace(/_/g, " ")}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-lg border p-4 space-y-3">
             <div className="space-y-1">
-              <Label className="text-xs">Date Format</Label>
-              <Select value={form.date_format} onValueChange={(v) => set("date_format", v)}>
+              <Label className="text-xs">Timezone</Label>
+              <Select value={form.timezone} onValueChange={(v) => set("timezone", v)}>
                 <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="YYYY-MM-DD">YYYY-MM-DD</SelectItem>
-                  <SelectItem value="DD/MM/YYYY">DD/MM/YYYY</SelectItem>
-                  <SelectItem value="MM/DD/YYYY">MM/DD/YYYY</SelectItem>
+                  {["UTC","America/New_York","America/Chicago","America/Denver","America/Los_Angeles","Europe/London","Europe/Berlin","Europe/Paris","Asia/Amman","Asia/Dubai","Asia/Tokyo","Asia/Shanghai","Australia/Sydney"].map((t) => (
+                    <SelectItem key={t} value={t}>{t.replace(/_/g, " ")}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Time Format</Label>
-              <Select value={form.time_format} onValueChange={(v) => set("time_format", v)}>
-                <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="24h">24-hour</SelectItem>
-                  <SelectItem value="12h">12-hour</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Date Format</Label>
+                <Select value={form.date_format} onValueChange={(v) => set("date_format", v)}>
+                  <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="YYYY-MM-DD">YYYY-MM-DD</SelectItem>
+                    <SelectItem value="DD/MM/YYYY">DD/MM/YYYY</SelectItem>
+                    <SelectItem value="MM/DD/YYYY">MM/DD/YYYY</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Time Format</Label>
+                <Select value={form.time_format} onValueChange={(v) => set("time_format", v)}>
+                  <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="24h">24-hour</SelectItem>
+                    <SelectItem value="12h">12-hour</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
         </div>
@@ -509,30 +554,32 @@ function PlatformSettingsCard() {
             </div>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Quotas & Limits</p>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label className="text-xs">Default inbox TTL</Label>
-              <Input value={form.default_inbox_ttl} onChange={(e) => set("default_inbox_ttl", e.target.value)} placeholder="1h" className="h-8 font-mono text-xs" />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Max inbox TTL</Label>
-              <Input value={form.max_inbox_ttl} onChange={(e) => set("max_inbox_ttl", e.target.value)} placeholder="24h" className="h-8 font-mono text-xs" />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Max attachment (MB)</Label>
-              <Input type="number" min={0} value={form.max_attachment_size_mb} onChange={(e) => set("max_attachment_size_mb", Number(e.target.value) || 0)} className="h-8" />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Max domains</Label>
-              <Input type="number" min={0} value={form.max_domains} onChange={(e) => set("max_domains", Number(e.target.value) || 0)} className="h-8" />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Max teams</Label>
-              <Input type="number" min={0} value={form.max_teams} onChange={(e) => set("max_teams", Number(e.target.value) || 0)} className="h-8" />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Max inboxes/domain</Label>
-              <Input type="number" min={0} value={form.max_inboxes_per_domain} onChange={(e) => set("max_inboxes_per_domain", Number(e.target.value) || 0)} className="h-8" />
+          <div className="rounded-lg border p-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Default inbox TTL</Label>
+                <Input value={form.default_inbox_ttl} onChange={(e) => set("default_inbox_ttl", e.target.value)} placeholder="1h" className="h-8 font-mono text-xs" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Max inbox TTL</Label>
+                <Input value={form.max_inbox_ttl} onChange={(e) => set("max_inbox_ttl", e.target.value)} placeholder="24h" className="h-8 font-mono text-xs" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Max attachment (MB)</Label>
+                <Input type="number" min={0} value={form.max_attachment_size_mb} onChange={(e) => set("max_attachment_size_mb", Number(e.target.value) || 0)} className="h-8" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Max domains</Label>
+                <Input type="number" min={0} value={form.max_domains} onChange={(e) => set("max_domains", Number(e.target.value) || 0)} className="h-8" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Max teams</Label>
+                <Input type="number" min={0} value={form.max_teams} onChange={(e) => set("max_teams", Number(e.target.value) || 0)} className="h-8" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Max inboxes/domain</Label>
+                <Input type="number" min={0} value={form.max_inboxes_per_domain} onChange={(e) => set("max_inboxes_per_domain", Number(e.target.value) || 0)} className="h-8" />
+              </div>
             </div>
           </div>
         </div>
