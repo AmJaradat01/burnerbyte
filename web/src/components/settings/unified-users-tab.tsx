@@ -144,6 +144,28 @@ export function UnifiedUsersTab({ orgId }: { orgId: string }) {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
+      <Card className="overflow-hidden">
+        <div className="h-2 bg-gradient-to-r from-blue-500/80 to-blue-500/20" />
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-7 w-7 rounded-md bg-blue-500/10 flex items-center justify-center">
+                <Users className="h-4 w-4 text-blue-600" />
+              </div>
+              <div>
+                <CardTitle className="text-base">Users &amp; Members</CardTitle>
+                <p className="text-sm text-muted-foreground">Manage platform users, org members, and invitations.</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {canInvite && <InviteDialog orgId={orgId} />}
+              {canInvite && <BulkInviteDialog orgId={orgId} />}
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
+
       {/* Stats */}
       <div className={`grid gap-4 ${isAdmin ? "grid-cols-2 md:grid-cols-5" : "grid-cols-3"}`}>
         <StatCard label="Total Users" value={isAdmin ? (usersData?.total ?? 0) : members.length} icon={<Users className="h-4 w-4" />} accent="text-slate-600 bg-slate-100" active={filter === "all"} onClick={() => setFilter("all")} />
@@ -167,8 +189,6 @@ export function UnifiedUsersTab({ orgId }: { orgId: string }) {
             <Badge variant="secondary" className="gap-1 text-xs capitalize">{filter.replace("-", " ")} <button onClick={() => setFilter("all")} className="ml-1 hover:text-foreground">×</button></Badge>
           )}
           <span className="text-xs text-muted-foreground tabular-nums">{filtered.length} result{filtered.length !== 1 ? "s" : ""}</span>
-          {canInvite && <InviteDialog orgId={orgId} />}
-          {canInvite && <BulkInviteDialog orgId={orgId} />}
         </div>
       </div>
 
