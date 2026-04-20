@@ -182,21 +182,32 @@ export default function ApiKeysPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">API Keys</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {data?.data?.length
-              ? `${data.total ?? data.data.length} key${(data.total ?? data.data.length) !== 1 ? "s" : ""}`
-              : "Manage programmatic access to your team\u2019s resources."}
-          </p>
-        </div>
-        <CreateApiKeyDialog
-          orgId={currentOrg!.id}
-          teamId={currentTeam.id}
-          teamPermissions={teamPermissions}
-        />
-      </div>
+      {/* Header */}
+      <Card className="overflow-hidden">
+        <div className="h-2 bg-gradient-to-r from-violet-500/80 to-violet-500/20" />
+        <CardContent className="pt-5 pb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-7 w-7 rounded-md bg-violet-500/10 flex items-center justify-center">
+                <Key className="h-4 w-4 text-violet-600" />
+              </div>
+              <div>
+                <h1 className="text-base font-semibold">API Keys</h1>
+                <p className="text-sm text-muted-foreground">
+                  {data?.data?.length
+                    ? `${data.total ?? data.data.length} key${(data.total ?? data.data.length) !== 1 ? "s" : ""} · Manage programmatic access to your team\u2019s resources.`
+                    : "Manage programmatic access to your team\u2019s resources."}
+                </p>
+              </div>
+            </div>
+            <CreateApiKeyDialog
+              orgId={currentOrg!.id}
+              teamId={currentTeam.id}
+              teamPermissions={teamPermissions}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Summary cards */}
       {data?.data && data.data.length > 0 && (
@@ -225,7 +236,7 @@ export default function ApiKeysPage() {
               bg: "bg-red-100 text-red-600",
             },
           ].map((s) => (
-            <Card key={s.label}>
+            <Card key={s.label} className="transition-all hover:shadow-md hover:-translate-y-0.5">
               <CardContent className="pt-5 pb-4">
                 <div className="flex justify-between mb-3">
                   <span className="text-sm font-medium text-muted-foreground">{s.label}</span>
