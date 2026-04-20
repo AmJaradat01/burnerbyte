@@ -463,19 +463,19 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
       if (v) { setDisplayName(u.display_name); setIsAdminFlag(u.is_system_admin); setVerified(u.email_verified); setAvatarURL(u.avatar_url ?? ""); setTimezone(u.timezone ?? ""); setDateFormat(u.date_format ?? ""); setTimeFormat(u.time_format ?? ""); setCopied(false); setAuthMethodLock(u.auth_method_lock ?? "any"); setMigratePasswordOpen(false); setMigratePassword(""); }
     }}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto">
+        <DialogHeader className="pb-2">
           <DialogTitle className="text-xl">User Details</DialogTitle>
           <DialogDescription>View and manage this user account.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
           {/* ── Profile Header ── */}
-          <div className="flex items-start gap-5 p-4 rounded-xl bg-muted/40 border">
-            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-primary/10 text-3xl font-bold text-primary">
+          <div className="flex items-start gap-5 p-5 rounded-xl bg-gradient-to-r from-muted/60 to-muted/30 border">
+            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-3xl font-bold text-primary shadow-sm">
               {(u.display_name || u.email).charAt(0).toUpperCase()}
             </div>
-            <div className="min-w-0 flex-1 space-y-2">
+            <div className="min-w-0 flex-1 space-y-2.5">
               <div>
                 <p className="font-semibold text-xl truncate">{u.display_name || "—"}</p>
                 <p className="text-sm text-muted-foreground font-mono truncate">{u.email}</p>
@@ -490,121 +490,137 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
                 <Badge variant="outline" className="text-[10px]">
                   <KeyRound className="h-3 w-3 mr-0.5" />{u.sso_provider ?? "Password"}
                 </Badge>
+                {u.auth_method_lock && u.auth_method_lock !== "any" && (
+                  <Badge variant="outline" className="text-[10px] text-purple-600 border-purple-200">
+                    <Lock className="h-3 w-3 mr-0.5" />{u.auth_method_lock === "sso" ? "SSO Locked" : "Password Locked"}
+                  </Badge>
+                )}
                 {isYou && <Badge variant="outline" className="text-[10px] bg-blue-50 border-blue-200 text-blue-700">You</Badge>}
               </div>
             </div>
           </div>
 
-          {/* ── Account Information ── */}
-          <div>
-            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Account Information</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="rounded-lg border p-3 space-y-1">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Copy className="h-3 w-3" />User ID</p>
-                <button onClick={copyId} className="font-mono text-xs truncate block w-full text-left hover:text-primary transition-colors" title="Click to copy">
-                  {copied ? "Copied!" : u.id.slice(0, 8) + "…"}
-                </button>
+          {/* ── Two-Column Layout ── */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Left Column */}
+            <div className="space-y-6">
+              {/* Account Information */}
+              <div>
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Account Information</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-lg border p-3 space-y-1">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Copy className="h-3 w-3" />User ID</p>
+                    <button onClick={copyId} className="font-mono text-xs truncate block w-full text-left hover:text-primary transition-colors" title="Click to copy">
+                      {copied ? "Copied!" : u.id.slice(0, 8) + "…"}
+                    </button>
+                  </div>
+                  <div className="rounded-lg border p-3 space-y-1">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><KeyRound className="h-3 w-3" />Auth Method</p>
+                    <p className="text-xs font-medium">{u.sso_provider ?? "Password"}</p>
+                  </div>
+                  <div className="rounded-lg border p-3 space-y-1">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Clock className="h-3 w-3" />Registered</p>
+                    <p className="text-xs">{new Date(u.created_at).toLocaleDateString()}</p>
+                    <p className="text-[10px] text-muted-foreground">{new Date(u.created_at).toLocaleTimeString()}</p>
+                  </div>
+                  <div className="rounded-lg border p-3 space-y-1">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Clock className="h-3 w-3" />Last Active</p>
+                    <p className="text-xs font-medium">{u.last_login_at ? timeAgo(u.last_login_at) : "Never"}</p>
+                    {u.last_login_at && <p className="text-[10px] text-muted-foreground">{new Date(u.last_login_at).toLocaleDateString()}</p>}
+                  </div>
+                  <div className="rounded-lg border p-3 space-y-1">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Lock className="h-3 w-3" />Auth Lock</p>
+                    <p className="text-xs font-medium">{u.auth_method_lock === "sso" ? "SSO Only" : u.auth_method_lock === "password" ? "Password Only" : "Any Method"}</p>
+                  </div>
+                  <div className="rounded-lg border p-3 space-y-1">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Mail className="h-3 w-3" />Email Status</p>
+                    <p className="text-xs font-medium">{u.email_verified ? "Verified" : "Unverified"}</p>
+                  </div>
+                </div>
               </div>
-              <div className="rounded-lg border p-3 space-y-1">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><KeyRound className="h-3 w-3" />Auth Method</p>
-                <p className="text-xs font-medium">{u.sso_provider ?? "Password"}</p>
-              </div>
-              <div className="rounded-lg border p-3 space-y-1">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Clock className="h-3 w-3" />Registered</p>
-                <p className="text-xs">{new Date(u.created_at).toLocaleDateString()}</p>
-                <p className="text-[10px] text-muted-foreground">{new Date(u.created_at).toLocaleTimeString()}</p>
-              </div>
-              <div className="rounded-lg border p-3 space-y-1">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Clock className="h-3 w-3" />Last Active</p>
-                <p className="text-xs font-medium">{u.last_login_at ? timeAgo(u.last_login_at) : "Never"}</p>
-                {u.last_login_at && <p className="text-[10px] text-muted-foreground">{new Date(u.last_login_at).toLocaleDateString()}</p>}
-              </div>
-              <div className="rounded-lg border p-3 space-y-1">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Lock className="h-3 w-3" />Auth Lock</p>
-                <p className="text-xs font-medium">{u.auth_method_lock === "sso" ? "SSO Only" : u.auth_method_lock === "password" ? "Password Only" : "Any Method"}</p>
-              </div>
-            </div>
-          </div>
 
-          {/* ── Organization Actions ── */}
-          {(!u.org_role || (u.org_role && !isYou)) && (
-            <div>
-              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Organization</h3>
-              <div className="flex gap-2">
-                {!u.org_role && (
-                  <Button variant="outline" className="gap-2" onClick={addToOrg}>
-                    <UserPlus className="h-4 w-4" /> Add to Organization
-                  </Button>
-                )}
-                {u.org_role && !isYou && (
-                  <ConfirmDialog
-                    trigger={
-                      <Button variant="outline" className="gap-2 text-orange-600 hover:text-orange-700 border-orange-200 hover:border-orange-300">
-                        <XCircle className="h-4 w-4" /> Deactivate
+              {/* Organization Actions */}
+              {(!u.org_role || (u.org_role && !isYou)) && (
+                <div>
+                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Organization</h3>
+                  <div className="flex gap-2">
+                    {!u.org_role && (
+                      <Button variant="outline" className="gap-2" onClick={addToOrg}>
+                        <UserPlus className="h-4 w-4" /> Add to Organization
                       </Button>
-                    }
-                    title="Deactivate user?"
-                    description={`${u.display_name || u.email} will be removed from the organization and all teams. Their sessions will be revoked. The account will be preserved for audit purposes.`}
-                    onConfirm={deactivateFromOrg}
-                  />
-                )}
-              </div>
+                    )}
+                    {u.org_role && !isYou && (
+                      <ConfirmDialog
+                        trigger={
+                          <Button variant="outline" className="gap-2 text-orange-600 hover:text-orange-700 border-orange-200 hover:border-orange-300">
+                            <XCircle className="h-4 w-4" /> Deactivate
+                          </Button>
+                        }
+                        title="Deactivate user?"
+                        description={`${u.display_name || u.email} will be removed from the organization and all teams. Their sessions will be revoked. The account will be preserved for audit purposes.`}
+                        onConfirm={deactivateFromOrg}
+                      />
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
-          )}
 
-          {/* ── Edit Profile ── */}
-          <div>
-            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Edit Profile</h3>
-            <div className="space-y-4 rounded-lg border p-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Display Name</Label>
-                  <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Email</Label>
-                  <Input value={u.email} disabled className="bg-muted font-mono text-sm" />
+            {/* Right Column */}
+            <div className="space-y-6">
+              {/* Edit Profile */}
+              <div>
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Edit Profile</h3>
+                <div className="space-y-4 rounded-lg border p-4">
+                  <div className="space-y-2">
+                    <Label>Display Name</Label>
+                    <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Email</Label>
+                    <Input value={u.email} disabled className="bg-muted font-mono text-sm" />
+                  </div>
+                  {isAdmin && (
+                    <div className="space-y-2">
+                      <Label>Avatar URL</Label>
+                      <Input value={avatarURL} onChange={(e) => setAvatarURL(e.target.value)} placeholder="https://..." />
+                    </div>
+                  )}
+                  {(isAdmin || isYou) && (
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="space-y-2">
+                        <Label className="text-xs">Timezone</Label>
+                        <Input value={timezone} onChange={(e) => setTimezone(e.target.value)} placeholder="UTC" className="h-8 text-xs" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs">Date Format</Label>
+                        <Select value={dateFormat || "YYYY-MM-DD"} onValueChange={setDateFormat}>
+                          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="YYYY-MM-DD">YYYY-MM-DD</SelectItem>
+                            <SelectItem value="MM/DD/YYYY">MM/DD/YYYY</SelectItem>
+                            <SelectItem value="DD/MM/YYYY">DD/MM/YYYY</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs">Time Format</Label>
+                        <Select value={timeFormat || "24h"} onValueChange={setTimeFormat}>
+                          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="24h">24-hour</SelectItem>
+                            <SelectItem value="12h">12-hour</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-              {isAdmin && (
-                <div className="space-y-2">
-                  <Label>Avatar URL</Label>
-                  <Input value={avatarURL} onChange={(e) => setAvatarURL(e.target.value)} placeholder="https://..." />
-                </div>
-              )}
-              {(isAdmin || isYou) && (
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label>Timezone</Label>
-                    <Input value={timezone} onChange={(e) => setTimezone(e.target.value)} placeholder="e.g. UTC" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Date Format</Label>
-                    <Select value={dateFormat || "YYYY-MM-DD"} onValueChange={setDateFormat}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="YYYY-MM-DD">YYYY-MM-DD</SelectItem>
-                        <SelectItem value="MM/DD/YYYY">MM/DD/YYYY</SelectItem>
-                        <SelectItem value="DD/MM/YYYY">DD/MM/YYYY</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Time Format</Label>
-                    <Select value={timeFormat || "24h"} onValueChange={setTimeFormat}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="24h">24-hour</SelectItem>
-                        <SelectItem value="12h">12-hour</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 
-          {/* ── Admin Controls ── */}
+          {/* ── Admin Controls (full width below the two columns) ── */}
           {isAdmin && (
             <div>
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Admin Controls</h3>
