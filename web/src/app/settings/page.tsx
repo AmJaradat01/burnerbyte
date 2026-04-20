@@ -152,65 +152,58 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
                 <div className="h-7 w-7 rounded-md bg-violet-100 flex items-center justify-center">
                   <Shield className="h-4 w-4 text-violet-600" />
                 </div>
-                Policies & Quotas
+                Organization Policies
               </CardTitle>
-              <CardDescription>Limits and defaults for your organization.</CardDescription>
+              <CardDescription>Security and feature policies for this organization.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between rounded-lg border p-3">
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-md bg-green-100 flex items-center justify-center shrink-0">
-                      <Paperclip className="h-4 w-4 text-green-600" />
-                    </div>
-                    <div>
-                      <Label>Attachments enabled</Label>
-                      <p className="text-xs text-muted-foreground">Allow file attachments on emails</p>
-                    </div>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-md bg-green-100 flex items-center justify-center shrink-0">
+                    <Paperclip className="h-4 w-4 text-green-600" />
                   </div>
-                  <Switch checked={settings.attachments_enabled ?? true} onCheckedChange={(v) => set("attachments_enabled", v)} />
-                </div>
-                <div className="flex items-center justify-between rounded-lg border p-3">
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-md bg-blue-100 flex items-center justify-center shrink-0">
-                      <Lock className="h-4 w-4 text-blue-600" />
-                    </div>
-                    <div>
-                      <Label>Enforce SSO</Label>
-                      <p className="text-xs text-muted-foreground">Require SSO for all members</p>
-                    </div>
+                  <div>
+                    <Label>Attachments enabled</Label>
+                    <p className="text-xs text-muted-foreground">Allow file attachments on emails</p>
                   </div>
-                  <Switch checked={settings.enforce_sso ?? false} onCheckedChange={(v) => set("enforce_sso", v)} />
                 </div>
+                <Switch checked={settings.attachments_enabled ?? true} onCheckedChange={(v) => set("attachments_enabled", v)} />
               </div>
-              <div className="space-y-2">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Quotas</p>
-                <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs">Default inbox TTL</Label>
-                  <Input value={settings.default_inbox_ttl ?? ""} onChange={(e) => set("default_inbox_ttl", e.target.value)} placeholder="1h" className="h-8" />
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-md bg-blue-100 flex items-center justify-center shrink-0">
+                    <Lock className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <div>
+                    <Label>Enforce SSO</Label>
+                    <p className="text-xs text-muted-foreground">Require SSO for all members</p>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Max inbox TTL</Label>
-                  <Input value={settings.max_inbox_ttl ?? ""} onChange={(e) => set("max_inbox_ttl", e.target.value)} placeholder="24h" className="h-8" />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Max attachment (MB)</Label>
-                  <Input type="number" value={settings.max_attachment_size_mb ?? ""} onChange={(e) => set("max_attachment_size_mb", Number(e.target.value) || undefined)} className="h-8" />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Max domains</Label>
-                  <Input type="number" value={settings.max_domains ?? ""} onChange={(e) => set("max_domains", Number(e.target.value) || undefined)} className="h-8" />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Max teams</Label>
-                  <Input type="number" value={settings.max_teams ?? ""} onChange={(e) => set("max_teams", Number(e.target.value) || undefined)} className="h-8" />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Max inboxes/domain</Label>
-                  <Input type="number" value={settings.max_inboxes_per_domain ?? ""} onChange={(e) => set("max_inboxes_per_domain", Number(e.target.value) || undefined)} className="h-8" />
-                </div>
+                <Switch checked={settings.enforce_sso ?? false} onCheckedChange={(v) => set("enforce_sso", v)} />
               </div>
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-md bg-amber-100 flex items-center justify-center shrink-0">
+                    <Clock className="h-4 w-4 text-amber-600" />
+                  </div>
+                  <div>
+                    <Label>Default Inbox TTL</Label>
+                    <p className="text-xs text-muted-foreground">Override platform default for this org</p>
+                  </div>
+                </div>
+                <Input value={settings.default_inbox_ttl ?? ""} onChange={(e) => set("default_inbox_ttl", e.target.value)} placeholder="1h" className="h-8 w-24 text-xs text-right" />
+              </div>
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-md bg-amber-100 flex items-center justify-center shrink-0">
+                    <Clock className="h-4 w-4 text-amber-600" />
+                  </div>
+                  <div>
+                    <Label>Max Inbox TTL</Label>
+                    <p className="text-xs text-muted-foreground">Maximum inbox lifetime for this org</p>
+                  </div>
+                </div>
+                <Input value={settings.max_inbox_ttl ?? ""} onChange={(e) => set("max_inbox_ttl", e.target.value)} placeholder="24h" className="h-8 w-24 text-xs text-right" />
               </div>
             </CardContent>
           </Card>
