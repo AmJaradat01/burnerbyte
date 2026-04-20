@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ErrorState } from "@/components/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Activity, AlertTriangle, Archive, CheckCircle2, Database, Globe, HardDrive, Inbox, Info, Key, Link as LinkIcon, Loader2, Mail, Monitor, Pencil, Plus, Search, Settings, Shield, Trash2, Users, UsersRound, XCircle } from "lucide-react";
+import { Activity, AlertTriangle, Archive, CheckCircle2, Clock, Database, Globe, HardDrive, Inbox, Info, Key, Link as LinkIcon, Loader2, Lock, Mail, Monitor, Paperclip, Pencil, Plus, Save, Search, Settings, Shield, Trash2, Users, UsersRound, XCircle } from "lucide-react";
 import Link from "next/link";
 import { UnifiedUsersTab } from "@/components/settings/unified-users-tab";
 import { RolesTab } from "@/components/settings/roles-tab";
@@ -99,9 +99,15 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
       <div className="grid gap-6 md:grid-cols-2">
         <div className="space-y-6">
           {/* Org identity */}
-          <Card>
+          <Card className="overflow-hidden">
+            <div className="h-2 bg-gradient-to-r from-primary/80 to-primary/20" />
             <CardHeader>
-              <CardTitle className="text-base">Organization</CardTitle>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center">
+                  <Settings className="h-4 w-4 text-primary" />
+                </div>
+                Organization
+              </CardTitle>
               <CardDescription>Name and branding for your org.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -142,27 +148,44 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
           {/* Policies */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base"><Shield className="h-4 w-4" /> Policies & Quotas</CardTitle>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <div className="h-7 w-7 rounded-md bg-violet-100 flex items-center justify-center">
+                  <Shield className="h-4 w-4 text-violet-600" />
+                </div>
+                Policies & Quotas
+              </CardTitle>
               <CardDescription>Limits and defaults for your organization.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="space-y-3">
                 <div className="flex items-center justify-between rounded-lg border p-3">
-                  <div>
-                    <Label>Attachments enabled</Label>
-                    <p className="text-xs text-muted-foreground">Allow file attachments on emails</p>
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-md bg-green-100 flex items-center justify-center shrink-0">
+                      <Paperclip className="h-4 w-4 text-green-600" />
+                    </div>
+                    <div>
+                      <Label>Attachments enabled</Label>
+                      <p className="text-xs text-muted-foreground">Allow file attachments on emails</p>
+                    </div>
                   </div>
                   <Switch checked={settings.attachments_enabled ?? true} onCheckedChange={(v) => set("attachments_enabled", v)} />
                 </div>
                 <div className="flex items-center justify-between rounded-lg border p-3">
-                  <div>
-                    <Label>Enforce SSO</Label>
-                    <p className="text-xs text-muted-foreground">Require SSO for all members</p>
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-md bg-blue-100 flex items-center justify-center shrink-0">
+                      <Lock className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <div>
+                      <Label>Enforce SSO</Label>
+                      <p className="text-xs text-muted-foreground">Require SSO for all members</p>
+                    </div>
                   </div>
                   <Switch checked={settings.enforce_sso ?? false} onCheckedChange={(v) => set("enforce_sso", v)} />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Quotas</p>
+                <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <Label className="text-xs">Default inbox TTL</Label>
                   <Input value={settings.default_inbox_ttl ?? ""} onChange={(e) => set("default_inbox_ttl", e.target.value)} placeholder="1h" className="h-8" />
@@ -188,6 +211,7 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
                   <Input type="number" value={settings.max_inboxes_per_domain ?? ""} onChange={(e) => set("max_inboxes_per_domain", Number(e.target.value) || undefined)} className="h-8" />
                 </div>
               </div>
+              </div>
             </CardContent>
           </Card>
 
@@ -197,7 +221,8 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
 
       {dirty && (
         <div className="sticky bottom-4 flex justify-end">
-          <Button onClick={save} disabled={saving} size="lg" className="shadow-lg">
+          <Button onClick={save} disabled={saving} size="lg" className="shadow-lg gap-2">
+            <Save className="h-4 w-4" />
             {saving ? "Saving…" : "Save Settings"}
           </Button>
         </div>
@@ -297,10 +322,10 @@ function OverviewTab() {
           );
           return s.href ? (
             <Link key={s.label} href={s.href} className="block">
-              <Card className="transition-colors hover:border-primary/40">{inner}</Card>
+              <Card className="transition-all hover:border-primary/40 hover:shadow-md hover:-translate-y-0.5">{inner}</Card>
             </Link>
           ) : (
-            <Card key={s.label}>{inner}</Card>
+            <Card key={s.label} className="transition-all hover:shadow-md hover:-translate-y-0.5">{inner}</Card>
           );
         })}
       </div>
@@ -370,13 +395,23 @@ function PlatformSettingsCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Platform Settings</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <div className="h-7 w-7 rounded-md bg-slate-100 flex items-center justify-center">
+            <Settings className="h-4 w-4 text-slate-600" />
+          </div>
+          Platform Settings
+        </CardTitle>
         <CardDescription>Control access, security, and authentication policies.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Access */}
         <div className="space-y-3">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Access</p>
+          <div className="flex items-center gap-2">
+            <div className="h-6 w-6 rounded-md bg-emerald-100 flex items-center justify-center">
+              <Users className="h-3.5 w-3.5 text-emerald-600" />
+            </div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Access</p>
+          </div>
           <div className="flex items-center justify-between">
             <div><Label>Allow public registration</Label><p className="text-xs text-muted-foreground">When disabled, only invited users can join.</p></div>
             <Switch checked={form.allow_registration} onCheckedChange={(v) => set("allow_registration", v)} />
@@ -388,8 +423,13 @@ function PlatformSettingsCard() {
         </div>
 
         {/* Password policy */}
-        <div className="space-y-3">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Password Policy</p>
+        <div className="space-y-3 border-t pt-5">
+          <div className="flex items-center gap-2">
+            <div className="h-6 w-6 rounded-md bg-amber-100 flex items-center justify-center">
+              <Key className="h-3.5 w-3.5 text-amber-600" />
+            </div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Password Policy</p>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label className="text-xs">Min length</Label>
@@ -405,8 +445,13 @@ function PlatformSettingsCard() {
         </div>
 
         {/* Lockout */}
-        <div className="space-y-3">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Account Lockout</p>
+        <div className="space-y-3 border-t pt-5">
+          <div className="flex items-center gap-2">
+            <div className="h-6 w-6 rounded-md bg-red-100 flex items-center justify-center">
+              <Lock className="h-3.5 w-3.5 text-red-600" />
+            </div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Account Lockout</p>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label className="text-xs">Max failed attempts</Label>
@@ -420,8 +465,13 @@ function PlatformSettingsCard() {
         </div>
 
         {/* Date & Time */}
-        <div className="space-y-3">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Date & Time Defaults</p>
+        <div className="space-y-3 border-t pt-5">
+          <div className="flex items-center gap-2">
+            <div className="h-6 w-6 rounded-md bg-blue-100 flex items-center justify-center">
+              <Clock className="h-3.5 w-3.5 text-blue-600" />
+            </div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Date & Time Defaults</p>
+          </div>
           <div className="space-y-1">
             <Label className="text-xs">Timezone</Label>
             <Select value={form.timezone} onValueChange={(v) => set("timezone", v)}>
@@ -459,8 +509,13 @@ function PlatformSettingsCard() {
         </div>
 
         {/* Quotas & Limits */}
-        <div className="space-y-3">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Quotas & Limits</p>
+        <div className="space-y-3 border-t pt-5">
+          <div className="flex items-center gap-2">
+            <div className="h-6 w-6 rounded-md bg-purple-100 flex items-center justify-center">
+              <Activity className="h-3.5 w-3.5 text-purple-600" />
+            </div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Quotas & Limits</p>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label className="text-xs">Default inbox TTL</Label>
@@ -489,9 +544,12 @@ function PlatformSettingsCard() {
           </div>
         </div>
 
-        <Button onClick={save} disabled={saving} size="sm">
-          {saving ? "Saving…" : "Save Platform Settings"}
-        </Button>
+        <div className="border-t pt-5">
+          <Button onClick={save} disabled={saving} size="sm" className="gap-2">
+            <Save className="h-4 w-4" />
+            {saving ? "Saving…" : "Save Platform Settings"}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
