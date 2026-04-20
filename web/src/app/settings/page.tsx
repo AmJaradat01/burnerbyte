@@ -43,17 +43,18 @@ export default function SettingsPage() {
         <TabsList className="flex-wrap">
           <TabsTrigger value="general" className="gap-1.5"><Settings className="h-3.5 w-3.5" /> General</TabsTrigger>
           <TabsTrigger value="users" className="gap-1.5"><Users className="h-3.5 w-3.5" /> Users</TabsTrigger>
-          {isSysAdmin && <TabsTrigger value="roles" className="gap-1.5"><Shield className="h-3.5 w-3.5" /> Roles</TabsTrigger>}
-          {isSysAdmin && <TabsTrigger value="sso" className="gap-1.5"><Key className="h-3.5 w-3.5" /> SSO</TabsTrigger>}
-          {isSysAdmin && <TabsTrigger value="overview" className="gap-1.5"><Activity className="h-3.5 w-3.5" /> System</TabsTrigger>}
-          {isSysAdmin && <TabsTrigger value="health" className="gap-1.5"><Monitor className="h-3.5 w-3.5" /> Health</TabsTrigger>}
+          {isSysAdmin && <>
+            <div className="mx-1 h-4 w-px bg-border self-center" />
+            <TabsTrigger value="roles" className="gap-1.5"><Shield className="h-3.5 w-3.5" /> Roles</TabsTrigger>
+            <TabsTrigger value="sso" className="gap-1.5"><Key className="h-3.5 w-3.5" /> SSO</TabsTrigger>
+            <TabsTrigger value="overview" className="gap-1.5"><Activity className="h-3.5 w-3.5" /> System</TabsTrigger>
+          </>}
         </TabsList>
         <TabsContent value="general"><GeneralTab org={currentOrg} onSaved={fetchOrgs} /></TabsContent>
         <TabsContent value="users"><UnifiedUsersTab orgId={currentOrg.id} /></TabsContent>
         {isSysAdmin && <TabsContent value="roles"><RolesTab /></TabsContent>}
         {isSysAdmin && <TabsContent value="sso"><SSOProvidersTab /></TabsContent>}
         {isSysAdmin && <TabsContent value="overview"><OverviewTab /></TabsContent>}
-        {isSysAdmin && <TabsContent value="health"><HealthTab /></TabsContent>}
       </Tabs>
     </div>
   );
@@ -358,6 +359,7 @@ function OverviewTab() {
           </div>
         </CardContent>
       </Card>
+      <HealthSection />
     </div>
   );
 }
@@ -606,7 +608,7 @@ interface HealthResponse {
   uptime: string;
 }
 
-function HealthTab() {
+function HealthSection() {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["admin-health"],
     queryFn: () => api.get<HealthResponse>("/admin/health"),
@@ -634,6 +636,13 @@ function HealthTab() {
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center gap-2 pt-2">
+        <div className="h-6 w-6 rounded-md bg-green-100 flex items-center justify-center">
+          <Monitor className="h-3.5 w-3.5 text-green-600" />
+        </div>
+        <p className="text-sm font-semibold">Service Health</p>
+        <p className="text-xs text-muted-foreground">· Auto-refreshing every 15s</p>
+      </div>
       {services.length > 0 && (
         <Card className="overflow-hidden">
           <div className={`h-1.5 ${allHealthy ? "bg-gradient-to-r from-green-500/80 to-green-500/20" : "bg-gradient-to-r from-red-500/80 to-red-500/20"}`} />
@@ -695,10 +704,6 @@ function HealthTab() {
           })
         )}
       </div>
-
-      {data && (
-        <p className="text-xs text-muted-foreground">Auto-refreshing every 15s · Last checked: {new Date().toLocaleTimeString()}</p>
-      )}
     </div>
   );
 }
