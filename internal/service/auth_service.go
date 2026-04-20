@@ -701,6 +701,21 @@ func (s *AuthService) autoProvisionSSOFromProvider(ctx context.Context, user *do
 		ID: uuid.New(), UserID: user.ID, OrgID: orgs[0].ID, Role: role,
 	})
 	slog.Info("SSO auto-provisioned user into org", "user", user.Email, "org", orgs[0].Name, "role", role)
+
+	// Assign to default team if configured
+	if provCfg.DefaultTeamID != nil && s.teamRepo != nil {
+		teamRole := provCfg.DefaultTeamRole
+		if teamRole == "" {
+			teamRole = "member"
+		}
+		_ = s.teamRepo.CreateMembership(ctx, &domain.TeamMembership{
+			ID:     uuid.New(),
+			UserID: user.ID,
+			TeamID: *provCfg.DefaultTeamID,
+			Role:   teamRole,
+		})
+		slog.Info("SSO auto-provisioned user into default team", "user", user.Email, "team_id", provCfg.DefaultTeamID.String(), "role", teamRole)
+	}
 }
 
 func (s *AuthService) autoProvisionSSO(ctx context.Context, user *domain.User, ssoCfg config.SSOConfig) {
