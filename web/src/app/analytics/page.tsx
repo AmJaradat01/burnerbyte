@@ -51,10 +51,22 @@ export default function AnalyticsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Analytics</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Usage metrics and trends for your organization.</p>
-      </div>
+      <Card className="overflow-hidden">
+        <div className="h-2 bg-gradient-to-r from-rose-500/80 to-rose-500/20" />
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-7 w-7 rounded-md bg-rose-500/10 flex items-center justify-center">
+                <Mail className="h-4 w-4 text-rose-600" />
+              </div>
+              <div>
+                <CardTitle className="text-base">Analytics</CardTitle>
+                <CardDescription>Usage metrics and trends for your organization.</CardDescription>
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
       <Tabs defaultValue="org">
         <TabsList>
           <TabsTrigger value="org">Organization</TabsTrigger>
@@ -113,7 +125,12 @@ function OrgAnalytics({ orgId }: { orgId: string }) {
       )}
 
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold">Overview</h2>
+        <div className="flex items-center gap-2">
+          <div className="h-6 w-6 rounded-md bg-primary/10 flex items-center justify-center">
+            <Mail className="h-3.5 w-3.5 text-primary" />
+          </div>
+          <h2 className="text-base font-semibold">Overview</h2>
+        </div>
         <DateRangeSelector value={days} onChange={setDays} />
       </div>
 
@@ -302,8 +319,8 @@ const STAT_COLORS: Record<string, { bg: string; text: string }> = {
 function StatCard({ icon: Icon, label, value, subtitle, color = "blue", link }: { icon: typeof Mail; label: string; value: number | string; subtitle?: string; color?: keyof typeof STAT_COLORS; link?: string }) {
   const display = typeof value === "number" ? (value ?? 0).toLocaleString() : value;
   const c = STAT_COLORS[color];
-  return (
-    <Card>
+  const inner = (
+    <Card className="transition-all hover:shadow-md hover:-translate-y-0.5">
       <CardContent className="pt-5 pb-4">
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-medium text-muted-foreground">{label}</span>
@@ -314,13 +331,15 @@ function StatCard({ icon: Icon, label, value, subtitle, color = "blue", link }: 
         <p className="text-2xl font-bold tabular-nums">{display}</p>
         {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
         {link && (
-          <Link href={link} className={`text-xs mt-1.5 inline-block hover:underline ${c.text}`}>
+          <span className={`text-xs mt-1.5 inline-block hover:underline ${c.text}`}>
             View →
-          </Link>
+          </span>
         )}
       </CardContent>
     </Card>
   );
+  if (link) return <Link href={link} className="block">{inner}</Link>;
+  return inner;
 }
 
 function DateRangeSelector({ value, onChange }: { value: string; onChange: (v: string) => void }) {
