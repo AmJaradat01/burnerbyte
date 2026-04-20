@@ -82,14 +82,20 @@ func (r *DomainAssignmentRepo) GetByTeamAndDomain(ctx context.Context, teamID, d
 
 func (r *DomainAssignmentRepo) ListByUser(ctx context.Context, userID uuid.UUID) ([]domain.DomainAssignment, error) {
 	rows, err := r.db.Query(ctx,
-		`SELECT da.id, da.team_id, da.domain_id, da.access_level, da.settings, da.assigned_by,
-		        da.created_at, da.updated_at, d.domain_name
-		 FROM domain_assignments da
-		 JOIN domains d ON da.domain_id = d.id
-		 JOIN team_memberships tm ON tm.team_id = da.team_id
-		 WHERE tm.user_id = $1 AND da.access_level IN ('full','create_inbox')
-		   AND d.mx_verified = TRUE
-		 ORDER BY d.domain_name`, userID)
+		`SELECT id, team_id, domain_id, access_level, settings, assigned_by,
+		        created_at, updated_at, domain_name
+		 FROM (
+		   SELECT DISTINCT ON (da.domain_id)
+		          da.id, da.team_id, da.domain_id, da.access_level, da.settings, da.assigned_by,
+		          da.created_at, da.updated_at, d.domain_name
+		   FROM domain_assignments da
+		   JOIN domains d ON da.domain_id = d.id
+		   JOIN team_memberships tm ON tm.team_id = da.team_id
+		   WHERE tm.user_id = $1 AND da.access_level IN ('full','create_inbox')
+		     AND d.mx_verified = TRUE
+		   ORDER BY da.domain_id, da.access_level ASC, da.created_at ASC
+		 ) deduped
+		 ORDER BY domain_name`, userID)
 	if err != nil {
 		return nil, err
 	}
