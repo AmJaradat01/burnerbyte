@@ -113,12 +113,20 @@ func (r *AnalyticsRepo) GetSystemStats(ctx context.Context) (*domain.SystemStats
 	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM users`).Scan(&stats.TotalUsers); err != nil { return nil, err }
 	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM teams`).Scan(&stats.TotalTeams); err != nil { return nil, err }
 	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM domains`).Scan(&stats.TotalDomains); err != nil { return nil, err }
-	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM emails`).Scan(&stats.TotalEmails); err != nil { return nil, err }
+	// Use cumulative counters for emails (emails table gets cleaned up as inboxes expire)
+	if err := r.db.QueryRow(ctx, `SELECT COALESCE(SUM(total_emails_received), 0) FROM org_analytics_counters`).Scan(&stats.TotalEmails); err != nil {
+		// Fallback to current emails table if counters table doesn't exist
+		if err2 := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM emails`).Scan(&stats.TotalEmails); err2 != nil { return nil, err2 }
+	}
 	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM inboxes`).Scan(&stats.TotalInboxes); err != nil { return nil, err }
 	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM inboxes WHERE is_active = TRUE AND expires_at > NOW()`).Scan(&stats.ActiveInboxes); err != nil { return nil, err }
 	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM sessions WHERE revoked = FALSE AND expires_at > NOW()`).Scan(&stats.TotalSessions); err != nil { return nil, err }
 	if err := r.db.QueryRow(ctx, `SELECT COALESCE(SUM(inboxes_created_count), 0) FROM domains`).Scan(&stats.TotalInboxesCreated); err != nil { return nil, err }
-	if err := r.db.QueryRow(ctx, `SELECT COALESCE(SUM(size_bytes), 0) FROM emails`).Scan(&stats.StorageUsedBytes); err != nil { return nil, err }
+	// Use cumulative counters for storage (emails table gets cleaned up)
+	if err := r.db.QueryRow(ctx, `SELECT COALESCE(SUM(total_storage_bytes), 0) FROM org_analytics_counters`).Scan(&stats.StorageUsedBytes); err != nil {
+		// Fallback to current emails table if counters table doesn't exist
+		if err2 := r.db.QueryRow(ctx, `SELECT COALESCE(SUM(size_bytes), 0) FROM emails`).Scan(&stats.StorageUsedBytes); err2 != nil { return nil, err2 }
+	}
 	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM webhooks`).Scan(&stats.TotalWebhooks); err != nil { return nil, err }
 	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM api_keys WHERE (expires_at IS NULL OR expires_at > NOW())`).Scan(&stats.TotalAPIKeys); err != nil { return nil, err }
 	return stats, nil
