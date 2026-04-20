@@ -181,6 +181,7 @@ func TestProperty_BugCondition_SSOIdentityLookupSetsEmailVerified(t *testing.T) 
 						nilStr,      // timezone
 						nilStr,      // date_format
 						nilStr,      // time_format
+						nilStr,      // auth_method_lock
 						now,         // created_at
 						now,         // updated_at
 					}}
@@ -332,6 +333,7 @@ func TestProperty_Preservation_AlreadyVerifiedIdentityLookup(t *testing.T) {
 						nilStr,      // timezone
 						nilStr,      // date_format
 						nilStr,      // time_format
+						nilStr,      // auth_method_lock
 						now,         // created_at
 						now,         // updated_at
 					}}
@@ -541,6 +543,7 @@ func TestProperty_Preservation_EmailLookupSSO(t *testing.T) {
 						nilStr,  // timezone
 						nilStr,  // date_format
 						nilStr,  // time_format
+						nilStr,  // auth_method_lock
 						now,     // created_at
 						now,     // updated_at
 					}}

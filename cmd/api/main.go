@@ -372,6 +372,7 @@ func main() {
 			r.With(auth.RequireSystemAdmin).Get("/admin/users", adminHandler.ListUsers)
 			r.With(auth.RequireSystemAdmin).Delete("/admin/users/{userId}", adminHandler.DeleteUser)
 			r.With(auth.RequireSystemAdmin).Patch("/admin/users/{userId}", adminHandler.UpdateUser)
+			r.With(auth.RequireSystemAdmin).Post("/admin/users/{userId}/migrate-auth", adminHandler.MigrateAuth)
 			r.With(auth.RequireSystemAdmin).Get("/admin/health", adminHandler.Health)
 			r.With(auth.RequireSystemAdmin).Get("/admin/platform", adminHandler.GetPlatformSettings)
 			r.With(auth.RequireSystemAdmin).Put("/admin/platform", adminHandler.UpdatePlatformSettings)
@@ -644,6 +645,7 @@ func main() {
 	wm.Add("dns_recheck", cfg.Workers.DNSRecheckInterval, worker.DNSRecheckJob(domainRepo, verHistoryRepo, cfg.SMTP.Hostname))
 	wm.Add("webhook_retry", cfg.Workers.WebhookRetryInterval, worker.WebhookRetryJob(webhookRepo, webhookDispatcher))
 	wm.Add("analytics", cfg.Workers.AnalyticsInterval, worker.AnalyticsJob(analyticsRepo, rdb, cfg.Defaults.AnalyticsCacheTTL))
+	wm.Add("invite_expiry", 24*time.Hour, worker.InviteExpiryJob(orgRepo, userRepo, ml, cfg.Server.FrontendURL))
 	go wm.Start(workerCtx)
 
 	go func() {

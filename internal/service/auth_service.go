@@ -187,6 +187,11 @@ func (s *AuthService) Login(ctx context.Context, input domain.LoginInput, ip, us
 		return nil, nil, &LockedError{RetryAfter: retryAfter}
 	}
 
+	// Check auth method lock
+	if err := checkAuthMethodLock(user, "password"); err != nil {
+		return nil, nil, err
+	}
+
 	if user.PasswordHash == nil {
 		return nil, nil, fmt.Errorf("account uses SSO login only")
 	}
@@ -265,6 +270,12 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken, ip, userAgent s
 
 	user, err := s.userRepo.GetByID(ctx, session.UserID)
 	if err != nil {
+		return nil, err
+	}
+
+	// Check session auth method matches user's lock
+	if err := checkSessionAuthMethodLock(user, session); err != nil {
+		_ = s.sessionRepo.Revoke(ctx, session.ID)
 		return nil, err
 	}
 
@@ -526,6 +537,10 @@ func (s *AuthService) SSOLogin(ctx context.Context, result *domain.SSOCallbackRe
 			if err != nil {
 				return nil, nil, fmt.Errorf("load SSO user: %w", err)
 			}
+			// Check auth method lock for existing users
+			if err := checkAuthMethodLock(user, "sso"); err != nil {
+				return nil, nil, err
+			}
 			if !user.EmailVerified {
 				user.EmailVerified = true
 				_ = s.userRepo.Update(ctx, user)
@@ -615,6 +630,10 @@ func (s *AuthService) SSOLogin(ctx context.Context, result *domain.SSOCallbackRe
 			// Existing user by email — auto-link SSO identity.
 			// The email from the SSO provider is verified by the provider (GitHub, Google, etc.),
 			// so it's safe to trust it as proof of identity.
+			// Check auth method lock for existing users
+			if err := checkAuthMethodLock(user, "sso"); err != nil {
+				return nil, nil, err
+			}
 			user.EmailVerified = true
 			user.SSOProvider = &result.Provider
 			if err := s.userRepo.Update(ctx, user); err != nil {
@@ -1065,4 +1084,137 @@ type LockedError struct {
 
 func (e *LockedError) Error() string {
 	return fmt.Sprintf("account locked, retry after %s", e.RetryAfter)
+}
+
+// checkAuthMethodLock returns an error if the user's auth method lock
+// does not permit the given method ("password" or "sso").
+// Returns nil if the lock is nil (any method allowed) or matches the method.
+func checkAuthMethodLock(user *domain.User, method string) error {
+	if user.AuthMethodLock == nil {
+		return nil
+	}
+	lock := *user.AuthMethodLock
+	if lock == method {
+		return nil
+	}
+	switch lock {
+	case "sso":
+		return fmt.Errorf("account is locked to SSO login only")
+	case "password":
+		return fmt.Errorf("account is locked to password login only")
+	default:
+		return fmt.Errorf("account has unknown auth method lock: %s", lock)
+	}
+}
+
+// checkSessionAuthMethodLock verifies that a session's auth method matches
+// the user's auth method lock. Returns an error if there is a mismatch.
+func checkSessionAuthMethodLock(user *domain.User, session *domain.Session) error {
+	if user.AuthMethodLock == nil {
+		return nil
+	}
+	lock := *user.AuthMethodLock
+	sessionIsSSO := session.SSOProviderName != nil
+
+	if lock == "sso" && !sessionIsSSO {
+		return fmt.Errorf("session does not match auth method lock")
+	}
+	if lock == "password" && sessionIsSSO {
+		return fmt.Errorf("session does not match auth method lock")
+	}
+	return nil
+}
+
+// MigrateToSSO migrates a user to SSO-only authentication.
+// It verifies the user has a linked SSO identity, clears the password hash,
+// sets auth_method_lock to "sso", and revokes all sessions.
+func (s *AuthService) MigrateToSSO(ctx context.Context, userID uuid.UUID) (*domain.User, error) {
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("user not found")
+	}
+
+	// Verify user has at least one SSO identity
+	if s.ssoIdentityRepo == nil {
+		return nil, fmt.Errorf("SSO identity repository not configured")
+	}
+	identities, err := s.ssoIdentityRepo.ListByUser(ctx, userID)
+	if err != nil || len(identities) == 0 {
+		return nil, fmt.Errorf("user has no linked SSO identity; link one before migrating")
+	}
+
+	// Clear password hash
+	user.PasswordHash = nil
+
+	// Set lock
+	lock := "sso"
+	user.AuthMethodLock = &lock
+
+	if err := s.userRepo.Update(ctx, user); err != nil {
+		return nil, err
+	}
+
+	// Revoke all sessions — forces re-login via SSO
+	_ = s.sessionRepo.RevokeAll(ctx, userID)
+
+	return user, nil
+}
+
+// MigrateToPassword migrates a user to password-only authentication.
+// It validates and hashes the new password, sets auth_method_lock to "password",
+// updates password_changed_at, and revokes all sessions.
+func (s *AuthService) MigrateToPassword(ctx context.Context, userID uuid.UUID, newPassword string) (*domain.User, error) {
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("user not found")
+	}
+
+	// Validate password against policy
+	if err := auth.ValidatePassword(newPassword, s.cfg.Password); err != nil {
+		return nil, err
+	}
+
+	// Hash and set password
+	hash, err := auth.HashPassword(newPassword)
+	if err != nil {
+		return nil, err
+	}
+
+	now := time.Now()
+	user.PasswordHash = &hash
+	user.PasswordChangedAt = &now
+
+	// Set lock
+	lock := "password"
+	user.AuthMethodLock = &lock
+
+	if err := s.userRepo.Update(ctx, user); err != nil {
+		return nil, err
+	}
+
+	// Revoke all sessions — forces re-login via password
+	_ = s.sessionRepo.RevokeAll(ctx, userID)
+
+	return user, nil
+}
+
+// SetAuthMethodLock sets or clears the auth method lock for a user.
+// Valid values are nil (any method), "sso", or "password".
+func (s *AuthService) SetAuthMethodLock(ctx context.Context, userID uuid.UUID, lock *string) (*domain.User, error) {
+	if lock != nil && *lock != "sso" && *lock != "password" {
+		return nil, fmt.Errorf("invalid auth_method_lock value: must be null, \"sso\", or \"password\"")
+	}
+
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("user not found")
+	}
+
+	user.AuthMethodLock = lock
+
+	if err := s.userRepo.Update(ctx, user); err != nil {
+		return nil, err
+	}
+
+	return user, nil
 }

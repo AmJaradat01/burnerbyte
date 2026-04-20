@@ -20,7 +20,7 @@ import { ErrorState } from "@/components/error-state";
 import { Pagination } from "@/components/pagination";
 import { useRoles } from "@/hooks/use-roles";
 import { Textarea } from "@/components/ui/textarea";
-import { AlertTriangle, CheckCircle2, Clock, Copy, KeyRound, LogOut, Mail, Minus, Plus, RefreshCw, Shield, Trash2, Upload, UserPlus, Users, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock, Copy, KeyRound, Lock, LogOut, Mail, Minus, Plus, RefreshCw, Shield, Trash2, Upload, UserPlus, Users, XCircle } from "lucide-react";
 import type { User, Membership, Invite, PaginatedResponse } from "@/types";
 
 interface SSOStatusProvider { name: string; provider_type: string; label: string; enabled: boolean; }
@@ -334,8 +334,12 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
   const [timeFormat, setTimeFormat] = useState(u.time_format ?? "");
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [authMethodLock, setAuthMethodLock] = useState<string>(u.auth_method_lock ?? "any");
+  const [migratePasswordOpen, setMigratePasswordOpen] = useState(false);
+  const [migratePassword, setMigratePassword] = useState("");
+  const [migrating, setMigrating] = useState(false);
 
-  const dirty = displayName !== u.display_name || isAdminFlag !== u.is_system_admin || verified !== u.email_verified || avatarURL !== (u.avatar_url ?? "") || timezone !== (u.timezone ?? "") || dateFormat !== (u.date_format ?? "") || timeFormat !== (u.time_format ?? "");
+  const dirty = displayName !== u.display_name || isAdminFlag !== u.is_system_admin || verified !== u.email_verified || avatarURL !== (u.avatar_url ?? "") || timezone !== (u.timezone ?? "") || dateFormat !== (u.date_format ?? "") || timeFormat !== (u.time_format ?? "") || authMethodLock !== (u.auth_method_lock ?? "any");
 
   const copyId = () => {
     navigator.clipboard.writeText(u.id);
@@ -352,6 +356,7 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
           avatar_url: avatarURL !== (u.avatar_url ?? "") ? avatarURL : undefined,
           is_system_admin: isAdminFlag !== u.is_system_admin ? isAdminFlag : undefined,
           email_verified: verified !== u.email_verified ? verified : undefined,
+          auth_method_lock: authMethodLock !== (u.auth_method_lock ?? "any") ? (authMethodLock === "any" ? null : authMethodLock) : undefined,
         });
       } else {
         await api.patch("/auth/me", {
@@ -419,10 +424,43 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
     }
   };
 
+  const migrateToSSO = async () => {
+    setMigrating(true);
+    try {
+      await api.post(`/admin/users/${u.id}/migrate-auth`, { target: "sso" });
+      qc.invalidateQueries({ queryKey: ["admin-users"] });
+      qc.invalidateQueries({ queryKey: ["org-members"] });
+      toast.success(`${u.display_name || u.email} migrated to SSO`);
+      setOpen(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Migration failed");
+    } finally {
+      setMigrating(false);
+    }
+  };
+
+  const migrateToPassword = async () => {
+    if (!migratePassword) return;
+    setMigrating(true);
+    try {
+      await api.post(`/admin/users/${u.id}/migrate-auth`, { target: "password", new_password: migratePassword });
+      qc.invalidateQueries({ queryKey: ["admin-users"] });
+      qc.invalidateQueries({ queryKey: ["org-members"] });
+      toast.success(`${u.display_name || u.email} migrated to password auth`);
+      setMigratePasswordOpen(false);
+      setMigratePassword("");
+      setOpen(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Migration failed");
+    } finally {
+      setMigrating(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={(v) => {
       setOpen(v);
-      if (v) { setDisplayName(u.display_name); setIsAdminFlag(u.is_system_admin); setVerified(u.email_verified); setAvatarURL(u.avatar_url ?? ""); setTimezone(u.timezone ?? ""); setDateFormat(u.date_format ?? ""); setTimeFormat(u.time_format ?? ""); setCopied(false); }
+      if (v) { setDisplayName(u.display_name); setIsAdminFlag(u.is_system_admin); setVerified(u.email_verified); setAvatarURL(u.avatar_url ?? ""); setTimezone(u.timezone ?? ""); setDateFormat(u.date_format ?? ""); setTimeFormat(u.time_format ?? ""); setCopied(false); setAuthMethodLock(u.auth_method_lock ?? "any"); setMigratePasswordOpen(false); setMigratePassword(""); }
     }}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -480,6 +518,10 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Clock className="h-3 w-3" />Last Active</p>
                 <p className="text-xs font-medium">{u.last_login_at ? timeAgo(u.last_login_at) : "Never"}</p>
                 {u.last_login_at && <p className="text-[10px] text-muted-foreground">{new Date(u.last_login_at).toLocaleDateString()}</p>}
+              </div>
+              <div className="rounded-lg border p-3 space-y-1">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Lock className="h-3 w-3" />Auth Lock</p>
+                <p className="text-xs font-medium">{u.auth_method_lock === "sso" ? "SSO Only" : u.auth_method_lock === "password" ? "Password Only" : "Any Method"}</p>
               </div>
             </div>
           </div>
@@ -591,6 +633,78 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
                     </div>
                   </div>
                   <Switch checked={isAdminFlag} onCheckedChange={setIsAdminFlag} disabled={isYou} />
+                </div>
+                <div className="border-t" />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100">
+                      <Lock className="h-4 w-4 text-purple-600" />
+                    </div>
+                    <div>
+                      <Label className="text-sm">Auth Method Lock</Label>
+                      <p className="text-xs text-muted-foreground">Restrict this user to a specific authentication method.</p>
+                    </div>
+                  </div>
+                  <Select value={authMethodLock} onValueChange={setAuthMethodLock}>
+                    <SelectTrigger className="w-36 h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="any">Any Method</SelectItem>
+                      <SelectItem value="sso">SSO Only</SelectItem>
+                      <SelectItem value="password">Password Only</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="border-t" />
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100">
+                      <RefreshCw className="h-4 w-4 text-amber-600" />
+                    </div>
+                    <div>
+                      <Label className="text-sm">Auth Migration</Label>
+                      <p className="text-xs text-muted-foreground">Migrate this user between authentication methods. This revokes all sessions.</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 ml-11">
+                    <ConfirmDialog
+                      trigger={
+                        <Button variant="outline" size="sm" className="text-xs gap-1.5" disabled={migrating}>
+                          <Shield className="h-3.5 w-3.5" /> Migrate to SSO
+                        </Button>
+                      }
+                      title="Migrate to SSO?"
+                      description={`This will clear ${u.display_name || u.email}'s password, lock them to SSO-only login, and revoke all active sessions. They must have a linked SSO identity.`}
+                      onConfirm={migrateToSSO}
+                    />
+                    {!migratePasswordOpen ? (
+                      <Button variant="outline" size="sm" className="text-xs gap-1.5" disabled={migrating} onClick={() => setMigratePasswordOpen(true)}>
+                        <KeyRound className="h-3.5 w-3.5" /> Migrate to Password
+                      </Button>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="password"
+                          placeholder="New password"
+                          value={migratePassword}
+                          onChange={(e) => setMigratePassword(e.target.value)}
+                          className="h-8 w-40 text-xs"
+                        />
+                        <ConfirmDialog
+                          trigger={
+                            <Button variant="outline" size="sm" className="text-xs" disabled={!migratePassword || migrating}>
+                              Confirm
+                            </Button>
+                          }
+                          title="Migrate to Password?"
+                          description={`This will set a new password for ${u.display_name || u.email}, lock them to password-only login, and revoke all active sessions.`}
+                          onConfirm={migrateToPassword}
+                        />
+                        <Button variant="ghost" size="sm" className="text-xs h-8 w-8 p-0" onClick={() => { setMigratePasswordOpen(false); setMigratePassword(""); }}>
+                          <XCircle className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
