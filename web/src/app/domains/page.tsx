@@ -86,15 +86,25 @@ export default function DomainsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Domains</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {totalDomains > 0 ? `${totalDomains} domain${totalDomains !== 1 ? "s" : ""} · ${verifiedCount} verified · ${pendingCount} pending` : "Manage your email domains"}
-          </p>
-        </div>
-        <AddDomainDialog orgId={currentOrg.id} />
-      </div>
+      <Card className="overflow-hidden">
+        <div className="h-2 bg-gradient-to-r from-emerald-500/80 to-emerald-500/20" />
+        <CardContent className="pt-5 pb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-7 w-7 rounded-md bg-emerald-500/10 flex items-center justify-center">
+                <Globe className="h-4 w-4 text-emerald-600" />
+              </div>
+              <div>
+                <h1 className="text-base font-semibold">Domains</h1>
+                <p className="text-sm text-muted-foreground">
+                  {totalDomains > 0 ? `${totalDomains} domain${totalDomains !== 1 ? "s" : ""} · ${verifiedCount} verified · ${pendingCount} pending · Manage your email domains.` : "Manage your email domains and DNS verification."}
+                </p>
+              </div>
+            </div>
+            <AddDomainDialog orgId={currentOrg.id} />
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Summary cards — 4 cards */}
       {totalDomains > 0 && (
@@ -183,7 +193,7 @@ export default function DomainsPage() {
 
 function MiniStat({ icon: Icon, label, value, accent }: { icon: typeof Globe; label: string; value: number; accent: string }) {
   return (
-    <Card>
+    <Card className="transition-all hover:shadow-md hover:-translate-y-0.5">
       <CardContent className="pt-5 pb-4">
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-medium text-muted-foreground">{label}</span>
