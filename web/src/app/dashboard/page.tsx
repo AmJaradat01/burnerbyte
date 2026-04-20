@@ -169,12 +169,24 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">
-          {greetingEmoji} {greeting}, {user?.display_name?.split(" ")[0] || "there"}
-        </h1>
-        <p className="text-muted-foreground text-sm mt-0.5">Here&apos;s what&apos;s happening with {org.name}</p>
-      </div>
+      <Card className="overflow-hidden">
+        <div className="h-2 bg-gradient-to-r from-primary/80 to-primary/20" />
+        <CardContent className="pt-5 pb-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-bold tracking-tight">
+                {greetingEmoji} {greeting}, {user?.display_name?.split(" ")[0] || "there"}
+              </h1>
+              <p className="text-muted-foreground text-sm mt-0.5">Here&apos;s what&apos;s happening with {org.name}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button asChild variant="outline" size="sm">
+                <Link href="/" className="gap-1.5"><Plus className="h-3.5 w-3.5" /> New Inbox</Link>
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Primary stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -389,7 +401,7 @@ function StatCard({ icon: Icon, label, value, loading, accent, footer }: {
   footer?: React.ReactNode;
 }) {
   return (
-    <Card>
+    <Card className="transition-all hover:shadow-md hover:-translate-y-0.5">
       <CardContent className="pt-5 pb-4">
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-medium text-muted-foreground">{label}</span>
