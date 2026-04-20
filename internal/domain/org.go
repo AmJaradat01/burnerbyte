@@ -49,8 +49,11 @@ type UpdateOrgInput struct {
 }
 
 type InviteMemberInput struct {
-	Email    string  `json:"email"`
-	OrgRole  string  `json:"org_role"`
+	Email           string             `json:"email"`
+	OrgRole         string             `json:"org_role"`
+	AllowedAuth     []string           `json:"allowed_auth,omitempty"`
+	TeamAssignments []InviteTeamAssign `json:"team_assignments,omitempty"`
+	// Deprecated — kept for backward compat
 	TeamID   *string `json:"team_id,omitempty"`
 	TeamRole *string `json:"team_role,omitempty"`
 }
@@ -67,17 +70,56 @@ type ChangeRoleInput struct {
 }
 
 type Invite struct {
-	ID         uuid.UUID  `json:"id"`
-	OrgID      uuid.UUID  `json:"org_id"`
-	TeamID     *uuid.UUID `json:"team_id,omitempty"`
-	Email      string     `json:"email"`
-	OrgRole    string     `json:"org_role"`
-	TeamRole   *string    `json:"team_role,omitempty"`
-	Token      string     `json:"-"`
-	InvitedBy  *uuid.UUID `json:"invited_by,omitempty"`
-	AcceptedAt *time.Time `json:"accepted_at,omitempty"`
-	ExpiresAt  time.Time  `json:"expires_at"`
-	CreatedAt  time.Time  `json:"created_at"`
+	ID              uuid.UUID          `json:"id"`
+	OrgID           uuid.UUID          `json:"org_id"`
+	Email           string             `json:"email"`
+	OrgRole         string             `json:"org_role"`
+	AllowedAuth     []string           `json:"allowed_auth"`
+	TeamAssignments []InviteTeamAssign `json:"team_assignments"`
+	Token           string             `json:"-"`
+	InvitedBy       *uuid.UUID         `json:"invited_by,omitempty"`
+	AcceptedAt      *time.Time         `json:"accepted_at,omitempty"`
+	ExpiresAt       time.Time          `json:"expires_at"`
+	CreatedAt       time.Time          `json:"created_at"`
+	// Deprecated single-team fields kept for backward compat
+	TeamID   *uuid.UUID `json:"team_id,omitempty"`
+	TeamRole *string    `json:"team_role,omitempty"`
 	// Joined/enriched fields
 	TeamName string `json:"team_name,omitempty"`
+}
+
+// InviteTeamAssign represents a single team assignment within an invite.
+type InviteTeamAssign struct {
+	TeamID   uuid.UUID `json:"team_id"`
+	TeamRole string    `json:"team_role"`
+	// Enriched fields (not stored, populated on read)
+	TeamName string `json:"team_name,omitempty"`
+}
+
+// BulkInviteMemberInput represents a batch invite request where all invites
+// share the same allowed_auth and team_assignments configuration.
+type BulkInviteMemberInput struct {
+	Emails          []string           `json:"emails"`
+	OrgRole         string             `json:"org_role"`
+	AllowedAuth     []string           `json:"allowed_auth,omitempty"`
+	TeamAssignments []InviteTeamAssign `json:"team_assignments,omitempty"`
+}
+
+// BulkInviteResult summarizes the outcome of a bulk invite operation.
+type BulkInviteResult struct {
+	Created int                 `json:"created"`
+	Skipped []BulkInviteSkipped `json:"skipped"`
+	Failed  []BulkInviteFailed  `json:"failed"`
+}
+
+// BulkInviteSkipped represents an email that was skipped during bulk invite.
+type BulkInviteSkipped struct {
+	Email  string `json:"email"`
+	Reason string `json:"reason"`
+}
+
+// BulkInviteFailed represents an email that failed validation during bulk invite.
+type BulkInviteFailed struct {
+	Email  string `json:"email"`
+	Reason string `json:"reason"`
 }

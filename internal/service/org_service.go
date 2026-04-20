@@ -23,20 +23,21 @@ import (
 )
 
 type OrgService struct {
-	pool         *pgxpool.Pool
-	orgRepo      *postgres.OrgRepo
-	teamRepo     *postgres.TeamRepo
-	userRepo     *postgres.UserRepo
-	mailer       *mailer.Mailer
-	baseURL      string
-	inviteExpiry time.Duration
+	pool            *pgxpool.Pool
+	orgRepo         *postgres.OrgRepo
+	teamRepo        *postgres.TeamRepo
+	userRepo        *postgres.UserRepo
+	ssoProviderRepo *postgres.SSOProviderRepo
+	mailer          *mailer.Mailer
+	baseURL         string
+	inviteExpiry    time.Duration
 }
 
-func NewOrgService(pool *pgxpool.Pool, orgRepo *postgres.OrgRepo, teamRepo *postgres.TeamRepo, userRepo *postgres.UserRepo, mailer *mailer.Mailer, baseURL string, inviteExpiry time.Duration) *OrgService {
+func NewOrgService(pool *pgxpool.Pool, orgRepo *postgres.OrgRepo, teamRepo *postgres.TeamRepo, userRepo *postgres.UserRepo, ssoProviderRepo *postgres.SSOProviderRepo, mailer *mailer.Mailer, baseURL string, inviteExpiry time.Duration) *OrgService {
 	if inviteExpiry <= 0 {
 		inviteExpiry = 48 * time.Hour
 	}
-	return &OrgService{pool: pool, orgRepo: orgRepo, teamRepo: teamRepo, userRepo: userRepo, mailer: mailer, baseURL: baseURL, inviteExpiry: inviteExpiry}
+	return &OrgService{pool: pool, orgRepo: orgRepo, teamRepo: teamRepo, userRepo: userRepo, ssoProviderRepo: ssoProviderRepo, mailer: mailer, baseURL: baseURL, inviteExpiry: inviteExpiry}
 }
 
 var slugRe = regexp.MustCompile(`[^a-z0-9]+`)
@@ -348,6 +349,20 @@ func (s *OrgService) InviteMember(ctx context.Context, orgID uuid.UUID, input do
 		return nil, fmt.Errorf("invalid org_role: %s", input.OrgRole)
 	}
 
+	// Validate allowed_auth: default to ["any"] if empty/nil
+	allowedAuth := input.AllowedAuth
+	if len(allowedAuth) == 0 {
+		allowedAuth = []string{"any"}
+	}
+	if err := s.validateAllowedAuth(ctx, allowedAuth); err != nil {
+		return nil, err
+	}
+
+	// Validate team_assignments
+	if err := s.validateTeamAssignments(ctx, orgID, input.TeamAssignments); err != nil {
+		return nil, err
+	}
+
 	// Delete any existing pending invite for this email+org (prevents duplicates on resend)
 	_ = s.orgRepo.DeletePendingInviteByEmail(ctx, orgID, input.Email)
 
@@ -382,18 +397,39 @@ func (s *OrgService) InviteMember(ctx context.Context, orgID uuid.UUID, input do
 	}
 
 	invite := &domain.Invite{
-		ID:        uuid.New(),
-		OrgID:     orgID,
-		TeamID:    teamID,
-		Email:     input.Email,
-		OrgRole:   input.OrgRole,
-		TeamRole:  input.TeamRole,
-		Token:     token,
-		InvitedBy: &inviterID,
-		ExpiresAt: time.Now().Add(s.inviteExpiry),
+		ID:          uuid.New(),
+		OrgID:       orgID,
+		TeamID:      teamID,
+		Email:       input.Email,
+		OrgRole:     input.OrgRole,
+		AllowedAuth: allowedAuth,
+		TeamRole:    input.TeamRole,
+		Token:       token,
+		InvitedBy:   &inviterID,
+		ExpiresAt:   time.Now().Add(s.inviteExpiry),
 	}
 
-	if err := s.orgRepo.CreateInvite(ctx, invite); err != nil {
+	// Use a transaction to persist invite + team assignments atomically
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+
+	orgRepoTx := s.orgRepo.WithTx(tx)
+
+	if err := orgRepoTx.CreateInvite(ctx, invite); err != nil {
+		return nil, err
+	}
+
+	if len(input.TeamAssignments) > 0 {
+		if err := orgRepoTx.CreateInviteTeamAssignments(ctx, invite.ID, input.TeamAssignments); err != nil {
+			return nil, fmt.Errorf("create team assignments: %w", err)
+		}
+		invite.TeamAssignments = input.TeamAssignments
+	}
+
+	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
 
@@ -419,11 +455,12 @@ func (s *OrgService) InviteMember(ctx context.Context, orgID uuid.UUID, input do
 
 // AcceptInviteResult holds the result of accepting an invite, including optional team info.
 type AcceptInviteResult struct {
-	OrgID    uuid.UUID  `json:"org_id"`
-	OrgName  string     `json:"org_name"`
-	TeamID   *uuid.UUID `json:"team_id,omitempty"`
-	TeamName string     `json:"team_name,omitempty"`
-	TeamRole string     `json:"team_role,omitempty"`
+	OrgID           uuid.UUID                  `json:"org_id"`
+	OrgName         string                     `json:"org_name"`
+	TeamID          *uuid.UUID                 `json:"team_id,omitempty"`
+	TeamName        string                     `json:"team_name,omitempty"`
+	TeamRole        string                     `json:"team_role,omitempty"`
+	TeamAssignments []domain.InviteTeamAssign   `json:"team_assignments,omitempty"`
 }
 
 func (s *OrgService) AcceptInvite(ctx context.Context, token string, userID uuid.UUID, userEmail string) (*AcceptInviteResult, error) {
@@ -466,6 +503,7 @@ func (s *OrgService) AcceptInvite(ctx context.Context, token string, userID uuid
 	defer tx.Rollback(ctx)
 
 	orgRepoTx := s.orgRepo.WithTx(tx)
+	teamRepoTx := s.teamRepo.WithTx(tx)
 
 	membership := &domain.OrgMembership{
 		ID:     uuid.New(),
@@ -482,30 +520,64 @@ func (s *OrgService) AcceptInvite(ctx context.Context, token string, userID uuid
 		}
 	}
 
-	// Team membership creation (within the same transaction)
-	var teamID *uuid.UUID
-	var teamName string
-	var teamRole string
-	if invite.TeamID != nil {
-		teamRepoTx := s.teamRepo.WithTx(tx)
+	// Multi-team assignment processing
+	var resultTeamID *uuid.UUID
+	var resultTeamName string
+	var resultTeamRole string
+	var resultAssignments []domain.InviteTeamAssign
+
+	// Fetch invite_team_assignments
+	assignments, assignErr := orgRepoTx.GetInviteTeamAssignments(ctx, invite.ID)
+	if assignErr == nil && len(assignments) > 0 {
+		// Prefer team_assignments over legacy fields
+		for _, a := range assignments {
+			team, err := teamRepoTx.GetByID(ctx, a.TeamID)
+			if err != nil {
+				if errors.Is(err, postgres.ErrNotFound) {
+					slog.Warn("team not found during invite acceptance, skipping team assignment",
+						"team_id", a.TeamID, "invite_id", invite.ID, "user_id", userID)
+				} else {
+					return nil, fmt.Errorf("look up team: %w", err)
+				}
+				continue
+			}
+			if team.IsArchived {
+				slog.Warn("team is archived during invite acceptance, skipping team assignment",
+					"team_id", a.TeamID, "team_name", team.Name, "invite_id", invite.ID, "user_id", userID)
+				continue
+			}
+			tm := &domain.TeamMembership{
+				ID:     uuid.New(),
+				UserID: userID,
+				TeamID: a.TeamID,
+				Role:   a.TeamRole,
+			}
+			if err := teamRepoTx.CreateMembership(ctx, tm); err != nil {
+				if errors.Is(err, postgres.ErrConflict) {
+					// Already a team member — skip silently (idempotent)
+				} else {
+					return nil, fmt.Errorf("create team membership: %w", err)
+				}
+			}
+			resultAssignments = append(resultAssignments, domain.InviteTeamAssign{
+				TeamID:   a.TeamID,
+				TeamRole: a.TeamRole,
+				TeamName: team.Name,
+			})
+		}
+	} else if invite.TeamID != nil {
+		// Backward compat: use legacy single-team field
 		team, err := teamRepoTx.GetByID(ctx, *invite.TeamID)
 		if err != nil {
 			if errors.Is(err, postgres.ErrNotFound) {
 				slog.Warn("team not found during invite acceptance, skipping team assignment",
-					"team_id", invite.TeamID,
-					"invite_id", invite.ID,
-					"user_id", userID,
-				)
+					"team_id", invite.TeamID, "invite_id", invite.ID, "user_id", userID)
 			} else {
 				return nil, fmt.Errorf("look up team: %w", err)
 			}
 		} else if team.IsArchived {
 			slog.Warn("team is archived during invite acceptance, skipping team assignment",
-				"team_id", invite.TeamID,
-				"team_name", team.Name,
-				"invite_id", invite.ID,
-				"user_id", userID,
-			)
+				"team_id", invite.TeamID, "team_name", team.Name, "invite_id", invite.ID, "user_id", userID)
 		} else {
 			role := "member"
 			if invite.TeamRole != nil {
@@ -524,14 +596,13 @@ func (s *OrgService) AcceptInvite(ctx context.Context, token string, userID uuid
 					return nil, fmt.Errorf("create team membership: %w", err)
 				}
 			}
-			teamID = invite.TeamID
-			teamName = team.Name
-			teamRole = role
+			resultTeamID = invite.TeamID
+			resultTeamName = team.Name
+			resultTeamRole = role
 		}
 	}
 
 	// Auto-verify email: the user proved ownership by clicking the invite link
-	// Only verify if the invite email matches the user's email (which we already checked above)
 	if s.userRepo != nil {
 		userRepoTx := s.userRepo.WithTx(tx)
 		invitedUser, err := userRepoTx.GetByID(ctx, userID)
@@ -558,11 +629,12 @@ func (s *OrgService) AcceptInvite(ctx context.Context, token string, userID uuid
 		orgName = org.Name
 	}
 	return &AcceptInviteResult{
-		OrgID:    invite.OrgID,
-		OrgName:  orgName,
-		TeamID:   teamID,
-		TeamName: teamName,
-		TeamRole: teamRole,
+		OrgID:           invite.OrgID,
+		OrgName:         orgName,
+		TeamID:          resultTeamID,
+		TeamName:        resultTeamName,
+		TeamRole:        resultTeamRole,
+		TeamAssignments: resultAssignments,
 	}, nil
 }
 
@@ -594,7 +666,20 @@ func (s *OrgService) PreviewInvite(ctx context.Context, token string) (map[strin
 		"org_name": orgName,
 		"org_role": invite.OrgRole,
 	}
-	if invite.TeamID != nil {
+
+	// Include allowed_auth in preview
+	allowedAuth := invite.AllowedAuth
+	if len(allowedAuth) == 0 {
+		allowedAuth = []string{"any"}
+	}
+	result["allowed_auth"] = allowedAuth
+
+	// Include team assignment details
+	assignments, err := s.orgRepo.GetInviteTeamAssignments(ctx, invite.ID)
+	if err == nil && len(assignments) > 0 {
+		result["team_assignments"] = assignments
+	} else if invite.TeamID != nil {
+		// Legacy single-team fallback
 		team, err := s.teamRepo.GetByID(ctx, *invite.TeamID)
 		if err == nil {
 			result["team_name"] = team.Name
@@ -645,4 +730,327 @@ func (s *OrgService) ListPendingInvites(ctx context.Context, orgID uuid.UUID) ([
 	}
 
 	return invites, nil
+}
+
+// ── Bulk Invites ──
+
+// BulkInviteMembers creates multiple invites in a single operation with shared configuration.
+func (s *OrgService) BulkInviteMembers(ctx context.Context, orgID uuid.UUID, input domain.BulkInviteMemberInput, inviterID uuid.UUID) (*domain.BulkInviteResult, error) {
+	if len(input.Emails) > 100 {
+		return nil, fmt.Errorf("bulk invite request cannot exceed 100 emails")
+	}
+
+	if !rbac.ValidOrgRole(input.OrgRole) {
+		return nil, fmt.Errorf("invalid org_role: %s", input.OrgRole)
+	}
+
+	// Default allowed_auth
+	allowedAuth := input.AllowedAuth
+	if len(allowedAuth) == 0 {
+		allowedAuth = []string{"any"}
+	}
+
+	// Validate shared config once
+	if err := s.validateAllowedAuth(ctx, allowedAuth); err != nil {
+		return nil, err
+	}
+	if err := s.validateTeamAssignments(ctx, orgID, input.TeamAssignments); err != nil {
+		return nil, err
+	}
+
+	result := &domain.BulkInviteResult{
+		Skipped: []domain.BulkInviteSkipped{},
+		Failed:  []domain.BulkInviteFailed{},
+	}
+
+	// Phase 1: Validate ALL emails upfront
+	var validEmails []string
+	for _, rawEmail := range input.Emails {
+		email := strings.ToLower(strings.TrimSpace(rawEmail))
+		if email == "" {
+			continue // skip blank lines
+		}
+
+		// RFC email validation
+		if _, err := mail.ParseAddress(email); err != nil {
+			result.Failed = append(result.Failed, domain.BulkInviteFailed{Email: email, Reason: "invalid email format"})
+			continue
+		}
+
+		// Domain validation
+		parts := strings.SplitN(email, "@", 2)
+		if len(parts) != 2 || !emailDomainRe.MatchString(parts[1]) {
+			result.Failed = append(result.Failed, domain.BulkInviteFailed{Email: email, Reason: "invalid email domain"})
+			continue
+		}
+
+		// DNS check
+		emailDomain := parts[1]
+		if _, err := net.LookupMX(emailDomain); err != nil {
+			if _, err := net.LookupHost(emailDomain); err != nil {
+				result.Failed = append(result.Failed, domain.BulkInviteFailed{Email: email, Reason: fmt.Sprintf("email domain %q does not exist or has no mail server", emailDomain)})
+				continue
+			}
+		}
+
+		// Check if already a member
+		if s.isOrgMember(ctx, orgID, email) {
+			result.Skipped = append(result.Skipped, domain.BulkInviteSkipped{Email: email, Reason: "already_member"})
+			continue
+		}
+
+		// Check if already has a pending invite
+		if s.hasPendingInvite(ctx, orgID, email) {
+			result.Skipped = append(result.Skipped, domain.BulkInviteSkipped{Email: email, Reason: "already_invited"})
+			continue
+		}
+
+		validEmails = append(validEmails, email)
+	}
+
+	// Phase 2: Create all valid invites in a single transaction
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+
+	orgRepoTx := s.orgRepo.WithTx(tx)
+	var createdTokens []struct {
+		email string
+		token string
+	}
+
+	for _, email := range validEmails {
+		// Delete any existing pending invite for this email+org
+		_ = orgRepoTx.DeletePendingInviteByEmail(ctx, orgID, email)
+
+		b := make([]byte, 32)
+		rand.Read(b)
+		token := hex.EncodeToString(b)
+
+		invite := &domain.Invite{
+			ID:          uuid.New(),
+			OrgID:       orgID,
+			Email:       email,
+			OrgRole:     input.OrgRole,
+			AllowedAuth: allowedAuth,
+			Token:       token,
+			InvitedBy:   &inviterID,
+			ExpiresAt:   time.Now().Add(s.inviteExpiry),
+		}
+
+		if err := orgRepoTx.CreateInvite(ctx, invite); err != nil {
+			result.Failed = append(result.Failed, domain.BulkInviteFailed{Email: email, Reason: "failed to create invite"})
+			continue
+		}
+
+		if len(input.TeamAssignments) > 0 {
+			if err := orgRepoTx.CreateInviteTeamAssignments(ctx, invite.ID, input.TeamAssignments); err != nil {
+				result.Failed = append(result.Failed, domain.BulkInviteFailed{Email: email, Reason: "failed to create team assignments"})
+				continue
+			}
+		}
+
+		createdTokens = append(createdTokens, struct {
+			email string
+			token string
+		}{email: email, token: token})
+		result.Created++
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("commit bulk invites: %w", err)
+	}
+
+	// Phase 3: Send invite emails asynchronously
+	go func() {
+		orgName := ""
+		if org, err := s.orgRepo.GetByID(ctx, orgID); err == nil {
+			orgName = org.Name
+		}
+		for _, ct := range createdTokens {
+			acceptURL := fmt.Sprintf("%s/invite?token=%s", s.baseURL, ct.token)
+			if err := s.mailer.Send(ct.email, "You've been invited", "invite.html", map[string]string{
+				"OrgName":     orgName,
+				"InviterName": "A team member",
+				"AcceptURL":   acceptURL,
+				"ExpiresIn":   mailer.HumanDuration(s.inviteExpiry),
+			}); err != nil {
+				slog.Error("failed to send bulk invite email", "email", ct.email, "error", err)
+			}
+		}
+	}()
+
+	return result, nil
+}
+
+// ── Invite Revocation Cascade ──
+
+// CascadeTeamInviteRevocation handles invite cleanup when a team is archived or deleted.
+// It auto-revokes invites that only reference the given team, and removes the team assignment
+// from invites that reference multiple teams.
+func (s *OrgService) CascadeTeamInviteRevocation(ctx context.Context, teamID uuid.UUID) error {
+	// Find all pending invites with team assignments referencing this team
+	affectedInvites, err := s.orgRepo.FindPendingInvitesWithTeamAssignment(ctx, teamID)
+	if err != nil {
+		return fmt.Errorf("find affected invites: %w", err)
+	}
+
+	for _, invite := range affectedInvites {
+		assignmentCount, err := s.orgRepo.CountInviteTeamAssignments(ctx, invite.ID)
+		if err != nil {
+			slog.Error("failed to count invite assignments", "invite_id", invite.ID, "error", err)
+			continue
+		}
+
+		if assignmentCount <= 1 {
+			// This invite ONLY references the archived/deleted team — auto-revoke the entire invite
+			if err := s.orgRepo.DeleteInvite(ctx, invite.OrgID, invite.ID); err != nil {
+				slog.Error("failed to auto-revoke invite", "invite_id", invite.ID, "error", err)
+				continue
+			}
+			slog.Info("auto-revoked invite due to team archive/delete",
+				"invite_id", invite.ID, "email", invite.Email, "team_id", teamID)
+		} else {
+			// Invite has multiple team assignments — remove only the assignment for this team
+			if err := s.orgRepo.DeleteInviteTeamAssignment(ctx, invite.ID, teamID); err != nil {
+				slog.Error("failed to remove team assignment from invite",
+					"invite_id", invite.ID, "team_id", teamID, "error", err)
+				continue
+			}
+			slog.Info("removed team assignment from invite due to team archive/delete",
+				"invite_id", invite.ID, "email", invite.Email, "team_id", teamID,
+				"remaining_assignments", assignmentCount-1)
+		}
+	}
+
+	// Also handle legacy invites that use the old team_id column directly
+	if err := s.orgRepo.RevokePendingInvitesByLegacyTeamID(ctx, teamID); err != nil {
+		slog.Error("failed to revoke legacy team invites", "team_id", teamID, "error", err)
+	}
+
+	return nil
+}
+
+// ── Validation Helpers ──
+
+// validateAllowedAuth validates the allowed_auth array values.
+func (s *OrgService) validateAllowedAuth(ctx context.Context, allowedAuth []string) error {
+	if len(allowedAuth) == 0 {
+		return nil
+	}
+
+	hasAny := false
+	for _, a := range allowedAuth {
+		if a == "any" {
+			hasAny = true
+		}
+	}
+
+	// If "any" is present, it must be the sole element
+	if hasAny && len(allowedAuth) > 1 {
+		return fmt.Errorf("allowed_auth: \"any\" must be the only element when present")
+	}
+
+	if hasAny {
+		return nil
+	}
+
+	var invalidValues []string
+	for _, a := range allowedAuth {
+		if a == "password" {
+			continue
+		}
+		if strings.HasPrefix(a, "sso:") {
+			providerName := strings.TrimPrefix(a, "sso:")
+			if providerName == "" {
+				invalidValues = append(invalidValues, a)
+				continue
+			}
+			if s.ssoProviderRepo != nil {
+				provider, err := s.ssoProviderRepo.GetByName(ctx, providerName)
+				if err != nil {
+					invalidValues = append(invalidValues, a)
+					continue
+				}
+				if !provider.Enabled {
+					invalidValues = append(invalidValues, a+" (disabled)")
+					continue
+				}
+			}
+			continue
+		}
+		invalidValues = append(invalidValues, a)
+	}
+
+	if len(invalidValues) > 0 {
+		return fmt.Errorf("invalid allowed_auth values: %s", strings.Join(invalidValues, ", "))
+	}
+	return nil
+}
+
+// validateTeamAssignments validates team assignments for an invite.
+func (s *OrgService) validateTeamAssignments(ctx context.Context, orgID uuid.UUID, assignments []domain.InviteTeamAssign) error {
+	if len(assignments) == 0 {
+		return nil
+	}
+
+	seen := make(map[uuid.UUID]bool)
+	for _, a := range assignments {
+		// Check for duplicate team_id
+		if seen[a.TeamID] {
+			return fmt.Errorf("duplicate team_id in team_assignments: %s", a.TeamID)
+		}
+		seen[a.TeamID] = true
+
+		// Validate team exists and belongs to org
+		team, err := s.teamRepo.GetByID(ctx, a.TeamID)
+		if err != nil {
+			return fmt.Errorf("team not found: %s", a.TeamID)
+		}
+		if team.OrgID != orgID {
+			return fmt.Errorf("team %s does not belong to this organization", a.TeamID)
+		}
+		if team.IsArchived {
+			return fmt.Errorf("team %s is archived", a.TeamID)
+		}
+
+		// Validate team_role
+		role := a.TeamRole
+		if role == "" {
+			role = "member"
+		}
+		if !rbac.ValidTeamRole(role) {
+			return fmt.Errorf("invalid team_role: %s", role)
+		}
+	}
+	return nil
+}
+
+// isOrgMember checks if an email belongs to an existing org member.
+func (s *OrgService) isOrgMember(ctx context.Context, orgID uuid.UUID, email string) bool {
+	if s.userRepo == nil {
+		return false
+	}
+	user, err := s.userRepo.GetByEmail(ctx, email)
+	if err != nil {
+		return false
+	}
+	_, err = s.orgRepo.GetMembership(ctx, user.ID, orgID)
+	return err == nil
+}
+
+// hasPendingInvite checks if an email already has a pending invite for the org.
+func (s *OrgService) hasPendingInvite(ctx context.Context, orgID uuid.UUID, email string) bool {
+	invites, err := s.orgRepo.ListPendingInvites(ctx, orgID)
+	if err != nil {
+		return false
+	}
+	for _, inv := range invites {
+		if strings.EqualFold(inv.Email, email) {
+			return true
+		}
+	}
+	return false
 }

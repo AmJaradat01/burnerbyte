@@ -86,3 +86,44 @@ type SSOStatusProvider struct {
 	Label        string `json:"label"`
 	Enabled      bool   `json:"enabled"`
 }
+
+// SSODomainMapping maps an email domain to a team with role assignments.
+// Multiple mappings can exist for the same (provider_id, domain) pair with different team_ids,
+// enabling one domain rule to route users to multiple teams simultaneously.
+type SSODomainMapping struct {
+	ID         uuid.UUID `json:"id"`
+	ProviderID uuid.UUID `json:"provider_id"`
+	Domain     string    `json:"domain"`
+	OrgRole    string    `json:"org_role"`
+	TeamID     uuid.UUID `json:"team_id"`
+	TeamRole   string    `json:"team_role"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+	// Enriched fields (not stored, populated on read)
+	TeamName string `json:"team_name,omitempty"`
+}
+
+// DomainMappingPreviewInput is the request body for the domain mapping dry-run endpoint.
+type DomainMappingPreviewInput struct {
+	Email    string `json:"email"`
+	Provider string `json:"provider"`
+}
+
+// DomainMappingPreviewResult shows what would happen if a user with the given email
+// authenticated via the given SSO provider.
+type DomainMappingPreviewResult struct {
+	Email             string                    `json:"email"`
+	EmailDomain       string                    `json:"email_domain"`
+	Provider          string                    `json:"provider"`
+	MatchingRules     []SSODomainMapping        `json:"matching_rules"`
+	WouldBypassInvite bool                      `json:"would_bypass_invite"`
+	TeamAssignments   []DomainMappingPreviewTeam `json:"team_assignments"`
+	OrgRole           string                    `json:"org_role,omitempty"`
+}
+
+// DomainMappingPreviewTeam represents a predicted team assignment from a domain mapping preview.
+type DomainMappingPreviewTeam struct {
+	TeamID   uuid.UUID `json:"team_id"`
+	TeamName string    `json:"team_name"`
+	TeamRole string    `json:"team_role"`
+}

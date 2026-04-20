@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -26,23 +27,25 @@ import (
 var startTime = time.Now()
 
 type AdminHandler struct {
-	analyticsSvc    *service.AnalyticsService
-	orgSvc          *service.OrgService
-	authSvc         *service.AuthService
-	sysConfig       *postgres.SystemConfigRepo
-	ssoProviderRepo *postgres.SSOProviderRepo
-	ssoMgr          *auth.SSOManager
-	encryptor       *appcrypto.Encryptor
-	cfg             *config.Config
-	cfgMu           sync.RWMutex
-	pool            *pgxpool.Pool
-	rdb             *redis.Client
-	s3              *minio.Client
-	bucket          string
+	analyticsSvc       *service.AnalyticsService
+	orgSvc             *service.OrgService
+	authSvc            *service.AuthService
+	sysConfig          *postgres.SystemConfigRepo
+	ssoProviderRepo    *postgres.SSOProviderRepo
+	domainMappingRepo  *postgres.SSODomainMappingRepo
+	teamRepo           *postgres.TeamRepo
+	ssoMgr             *auth.SSOManager
+	encryptor          *appcrypto.Encryptor
+	cfg                *config.Config
+	cfgMu              sync.RWMutex
+	pool               *pgxpool.Pool
+	rdb                *redis.Client
+	s3                 *minio.Client
+	bucket             string
 }
 
-func NewAdminHandler(analyticsSvc *service.AnalyticsService, orgSvc *service.OrgService, authSvc *service.AuthService, sysConfig *postgres.SystemConfigRepo, ssoProviderRepo *postgres.SSOProviderRepo, ssoMgr *auth.SSOManager, encryptor *appcrypto.Encryptor, cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, s3 *minio.Client, bucket string) *AdminHandler {
-	return &AdminHandler{analyticsSvc: analyticsSvc, orgSvc: orgSvc, authSvc: authSvc, sysConfig: sysConfig, ssoProviderRepo: ssoProviderRepo, ssoMgr: ssoMgr, encryptor: encryptor, cfg: cfg, pool: pool, rdb: rdb, s3: s3, bucket: bucket}
+func NewAdminHandler(analyticsSvc *service.AnalyticsService, orgSvc *service.OrgService, authSvc *service.AuthService, sysConfig *postgres.SystemConfigRepo, ssoProviderRepo *postgres.SSOProviderRepo, domainMappingRepo *postgres.SSODomainMappingRepo, teamRepo *postgres.TeamRepo, ssoMgr *auth.SSOManager, encryptor *appcrypto.Encryptor, cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, s3 *minio.Client, bucket string) *AdminHandler {
+	return &AdminHandler{analyticsSvc: analyticsSvc, orgSvc: orgSvc, authSvc: authSvc, sysConfig: sysConfig, ssoProviderRepo: ssoProviderRepo, domainMappingRepo: domainMappingRepo, teamRepo: teamRepo, ssoMgr: ssoMgr, encryptor: encryptor, cfg: cfg, pool: pool, rdb: rdb, s3: s3, bucket: bucket}
 }
 
 func (h *AdminHandler) Routes(r chi.Router) {
@@ -565,4 +568,313 @@ func (h *AdminHandler) reloadSSOProviders(ctx context.Context) {
 		return
 	}
 	h.ssoMgr.LoadProviders(ctx, providers)
+}
+
+// ── SSO Domain Mapping CRUD ──
+
+func (h *AdminHandler) ListDomainMappings(w http.ResponseWriter, r *http.Request) {
+	if h.domainMappingRepo == nil {
+		writeJSON(w, http.StatusOK, []any{})
+		return
+	}
+	providerID, err := uuid.Parse(chi.URLParam(r, "providerId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid provider ID")
+		return
+	}
+	mappings, err := h.domainMappingRepo.ListByProvider(r.Context(), providerID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to list domain mappings")
+		return
+	}
+	if mappings == nil {
+		mappings = []domain.SSODomainMapping{}
+	}
+	writeJSON(w, http.StatusOK, mappings)
+}
+
+func (h *AdminHandler) CreateDomainMapping(w http.ResponseWriter, r *http.Request) {
+	if h.domainMappingRepo == nil {
+		writeError(w, http.StatusInternalServerError, "domain mapping repository not configured")
+		return
+	}
+	providerID, err := uuid.Parse(chi.URLParam(r, "providerId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid provider ID")
+		return
+	}
+	var input domain.SSODomainMapping
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	// Validate domain format
+	input.Domain = strings.TrimSpace(strings.ToLower(input.Domain))
+	if input.Domain == "" || !isValidDomainFormat(input.Domain) {
+		writeError(w, http.StatusBadRequest, "invalid domain format")
+		return
+	}
+	// Validate team exists and is not archived
+	if h.teamRepo == nil {
+		writeError(w, http.StatusInternalServerError, "team repository not configured")
+		return
+	}
+	team, err := h.teamRepo.GetByID(r.Context(), input.TeamID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "team not found")
+		return
+	}
+	if team.IsArchived {
+		writeError(w, http.StatusBadRequest, "cannot map to an archived team")
+		return
+	}
+	// Validate roles
+	if input.OrgRole == "" {
+		input.OrgRole = "member"
+	}
+	if input.TeamRole == "" {
+		input.TeamRole = "member"
+	}
+
+	input.ID = uuid.New()
+	input.ProviderID = providerID
+
+	if err := h.domainMappingRepo.Create(r.Context(), &input); err != nil {
+		if errors.Is(err, postgres.ErrConflict) {
+			writeError(w, http.StatusConflict, "a domain mapping with this provider, domain, and team already exists")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "failed to create domain mapping")
+		return
+	}
+
+	// Enrich with team name
+	input.TeamName = team.Name
+
+	auditRecordEnhanced(r, uuid.Nil, "admin.domain_mapping_created", "sso_domain_mapping", input.ID, input.Domain, map[string]any{
+		"provider_id": providerID.String(), "domain": input.Domain, "team_id": input.TeamID.String(),
+		"team_name": team.Name, "org_role": input.OrgRole, "team_role": input.TeamRole,
+	})
+	writeJSON(w, http.StatusCreated, input)
+}
+
+func (h *AdminHandler) UpdateDomainMapping(w http.ResponseWriter, r *http.Request) {
+	if h.domainMappingRepo == nil {
+		writeError(w, http.StatusInternalServerError, "domain mapping repository not configured")
+		return
+	}
+	providerID, err := uuid.Parse(chi.URLParam(r, "providerId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid provider ID")
+		return
+	}
+	mappingID, err := uuid.Parse(chi.URLParam(r, "mappingId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid mapping ID")
+		return
+	}
+
+	existing, err := h.domainMappingRepo.GetByID(r.Context(), mappingID)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "domain mapping not found")
+		return
+	}
+	if existing.ProviderID != providerID {
+		writeError(w, http.StatusNotFound, "domain mapping not found for this provider")
+		return
+	}
+
+	var input domain.SSODomainMapping
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	// Validate domain format
+	input.Domain = strings.TrimSpace(strings.ToLower(input.Domain))
+	if input.Domain == "" || !isValidDomainFormat(input.Domain) {
+		writeError(w, http.StatusBadRequest, "invalid domain format")
+		return
+	}
+	// Validate team exists and is not archived
+	if h.teamRepo == nil {
+		writeError(w, http.StatusInternalServerError, "team repository not configured")
+		return
+	}
+	team, err := h.teamRepo.GetByID(r.Context(), input.TeamID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "team not found")
+		return
+	}
+	if team.IsArchived {
+		writeError(w, http.StatusBadRequest, "cannot map to an archived team")
+		return
+	}
+	// Validate roles
+	if input.OrgRole == "" {
+		input.OrgRole = "member"
+	}
+	if input.TeamRole == "" {
+		input.TeamRole = "member"
+	}
+
+	input.ID = mappingID
+	input.ProviderID = providerID
+
+	if err := h.domainMappingRepo.Update(r.Context(), &input); err != nil {
+		if errors.Is(err, postgres.ErrConflict) {
+			writeError(w, http.StatusConflict, "a domain mapping with this provider, domain, and team already exists")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "failed to update domain mapping")
+		return
+	}
+
+	input.TeamName = team.Name
+
+	auditRecordEnhanced(r, uuid.Nil, "admin.domain_mapping_updated", "sso_domain_mapping", mappingID, input.Domain, map[string]any{
+		"provider_id": providerID.String(), "domain": input.Domain, "team_id": input.TeamID.String(),
+		"team_name": team.Name, "org_role": input.OrgRole, "team_role": input.TeamRole,
+		"before": map[string]any{"domain": existing.Domain, "team_id": existing.TeamID.String(), "org_role": existing.OrgRole, "team_role": existing.TeamRole},
+	})
+	writeJSON(w, http.StatusOK, input)
+}
+
+func (h *AdminHandler) DeleteDomainMapping(w http.ResponseWriter, r *http.Request) {
+	if h.domainMappingRepo == nil {
+		writeError(w, http.StatusInternalServerError, "domain mapping repository not configured")
+		return
+	}
+	providerID, err := uuid.Parse(chi.URLParam(r, "providerId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid provider ID")
+		return
+	}
+	mappingID, err := uuid.Parse(chi.URLParam(r, "mappingId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid mapping ID")
+		return
+	}
+
+	existing, err := h.domainMappingRepo.GetByID(r.Context(), mappingID)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "domain mapping not found")
+		return
+	}
+	if existing.ProviderID != providerID {
+		writeError(w, http.StatusNotFound, "domain mapping not found for this provider")
+		return
+	}
+
+	if err := h.domainMappingRepo.Delete(r.Context(), mappingID); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to delete domain mapping")
+		return
+	}
+
+	auditRecordEnhanced(r, uuid.Nil, "admin.domain_mapping_deleted", "sso_domain_mapping", mappingID, existing.Domain, map[string]any{
+		"provider_id": providerID.String(), "domain": existing.Domain, "team_id": existing.TeamID.String(),
+		"team_name": existing.TeamName, "org_role": existing.OrgRole, "team_role": existing.TeamRole,
+	})
+	writeJSON(w, http.StatusOK, map[string]string{"message": "domain mapping deleted"})
+}
+
+// ── Domain Mapping Preview/Dry-Run ──
+
+func (h *AdminHandler) PreviewDomainMapping(w http.ResponseWriter, r *http.Request) {
+	if h.domainMappingRepo == nil {
+		writeError(w, http.StatusInternalServerError, "domain mapping repository not configured")
+		return
+	}
+	var input domain.DomainMappingPreviewInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	// Validate email format
+	input.Email = strings.TrimSpace(strings.ToLower(input.Email))
+	if input.Email == "" || !strings.Contains(input.Email, "@") {
+		writeError(w, http.StatusBadRequest, "invalid email format")
+		return
+	}
+	parts := strings.SplitN(input.Email, "@", 2)
+	if len(parts) != 2 || parts[1] == "" {
+		writeError(w, http.StatusBadRequest, "invalid email format")
+		return
+	}
+	emailDomain := parts[1]
+
+	// Look up SSO provider by name
+	if h.ssoProviderRepo == nil {
+		writeError(w, http.StatusInternalServerError, "SSO provider repository not configured")
+		return
+	}
+	provider, err := h.ssoProviderRepo.GetByName(r.Context(), input.Provider)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "SSO provider not found")
+		return
+	}
+
+	// Find matching rules (read-only)
+	matchingRules, err := h.domainMappingRepo.FindMatchingRules(r.Context(), provider.ID, emailDomain)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to find matching rules")
+		return
+	}
+	if matchingRules == nil {
+		matchingRules = []domain.SSODomainMapping{}
+	}
+
+	// Build preview result
+	result := domain.DomainMappingPreviewResult{
+		Email:             input.Email,
+		EmailDomain:       emailDomain,
+		Provider:          input.Provider,
+		MatchingRules:     matchingRules,
+		WouldBypassInvite: len(matchingRules) > 0,
+		TeamAssignments:   []domain.DomainMappingPreviewTeam{},
+	}
+
+	if len(matchingRules) > 0 {
+		result.OrgRole = matchingRules[0].OrgRole
+		for _, rule := range matchingRules {
+			result.TeamAssignments = append(result.TeamAssignments, domain.DomainMappingPreviewTeam{
+				TeamID:   rule.TeamID,
+				TeamName: rule.TeamName,
+				TeamRole: rule.TeamRole,
+			})
+		}
+	}
+
+	writeJSON(w, http.StatusOK, result)
+}
+
+// isValidDomainFormat validates a domain string (e.g., "example.com").
+func isValidDomainFormat(d string) bool {
+	if len(d) > 255 || len(d) < 3 {
+		return false
+	}
+	// Must contain at least one dot
+	if !strings.Contains(d, ".") {
+		return false
+	}
+	// Must not start or end with a dot or hyphen
+	if d[0] == '.' || d[0] == '-' || d[len(d)-1] == '.' || d[len(d)-1] == '-' {
+		return false
+	}
+	// Each label must be valid
+	labels := strings.Split(d, ".")
+	for _, label := range labels {
+		if label == "" || len(label) > 63 {
+			return false
+		}
+		for _, c := range label {
+			if !((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-') {
+				return false
+			}
+		}
+	}
+	// TLD must be at least 2 characters
+	if len(labels[len(labels)-1]) < 2 {
+		return false
+	}
+	return true
 }
