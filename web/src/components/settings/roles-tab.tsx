@@ -141,20 +141,50 @@ export function RolesTab() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold">Roles &amp; Permissions</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Manage roles and their permissions.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <CreateRoleDialog
-            orgPermissions={orgPermissions}
-            teamPermissions={teamPermissions}
-            onCreated={refetch}
-          />
-        </div>
+      <Card className="overflow-hidden">
+        <div className="h-2 bg-gradient-to-r from-indigo-500/80 to-indigo-500/20" />
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-7 w-7 rounded-md bg-indigo-500/10 flex items-center justify-center">
+                <Shield className="h-4 w-4 text-indigo-600" />
+              </div>
+              <div>
+                <CardTitle className="text-base">Roles &amp; Permissions</CardTitle>
+                <CardDescription>Manage roles and their permissions across your organization and teams.</CardDescription>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <CreateRoleDialog
+                orgPermissions={orgPermissions}
+                teamPermissions={teamPermissions}
+                onCreated={refetch}
+              />
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
+
+      {/* Summary stats */}
+      <div className="grid grid-cols-3 gap-3">
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <p className="text-2xl font-bold tabular-nums">{orgRoles.length}</p>
+            <p className="text-xs text-muted-foreground">Org Roles</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <p className="text-2xl font-bold tabular-nums">{teamRoles.length}</p>
+            <p className="text-xs text-muted-foreground">Team Roles</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <p className="text-2xl font-bold tabular-nums">{orgPermissions.length + teamPermissions.length}</p>
+            <p className="text-xs text-muted-foreground">Total Permissions</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Tabbed interface */}
@@ -279,9 +309,11 @@ function RoleCard({
   onDelete: () => void;
 }) {
   const permCount = role.permissions?.length ?? 0;
+  const permPercent = totalPermissions > 0 ? Math.round((permCount / totalPermissions) * 100) : 0;
 
   return (
-    <Card className="flex flex-col">
+    <Card className="flex flex-col overflow-hidden transition-all hover:shadow-md hover:-translate-y-0.5">
+      <div className={`h-1.5 bg-gradient-to-r ${role.is_system ? "from-amber-500/80 to-amber-500/20" : "from-indigo-500/60 to-indigo-500/10"}`} />
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
@@ -293,7 +325,7 @@ function RoleCard({
             </div>
             <div className="flex items-center gap-1.5 mt-1.5">
               {role.is_system && (
-                <Badge variant="secondary" className="text-[10px]">
+                <Badge className="text-[10px] bg-amber-100 text-amber-700 border-amber-200">
                   System
                 </Badge>
               )}
@@ -308,10 +340,16 @@ function RoleCard({
         </CardDescription>
       </CardHeader>
       <CardContent className="mt-auto pt-0">
+        <div className="mb-2">
+          <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+            <span>{permCount}/{totalPermissions} permissions</span>
+            <span>{permPercent}%</span>
+          </div>
+          <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+            <div className="h-full rounded-full bg-indigo-500/70 transition-all" style={{ width: `${permPercent}%` }} />
+          </div>
+        </div>
         <div className="flex items-center justify-between">
-          <span className="text-xs text-muted-foreground">
-            {permCount}/{totalPermissions} permissions
-          </span>
           <div className="flex items-center gap-1">
             <Button
               variant="ghost"
