@@ -29,10 +29,17 @@ type TeamService struct {
 	userRepo    *postgres.UserRepo
 	counterRepo *postgres.CounterRepo
 	cfg         *config.Config
+	orgSvc      *OrgService
 }
 
 func NewTeamService(pool *pgxpool.Pool, teamRepo *postgres.TeamRepo, orgRepo *postgres.OrgRepo, userRepo *postgres.UserRepo, counterRepo *postgres.CounterRepo, cfg *config.Config) *TeamService {
 	return &TeamService{pool: pool, teamRepo: teamRepo, orgRepo: orgRepo, userRepo: userRepo, counterRepo: counterRepo, cfg: cfg}
+}
+
+// SetOrgService sets the OrgService reference for invite revocation cascade.
+// This is called after both services are created to break the circular dependency.
+func (s *TeamService) SetOrgService(orgSvc *OrgService) {
+	s.orgSvc = orgSvc
 }
 
 var teamSlugRe = regexp.MustCompile(`[^a-z0-9]+`)
@@ -389,6 +396,12 @@ func (s *TeamService) DeleteTeam(ctx context.Context, orgID, id uuid.UUID) error
 	if t.OrgID != orgID {
 		return fmt.Errorf("team not found")
 	}
+	// Cascade invite revocation before delete (for audit logging and partial assignment removal)
+	if s.orgSvc != nil {
+		if err := s.orgSvc.CascadeTeamInviteRevocation(ctx, id); err != nil {
+			slog.Warn("failed to cascade invite revocation on team delete", "team_id", id, "error", err)
+		}
+	}
 	return s.teamRepo.Delete(ctx, id)
 }
 
@@ -405,6 +418,12 @@ func (s *TeamService) ArchiveTeam(ctx context.Context, orgID, id uuid.UUID) (*do
 	}
 	if err := s.teamRepo.SetArchived(ctx, id, true); err != nil {
 		return nil, err
+	}
+	// Cascade invite revocation after archiving
+	if s.orgSvc != nil {
+		if err := s.orgSvc.CascadeTeamInviteRevocation(ctx, id); err != nil {
+			slog.Warn("failed to cascade invite revocation on team archive", "team_id", id, "error", err)
+		}
 	}
 	return s.teamRepo.GetByID(ctx, id)
 }

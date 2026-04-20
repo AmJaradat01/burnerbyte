@@ -11,16 +11,37 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Loader2, Shield } from "lucide-react";
+import { Loader2, Shield, Users } from "lucide-react";
 
-interface InvitePreview { email: string; org_name: string; org_role: string; }
+interface InviteTeamAssignment {
+  team_id: string;
+  team_role: string;
+  team_name: string;
+}
+
+interface InvitePreview {
+  email: string;
+  org_name: string;
+  org_role: string;
+  allowed_auth: string[];
+  team_assignments: InviteTeamAssignment[];
+}
+
 interface SSOStatusProvider { name: string; provider_type: string; label: string; enabled: boolean; }
 interface SSOStatus { enabled: boolean; allow_registration: boolean; enforce_sso?: boolean; providers?: SSOStatusProvider[]; }
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
 const REDIRECT_DELAY_MS = 3000;
+
+/** Check if a given auth method is allowed by the invite's allowed_auth list */
+function isAuthAllowed(allowedAuth: string[] | undefined, method: string): boolean {
+  if (!allowedAuth || allowedAuth.length === 0) return true;
+  if (allowedAuth.includes("any")) return true;
+  return allowedAuth.includes(method);
+}
 
 export default function InvitePage() {
   const params = useSearchParams();
@@ -143,12 +164,25 @@ export default function InvitePage() {
     }
   };
 
-  const ssoProviders = (sso?.providers ?? []).filter(p => p.enabled);
+  // Determine which auth options to show based on allowed_auth
+  const allowedAuth = preview?.allowed_auth;
+  const showAllAuth = !allowedAuth || allowedAuth.length === 0 || allowedAuth.includes("any");
+  const showPasswordForm = showAllAuth || isAuthAllowed(allowedAuth, "password");
 
-  const handleSSO = () => {
+  const allSSOProviders = (sso?.providers ?? []).filter(p => p.enabled);
+  // Filter SSO providers based on allowed_auth
+  const visibleSSOProviders = showAllAuth
+    ? allSSOProviders
+    : allSSOProviders.filter(p => isAuthAllowed(allowedAuth, `sso:${p.name}`));
+
+  const ssoEnabled = sso?.enabled ?? false;
+  const showSSO = ssoEnabled && visibleSSOProviders.length > 0;
+  const enforceSSO = sso?.enforce_sso ?? false;
+
+  const handleSSO = (providerName: string) => {
     // Store token in sessionStorage so we can accept after SSO callback
     if (token) sessionStorage.setItem("pending_invite_token", token);
-    window.location.href = `${API_BASE}/auth/sso/${ssoProviders[0]?.name}`;
+    window.location.href = `${API_BASE}/auth/sso/${providerName}`;
   };
 
   // Check for pending invite after SSO callback
@@ -161,6 +195,9 @@ export default function InvitePage() {
       }
     }
   }, [user, token]);
+
+  // Team assignments from preview
+  const teamAssignments = preview?.team_assignments ?? [];
 
   // Loading
   if (status === "loading" || authLoading) {
@@ -239,8 +276,6 @@ export default function InvitePage() {
   }
 
   // Auth form
-  const ssoEnabled = sso?.enabled ?? false;
-  const enforceSSO = sso?.enforce_sso ?? false;
   const allowReg = sso?.allow_registration ?? true;
 
   return (
@@ -256,8 +291,25 @@ export default function InvitePage() {
         </CardHeader>
 
         <CardContent className="space-y-4">
-          {/* Password form — default to registration (hidden when SSO enforced) */}
-          {!enforceSSO && (
+          {/* Team assignments info */}
+          {teamAssignments.length > 0 && (
+            <div className="rounded-lg border p-3 space-y-2">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Users className="h-4 w-4 text-muted-foreground" />
+                <span>Team assignments</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {teamAssignments.map((ta) => (
+                  <Badge key={ta.team_id} variant="outline" className="text-xs text-violet-600 border-violet-200">
+                    {ta.team_name} · {ta.team_role}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Password form — shown when allowed_auth permits password or when showing all */}
+          {showPasswordForm && !enforceSSO && (
             <form onSubmit={handleSubmit} className="space-y-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">Email</Label>
@@ -299,18 +351,33 @@ export default function InvitePage() {
             </form>
           )}
 
-          {ssoEnabled && (
+          {showSSO && (
             <>
-              {!enforceSSO && (
+              {showPasswordForm && !enforceSSO && (
                 <div className="relative">
                   <Separator />
                   <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">or</span>
                 </div>
               )}
-              <Button className="w-full gap-2" variant={enforceSSO ? "default" : "outline"} onClick={handleSSO}>
-                <Shield className="h-4 w-4" /> Continue with {ssoProviders[0]?.label ?? "SSO"}
-              </Button>
+              {visibleSSOProviders.map((provider) => (
+                <Button
+                  key={provider.name}
+                  className="w-full gap-2"
+                  variant={enforceSSO || !showPasswordForm ? "default" : "outline"}
+                  onClick={() => handleSSO(provider.name)}
+                >
+                  <Shield className="h-4 w-4" /> Continue with {provider.label ?? provider.name}
+                </Button>
+              ))}
             </>
+          )}
+
+          {/* If neither password nor SSO is available, show a message */}
+          {!showPasswordForm && !showSSO && (
+            <div className="text-center text-sm text-muted-foreground py-4">
+              <p>No authentication methods are currently available for this invite.</p>
+              <p className="mt-1">Please contact the administrator.</p>
+            </div>
           )}
         </CardContent>
       </Card>
