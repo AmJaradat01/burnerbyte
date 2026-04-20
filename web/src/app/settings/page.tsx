@@ -16,10 +16,12 @@ import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ErrorState } from "@/components/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Activity, AlertTriangle, Archive, CheckCircle2, Database, Globe, HardDrive, Inbox, Info, Key, Link as LinkIcon, Loader2, Mail, Monitor, Pencil, Plus, Settings, Shield, Trash2, Users, UsersRound, XCircle } from "lucide-react";
+import { Activity, AlertTriangle, Archive, CheckCircle2, Database, Globe, HardDrive, Inbox, Info, Key, Link as LinkIcon, Loader2, Mail, Monitor, Pencil, Plus, Search, Settings, Shield, Trash2, Users, UsersRound, XCircle } from "lucide-react";
 import Link from "next/link";
 import { UnifiedUsersTab } from "@/components/settings/unified-users-tab";
 import { RolesTab } from "@/components/settings/roles-tab";
+import { useRoles } from "@/hooks/use-roles";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import type { Organization, OrgSettings, SystemStats } from "@/types";
 
 export default function SettingsPage() {
@@ -623,6 +625,28 @@ interface SSOTestResultData {
   response_time: string;
 }
 
+interface SSODomainMapping {
+  id: string;
+  provider_id: string;
+  domain: string;
+  org_role: string;
+  team_id: string;
+  team_role: string;
+  team_name?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface DomainMappingPreviewResult {
+  email: string;
+  email_domain: string;
+  provider: string;
+  matching_rules: SSODomainMapping[];
+  would_bypass_invite: boolean;
+  team_assignments: { team_id: string; team_name: string; team_role: string }[];
+  org_role?: string;
+}
+
 const emptyProvider: Partial<SSOProviderData> = {
   name: "", provider_type: "google", client_id: "", client_secret: "", redirect_url: "",
   issuer_url: "", tenant_id: "", auto_provision: false, default_org_role: "member",
@@ -909,6 +933,11 @@ function SSOProvidersTab() {
               ))}
             </div>
 
+            {/* Domain Mappings Section (only for existing providers) */}
+            {editing.id && (
+              <DomainMappingsSection providerId={editing.id} providerName={editing.name ?? ""} />
+            )}
+
             <div className="flex gap-2 pt-2">
               <Button onClick={handleSave} disabled={saving} size="sm">
                 {saving ? "Saving…" : editing.id ? "Update Provider" : "Create Provider"}
@@ -919,6 +948,326 @@ function SSOProvidersTab() {
         </Card>
       )}
 
+    </div>
+  );
+}
+
+
+// ── Domain Mappings Section (within SSO Provider edit card) ──
+
+interface DomainMappingFormState {
+  domain: string;
+  team_id: string;
+  team_role: string;
+  org_role: string;
+}
+
+const emptyMappingForm: DomainMappingFormState = {
+  domain: "",
+  team_id: "",
+  team_role: "member",
+  org_role: "member",
+};
+
+function DomainMappingsSection({ providerId, providerName }: { providerId: string; providerName: string }) {
+  const qc = useQueryClient();
+  const teams = useOrgStore((s) => s.teams);
+  const { orgRoles, teamRoles } = useRoles();
+
+  const [addingMapping, setAddingMapping] = useState(false);
+  const [editingMappingId, setEditingMappingId] = useState<string | null>(null);
+  const [form, setForm] = useState<DomainMappingFormState>({ ...emptyMappingForm });
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Test email preview state
+  const [testEmail, setTestEmail] = useState("");
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewResult, setPreviewResult] = useState<DomainMappingPreviewResult | null>(null);
+
+  // Fetch domain mappings for this provider
+  const { data: mappings, isLoading } = useQuery({
+    queryKey: ["sso-domain-mappings", providerId],
+    queryFn: () => api.get<SSODomainMapping[]>(`/admin/sso/providers/${providerId}/domain-mappings`),
+    enabled: !!providerId,
+  });
+
+  const domainValid = /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/.test(form.domain);
+
+  const setFormField = (key: keyof DomainMappingFormState, value: string) => {
+    setForm(f => ({ ...f, [key]: value }));
+  };
+
+  const startAdd = () => {
+    setAddingMapping(true);
+    setEditingMappingId(null);
+    setForm({ ...emptyMappingForm, team_id: teams[0]?.id ?? "" });
+  };
+
+  const startEdit = (mapping: SSODomainMapping) => {
+    setEditingMappingId(mapping.id);
+    setAddingMapping(false);
+    setForm({
+      domain: mapping.domain,
+      team_id: mapping.team_id,
+      team_role: mapping.team_role,
+      org_role: mapping.org_role,
+    });
+  };
+
+  const cancelForm = () => {
+    setAddingMapping(false);
+    setEditingMappingId(null);
+    setForm({ ...emptyMappingForm });
+  };
+
+  const handleSaveMapping = async () => {
+    if (!form.domain || !form.team_id) return;
+    setSaving(true);
+    try {
+      if (editingMappingId) {
+        await api.put(`/admin/sso/providers/${providerId}/domain-mappings/${editingMappingId}`, {
+          domain: form.domain,
+          team_id: form.team_id,
+          team_role: form.team_role,
+          org_role: form.org_role,
+        });
+        toast.success("Domain mapping updated");
+      } else {
+        await api.post(`/admin/sso/providers/${providerId}/domain-mappings`, {
+          domain: form.domain,
+          team_id: form.team_id,
+          team_role: form.team_role,
+          org_role: form.org_role,
+        });
+        toast.success("Domain mapping created");
+      }
+      qc.invalidateQueries({ queryKey: ["sso-domain-mappings", providerId] });
+      cancelForm();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save mapping");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteMapping = async (mappingId: string) => {
+    setDeletingId(mappingId);
+    try {
+      await api.del(`/admin/sso/providers/${providerId}/domain-mappings/${mappingId}`);
+      qc.invalidateQueries({ queryKey: ["sso-domain-mappings", providerId] });
+      toast.success("Domain mapping deleted");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete mapping");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handlePreview = async () => {
+    if (!testEmail) return;
+    setPreviewLoading(true);
+    setPreviewResult(null);
+    try {
+      const result = await api.post<DomainMappingPreviewResult>("/admin/sso/domain-mappings/preview", {
+        email: testEmail,
+        provider: providerName,
+      });
+      setPreviewResult(result);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Preview failed");
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  const mappingsList = mappings ?? [];
+
+  return (
+    <div className="border-t pt-3 space-y-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <Label className="text-xs font-semibold">Domain Mappings</Label>
+          <p className="text-[11px] text-muted-foreground">Route users from specific email domains to teams automatically.</p>
+        </div>
+        {!addingMapping && !editingMappingId && (
+          <Button variant="outline" size="sm" className="h-6 text-xs gap-1" onClick={startAdd}>
+            <Plus className="h-3 w-3" /> Add Mapping
+          </Button>
+        )}
+      </div>
+
+      {/* Existing mappings list */}
+      {isLoading ? (
+        <Skeleton className="h-12 w-full" />
+      ) : mappingsList.length > 0 ? (
+        <div className="space-y-1.5">
+          {mappingsList.map((m) => (
+            <div key={m.id} className="flex items-center justify-between rounded-lg border p-2 text-xs">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant="outline" className="font-mono text-[10px]">@{m.domain}</Badge>
+                <span className="text-muted-foreground">→</span>
+                <Badge variant="outline" className="text-[10px] text-violet-600 border-violet-200">
+                  {m.team_name || m.team_id.slice(0, 8)} · {m.team_role}
+                </Badge>
+                <Badge variant="outline" className="text-[10px]">org: {m.org_role}</Badge>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => startEdit(m)} title="Edit">
+                  <Pencil className="h-3 w-3" />
+                </Button>
+                <ConfirmDialog
+                  trigger={
+                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive" disabled={deletingId === m.id} title="Delete">
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  }
+                  title="Delete domain mapping?"
+                  description={`Remove the mapping for @${m.domain} → ${m.team_name || "team"}? Users from this domain will no longer be auto-provisioned to this team.`}
+                  onConfirm={() => handleDeleteMapping(m.id)}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground">No domain mappings configured.</p>
+      )}
+
+      {/* Add/Edit mapping form */}
+      {(addingMapping || editingMappingId) && (
+        <div className="rounded-lg border p-3 space-y-2 bg-muted/30">
+          <p className="text-xs font-medium">{editingMappingId ? "Edit Mapping" : "New Mapping"}</p>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <Label className="text-[10px]">Domain</Label>
+              <Input
+                value={form.domain}
+                onChange={(e) => setFormField("domain", e.target.value)}
+                placeholder="example.com"
+                className="h-7 text-xs font-mono"
+              />
+              {form.domain && !domainValid && (
+                <p className="text-[10px] text-destructive">Invalid domain format</p>
+              )}
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[10px]">Team</Label>
+              <Select value={form.team_id} onValueChange={(v) => setFormField("team_id", v)}>
+                <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Select team" /></SelectTrigger>
+                <SelectContent>
+                  {teams.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[10px]">Team Role</Label>
+              <Select value={form.team_role} onValueChange={(v) => setFormField("team_role", v)}>
+                <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {teamRoles.map((r) => (
+                    <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[10px]">Org Role</Label>
+              <Select value={form.org_role} onValueChange={(v) => setFormField("org_role", v)}>
+                <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {orgRoles.map((r) => (
+                    <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" className="h-6 text-xs" onClick={handleSaveMapping} disabled={!form.domain || !domainValid || !form.team_id || saving}>
+              {saving ? "Saving…" : editingMappingId ? "Update" : "Add"}
+            </Button>
+            <Button variant="outline" size="sm" className="h-6 text-xs" onClick={cancelForm}>Cancel</Button>
+          </div>
+        </div>
+      )}
+
+      {/* Test Email Preview (Task 14.2) */}
+      <div className="border-t pt-3 space-y-2">
+        <Label className="text-xs font-semibold">Test Email</Label>
+        <p className="text-[11px] text-muted-foreground">Preview what would happen if a user with this email authenticated via this provider.</p>
+        <div className="flex gap-2">
+          <Input
+            value={testEmail}
+            onChange={(e) => setTestEmail(e.target.value)}
+            placeholder="user@example.com"
+            className="h-7 text-xs font-mono flex-1"
+            onKeyDown={(e) => e.key === "Enter" && handlePreview()}
+          />
+          <Button variant="outline" size="sm" className="h-7 text-xs gap-1 shrink-0" onClick={handlePreview} disabled={!testEmail || previewLoading}>
+            {previewLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Search className="h-3 w-3" />}
+            Preview
+          </Button>
+        </div>
+
+        {previewResult && (
+          <div className="rounded-lg border p-3 space-y-2 text-xs">
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground">Domain:</span>
+              <Badge variant="outline" className="font-mono text-[10px]">@{previewResult.email_domain}</Badge>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground">Would bypass invite:</span>
+              {previewResult.would_bypass_invite ? (
+                <Badge className="text-[10px] bg-green-100 text-green-700 border-green-200">
+                  <CheckCircle2 className="h-3 w-3 mr-0.5" /> Yes
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-[10px] text-amber-600 border-amber-200">
+                  <XCircle className="h-3 w-3 mr-0.5" /> No
+                </Badge>
+              )}
+            </div>
+            {previewResult.matching_rules.length > 0 ? (
+              <div className="space-y-1">
+                <span className="text-muted-foreground">Matching rules:</span>
+                {previewResult.matching_rules.map((rule, i) => (
+                  <div key={i} className="flex items-center gap-1.5 ml-2">
+                    <Badge variant="outline" className="font-mono text-[10px]">@{rule.domain}</Badge>
+                    <span className="text-muted-foreground">→</span>
+                    <Badge variant="outline" className="text-[10px] text-violet-600 border-violet-200">
+                      {rule.team_name || rule.team_id.slice(0, 8)} · {rule.team_role}
+                    </Badge>
+                    <Badge variant="outline" className="text-[10px]">org: {rule.org_role}</Badge>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground">No matching rules found for this domain.</p>
+            )}
+            {previewResult.team_assignments && previewResult.team_assignments.length > 0 && (
+              <div className="space-y-1">
+                <span className="text-muted-foreground">Predicted team assignments:</span>
+                <div className="flex flex-wrap gap-1 ml-2">
+                  {previewResult.team_assignments.map((ta, i) => (
+                    <Badge key={i} variant="outline" className="text-[10px] text-violet-600 border-violet-200">
+                      {ta.team_name} · {ta.team_role}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+            {previewResult.org_role && (
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground">Org role:</span>
+                <Badge variant="outline" className="text-[10px] capitalize">{previewResult.org_role}</Badge>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

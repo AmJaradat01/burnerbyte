@@ -34,19 +34,20 @@ func stripPort(addr string) string {
 }
 
 type AuthService struct {
-	pool            *pgxpool.Pool
-	userRepo        *postgres.UserRepo
-	sessionRepo     *postgres.SessionRepo
-	resetRepo       *postgres.PasswordResetRepo
-	emailVerifyRepo *postgres.EmailVerificationRepo
-	orgRepo         *postgres.OrgRepo
-	ssoIdentityRepo *postgres.SSOIdentityRepo
-	ssoProviderRepo *postgres.SSOProviderRepo
-	teamRepo        *postgres.TeamRepo
-	tokens          *auth.TokenManager
-	lockout         *auth.Lockout
-	mailer          *mailer.Mailer
-	cfg             *config.Config
+	pool              *pgxpool.Pool
+	userRepo          *postgres.UserRepo
+	sessionRepo       *postgres.SessionRepo
+	resetRepo         *postgres.PasswordResetRepo
+	emailVerifyRepo   *postgres.EmailVerificationRepo
+	orgRepo           *postgres.OrgRepo
+	ssoIdentityRepo   *postgres.SSOIdentityRepo
+	ssoProviderRepo   *postgres.SSOProviderRepo
+	teamRepo          *postgres.TeamRepo
+	domainMappingRepo *postgres.SSODomainMappingRepo
+	tokens            *auth.TokenManager
+	lockout           *auth.Lockout
+	mailer            *mailer.Mailer
+	cfg               *config.Config
 }
 
 func NewAuthService(
@@ -59,6 +60,7 @@ func NewAuthService(
 	ssoIdentityRepo *postgres.SSOIdentityRepo,
 	ssoProviderRepo *postgres.SSOProviderRepo,
 	teamRepo *postgres.TeamRepo,
+	domainMappingRepo *postgres.SSODomainMappingRepo,
 	tokens *auth.TokenManager,
 	lockout *auth.Lockout,
 	mailer *mailer.Mailer,
@@ -68,6 +70,7 @@ func NewAuthService(
 		pool: pool, userRepo: userRepo, sessionRepo: sessionRepo,
 		resetRepo: resetRepo, emailVerifyRepo: emailVerifyRepo, orgRepo: orgRepo,
 		ssoIdentityRepo: ssoIdentityRepo, ssoProviderRepo: ssoProviderRepo, teamRepo: teamRepo,
+		domainMappingRepo: domainMappingRepo,
 		tokens: tokens, lockout: lockout, mailer: mailer, cfg: cfg,
 	}
 }
@@ -80,6 +83,24 @@ func (s *AuthService) Register(ctx context.Context, input domain.CreateUserInput
 
 	if err := auth.ValidatePassword(input.Password, s.cfg.Password); err != nil {
 		return nil, nil, err
+	}
+
+	// Invite-only mode enforcement: when registration is restricted, require a pending invite
+	if !s.cfg.Defaults.AllowRegistration {
+		if s.orgRepo == nil {
+			slog.Warn("invite-only registration rejected: orgRepo not configured", "email", input.Email)
+			return nil, nil, fmt.Errorf("registration requires an invite")
+		}
+		invite, err := s.orgRepo.GetPendingInviteByEmail(ctx, input.Email)
+		if err != nil {
+			slog.Info("invite-only registration rejected: no pending invite", "email", input.Email)
+			return nil, nil, fmt.Errorf("registration requires an invite")
+		}
+		if !isAuthMethodAllowed(invite.AllowedAuth, "password") {
+			slog.Info("invite-only registration rejected: password auth not allowed",
+				"email", input.Email, "allowed_auth", invite.AllowedAuth)
+			return nil, nil, fmt.Errorf("password registration is not allowed for this invite; allowed methods: %v", invite.AllowedAuth)
+		}
 	}
 
 	hash, err := auth.HashPassword(input.Password)
@@ -522,21 +543,74 @@ func (s *AuthService) SSOLogin(ctx context.Context, result *domain.SSOCallbackRe
 		var err error
 		user, err = s.userRepo.GetByEmail(ctx, email)
 		if err != nil {
-			// New user — create with SSO provider info
-			provider := result.Provider
-			user = &domain.User{
-				ID: uuid.New(), Email: email, DisplayName: result.DisplayName,
-				SSOProvider:   &provider,
-				IsSystemAdmin: false, EmailVerified: true,
-				PasswordChangedAt: func() *time.Time { t := time.Now(); return &t }(),
-			}
-			if result.AvatarURL != "" {
-				user.AvatarURL = &result.AvatarURL
-			}
-			if err := s.userRepo.Create(ctx, user); err != nil {
-				return nil, nil, fmt.Errorf("create SSO user: %w", err)
-			}
+			// New user — apply invite-only checks before creating
 			isNew = true
+
+			// Invite-only mode enforcement for new SSO users
+			if !s.cfg.Defaults.AllowRegistration {
+				// Step 1: Check domain mapping rules (bypass invite requirement)
+				var domainMappingMatched bool
+				if s.ssoProviderRepo != nil && s.domainMappingRepo != nil {
+					provCfg, provErr := s.ssoProviderRepo.GetByName(ctx, result.Provider)
+					if provErr == nil && provCfg != nil {
+						parts := strings.Split(email, "@")
+						if len(parts) == 2 {
+							emailDomain := parts[1]
+							mappings, mapErr := s.domainMappingRepo.FindMatchingRules(ctx, provCfg.ID, emailDomain)
+							if mapErr == nil && len(mappings) > 0 {
+								// Domain mapping found — auto-provision with ALL mapped teams
+								domainMappingMatched = true
+								provisionedUser, provErr := s.createAndProvisionFromMappings(ctx, result, mappings)
+								if provErr != nil {
+									return nil, nil, fmt.Errorf("domain mapping auto-provision failed: %w", provErr)
+								}
+								user = provisionedUser
+								slog.Info("SSO domain mapping: auto-provisioned user",
+									"email", email, "provider", result.Provider, "teams", len(mappings))
+							}
+						}
+					}
+				}
+
+				// Step 2: If no domain mapping match, check for pending invite
+				if !domainMappingMatched {
+					if s.orgRepo == nil {
+						slog.Info("invite-only SSO login rejected: no invite and no domain mapping",
+							"email", email, "provider", result.Provider)
+						return nil, nil, fmt.Errorf("registration requires an invite")
+					}
+					invite, invErr := s.orgRepo.GetPendingInviteByEmail(ctx, email)
+					if invErr != nil {
+						slog.Info("invite-only SSO login rejected: no pending invite and no domain mapping",
+							"email", email, "provider", result.Provider)
+						return nil, nil, fmt.Errorf("registration requires an invite")
+					}
+					providerKey := "sso:" + result.Provider
+					if !isAuthMethodAllowed(invite.AllowedAuth, providerKey) {
+						slog.Info("invite-only SSO login rejected: SSO provider not allowed by invite",
+							"email", email, "provider", result.Provider, "allowed_auth", invite.AllowedAuth)
+						return nil, nil, fmt.Errorf("SSO provider %s is not allowed for this invite; allowed methods: %v",
+							result.Provider, invite.AllowedAuth)
+					}
+				}
+			}
+
+			// Create user if not already provisioned via domain mapping
+			if user == nil {
+				provider := result.Provider
+				user = &domain.User{
+					ID: uuid.New(), Email: email, DisplayName: result.DisplayName,
+					SSOProvider:   &provider,
+					IsSystemAdmin: false, EmailVerified: true,
+					PasswordChangedAt: func() *time.Time { t := time.Now(); return &t }(),
+				}
+				if result.AvatarURL != "" {
+					user.AvatarURL = &result.AvatarURL
+				}
+				if err := s.userRepo.Create(ctx, user); err != nil {
+					return nil, nil, fmt.Errorf("create SSO user: %w", err)
+				}
+			}
 		} else {
 			// Existing user by email — auto-link SSO identity.
 			// The email from the SSO provider is verified by the provider (GitHub, Google, etc.),
@@ -878,6 +952,110 @@ func (s *AuthService) applyClaimMappings(ctx context.Context, userID uuid.UUID, 
 			}
 		}
 	}
+}
+
+// isAuthMethodAllowed checks whether a given auth method is permitted by the invite's allowed_auth list.
+// It returns true if allowedAuth contains "any" or the specific method string.
+func isAuthMethodAllowed(allowedAuth []string, method string) bool {
+	if len(allowedAuth) == 0 {
+		return true // empty defaults to "any"
+	}
+	for _, a := range allowedAuth {
+		if a == "any" || a == method {
+			return true
+		}
+	}
+	return false
+}
+
+// createAndProvisionFromMappings creates a new user from SSO callback data and provisions
+// org membership + team memberships based on ALL matching domain mapping rules.
+// The org_role is taken from the first mapping rule. Team memberships are created for
+// all matching rules; archived teams are skipped with a warning log.
+func (s *AuthService) createAndProvisionFromMappings(ctx context.Context, result *domain.SSOCallbackResult, mappings []domain.SSODomainMapping) (*domain.User, error) {
+	email := strings.ToLower(result.Email)
+	provider := result.Provider
+
+	user := &domain.User{
+		ID:            uuid.New(),
+		Email:         email,
+		DisplayName:   result.DisplayName,
+		SSOProvider:   &provider,
+		IsSystemAdmin: false,
+		EmailVerified: true,
+		PasswordChangedAt: func() *time.Time { t := time.Now(); return &t }(),
+	}
+	if result.AvatarURL != "" {
+		user.AvatarURL = &result.AvatarURL
+	}
+
+	if err := s.userRepo.Create(ctx, user); err != nil {
+		return nil, fmt.Errorf("create domain-mapped SSO user: %w", err)
+	}
+
+	// Create SSO identity record
+	if s.ssoIdentityRepo != nil {
+		identity := &domain.SSOIdentity{
+			ID:          uuid.New(),
+			UserID:      user.ID,
+			Provider:    result.Provider,
+			Subject:     result.Subject,
+			Email:       email,
+			DisplayName: result.DisplayName,
+			Metadata:    result.Claims,
+		}
+		_ = s.ssoIdentityRepo.Create(ctx, identity)
+	}
+
+	// Use org_role from the first mapping
+	orgRole := mappings[0].OrgRole
+	if orgRole == "" {
+		orgRole = "member"
+	}
+
+	// Find the org to provision into (first org, same as existing auto-provision logic)
+	if s.orgRepo != nil {
+		orgs, _, err := s.orgRepo.ListAll(ctx, 1, 1)
+		if err == nil && len(orgs) > 0 {
+			_ = s.orgRepo.CreateMembership(ctx, &domain.OrgMembership{
+				ID: uuid.New(), UserID: user.ID, OrgID: orgs[0].ID, Role: orgRole,
+			})
+			slog.Info("domain mapping: provisioned user into org",
+				"user", email, "org", orgs[0].Name, "role", orgRole)
+		}
+	}
+
+	// Create team memberships for ALL matching rules
+	if s.teamRepo != nil {
+		for _, m := range mappings {
+			team, err := s.teamRepo.GetByID(ctx, m.TeamID)
+			if err != nil {
+				slog.Warn("domain mapping: team not found, skipping",
+					"team_id", m.TeamID, "user", email)
+				continue
+			}
+			if team.IsArchived {
+				slog.Warn("domain mapping: team is archived, skipping",
+					"team_id", m.TeamID, "team_name", team.Name, "user", email)
+				continue
+			}
+			teamRole := m.TeamRole
+			if teamRole == "" {
+				teamRole = "member"
+			}
+			if err := s.teamRepo.CreateMembership(ctx, &domain.TeamMembership{
+				ID: uuid.New(), UserID: user.ID, TeamID: m.TeamID, Role: teamRole,
+			}); err != nil {
+				slog.Warn("domain mapping: failed to create team membership",
+					"team_id", m.TeamID, "user", email, "error", err)
+				continue
+			}
+			slog.Info("domain mapping: provisioned user into team",
+				"user", email, "team", team.Name, "role", teamRole)
+		}
+	}
+
+	return user, nil
 }
 
 // LockedError indicates the account is locked.

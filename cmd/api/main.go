@@ -110,6 +110,7 @@ func main() {
 	// SSO repositories
 	ssoProviderRepo := postgres.NewSSOProviderRepo(pool, enc)
 	ssoIdentityRepo := postgres.NewSSOIdentityRepo(pool)
+	ssoDomainMappingRepo := postgres.NewSSODomainMappingRepo(pool)
 
 	// Load runtime configs from DB (overrides config.yaml/env for mailer + storage)
 	cfg.LoadFromDB(ctx, sysConfigRepo)
@@ -124,11 +125,12 @@ func main() {
 	if s3Client != nil {
 		attachmentSvc = service.NewAttachmentService(attachmentRepo, emailRepo, inboxRepo, s3Client, cfg.MinIO, cfg.Defaults.MaxAttachmentSizeMB, cfg.Defaults.PresignedURLTTL)
 	}
-	authSvc := service.NewAuthService(pool, userRepo, sessionRepo, resetRepo, postgres.NewEmailVerificationRepo(pool), orgRepo, ssoIdentityRepo, ssoProviderRepo, teamRepo, tokenMgr, lockout, ml, cfg)
-	orgSvc := service.NewOrgService(pool, orgRepo, teamRepo, userRepo, ml, cfg.Server.FrontendURL, cfg.Defaults.InviteExpiryTTL)
+	authSvc := service.NewAuthService(pool, userRepo, sessionRepo, resetRepo, postgres.NewEmailVerificationRepo(pool), orgRepo, ssoIdentityRepo, ssoProviderRepo, teamRepo, ssoDomainMappingRepo, tokenMgr, lockout, ml, cfg)
+	orgSvc := service.NewOrgService(pool, orgRepo, teamRepo, userRepo, ssoProviderRepo, ml, cfg.Server.FrontendURL, cfg.Defaults.InviteExpiryTTL)
 	redisInboxRepo := redisrepo.NewInboxRepo(rdb)
 	domainSvc := service.NewDomainService(domainRepo, orgRepo, inboxRepo, redisInboxRepo, verHistoryRepo, cfg)
 	teamSvc := service.NewTeamService(pool, teamRepo, orgRepo, userRepo, counterRepo, cfg)
+	teamSvc.SetOrgService(orgSvc)
 	assignmentSvc := service.NewDomainAssignmentService(assignmentRepo, domainRepo, orgRepo, cfg.Defaults)
 	inboxSvc := service.NewInboxService(inboxRepo, redisInboxRepo, assignmentRepo, domainRepo, orgRepo, teamRepo, counterRepo, cfg)
 	// Pass explicit nil interface when attachments are disabled to avoid
@@ -184,7 +186,7 @@ func main() {
 	apikeyHandler := handler.NewAPIKeyHandler(apikeySvc)
 	auditHandler := handler.NewAuditHandler(auditSvc)
 	analyticsHandler := handler.NewAnalyticsHandler(analyticsSvc, cfg.Defaults.AnalyticsDefaultDays)
-	adminHandler := handler.NewAdminHandler(analyticsSvc, orgSvc, authSvc, sysConfigRepo, ssoProviderRepo, ssoMgr, enc, cfg, pool, rdb, s3Client, cfg.MinIO.Bucket)
+	adminHandler := handler.NewAdminHandler(analyticsSvc, orgSvc, authSvc, sysConfigRepo, ssoProviderRepo, ssoDomainMappingRepo, teamRepo, ssoMgr, enc, cfg, pool, rdb, s3Client, cfg.MinIO.Bucket)
 	setupHandler := handler.NewSetupHandler(pool, userRepo, orgRepo, domainRepo, teamRepo, sessionRepo, sysConfigRepo, tokenMgr, ml, cfg)
 	wsHandler := handler.NewWSHandler(hub, inboxRepo, cfg.CORS.AllowedOrigins)
 	notifWSHandler := handler.NewNotifWSHandler(notifHub, cfg.CORS.AllowedOrigins)
@@ -276,6 +278,7 @@ func main() {
 			r.Patch("/orgs/{orgId}/members/{userId}", orgHandler.ChangeRole)
 			r.Post("/orgs/{orgId}/members/{userId}/deactivate", orgHandler.DeactivateUser)
 			r.Post("/orgs/{orgId}/invites", orgHandler.InviteMember)
+			r.Post("/orgs/{orgId}/invites/bulk", orgHandler.BulkInviteMembers)
 			r.Get("/orgs/{orgId}/invites", orgHandler.ListPendingInvites)
 			r.Delete("/orgs/{orgId}/invites/{inviteId}", orgHandler.RevokeInvite)
 			r.Post("/invites/{token}/accept", orgHandler.AcceptInvite)
@@ -378,6 +381,11 @@ func main() {
 			r.With(auth.RequireSystemAdmin).Put("/admin/sso/providers/{providerId}", adminHandler.UpdateSSOProvider)
 			r.With(auth.RequireSystemAdmin).Delete("/admin/sso/providers/{providerId}", adminHandler.DeleteSSOProvider)
 			r.With(auth.RequireSystemAdmin).Post("/admin/sso/test", adminHandler.TestSSOConnection)
+			r.With(auth.RequireSystemAdmin).Get("/admin/sso/providers/{providerId}/domain-mappings", adminHandler.ListDomainMappings)
+			r.With(auth.RequireSystemAdmin).Post("/admin/sso/providers/{providerId}/domain-mappings", adminHandler.CreateDomainMapping)
+			r.With(auth.RequireSystemAdmin).Put("/admin/sso/providers/{providerId}/domain-mappings/{mappingId}", adminHandler.UpdateDomainMapping)
+			r.With(auth.RequireSystemAdmin).Delete("/admin/sso/providers/{providerId}/domain-mappings/{mappingId}", adminHandler.DeleteDomainMapping)
+			r.With(auth.RequireSystemAdmin).Post("/admin/sso/domain-mappings/preview", adminHandler.PreviewDomainMapping)
 			r.With(auth.RequireSystemAdmin).Get("/admin/version", func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Content-Type", "application/json")
 				json.NewEncoder(w).Encode(map[string]string{"version": Version})

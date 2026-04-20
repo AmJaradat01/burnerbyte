@@ -231,6 +231,7 @@ func TestProperty_BugCondition_SSOIdentityLookupSetsEmailVerified(t *testing.T) 
 			ssoIdentityRepo,
 			ssoProviderRepo,
 			nil, // teamRepo
+			nil, // domainMappingRepo
 			tokens,
 			nil, // lockout
 			nil, // mailer
@@ -360,7 +361,7 @@ func TestProperty_Preservation_AlreadyVerifiedIdentityLookup(t *testing.T) {
 
 		svc := NewAuthService(
 			nil, userRepo, sessionRepo, nil, nil, nil,
-			ssoIdentityRepo, ssoProviderRepo, nil,
+			ssoIdentityRepo, ssoProviderRepo, nil, nil,
 			tokens, nil, nil, cfg,
 		)
 
@@ -449,12 +450,15 @@ func TestProperty_Preservation_NewSSOUser(t *testing.T) {
 				AccessTTL:  15 * time.Minute,
 				RefreshTTL: 7 * 24 * time.Hour,
 			},
+			Defaults: config.DefaultsConfig{
+				AllowRegistration: true, // open registration for this preservation test
+			},
 		}
 		tokens := auth.NewTokenManager(cfg.JWT)
 
 		svc := NewAuthService(
 			nil, userRepo, sessionRepo, nil, nil, nil,
-			ssoIdentityRepo, ssoProviderRepo, nil,
+			ssoIdentityRepo, ssoProviderRepo, nil, nil,
 			tokens, nil, nil, cfg,
 		)
 
@@ -574,7 +578,7 @@ func TestProperty_Preservation_EmailLookupSSO(t *testing.T) {
 
 		svc := NewAuthService(
 			nil, userRepo, sessionRepo, nil, nil, nil,
-			ssoIdentityRepo, ssoProviderRepo, nil,
+			ssoIdentityRepo, ssoProviderRepo, nil, nil,
 			tokens, nil, nil, cfg,
 		)
 

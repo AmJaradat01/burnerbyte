@@ -217,10 +217,14 @@ func (r *OrgRepo) CountOwners(ctx context.Context, orgID uuid.UUID) (int, error)
 // ── Invites ──
 
 func (r *OrgRepo) CreateInvite(ctx context.Context, inv *domain.Invite) error {
+	allowedAuth, _ := json.Marshal(inv.AllowedAuth)
+	if len(inv.AllowedAuth) == 0 {
+		allowedAuth = []byte(`["any"]`)
+	}
 	_, err := r.db.Exec(ctx,
-		`INSERT INTO invites (id, org_id, team_id, email, org_role, team_role, token, invited_by, expires_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-		inv.ID, inv.OrgID, inv.TeamID, inv.Email, inv.OrgRole, inv.TeamRole, HashToken(inv.Token), inv.InvitedBy, inv.ExpiresAt)
+		`INSERT INTO invites (id, org_id, team_id, email, org_role, team_role, token, invited_by, expires_at, allowed_auth)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+		inv.ID, inv.OrgID, inv.TeamID, inv.Email, inv.OrgRole, inv.TeamRole, HashToken(inv.Token), inv.InvitedBy, inv.ExpiresAt, allowedAuth)
 	if err != nil {
 		return fmt.Errorf("create invite: %w", err)
 	}
@@ -229,16 +233,20 @@ func (r *OrgRepo) CreateInvite(ctx context.Context, inv *domain.Invite) error {
 
 func (r *OrgRepo) GetInviteByToken(ctx context.Context, token string) (*domain.Invite, error) {
 	var inv domain.Invite
+	var allowedAuth []byte
 	err := r.db.QueryRow(ctx,
-		`SELECT id, org_id, team_id, email, org_role, team_role, token, invited_by, accepted_at, expires_at, created_at
+		`SELECT id, org_id, team_id, email, org_role, team_role, token, invited_by, accepted_at, expires_at, created_at, allowed_auth
 		 FROM invites WHERE token = $1`, HashToken(token)).
 		Scan(&inv.ID, &inv.OrgID, &inv.TeamID, &inv.Email, &inv.OrgRole, &inv.TeamRole,
-			&inv.Token, &inv.InvitedBy, &inv.AcceptedAt, &inv.ExpiresAt, &inv.CreatedAt)
+			&inv.Token, &inv.InvitedBy, &inv.AcceptedAt, &inv.ExpiresAt, &inv.CreatedAt, &allowedAuth)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNotFound
 		}
 		return nil, fmt.Errorf("get invite: %w", err)
+	}
+	if len(allowedAuth) > 0 {
+		_ = json.Unmarshal(allowedAuth, &inv.AllowedAuth)
 	}
 	return &inv, nil
 }
@@ -255,16 +263,20 @@ func (r *OrgRepo) DeleteInvite(ctx context.Context, orgID, id uuid.UUID) error {
 
 func (r *OrgRepo) GetInviteByID(ctx context.Context, id uuid.UUID) (*domain.Invite, error) {
 	var inv domain.Invite
+	var allowedAuth []byte
 	err := r.db.QueryRow(ctx,
-		`SELECT id, org_id, team_id, email, org_role, team_role, token, invited_by, accepted_at, expires_at, created_at
+		`SELECT id, org_id, team_id, email, org_role, team_role, token, invited_by, accepted_at, expires_at, created_at, allowed_auth
 		 FROM invites WHERE id = $1`, id).
 		Scan(&inv.ID, &inv.OrgID, &inv.TeamID, &inv.Email, &inv.OrgRole, &inv.TeamRole,
-			&inv.Token, &inv.InvitedBy, &inv.AcceptedAt, &inv.ExpiresAt, &inv.CreatedAt)
+			&inv.Token, &inv.InvitedBy, &inv.AcceptedAt, &inv.ExpiresAt, &inv.CreatedAt, &allowedAuth)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNotFound
 		}
 		return nil, fmt.Errorf("get invite by id: %w", err)
+	}
+	if len(allowedAuth) > 0 {
+		_ = json.Unmarshal(allowedAuth, &inv.AllowedAuth)
 	}
 	return &inv, nil
 }
@@ -276,7 +288,7 @@ func (r *OrgRepo) DeletePendingInviteByEmail(ctx context.Context, orgID uuid.UUI
 
 func (r *OrgRepo) ListPendingInvites(ctx context.Context, orgID uuid.UUID) ([]domain.Invite, error) {
 	rows, err := r.db.Query(ctx,
-		`SELECT id, org_id, team_id, email, org_role, team_role, invited_by, expires_at, created_at
+		`SELECT id, org_id, team_id, email, org_role, team_role, invited_by, expires_at, created_at, allowed_auth
 		 FROM invites WHERE org_id = $1 AND accepted_at IS NULL AND expires_at > NOW()
 		 ORDER BY created_at DESC`, orgID)
 	if err != nil {
@@ -286,8 +298,12 @@ func (r *OrgRepo) ListPendingInvites(ctx context.Context, orgID uuid.UUID) ([]do
 	var invites []domain.Invite
 	for rows.Next() {
 		var inv domain.Invite
-		if err := rows.Scan(&inv.ID, &inv.OrgID, &inv.TeamID, &inv.Email, &inv.OrgRole, &inv.TeamRole, &inv.InvitedBy, &inv.ExpiresAt, &inv.CreatedAt); err != nil {
+		var allowedAuth []byte
+		if err := rows.Scan(&inv.ID, &inv.OrgID, &inv.TeamID, &inv.Email, &inv.OrgRole, &inv.TeamRole, &inv.InvitedBy, &inv.ExpiresAt, &inv.CreatedAt, &allowedAuth); err != nil {
 			return nil, err
+		}
+		if len(allowedAuth) > 0 {
+			_ = json.Unmarshal(allowedAuth, &inv.AllowedAuth)
 		}
 		invites = append(invites, inv)
 	}
@@ -379,4 +395,123 @@ func (r *OrgRepo) ListAll(ctx context.Context, page, perPage int) ([]domain.Orga
 		orgs = append(orgs, o)
 	}
 	return orgs, total, nil
+}
+
+// ── Invite Team Assignments ──
+
+func (r *OrgRepo) CreateInviteTeamAssignments(ctx context.Context, inviteID uuid.UUID, assignments []domain.InviteTeamAssign) error {
+	for _, a := range assignments {
+		_, err := r.db.Exec(ctx,
+			`INSERT INTO invite_team_assignments (id, invite_id, team_id, team_role)
+			 VALUES ($1, $2, $3, $4)`,
+			uuid.New(), inviteID, a.TeamID, a.TeamRole)
+		if err != nil {
+			if isUniqueViolation(err) {
+				return ErrConflict
+			}
+			return fmt.Errorf("create invite team assignment: %w", err)
+		}
+	}
+	return nil
+}
+
+func (r *OrgRepo) GetInviteTeamAssignments(ctx context.Context, inviteID uuid.UUID) ([]domain.InviteTeamAssign, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT ita.team_id, ita.team_role, t.name
+		 FROM invite_team_assignments ita
+		 JOIN teams t ON ita.team_id = t.id
+		 WHERE ita.invite_id = $1
+		 ORDER BY ita.created_at`, inviteID)
+	if err != nil {
+		return nil, fmt.Errorf("get invite team assignments: %w", err)
+	}
+	defer rows.Close()
+
+	var assignments []domain.InviteTeamAssign
+	for rows.Next() {
+		var a domain.InviteTeamAssign
+		if err := rows.Scan(&a.TeamID, &a.TeamRole, &a.TeamName); err != nil {
+			return nil, err
+		}
+		assignments = append(assignments, a)
+	}
+	return assignments, nil
+}
+
+func (r *OrgRepo) GetPendingInviteByEmail(ctx context.Context, email string) (*domain.Invite, error) {
+	var inv domain.Invite
+	var allowedAuth []byte
+	err := r.db.QueryRow(ctx,
+		`SELECT id, org_id, team_id, email, org_role, team_role, token, invited_by, accepted_at, expires_at, created_at, allowed_auth
+		 FROM invites
+		 WHERE email = $1 AND accepted_at IS NULL AND expires_at > NOW()
+		 ORDER BY created_at DESC
+		 LIMIT 1`, email).
+		Scan(&inv.ID, &inv.OrgID, &inv.TeamID, &inv.Email, &inv.OrgRole, &inv.TeamRole,
+			&inv.Token, &inv.InvitedBy, &inv.AcceptedAt, &inv.ExpiresAt, &inv.CreatedAt, &allowedAuth)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("get pending invite by email: %w", err)
+	}
+	if len(allowedAuth) > 0 {
+		_ = json.Unmarshal(allowedAuth, &inv.AllowedAuth)
+	}
+	return &inv, nil
+}
+
+func (r *OrgRepo) FindPendingInvitesWithTeamAssignment(ctx context.Context, teamID uuid.UUID) ([]domain.Invite, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT DISTINCT i.id, i.org_id, i.team_id, i.email, i.org_role, i.team_role, i.invited_by, i.expires_at, i.created_at, i.allowed_auth
+		 FROM invites i
+		 JOIN invite_team_assignments ita ON i.id = ita.invite_id
+		 WHERE ita.team_id = $1 AND i.accepted_at IS NULL AND i.expires_at > NOW()
+		 ORDER BY i.created_at DESC`, teamID)
+	if err != nil {
+		return nil, fmt.Errorf("find pending invites with team assignment: %w", err)
+	}
+	defer rows.Close()
+
+	var invites []domain.Invite
+	for rows.Next() {
+		var inv domain.Invite
+		var allowedAuth []byte
+		if err := rows.Scan(&inv.ID, &inv.OrgID, &inv.TeamID, &inv.Email, &inv.OrgRole, &inv.TeamRole, &inv.InvitedBy, &inv.ExpiresAt, &inv.CreatedAt, &allowedAuth); err != nil {
+			return nil, err
+		}
+		if len(allowedAuth) > 0 {
+			_ = json.Unmarshal(allowedAuth, &inv.AllowedAuth)
+		}
+		invites = append(invites, inv)
+	}
+	return invites, nil
+}
+
+func (r *OrgRepo) CountInviteTeamAssignments(ctx context.Context, inviteID uuid.UUID) (int, error) {
+	var count int
+	err := r.db.QueryRow(ctx,
+		`SELECT COUNT(*) FROM invite_team_assignments WHERE invite_id = $1`, inviteID).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("count invite team assignments: %w", err)
+	}
+	return count, nil
+}
+
+func (r *OrgRepo) DeleteInviteTeamAssignment(ctx context.Context, inviteID uuid.UUID, teamID uuid.UUID) error {
+	_, err := r.db.Exec(ctx,
+		`DELETE FROM invite_team_assignments WHERE invite_id = $1 AND team_id = $2`, inviteID, teamID)
+	if err != nil {
+		return fmt.Errorf("delete invite team assignment: %w", err)
+	}
+	return nil
+}
+
+func (r *OrgRepo) RevokePendingInvitesByLegacyTeamID(ctx context.Context, teamID uuid.UUID) error {
+	_, err := r.db.Exec(ctx,
+		`DELETE FROM invites WHERE team_id = $1 AND accepted_at IS NULL`, teamID)
+	if err != nil {
+		return fmt.Errorf("revoke pending invites by legacy team id: %w", err)
+	}
+	return nil
 }
