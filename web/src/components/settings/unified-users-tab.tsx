@@ -868,52 +868,71 @@ function InviteDialog({ orgId }: { orgId: string }) {
       <DialogTrigger asChild>
         <Button size="sm" className="gap-1.5"><UserPlus className="h-3.5 w-3.5" /> Invite User</Button>
       </DialogTrigger>
-      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Invite a user</DialogTitle>
+          <DialogTitle className="flex items-center gap-2"><UserPlus className="h-5 w-5 text-primary" /> Invite a user</DialogTitle>
           <DialogDescription>They&apos;ll receive an email with a link to join your organization.</DialogDescription>
         </DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>Email</Label>
-            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="colleague@example.com" onKeyDown={(e) => e.key === "Enter" && invite()} />
-            {email && !emailValid && (
-              <p className="text-xs text-destructive">Please enter a valid email address</p>
-            )}
-          </div>
-          <div className="space-y-2">
-            <Label>Organization Role</Label>
-            <Select value={role} onValueChange={setRole}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {orgRoles.map((r) => (
-                  <SelectItem key={r.value} value={r.value}>{r.label} — {r.description}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <div className="space-y-5">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Email</Label>
+              <div className="relative">
+                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="colleague@example.com" onKeyDown={(e) => e.key === "Enter" && invite()} className="pl-9" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              </div>
+              {email && !emailValid && (
+                <p className="text-xs text-destructive">Please enter a valid email address</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Organization Role</Label>
+              <Select value={role} onValueChange={setRole}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {orgRoles.map((r) => (
+                    <SelectItem key={r.value} value={r.value}>{r.label} — {r.description}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Auth Method Selector */}
-          <div className="border-t pt-4 space-y-3">
-            <div className="space-y-1">
-              <Label>Allowed Auth Methods</Label>
-              <p className="text-xs text-muted-foreground">Choose which authentication methods this user can use to accept the invite.</p>
+          <div className="border-t pt-5 space-y-3">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-purple-100">
+                <Shield className="h-3.5 w-3.5 text-purple-600" />
+              </div>
+              <div>
+                <Label className="text-sm font-medium">Allowed Auth Methods</Label>
+                <p className="text-[11px] text-muted-foreground">Choose which methods this user can use to accept.</p>
+              </div>
             </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between rounded-lg border p-2.5">
-                <span className="text-sm">Any method</span>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between rounded-lg border p-3 bg-muted/30">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Any method</span>
+                </div>
                 <Switch checked={authAny} onCheckedChange={(v) => {
                   setAuthAny(v);
                   if (v) { setAuthPassword(false); setAuthSSO({}); }
                 }} />
               </div>
-              <div className="flex items-center justify-between rounded-lg border p-2.5">
-                <span className="text-sm">Password</span>
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div className="flex items-center gap-2">
+                  <KeyRound className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">Password</span>
+                </div>
                 <Switch checked={authAny || authPassword} disabled={authAny} onCheckedChange={setAuthPassword} />
               </div>
               {ssoProviders.map((p) => (
-                <div key={p.name} className="flex items-center justify-between rounded-lg border p-2.5">
-                  <span className="text-sm capitalize">{p.label || p.name}</span>
+                <div key={p.name} className="flex items-center justify-between rounded-lg border p-3">
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm capitalize">{p.label || p.name}</span>
+                  </div>
                   <Switch checked={authAny || (authSSO[p.name] ?? false)} disabled={authAny} onCheckedChange={(v) => setAuthSSO({ ...authSSO, [p.name]: v })} />
                 </div>
               ))}
@@ -922,11 +941,16 @@ function InviteDialog({ orgId }: { orgId: string }) {
 
           {/* Multi-Team Selector */}
           {teams.length > 0 && (
-            <div className="border-t pt-4 space-y-3">
+            <div className="border-t pt-5 space-y-3">
               <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <Label>Team Assignments <span className="text-muted-foreground font-normal">(optional)</span></Label>
-                  <p className="text-xs text-muted-foreground">Assign the user to one or more teams when they accept.</p>
+                <div className="flex items-center gap-2">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-100">
+                    <Users className="h-3.5 w-3.5 text-violet-600" />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">Team Assignments <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                    <p className="text-[11px] text-muted-foreground">Assign to teams when they accept.</p>
+                  </div>
                 </div>
                 {canAddTeam && (
                   <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={addTeamAssignment}>
@@ -960,8 +984,8 @@ function InviteDialog({ orgId }: { orgId: string }) {
             </div>
           )}
 
-          <Button onClick={invite} className="w-full" disabled={!email || !emailValid || sending}>
-            {sending ? "Sending…" : "Send Invite"}
+          <Button onClick={invite} className="w-full h-11 text-sm font-medium gap-2" disabled={!email || !emailValid || sending}>
+            {sending ? <><RefreshCw className="h-4 w-4 animate-spin" /> Sending…</> : <><Mail className="h-4 w-4" /> Send Invite</>}
           </Button>
         </div>
       </DialogContent>
@@ -1079,15 +1103,15 @@ function BulkInviteDialog({ orgId }: { orgId: string }) {
       <DialogTrigger asChild>
         <Button size="sm" variant="outline" className="gap-1.5"><Upload className="h-3.5 w-3.5" /> Bulk Invite</Button>
       </DialogTrigger>
-      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Bulk Invite</DialogTitle>
+          <DialogTitle className="flex items-center gap-2"><Upload className="h-5 w-5 text-primary" /> Bulk Invite</DialogTitle>
           <DialogDescription>Invite multiple users at once. All invites share the same role, auth methods, and team assignments.</DialogDescription>
         </DialogHeader>
-        <div className="space-y-4">
+        <div className="space-y-5">
           {/* Email textarea */}
           <div className="space-y-2">
-            <Label>Email Addresses</Label>
+            <Label className="text-sm font-medium">Email Addresses</Label>
             <Textarea
               value={emailsText}
               onChange={(e) => setEmailsText(e.target.value)}
@@ -1114,26 +1138,40 @@ function BulkInviteDialog({ orgId }: { orgId: string }) {
           </div>
 
           {/* Auth Method Selector */}
-          <div className="border-t pt-4 space-y-3">
-            <div className="space-y-1">
-              <Label>Allowed Auth Methods</Label>
-              <p className="text-xs text-muted-foreground">Applied to all invites in this batch.</p>
+          <div className="border-t pt-5 space-y-3">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-purple-100">
+                <Shield className="h-3.5 w-3.5 text-purple-600" />
+              </div>
+              <div>
+                <Label className="text-sm font-medium">Allowed Auth Methods</Label>
+                <p className="text-[11px] text-muted-foreground">Applied to all invites in this batch.</p>
+              </div>
             </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between rounded-lg border p-2.5">
-                <span className="text-sm">Any method</span>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between rounded-lg border p-3 bg-muted/30">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Any method</span>
+                </div>
                 <Switch checked={authAny} onCheckedChange={(v) => {
                   setAuthAny(v);
                   if (v) { setAuthPassword(false); setAuthSSO({}); }
                 }} />
               </div>
-              <div className="flex items-center justify-between rounded-lg border p-2.5">
-                <span className="text-sm">Password</span>
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div className="flex items-center gap-2">
+                  <KeyRound className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">Password</span>
+                </div>
                 <Switch checked={authAny || authPassword} disabled={authAny} onCheckedChange={setAuthPassword} />
               </div>
               {ssoProviders.map((p) => (
-                <div key={p.name} className="flex items-center justify-between rounded-lg border p-2.5">
-                  <span className="text-sm capitalize">{p.label || p.name}</span>
+                <div key={p.name} className="flex items-center justify-between rounded-lg border p-3">
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm capitalize">{p.label || p.name}</span>
+                  </div>
                   <Switch checked={authAny || (authSSO[p.name] ?? false)} disabled={authAny} onCheckedChange={(v) => setAuthSSO({ ...authSSO, [p.name]: v })} />
                 </div>
               ))}
@@ -1142,11 +1180,16 @@ function BulkInviteDialog({ orgId }: { orgId: string }) {
 
           {/* Multi-Team Selector */}
           {teams.length > 0 && (
-            <div className="border-t pt-4 space-y-3">
+            <div className="border-t pt-5 space-y-3">
               <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <Label>Team Assignments <span className="text-muted-foreground font-normal">(optional)</span></Label>
-                  <p className="text-xs text-muted-foreground">Applied to all invites in this batch.</p>
+                <div className="flex items-center gap-2">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-100">
+                    <Users className="h-3.5 w-3.5 text-violet-600" />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">Team Assignments <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                    <p className="text-[11px] text-muted-foreground">Applied to all invites in this batch.</p>
+                  </div>
                 </div>
                 {canAddTeam && (
                   <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={addTeamAssignment}>
@@ -1180,26 +1223,26 @@ function BulkInviteDialog({ orgId }: { orgId: string }) {
             </div>
           )}
 
-          <Button onClick={sendBulk} className="w-full" disabled={emailCount === 0 || emailCount > 100 || sending}>
-            {sending ? "Sending…" : `Send ${emailCount} Invite${emailCount !== 1 ? "s" : ""}`}
+          <Button onClick={sendBulk} className="w-full h-11 text-sm font-medium gap-2" disabled={emailCount === 0 || emailCount > 100 || sending}>
+            {sending ? <><RefreshCw className="h-4 w-4 animate-spin" /> Sending…</> : <><Upload className="h-4 w-4" /> Send {emailCount} Invite{emailCount !== 1 ? "s" : ""}</>}
           </Button>
 
           {/* Results summary */}
           {result && (
-            <div className="border-t pt-4 space-y-3">
-              <p className="text-sm font-medium">Results</p>
-              <div className="grid grid-cols-3 gap-2 text-center">
-                <div className="rounded-lg border p-2">
-                  <p className="text-lg font-bold text-green-600">{result.created}</p>
-                  <p className="text-xs text-muted-foreground">Created</p>
+            <div className="border-t pt-5 space-y-4">
+              <p className="text-sm font-semibold">Results</p>
+              <div className="grid grid-cols-3 gap-3 text-center">
+                <div className="rounded-xl border p-3 bg-green-50">
+                  <p className="text-2xl font-bold text-green-600 tabular-nums">{result.created}</p>
+                  <p className="text-xs font-medium text-green-700">Created</p>
                 </div>
-                <div className="rounded-lg border p-2">
-                  <p className="text-lg font-bold text-amber-600">{result.skipped?.length ?? 0}</p>
-                  <p className="text-xs text-muted-foreground">Skipped</p>
+                <div className="rounded-xl border p-3 bg-amber-50">
+                  <p className="text-2xl font-bold text-amber-600 tabular-nums">{result.skipped?.length ?? 0}</p>
+                  <p className="text-xs font-medium text-amber-700">Skipped</p>
                 </div>
-                <div className="rounded-lg border p-2">
-                  <p className="text-lg font-bold text-red-600">{result.failed?.length ?? 0}</p>
-                  <p className="text-xs text-muted-foreground">Failed</p>
+                <div className="rounded-xl border p-3 bg-red-50">
+                  <p className="text-2xl font-bold text-red-600 tabular-nums">{result.failed?.length ?? 0}</p>
+                  <p className="text-xs font-medium text-red-700">Failed</p>
                 </div>
               </div>
               {result.skipped && result.skipped.length > 0 && (
