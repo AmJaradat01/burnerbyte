@@ -22,6 +22,7 @@ import { UnifiedUsersTab } from "@/components/settings/unified-users-tab";
 import { RolesTab } from "@/components/settings/roles-tab";
 import { useRoles } from "@/hooks/use-roles";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import type { Organization, OrgSettings, SystemStats } from "@/types";
 
 export default function SettingsPage() {
@@ -780,6 +781,54 @@ function SSOProvidersTab() {
   const [testResults, setTestResults] = useState<Record<string, SSOTestResultData>>({});
   const [testing, setTesting] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const validateUrl = (value: string): boolean => {
+    if (!value) return false;
+    try { new URL(value); return true; } catch { return false; }
+  };
+
+  const validateForm = (form: Partial<SSOProviderData>): Record<string, string> => {
+    const errs: Record<string, string> = {};
+    if (!form.name?.trim()) errs.name = "Name is required";
+    if (!form.client_id?.trim()) errs.client_id = "Client ID is required";
+    if (!form.client_secret?.trim()) errs.client_secret = "Client Secret is required";
+    if (!form.redirect_url?.trim()) errs.redirect_url = "Redirect URL is required";
+    else if (!validateUrl(form.redirect_url)) errs.redirect_url = "Invalid URL format";
+    return errs;
+  };
+
+  const handleFieldChange = (key: string, val: unknown) => {
+    setEditing((prev) => {
+      if (!prev) return prev;
+      const updated = { ...prev, [key]: val };
+      const newErrors = validateForm(updated);
+      setErrors(newErrors);
+      return updated;
+    });
+  };
+
+  const handleFieldBlur = (key: string) => {
+    setTouched((prev) => ({ ...prev, [key]: true }));
+    if (editing) {
+      const newErrors = validateForm(editing);
+      setErrors(newErrors);
+    }
+  };
+
+  const isFormValid = editing ? Object.keys(validateForm(editing)).length === 0 : false;
+
+  // Reset validation state when editing changes
+  const editingId = editing?.id ?? (editing ? "__new__" : null);
+  const [lastEditingId, setLastEditingId] = useState<string | null>(null);
+  if (editingId !== lastEditingId) {
+    setLastEditingId(editingId);
+    if (editing) {
+      setTouched({});
+      setErrors({});
+    }
+  }
 
   const handleSave = async () => {
     if (!editing) return;
@@ -829,93 +878,67 @@ function SSOProvidersTab() {
 
   if (isLoading) return <div className="space-y-4">{Array.from({ length: 2 }).map((_, i) => <Card key={i}><CardContent className="pt-6"><Skeleton className="h-24 w-full" /></CardContent></Card>)}</div>;
 
+  // Compute summary stats
+  const providerList = providers ?? [];
+  const enabledCount = providerList.filter((p) => p.enabled).length;
+  const totalLinkedUsers = providerList.reduce((sum, p) => sum + (p.linked_user_count ?? 0), 0);
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold">SSO Providers</h3>
-          <p className="text-sm text-muted-foreground">Configure single sign-on providers for your platform.</p>
-        </div>
-        <Button size="sm" className="gap-1.5" onClick={() => setEditing({ ...emptyProvider })}>
-          <Plus className="h-4 w-4" /> Add Provider
-        </Button>
-      </div>
-
-      {/* Provider list */}
-      {(providers ?? []).map((p) => {
-        const providerColors: Record<string, string> = {
-          github: "bg-gray-900 text-white",
-          google: "bg-blue-100 text-blue-600",
-          azure: "bg-sky-100 text-sky-600",
-          okta: "bg-indigo-100 text-indigo-600",
-          oidc: "bg-violet-100 text-violet-600",
-        };
-        const iconBg = p.enabled ? (providerColors[p.provider_type] ?? "bg-green-100 text-green-600") : "bg-gray-100 text-gray-400";
-        return (
-        <Card key={p.id} className="overflow-hidden transition-all hover:shadow-md">
-          <div className={`h-1.5 ${p.enabled ? "bg-gradient-to-r from-green-500/80 to-green-500/20" : "bg-gradient-to-r from-gray-300/80 to-gray-300/20"}`} />
-          <CardContent className="pt-5 pb-4">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                <div className={`h-10 w-10 rounded-lg flex items-center justify-center shadow-sm ${iconBg}`}>
-                  <Shield className="h-5 w-5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium">{p.name}</p>
-                    <Badge variant={p.enabled ? "default" : "secondary"} className="text-xs">{p.enabled ? "Enabled" : "Disabled"}</Badge>
-                    <Badge variant="outline" className="text-xs capitalize">{p.provider_type}</Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground">{p.linked_user_count ?? 0} linked users · Created {new Date(p.created_at).toLocaleDateString()}</p>
-                </div>
+      {/* Styled header card */}
+      <Card className="overflow-hidden">
+        <div className="h-2 bg-gradient-to-r from-emerald-500/80 to-emerald-500/20" />
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-7 w-7 rounded-md bg-emerald-500/10 flex items-center justify-center">
+                <Shield className="h-4 w-4 text-emerald-600" />
               </div>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" className="gap-1" onClick={() => handleTest(p)} disabled={testing === p.id}>
-                  {testing === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
-                  Test
-                </Button>
-                <Button variant="outline" size="sm" className="gap-1" onClick={() => setEditing(p)}>
-                  <Pencil className="h-3.5 w-3.5" /> Edit
-                </Button>
-                <Button variant="destructive" size="sm" className="gap-1" onClick={() => handleDelete(p)} disabled={deleting === p.id}>
-                  <Trash2 className="h-3.5 w-3.5" /> {deleting === p.id ? "Deleting…" : "Delete"}
-                </Button>
+              <div>
+                <CardTitle className="text-base">SSO Providers</CardTitle>
+                <CardDescription>Configure single sign-on providers for your platform.</CardDescription>
               </div>
             </div>
+            <Button size="sm" className="gap-1.5" onClick={() => setEditing({ ...emptyProvider })}>
+              <Plus className="h-4 w-4" /> Add Provider
+            </Button>
+          </div>
+        </CardHeader>
+      </Card>
 
-            {/* Test result */}
-            {testResults[p.id] && (
-              <div className={`mt-3 p-3 rounded-lg border text-xs ${testResults[p.id].success ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-700 border-red-200"}`}>
-                <div className="flex items-center gap-1.5">
-                  {testResults[p.id].success ? <CheckCircle2 className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
-                  <span className="font-medium">{testResults[p.id].success ? "Connection successful" : "Connection failed"}</span>
-                </div>
-                <p className="mt-1 text-[11px] opacity-80">{testResults[p.id].message}
-                {testResults[p.id].endpoint && <span className="ml-1 font-mono">{testResults[p.id].endpoint}</span>}
-                {testResults[p.id].response_time && <span className="ml-1">({testResults[p.id].response_time})</span>}
-                </p>
-              </div>
-            )}
+      {/* Summary stats */}
+      {providerList.length > 0 && (
+        <div className="grid grid-cols-2 gap-3">
+          <Card>
+            <CardContent className="pt-4 pb-3">
+              <p className="text-2xl font-bold tabular-nums">{enabledCount}</p>
+              <p className="text-xs text-muted-foreground">Enabled Providers</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4 pb-3">
+              <p className="text-2xl font-bold tabular-nums">{totalLinkedUsers}</p>
+              <p className="text-xs text-muted-foreground">Linked Users</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
-            {/* Claim mappings display */}
-            {p.claim_mappings && p.claim_mappings.length > 0 && (
-              <div className="mt-3 pt-3 border-t">
-                <p className="text-xs font-medium text-muted-foreground mb-1">Claim Mappings</p>
-                <div className="space-y-1">
-                  {p.claim_mappings.map((m, i) => (
-                    <div key={i} className="text-xs text-muted-foreground">
-                      {m.claim_name}={m.claim_value} → org:{m.org_role}{m.team_id ? `, team:${m.team_role}` : ""}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-        );
-      })}
+      {/* Provider list */}
+      {providerList.map((p) => (
+        <ProviderCard
+          key={p.id}
+          provider={p}
+          testing={testing}
+          deleting={deleting}
+          testResults={testResults}
+          onTest={handleTest}
+          onEdit={setEditing}
+          onDelete={handleDelete}
+        />
+      ))}
 
-      {(providers ?? []).length === 0 && (
+      {providerList.length === 0 && (
         <Card className="border-dashed">
           <CardContent className="pt-8 pb-8 text-center">
             <div className="mx-auto h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
@@ -943,8 +966,9 @@ function SSOProvidersTab() {
           <CardContent className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label className="text-xs">Name</Label>
-                <Input value={editing.name ?? ""} onChange={(e) => set("name", e.target.value)} placeholder="e.g. google, github-corp" className="h-8 text-xs" disabled={!!editing.id} />
+                <Label className="text-xs">Name <span className="text-destructive">*</span></Label>
+                <Input value={editing.name ?? ""} onChange={(e) => handleFieldChange("name", e.target.value)} onBlur={() => handleFieldBlur("name")} placeholder="e.g. google, github-corp" className="h-8 text-xs" disabled={!!editing.id} />
+                {touched.name && errors.name && <p className="text-[10px] text-destructive">{errors.name}</p>}
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Provider Type</Label>
@@ -975,16 +999,19 @@ function SSOProvidersTab() {
             )}
 
             <div className="space-y-1">
-              <Label className="text-xs">Client ID</Label>
-              <Input value={editing.client_id ?? ""} onChange={(e) => set("client_id", e.target.value)} placeholder="your-client-id" className="h-8 font-mono text-xs" />
+              <Label className="text-xs">Client ID <span className="text-destructive">*</span></Label>
+              <Input value={editing.client_id ?? ""} onChange={(e) => handleFieldChange("client_id", e.target.value)} onBlur={() => handleFieldBlur("client_id")} placeholder="your-client-id" className="h-8 font-mono text-xs" />
+              {touched.client_id && errors.client_id && <p className="text-[10px] text-destructive">{errors.client_id}</p>}
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Client Secret</Label>
-              <Input type="password" value={editing.client_secret ?? ""} onChange={(e) => set("client_secret", e.target.value)} placeholder="your-client-secret" className="h-8 font-mono text-xs" />
+              <Label className="text-xs">Client Secret <span className="text-destructive">*</span></Label>
+              <Input type="password" value={editing.client_secret ?? ""} onChange={(e) => handleFieldChange("client_secret", e.target.value)} onBlur={() => handleFieldBlur("client_secret")} placeholder="your-client-secret" className="h-8 font-mono text-xs" />
+              {touched.client_secret && errors.client_secret && <p className="text-[10px] text-destructive">{errors.client_secret}</p>}
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Redirect URL</Label>
-              <Input value={editing.redirect_url ?? ""} onChange={(e) => set("redirect_url", e.target.value)} placeholder="https://your-domain/api/v1/auth/sso/{name}/callback" className="h-8 font-mono text-xs" />
+              <Label className="text-xs">Redirect URL <span className="text-destructive">*</span></Label>
+              <Input value={editing.redirect_url ?? ""} onChange={(e) => handleFieldChange("redirect_url", e.target.value)} onBlur={() => handleFieldBlur("redirect_url")} placeholder="https://your-domain/api/v1/auth/sso/{name}/callback" className="h-8 font-mono text-xs" />
+              {touched.redirect_url && errors.redirect_url && <p className="text-[10px] text-destructive">{errors.redirect_url}</p>}
             </div>
 
             <div className="border-t pt-3 space-y-3">
@@ -1002,30 +1029,29 @@ function SSOProvidersTab() {
                 </div>
                 <Switch checked={editing.auto_provision ?? false} onCheckedChange={(v) => set("auto_provision", v)} />
               </div>
-              {editing.auto_provision && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <Label className="text-xs">Default Org Role</Label>
-                    <Select value={editing.default_org_role ?? "member"} onValueChange={(v) => set("default_org_role", v)}>
-                      <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="member">Member</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Default Team Role</Label>
-                    <Select value={editing.default_team_role ?? "member"} onValueChange={(v) => set("default_team_role", v)}>
-                      <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="member">Member</SelectItem>
-                        <SelectItem value="lead">Lead</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+              <div className={`grid grid-cols-2 gap-3 ${!editing.auto_provision ? "opacity-60" : ""}`}>
+                <div className="space-y-1">
+                  <Label className="text-xs">Default Org Role</Label>
+                  <Select value={editing.default_org_role ?? "member"} onValueChange={(v) => set("default_org_role", v)}>
+                    <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="member">Member</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-              )}
+                <div className="space-y-1">
+                  <Label className="text-xs">Default Team Role</Label>
+                  <Select value={editing.default_team_role ?? "member"} onValueChange={(v) => set("default_team_role", v)}>
+                    <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="member">Member</SelectItem>
+                      <SelectItem value="lead">Lead</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground">These roles are applied when auto-provision is enabled.</p>
               <div className="space-y-1">
                 <Label className="text-xs">Allowed Email Domains</Label>
                 <Input value={editing.allowed_domains ?? ""} onChange={(e) => set("allowed_domains", e.target.value)} placeholder="company.com, corp.com" className="h-8 text-xs" />
@@ -1044,33 +1070,57 @@ function SSOProvidersTab() {
                 </Button>
               </div>
               {(editing.claim_mappings ?? []).map((m, i) => (
-                <div key={i} className="grid grid-cols-5 gap-1 items-end">
-                  <Input value={m.claim_name} onChange={(e) => {
-                    const mappings = [...(editing.claim_mappings ?? [])];
-                    mappings[i] = { ...mappings[i], claim_name: e.target.value };
-                    set("claim_mappings", mappings);
-                  }} placeholder="claim" className="h-7 text-xs" />
-                  <Input value={m.claim_value} onChange={(e) => {
-                    const mappings = [...(editing.claim_mappings ?? [])];
-                    mappings[i] = { ...mappings[i], claim_value: e.target.value };
-                    set("claim_mappings", mappings);
-                  }} placeholder="value" className="h-7 text-xs" />
-                  <Input value={m.org_role} onChange={(e) => {
-                    const mappings = [...(editing.claim_mappings ?? [])];
-                    mappings[i] = { ...mappings[i], org_role: e.target.value };
-                    set("claim_mappings", mappings);
-                  }} placeholder="org role" className="h-7 text-xs" />
-                  <Input value={m.team_id ?? ""} onChange={(e) => {
-                    const mappings = [...(editing.claim_mappings ?? [])];
-                    mappings[i] = { ...mappings[i], team_id: e.target.value };
-                    set("claim_mappings", mappings);
-                  }} placeholder="team ID" className="h-7 text-xs" />
-                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => {
+                <div key={i} className="relative rounded-lg border p-3 space-y-2">
+                  <Button variant="ghost" size="sm" className="absolute top-2 right-2 h-6 w-6 p-0" onClick={() => {
                     const mappings = (editing.claim_mappings ?? []).filter((_, idx) => idx !== i);
                     set("claim_mappings", mappings);
                   }}>
                     <Trash2 className="h-3 w-3" />
                   </Button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-[10px]">Claim Name</Label>
+                      <Input value={m.claim_name} onChange={(e) => {
+                        const mappings = [...(editing.claim_mappings ?? [])];
+                        mappings[i] = { ...mappings[i], claim_name: e.target.value };
+                        set("claim_mappings", mappings);
+                      }} placeholder="claim" className="h-7 text-xs" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px]">Claim Value</Label>
+                      <Input value={m.claim_value} onChange={(e) => {
+                        const mappings = [...(editing.claim_mappings ?? [])];
+                        mappings[i] = { ...mappings[i], claim_value: e.target.value };
+                        set("claim_mappings", mappings);
+                      }} placeholder="value" className="h-7 text-xs" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-[10px]">Org Role</Label>
+                      <Input value={m.org_role} onChange={(e) => {
+                        const mappings = [...(editing.claim_mappings ?? [])];
+                        mappings[i] = { ...mappings[i], org_role: e.target.value };
+                        set("claim_mappings", mappings);
+                      }} placeholder="org role" className="h-7 text-xs" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px]">Team ID</Label>
+                      <Input value={m.team_id ?? ""} onChange={(e) => {
+                        const mappings = [...(editing.claim_mappings ?? [])];
+                        mappings[i] = { ...mappings[i], team_id: e.target.value };
+                        set("claim_mappings", mappings);
+                      }} placeholder="team ID" className="h-7 text-xs" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px]">Team Role</Label>
+                      <Input value={m.team_role ?? ""} onChange={(e) => {
+                        const mappings = [...(editing.claim_mappings ?? [])];
+                        mappings[i] = { ...mappings[i], team_role: e.target.value };
+                        set("claim_mappings", mappings);
+                      }} placeholder="team role" className="h-7 text-xs" />
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -1081,7 +1131,7 @@ function SSOProvidersTab() {
             )}
 
             <div className="flex gap-2 pt-2">
-              <Button onClick={handleSave} disabled={saving} size="sm">
+              <Button onClick={handleSave} disabled={saving || !isFormValid} size="sm">
                 {saving ? "Saving…" : editing.id ? "Update Provider" : "Create Provider"}
               </Button>
               <Button variant="outline" size="sm" onClick={() => setEditing(null)}>Cancel</Button>
@@ -1091,6 +1141,262 @@ function SSOProvidersTab() {
       )}
 
     </div>
+  );
+}
+
+
+// ── Provider Card (enhanced with info density, delete confirm, test email) ──
+
+function ProviderCard({
+  provider: p,
+  testing,
+  deleting,
+  testResults,
+  onTest,
+  onEdit,
+  onDelete,
+}: {
+  provider: SSOProviderData;
+  testing: string | null;
+  deleting: string | null;
+  testResults: Record<string, SSOTestResultData>;
+  onTest: (p: SSOProviderData) => void;
+  onEdit: (p: Partial<SSOProviderData>) => void;
+  onDelete: (p: SSOProviderData) => void;
+}) {
+  const providerColors: Record<string, string> = {
+    github: "bg-gray-900 text-white",
+    google: "bg-blue-100 text-blue-600",
+    azure: "bg-sky-100 text-sky-600",
+    okta: "bg-indigo-100 text-indigo-600",
+    oidc: "bg-violet-100 text-violet-600",
+  };
+  const iconBg = p.enabled ? (providerColors[p.provider_type] ?? "bg-green-100 text-green-600") : "bg-gray-100 text-gray-400";
+
+  // Fetch domain mappings count for this provider
+  const { data: domainMappings } = useQuery({
+    queryKey: ["sso-domain-mappings", p.id],
+    queryFn: () => api.get<SSODomainMapping[]>(`/admin/sso/providers/${p.id}/domain-mappings`),
+    enabled: !!p.id,
+  });
+  const domainMappingsCount = domainMappings?.length ?? 0;
+
+  // Truncate URL for display
+  const truncatedUrl = p.redirect_url && p.redirect_url.length > 50
+    ? p.redirect_url.slice(0, 50) + "…"
+    : p.redirect_url;
+
+  // Parse allowed domains
+  const allowedDomainsList = p.allowed_domains
+    ? p.allowed_domains.split(",").map((d) => d.trim()).filter(Boolean)
+    : [];
+
+  return (
+    <Card className="overflow-hidden transition-all hover:shadow-md">
+      <div className={`h-1.5 ${p.enabled ? "bg-gradient-to-r from-green-500/80 to-green-500/20" : "bg-gradient-to-r from-gray-300/80 to-gray-300/20"}`} />
+      <CardContent className="pt-5 pb-4">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`h-10 w-10 rounded-lg flex items-center justify-center shadow-sm ${iconBg}`}>
+              <Shield className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <p className="font-medium">{p.name}</p>
+                <Badge variant={p.enabled ? "default" : "secondary"} className="text-xs">{p.enabled ? "Enabled" : "Disabled"}</Badge>
+                <Badge variant="outline" className="text-xs capitalize">{p.provider_type}</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {p.linked_user_count ?? 0} linked users · Created {new Date(p.created_at).toLocaleDateString()}
+                {domainMappingsCount > 0 && <> · {domainMappingsCount} domain mapping{domainMappingsCount !== 1 ? "s" : ""}</>}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" className="gap-1" onClick={() => onTest(p)} disabled={testing === p.id}>
+              {testing === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+              Test
+            </Button>
+            <TestEmailDialog provider={p} />
+            <Button variant="outline" size="sm" className="gap-1" onClick={() => onEdit(p)}>
+              <Pencil className="h-3.5 w-3.5" /> Edit
+            </Button>
+            <ConfirmDialog
+              trigger={
+                <Button variant="destructive" size="sm" className="gap-1" disabled={deleting === p.id}>
+                  <Trash2 className="h-3.5 w-3.5" /> {deleting === p.id ? "Deleting…" : "Delete"}
+                </Button>
+              }
+              title="Delete SSO provider?"
+              description={`Remove "${p.name}"? This provider has ${p.linked_user_count ?? 0} linked users who will lose SSO access.`}
+              onConfirm={() => onDelete(p)}
+            />
+          </div>
+        </div>
+
+        {/* Provider details */}
+        <div className="mt-3 pt-3 border-t space-y-2">
+          {truncatedUrl && (
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-muted-foreground shrink-0">Redirect URL:</span>
+              <span className="font-mono text-[11px] truncate">{truncatedUrl}</span>
+            </div>
+          )}
+          <div className="flex items-center gap-2 flex-wrap">
+            {allowedDomainsList.length > 0 && allowedDomainsList.map((d) => (
+              <Badge key={d} variant="outline" className="text-[10px] font-mono">@{d}</Badge>
+            ))}
+            <Badge variant={p.auto_provision ? "default" : "secondary"} className="text-[10px]">
+              {p.auto_provision ? "Auto-provision on" : "Auto-provision off"}
+            </Badge>
+            {domainMappingsCount > 0 && (
+              <Badge variant="outline" className="text-[10px]">{domainMappingsCount} mapping{domainMappingsCount !== 1 ? "s" : ""}</Badge>
+            )}
+          </div>
+        </div>
+
+        {/* Test result */}
+        {testResults[p.id] && (
+          <div className={`mt-3 p-3 rounded-lg border text-xs ${testResults[p.id].success ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-700 border-red-200"}`}>
+            <div className="flex items-center gap-1.5">
+              {testResults[p.id].success ? <CheckCircle2 className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
+              <span className="font-medium">{testResults[p.id].success ? "Connection successful" : "Connection failed"}</span>
+            </div>
+            <p className="mt-1 text-[11px] opacity-80">{testResults[p.id].message}
+            {testResults[p.id].endpoint && <span className="ml-1 font-mono">{testResults[p.id].endpoint}</span>}
+            {testResults[p.id].response_time && <span className="ml-1">({testResults[p.id].response_time})</span>}
+            </p>
+          </div>
+        )}
+
+        {/* Claim mappings display */}
+        {p.claim_mappings && p.claim_mappings.length > 0 && (
+          <div className="mt-3 pt-3 border-t">
+            <p className="text-xs font-medium text-muted-foreground mb-1">Claim Mappings</p>
+            <div className="space-y-1">
+              {p.claim_mappings.map((m, i) => (
+                <div key={i} className="text-xs text-muted-foreground">
+                  {m.claim_name}={m.claim_value} → org:{m.org_role}{m.team_id ? `, team:${m.team_role}` : ""}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+
+// ── Test Email Dialog (accessible from provider card) ──
+
+function TestEmailDialog({ provider }: { provider: SSOProviderData }) {
+  const [testEmail, setTestEmail] = useState("");
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewResult, setPreviewResult] = useState<DomainMappingPreviewResult | null>(null);
+
+  const handlePreview = async () => {
+    if (!testEmail) return;
+    setPreviewLoading(true);
+    setPreviewResult(null);
+    try {
+      const result = await api.post<DomainMappingPreviewResult>("/admin/sso/domain-mappings/preview", {
+        email: testEmail,
+        provider: provider.name,
+      });
+      setPreviewResult(result);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Preview failed");
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" className="gap-1">
+          <Mail className="h-3.5 w-3.5" /> Test Email
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Test Email Preview — {provider.name}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">Preview what would happen if a user with this email authenticated via this provider.</p>
+          <div className="flex gap-2">
+            <Input
+              value={testEmail}
+              onChange={(e) => setTestEmail(e.target.value)}
+              placeholder="user@example.com"
+              className="h-8 text-xs font-mono flex-1"
+              onKeyDown={(e) => e.key === "Enter" && handlePreview()}
+            />
+            <Button variant="outline" size="sm" className="h-8 text-xs gap-1 shrink-0" onClick={handlePreview} disabled={!testEmail || previewLoading}>
+              {previewLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Search className="h-3 w-3" />}
+              Preview
+            </Button>
+          </div>
+
+          {previewResult && (
+            <div className="rounded-lg border p-3 space-y-2 text-xs">
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground">Domain:</span>
+                <Badge variant="outline" className="font-mono text-[10px]">@{previewResult.email_domain}</Badge>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground">Would bypass invite:</span>
+                {previewResult.would_bypass_invite ? (
+                  <Badge className="text-[10px] bg-green-100 text-green-700 border-green-200">
+                    <CheckCircle2 className="h-3 w-3 mr-0.5" /> Yes
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-[10px] text-amber-600 border-amber-200">
+                    <XCircle className="h-3 w-3 mr-0.5" /> No
+                  </Badge>
+                )}
+              </div>
+              {previewResult.matching_rules.length > 0 ? (
+                <div className="space-y-1">
+                  <span className="text-muted-foreground">Matching rules:</span>
+                  {previewResult.matching_rules.map((rule, i) => (
+                    <div key={i} className="flex items-center gap-1.5 ml-2">
+                      <Badge variant="outline" className="font-mono text-[10px]">@{rule.domain}</Badge>
+                      <span className="text-muted-foreground">→</span>
+                      <Badge variant="outline" className="text-[10px] text-violet-600 border-violet-200">
+                        {rule.team_name || rule.team_id.slice(0, 8)} · {rule.team_role}
+                      </Badge>
+                      <Badge variant="outline" className="text-[10px]">org: {rule.org_role}</Badge>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground">No matching rules found for this domain.</p>
+              )}
+              {previewResult.team_assignments && previewResult.team_assignments.length > 0 && (
+                <div className="space-y-1">
+                  <span className="text-muted-foreground">Predicted team assignments:</span>
+                  <div className="flex flex-wrap gap-1 ml-2">
+                    {previewResult.team_assignments.map((ta, i) => (
+                      <Badge key={i} variant="outline" className="text-[10px] text-violet-600 border-violet-200">
+                        {ta.team_name} · {ta.team_role}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {previewResult.org_role && (
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">Org role:</span>
+                  <Badge variant="outline" className="text-[10px] capitalize">{previewResult.org_role}</Badge>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
