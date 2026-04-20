@@ -54,10 +54,21 @@ export default function ProfilePage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Profile</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Manage your account settings and preferences.</p>
-      </div>
+      {/* Header */}
+      <Card className="overflow-hidden">
+        <div className="h-2 bg-gradient-to-r from-cyan-500/80 to-cyan-500/20" />
+        <CardContent className="pt-5 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="h-7 w-7 rounded-md bg-cyan-500/10 flex items-center justify-center">
+              <Shield className="h-4 w-4 text-cyan-600" />
+            </div>
+            <div>
+              <h1 className="text-base font-semibold">Profile</h1>
+              <p className="text-sm text-muted-foreground">Manage your account settings and preferences.</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Identity banner */}
       <Card>
