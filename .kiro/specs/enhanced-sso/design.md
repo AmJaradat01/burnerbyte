@@ -1,824 +1,285 @@
-# Design Document: Enhanced SSO
+# Enhanced SSO Tab UI/UX Bugfix Design
 
 ## Overview
 
-This design transforms BurnerByte's SSO subsystem from a single-provider OIDC-only implementation into a production-grade, multi-provider authentication platform. The current implementation (`internal/auth/sso.go`) has several critical gaps: GitHub SSO is broken (it points at the GitHub Actions OIDC token endpoint instead of the OAuth2 authorization endpoint), only one provider can be active at a time, there is no account linking/unlinking UI, no connection testing, no IdP group-to-role mapping, and SSO configuration is stored only in the YAML config file.
+The SSO tab in the Settings page has nine UI/UX deficiencies that prevent administrators from effectively managing SSO providers. The backend fully supports all SSO operations, but the frontend fails to expose these capabilities with adequate usability, information density, and visual consistency. This design formalizes the bug conditions, defines the expected correct behavior, hypothesizes root causes in the existing React component code, and outlines a targeted fix plan that enhances the `SSOProvidersTab` and `DomainMappingsSection` components in `web/src/app/settings/page.tsx` while preserving all existing CRUD, test connection, and domain mapping functionality.
 
-The enhanced system delivers:
+## Glossary
 
-- **GitHub OAuth2 fix**: Dedicated OAuth2 flow for GitHub using the correct authorization, token exchange, and user API endpoints — no OIDC discovery required.
-- **Multi-provider support**: Multiple SSO providers configured simultaneously via the `sso_providers` database table, each with independent credentials, claim mappings, and enabled/disabled state.
-- **Account linking/unlinking**: Users can link and unlink SSO identities from their profile page, with safety checks (must have a password before unlinking, enforce_sso blocks unlinking).
-- **SSO connection testing**: Admins can dry-run validate provider configurations (discovery endpoint reachability, credential validity) before going live.
-- **IdP group-to-role mapping**: Claim mapping rules stored as JSONB on each provider, mapping IdP group/role claims to BurnerByte org roles and team memberships.
-- **Enhanced claim extraction**: Standard OIDC claims (picture, given_name, family_name, locale) plus configurable custom claims.
-- **Comprehensive audit trail**: Dedicated audit events for SSO login, login failure, link, unlink, config changes, connection tests, and enforce_sso denials.
-- **Session SSO metadata**: Sessions record which SSO provider was used, displayed in the sessions list.
-- **Database-backed configuration**: `sso_providers` table with encrypted client secrets, merged with file-based config at startup.
-- **Enhanced enforce_sso policy**: Granular enforcement that blocks password login only for users with linked SSO identities.
-- **Frontend overhaul**: Multi-provider SSO buttons on login/register, Connected Accounts section on profile, and a comprehensive admin SSO dashboard.
+- **Bug_Condition (C)**: The set of UI states where the SSO tab renders with deficient UX — missing validation, cramped layouts, hidden information, absent confirmation dialogs, or inconsistent visual treatment
+- **Property (P)**: The desired rendering and interaction behavior for each deficient UI state — always-visible role selectors, spacious claim editors, inline validation, information-dense cards, confirmation dialogs, accessible domain mappings, styled headers, and summary stats
+- **Preservation**: Existing SSO provider CRUD operations, test connection flow, domain mapping CRUD, domain mapping preview, provider-type-specific field rendering, empty state display, and enabled/disabled status indicators that must remain unchanged
+- **SSOProvidersTab**: The React component in `web/src/app/settings/page.tsx` that renders the SSO provider list, edit/create form, and tab header
+- **DomainMappingsSection**: The React component in `web/src/app/settings/page.tsx` that renders domain mapping CRUD and test email preview within the provider edit card
+- **ConfirmDialog**: The reusable confirmation dialog component at `web/src/components/confirm-dialog.tsx` that wraps shadcn/ui AlertDialog
 
-### Key Design Decisions
+## Bug Details
 
-1. **Separate OAuth2 path for GitHub**: GitHub does not support OIDC discovery. Rather than forcing it through the OIDC code path (which is the current broken behavior), the SSO Manager uses a dedicated `handleGitHubCallback` method that exchanges the code at GitHub's token endpoint and fetches user info from the GitHub User API. This keeps the OIDC path clean for providers that support it.
+### Bug Condition
 
-2. **`user_sso_identities` table for multi-provider**: Instead of the current single `sso_provider`/`sso_subject` columns on the users table, a new junction table allows multiple identities per user. The old columns are retained (deprecated) for backward compatibility and populated by the migration.
+The bug manifests across nine distinct UI states within the SSO tab. The `SSOProvidersTab` component renders with insufficient information density, missing validation, confusing conditional visibility, cramped layouts, no delete safety net, buried sub-features, inconsistent visual treatment, and no summary overview.
 
-3. **`sso_providers` table for configuration**: Provider configs are stored in a dedicated table rather than the existing `system_configs` key-value store. This gives us proper relational structure, per-provider CRUD, and the ability to query linked user counts per provider. Client secrets are encrypted at rest using the existing `internal/crypto/encryptor.go` AES-256-GCM encryptor.
+**Formal Specification:**
+```
+FUNCTION isBugCondition(uiState)
+  INPUT: uiState of type SSOTabRenderState
+  OUTPUT: boolean
 
-4. **Database config takes precedence over file config**: When both exist for the same provider name, the database configuration wins. File-based config serves as a bootstrap mechanism for initial setup.
-
-5. **Link intent via state cookie**: The SSO linking flow reuses the existing redirect/callback infrastructure but adds a `link` intent and the authenticated user's ID to the state cookie. This avoids creating new endpoints for the OAuth2 redirect while clearly distinguishing login from linking in the callback handler.
-
-6. **Claim mappings as JSONB on sso_providers**: Each provider stores its own claim mapping rules as a JSONB array, keeping the mapping tightly coupled to the provider that produces the claims. This avoids a separate mapping table and simplifies the admin UI.
-
-7. **Migration 000035**: A single migration creates both new tables (`sso_providers`, `user_sso_identities`), migrates existing SSO data, and adds the `sso_provider_name` column to sessions.
-
-## Architecture
-
-```mermaid
-graph TD
-    subgraph "HTTP Layer"
-        AH[AuthHandler] -->|SSO redirect, callback, link, unlink, status| AS
-        ADH[AdminHandler] -->|SSO CRUD, test connection| SM
-        ADH -->|provider persistence| SPR
-    end
-
-    subgraph "Service Layer"
-        AS[AuthService] -->|SSO login, link, unlink, enforce policy| UR
-        AS -->|session creation with SSO metadata| SR
-        AS -->|identity management| SIR
-        AS -->|group-to-role mapping| OR
-        AS -->|team assignment| TR
-        SM[SSOManager] -->|OIDC discovery, OAuth2 flows| IDP[External IdPs]
-    end
-
-    subgraph "Data Layer"
-        UR[UserRepo] -->|user CRUD| DB[(PostgreSQL)]
-        SR[SessionRepo] -->|sessions with sso_provider_name| DB
-        SIR[SSOIdentityRepo] -->|user_sso_identities| DB
-        SPR[SSOProviderRepo] -->|sso_providers with encrypted secrets| DB
-        OR[OrgRepo] -->|org memberships| DB
-        TR[TeamRepo] -->|team memberships| DB
-    end
-
-    subgraph "Crypto Layer"
-        SPR -->|encrypt/decrypt client_secret| ENC[Encryptor AES-256-GCM]
-    end
-
-    subgraph "Audit Layer"
-        AH -->|sso_login, sso_linked, sso_unlinked| AR[AuditRecorder]
-        ADH -->|sso_config_updated, sso_test| AR
-    end
+  RETURN (uiState.editFormOpen AND roleSelectorsHiddenWhenAutoProvisionOff(uiState))
+         OR (uiState.editFormOpen AND claimMappingsUseSingleRowLayout(uiState))
+         OR (uiState.editFormOpen AND requiredFieldsLackInlineValidation(uiState))
+         OR (uiState.providerListVisible AND cardsLackKeyInfo(uiState))
+         OR (uiState.deleteButtonClicked AND noConfirmationDialogShown(uiState))
+         OR (uiState.providerListVisible AND domainMappingsNotVisibleOnCards(uiState))
+         OR (uiState.providerListVisible AND testEmailPreviewOnlyInEditForm(uiState))
+         OR (uiState.tabHeaderVisible AND headerLacksVisualTreatment(uiState))
+         OR (uiState.tabVisible AND noSummaryStatsDisplayed(uiState))
+END FUNCTION
 ```
 
-### SSO Login Flow (OIDC Provider)
+### Examples
 
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant FE as Login Page
-    participant AH as AuthHandler
-    participant SM as SSOManager
-    participant IdP as Identity Provider
-    participant AS as AuthService
-    participant DB as PostgreSQL
+- **Defect 1**: Admin opens the "Add Provider" form. The auto-provision toggle is visible but the default org role and default team role selectors are hidden. Admin does not understand what roles will be assigned if they enable auto-provision. Expected: role selectors always visible with a hint that they apply when auto-provision is on.
+- **Defect 2**: Admin adds a claim mapping with 5 fields. All fields render in a `grid-cols-5` single row, each ~100px wide. Claim name and claim value are truncated. Expected: a stacked 2-row layout with labeled fields.
+- **Defect 3**: Admin types an invalid redirect URL like `not-a-url` and clicks Save. No inline feedback — error only surfaces from the API response. Expected: real-time URL format validation and required field indicators.
+- **Defect 4**: Admin views the provider list. Cards show name, type, status, linked users, and creation date. No redirect URL, allowed domains, auto-provision indicator, or domain mappings count. Expected: all key config details visible at a glance.
+- **Defect 5**: Admin clicks "Delete" on a provider with 47 linked users. The provider is immediately deleted with no confirmation. Expected: a ConfirmDialog showing provider name, linked user count, and impact warning.
+- **Defect 6**: Admin wants to check domain mappings for a provider. Must click "Edit" and scroll down to the DomainMappingsSection. No indication on the card of how many mappings exist. Expected: domain mappings count badge on card, with quick-view access.
+- **Defect 7**: Admin wants to test an email domain mapping preview. Must open the edit form and scroll to the bottom. Expected: test email preview accessible from the provider card area or a dedicated section.
+- **Defect 8**: Admin views the SSO tab. The header is a plain `<h3>` with a subtitle and "Add Provider" button. Other tabs (General, Roles) use gradient accent cards with icon badges. Expected: consistent styled header card.
+- **Defect 9**: Admin views the SSO tab. No summary of total enabled providers, total linked users, or total domain mappings. Expected: summary stats displayed prominently.
 
-    U->>FE: Click "Sign in with Google"
-    FE->>AH: GET /auth/sso/google
-    AH->>SM: GenerateState()
-    SM-->>AH: state token
-    AH->>AH: Set sso_state + sso_origin cookies
-    AH->>U: 302 Redirect to IdP authorize URL
+## Expected Behavior
 
-    U->>IdP: Authenticate
-    IdP->>AH: GET /auth/sso/google/callback?code=xxx&state=yyy
-    AH->>AH: Validate state cookie
-    AH->>SM: HandleCallback(provider="google", request)
-    SM->>IdP: Exchange code for tokens
-    IdP-->>SM: access_token + id_token
-    SM->>SM: Verify id_token, extract claims
-    SM-->>AH: SSOCallbackResult{email, name, provider, subject, claims}
+### Preservation Requirements
 
-    AH->>AS: SSOLogin(result, ip, userAgent)
-    AS->>DB: Query user_sso_identities(provider, subject)
-    alt Identity found
-        AS->>DB: Update last_used_at
-    else Identity not found, user exists by email
-        AS->>DB: Create identity link
-    else New user
-        AS->>DB: Create user + identity
-        AS->>AS: Auto-provision into org (if configured)
-        AS->>AS: Apply group-to-role mappings
-    end
-    AS->>DB: Create session (sso_provider_name="google")
-    AS-->>AH: user + tokens
+**Unchanged Behaviors:**
+- Creating a new SSO provider via `POST /admin/sso/providers` must continue to work and refresh the provider list
+- Updating an existing SSO provider via `PUT /admin/sso/providers/{id}` must continue to work and refresh the provider list
+- Testing a provider connection via `POST /admin/sso/test` must continue to display inline test results on the provider card
+- Domain mapping CRUD via `/admin/sso/providers/{id}/domain-mappings` endpoints must continue to function
+- Domain mapping preview via `POST /admin/sso/domain-mappings/preview` must continue to display matching rules and team assignments
+- Provider-type-specific fields (Tenant ID for Azure AD, Issuer URL for Okta/OIDC) must continue to render conditionally based on provider type
+- The empty state card ("No SSO providers configured") must continue to display when no providers exist
+- The enabled/disabled gradient bar and badge on provider cards must continue to reflect provider status
 
-    AH->>AH: Audit "user.sso_login"
-    AH->>U: 302 Redirect to frontend with tokens in fragment
-```
+**Scope:**
+All interactions that do NOT involve the nine deficient UI states should be completely unaffected by this fix. This includes:
+- All API call payloads and response handling
+- TanStack Query cache invalidation patterns
+- Provider form field data binding and state management
+- Toast notification messages
+- Loading skeleton states
 
-### SSO Login Flow (GitHub OAuth2)
+## Hypothesized Root Cause
 
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant AH as AuthHandler
-    participant SM as SSOManager
-    participant GH as GitHub
+Based on analysis of the `SSOProvidersTab` component in `web/src/app/settings/page.tsx`, the root causes are:
 
-    U->>AH: GET /auth/sso/github
-    AH->>SM: RedirectURL(provider="github", state)
-    SM-->>AH: https://github.com/login/oauth/authorize?...
-    AH->>U: 302 Redirect
+1. **Conditional Rendering of Role Selectors (Defect 1)**: The default org role and default team role `<Select>` components are wrapped in `{editing.auto_provision && (...)}`, making them invisible until auto-provision is toggled on. The auto-provision toggle itself has a description but the role selectors lack context about when they apply.
 
-    U->>GH: Authorize app
-    GH->>AH: GET /auth/sso/github/callback?code=xxx&state=yyy
-    AH->>SM: HandleCallback(provider="github", request)
-    SM->>GH: POST /login/oauth/access_token (exchange code)
-    GH-->>SM: access_token
-    SM->>GH: GET /user (with Bearer token)
-    GH-->>SM: {id, login, name, email, avatar_url}
-    alt No public email
-        SM->>GH: GET /user/emails
-        GH-->>SM: [{email, primary, verified}]
-        SM->>SM: Select verified primary email
-    end
-    SM-->>AH: SSOCallbackResult{email, name, "github", github_id, claims}
-    Note over AH: Continues same as OIDC flow
-```
+2. **Single-Row Claim Mapping Layout (Defect 2)**: The claim mappings editor uses `grid grid-cols-5 gap-1` for each mapping row, cramming 5 input fields plus a delete button into a single row. No field labels are rendered within the row.
 
-### Account Linking Flow
+3. **No Validation Logic (Defect 3)**: The edit form has no client-side validation. Required fields (name, client_id, client_secret, redirect_url) have no required markers. The redirect URL field has no URL format validation. The `handleSave` function submits directly without pre-validation.
 
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant FE as Profile Page
-    participant AH as AuthHandler
-    participant SM as SSOManager
-    participant AS as AuthService
-    participant DB as PostgreSQL
+4. **Minimal Card Content (Defect 4)**: The provider card only renders `p.name`, `p.enabled` badge, `p.provider_type` badge, `p.linked_user_count`, and `p.created_at`. Fields like `redirect_url`, `allowed_domains`, `auto_provision`, and domain mappings count are not displayed.
 
-    U->>FE: Click "Link Google Account"
-    FE->>AH: GET /auth/sso/google?intent=link
-    AH->>AH: Set sso_state cookie with intent=link + user_id
-    AH->>U: 302 Redirect to Google
+5. **Direct Delete Without Confirmation (Defect 5)**: The delete button calls `handleDelete(p)` directly via `onClick`, bypassing the `ConfirmDialog` component that is already used elsewhere in the codebase (e.g., in `DomainMappingsSection` for domain mapping deletion).
 
-    U->>AH: GET /auth/sso/google/callback?code=xxx&state=yyy
-    AH->>AH: Detect intent=link from state cookie
-    AH->>SM: HandleCallback(provider="google", request)
-    SM-->>AH: SSOCallbackResult
+6. **Domain Mappings Only in Edit Form (Defect 6)**: The `DomainMappingsSection` component is rendered only inside the `{editing && (...)}` block, making it inaccessible from the provider list view. No domain mappings count is shown on provider cards.
 
-    AH->>AS: LinkSSOIdentity(userID, result)
-    AS->>DB: Check identity not already linked to another user
-    AS->>DB: Check user doesn't already have this provider
-    AS->>DB: INSERT into user_sso_identities
-    AS-->>AH: success
+7. **Test Email Preview Buried (Defect 7)**: The test email preview is rendered at the bottom of `DomainMappingsSection`, which itself is at the bottom of the edit form. There is no way to access it without opening the full edit card.
 
-    AH->>AH: Audit "user.sso_linked"
-    AH->>U: 302 Redirect to profile page
-```
+8. **Plain Header (Defect 8)**: The SSO tab header uses a simple `<div>` with `<h3>` and `<p>` elements, unlike other tabs that use `<Card>` with gradient accent bars (`h-2 bg-gradient-to-r`), icon badges (`h-7 w-7 rounded-md`), and `<CardTitle>`/`<CardDescription>`.
 
-## Components and Interfaces
-
-### Domain Model Changes
-
-#### New: `internal/domain/sso.go`
-
-```go
-// SSOIdentity represents a user's linked SSO identity.
-type SSOIdentity struct {
-    ID          uuid.UUID  `json:"id"`
-    UserID      uuid.UUID  `json:"user_id"`
-    Provider    string     `json:"provider"`
-    Subject     string     `json:"subject"`
-    Email       string     `json:"email"`
-    DisplayName string     `json:"display_name"`
-    Metadata    any        `json:"metadata,omitempty"`
-    LinkedAt    time.Time  `json:"linked_at"`
-    LastUsedAt  time.Time  `json:"last_used_at"`
-}
-
-// SSOProvider represents a configured SSO provider stored in the database.
-type SSOProvider struct {
-    ID                   uuid.UUID       `json:"id"`
-    Name                 string          `json:"name"`
-    ProviderType         string          `json:"provider_type"` // "google", "github", "azure", "okta", "oidc"
-    ClientID             string          `json:"client_id"`
-    ClientSecretEncrypted string         `json:"-"`
-    ClientSecret         string          `json:"client_secret,omitempty"` // only for input; masked on output
-    RedirectURL          string          `json:"redirect_url"`
-    IssuerURL            string          `json:"issuer_url,omitempty"`
-    TenantID             string          `json:"tenant_id,omitempty"`
-    AutoProvision        bool            `json:"auto_provision"`
-    DefaultOrgRole       string          `json:"default_org_role,omitempty"`
-    DefaultTeamRole      string          `json:"default_team_role,omitempty"`
-    AllowedDomains       string          `json:"allowed_domains,omitempty"`
-    ClaimMappings        []ClaimMapping  `json:"claim_mappings,omitempty"`
-    CustomClaims         []string        `json:"custom_claims,omitempty"`
-    Enabled              bool            `json:"enabled"`
-    LinkedUserCount      int             `json:"linked_user_count,omitempty"` // computed on read
-    CreatedAt            time.Time       `json:"created_at"`
-    UpdatedAt            time.Time       `json:"updated_at"`
-}
-
-// ClaimMapping maps an IdP claim value to a BurnerByte role/team assignment.
-type ClaimMapping struct {
-    ClaimName    string `json:"claim_name"`    // e.g., "groups", "roles"
-    ClaimValue   string `json:"claim_value"`   // e.g., "engineering", "admin"
-    OrgRole      string `json:"org_role"`       // e.g., "admin", "member"
-    TeamID       string `json:"team_id,omitempty"`
-    TeamRole     string `json:"team_role,omitempty"` // e.g., "lead", "member"
-}
-
-// SSOCallbackResult holds the extracted data from an SSO callback.
-type SSOCallbackResult struct {
-    Email        string            `json:"email"`
-    DisplayName  string            `json:"display_name"`
-    Provider     string            `json:"provider"`
-    Subject      string            `json:"subject"`
-    AvatarURL    string            `json:"avatar_url,omitempty"`
-    Claims       map[string]any    `json:"claims,omitempty"`
-}
-
-// SSOTestResult holds the result of an SSO connection test.
-type SSOTestResult struct {
-    Success      bool   `json:"success"`
-    Endpoint     string `json:"endpoint"`
-    StatusCode   int    `json:"status_code,omitempty"`
-    Message      string `json:"message"`
-    ResponseTime string `json:"response_time"`
-}
-
-// SSOStatusResponse is returned by the SSO status endpoint.
-type SSOStatusResponse struct {
-    Enabled            bool              `json:"enabled"`
-    AllowRegistration  bool              `json:"allow_registration"`
-    EnforceSSO         bool              `json:"enforce_sso"`
-    Providers          []SSOStatusProvider `json:"providers"`
-    PasswordPolicy     any               `json:"password_policy"`
-}
-
-// SSOStatusProvider is a public-facing summary of a configured provider.
-type SSOStatusProvider struct {
-    Name          string `json:"name"`
-    ProviderType  string `json:"provider_type"`
-    Label         string `json:"label"`
-    Enabled       bool   `json:"enabled"`
-}
-```
-
-#### Updated: `internal/domain/user.go`
-
-The `Session` struct gains an SSO provider field:
-
-```go
-type Session struct {
-    // ... existing fields ...
-    SSOProviderName *string `json:"sso_provider_name,omitempty"`
-}
-```
-
-### SSO Manager Changes (`internal/auth/sso.go`)
-
-The SSOManager is refactored from a single-provider model to a multi-provider registry.
-
-```go
-type SSOManager struct {
-    cfg       *config.Config
-    encryptor *crypto.Encryptor
-    providers map[string]*providerState // keyed by provider name
-    mu        sync.RWMutex
-}
-
-type providerState struct {
-    config   domain.SSOProvider
-    oidcProv *oidc.Provider
-    verifier *oidc.IDTokenVerifier
-    oauth    *oauth2.Config
-}
-```
-
-Key method changes:
-
-| Method | Description |
-|--------|-------------|
-| `NewSSOManager(cfg, encryptor)` | Updated constructor accepting encryptor |
-| `LoadProviders(ctx, providers []domain.SSOProvider)` | New — initializes provider states from DB + file config |
-| `IsConfigured() bool` | Updated — returns true if any provider is enabled |
-| `IsProviderConfigured(name string) bool` | New — checks specific provider |
-| `ListProviders() []domain.SSOStatusProvider` | New — returns public provider list for status endpoint |
-| `RedirectURL(ctx, providerName, state) (string, error)` | Updated — accepts provider name |
-| `HandleCallback(ctx, providerName, r) (*domain.SSOCallbackResult, error)` | Updated — dispatches to OIDC or GitHub handler based on provider type |
-| `handleOIDCCallback(ctx, ps, r) (*domain.SSOCallbackResult, error)` | New — extracted OIDC-specific callback logic |
-| `handleGitHubCallback(ctx, ps, r) (*domain.SSOCallbackResult, error)` | New — GitHub OAuth2 flow: token exchange → user API → emails API fallback |
-| `TestConnection(ctx, provider domain.SSOProvider) (*domain.SSOTestResult, error)` | New — dry-run validation with 10s timeout |
-| `extractClaims(idToken, customClaims) map[string]any` | New — extracts standard + custom claims |
-
-### Repository Changes
-
-#### New: `internal/repository/postgres/sso_provider_repo.go`
-
-```go
-type SSOProviderRepo struct {
-    db        database.DBTX
-    encryptor *crypto.Encryptor
-}
-
-func NewSSOProviderRepo(db database.DBTX, enc *crypto.Encryptor) *SSOProviderRepo
-```
-
-| Method | Description |
-|--------|-------------|
-| `Create(ctx, provider)` | Insert with encrypted client_secret |
-| `GetByName(ctx, name) (*domain.SSOProvider, error)` | Fetch + decrypt secret |
-| `GetByID(ctx, id) (*domain.SSOProvider, error)` | Fetch + decrypt secret |
-| `List(ctx) ([]domain.SSOProvider, error)` | List all with decrypted secrets + linked user counts |
-| `ListEnabled(ctx) ([]domain.SSOProvider, error)` | List enabled only |
-| `Update(ctx, provider)` | Update with re-encrypted secret |
-| `Delete(ctx, id)` | Hard delete |
-| `CountLinkedUsers(ctx, providerName) (int, error)` | Count users linked to provider |
-
-#### New: `internal/repository/postgres/sso_identity_repo.go`
-
-```go
-type SSOIdentityRepo struct {
-    db database.DBTX
-}
-
-func NewSSOIdentityRepo(db database.DBTX) *SSOIdentityRepo
-```
-
-| Method | Description |
-|--------|-------------|
-| `Create(ctx, identity)` | Insert new identity link |
-| `GetByProviderSubject(ctx, provider, subject) (*domain.SSOIdentity, error)` | Lookup by provider+subject |
-| `ListByUser(ctx, userID) ([]domain.SSOIdentity, error)` | All identities for a user |
-| `GetByUserAndProvider(ctx, userID, provider) (*domain.SSOIdentity, error)` | Check if user has provider linked |
-| `Delete(ctx, userID, provider) error` | Remove identity link |
-| `UpdateLastUsed(ctx, id) error` | Touch last_used_at |
-| `MigrateFromUsers(ctx) (int, error)` | One-time migration helper (used by migration) |
-
-#### Updated: `internal/repository/postgres/session_repo.go`
-
-- `Create` updated to include `sso_provider_name` column
-- `scanOne` and `ListByUser` updated to scan `sso_provider_name`
-
-### Service Layer Changes (`internal/service/auth_service.go`)
-
-New dependencies:
-
-```go
-type AuthService struct {
-    // ... existing fields ...
-    ssoIdentityRepo *postgres.SSOIdentityRepo
-    ssoProviderRepo *postgres.SSOProviderRepo
-    teamRepo        *postgres.TeamRepo
-}
-```
-
-New and modified methods:
-
-| Method | Description |
-|--------|-------------|
-| `SSOLogin(ctx, result, ip, userAgent)` | Refactored — uses `ssoIdentityRepo` for lookups, creates identity records, applies claim mappings, stores SSO provider on session |
-| `LinkSSOIdentity(ctx, userID, result)` | New — links SSO identity to existing user with conflict checks |
-| `UnlinkSSOIdentity(ctx, userID, provider)` | New — unlinks with password-required and enforce_sso checks |
-| `GetSSOIdentities(ctx, userID) ([]domain.SSOIdentity, error)` | New — returns user's linked identities |
-| `applyClaimMappings(ctx, userID, provider, claims)` | New — maps IdP group claims to org roles and team memberships |
-| `Login(ctx, input, ip, userAgent)` | Updated — enhanced enforce_sso check: only blocks users with linked SSO identities |
-
-### Handler Layer Changes
-
-#### Updated: `internal/handler/auth.go`
-
-New routes:
-
-```
-GET    /auth/sso/{provider}              → SSORedirect (updated for multi-provider)
-GET    /auth/sso/{provider}/callback     → SSOCallback (updated for multi-provider + link intent)
-GET    /auth/sso-status                  → SSOStatus (updated to return provider list)
-DELETE /auth/me/sso/{provider}           → UnlinkSSO (new)
-GET    /auth/me/sso                      → ListSSOIdentities (new)
-```
-
-The `SSORedirect` handler now:
-1. Reads `intent` query param (empty = login, "link" = account linking)
-2. Looks up provider config from the SSOManager by `{provider}` path param
-3. Stores intent + user_id (if linking) in the state cookie
-
-The `SSOCallback` handler now:
-1. Reads intent from state cookie
-2. If intent=link, calls `AuthService.LinkSSOIdentity` and redirects to profile
-3. If intent=login (default), calls `AuthService.SSOLogin` as before
-
-#### Updated: `internal/handler/admin.go`
-
-New routes:
-
-```
-GET    /admin/sso/providers              → ListSSOProviders
-POST   /admin/sso/providers              → CreateSSOProvider
-GET    /admin/sso/providers/{providerId} → GetSSOProvider
-PUT    /admin/sso/providers/{providerId} → UpdateSSOProvider
-DELETE /admin/sso/providers/{providerId} → DeleteSSOProvider
-POST   /admin/sso/test                   → TestSSOConnection
-```
-
-The existing `GET /admin/sso` and `PUT /admin/sso` endpoints are retained for backward compatibility but marked as deprecated. They operate on the first provider in the list.
-
-### Frontend Changes
-
-#### Login Page (`web/src/app/login/page.tsx`)
-
-- `SSOStatus` response updated to include `providers[]` array
-- Renders a separate SSO button for each enabled provider with provider-specific icons/labels
-- Provider label mapping: Google → "Google", GitHub → "GitHub", Azure → "Microsoft", Okta → "Okta", OIDC → custom name
-
-#### Register Page (`web/src/app/register/page.tsx`)
-
-- Same multi-provider SSO button rendering as login page
-
-#### Profile Page (`web/src/app/profile/page.tsx`)
-
-New `ConnectedAccountsCard` component:
-- Fetches `GET /auth/me/sso` for linked identities
-- Fetches `GET /auth/sso-status` for available providers
-- Shows linked providers with email, linked date, and "Unlink" button
-- Shows unlinked but available providers with "Link Account" button
-- Disables "Unlink" when user has no password or enforce_sso is active
-- Hides password change section when user has no password hash
-
-#### Settings Page (`web/src/app/settings/page.tsx`)
-
-New `SSOProvidersTab` component (replaces existing `SSOCard`):
-- Lists all configured providers as cards with status badge, type, linked user count
-- "Add Provider" button opens a form dialog
-- Provider form includes: name, type selector, client ID, client secret, redirect URL, provider-specific fields (tenant ID, issuer URL), auto-provision toggle, default roles, allowed domains
-- Claim mapping editor within each provider card: table of rules with claim name, value pattern, org role, optional team + role
-- "Test Connection" button per provider with inline result display
-- Delete provider with confirmation dialog showing affected user count
-
-### Audit Events
-
-New audit actions added to `internal/audit/recorder.go`:
-
-| Action | Category | Severity |
-|--------|----------|----------|
-| `user.sso_login` | auth | info | (already exists) |
-| `user.sso_login_failed` | auth | warning | (new) |
-| `user.sso_linked` | auth | info | (new) |
-| `user.sso_unlinked` | auth | warning | (new) |
-| `user.sso_enforced` | auth | warning | (new) |
-| `admin.sso_config_updated` | admin | critical | (already exists) |
-| `admin.sso_provider_created` | admin | critical | (new) |
-| `admin.sso_provider_deleted` | admin | critical | (new) |
-| `admin.sso_test` | admin | info | (new) |
-
-## Data Models
-
-### Migration 000035: Enhanced SSO
-
-**Up migration** (`migrations/000035_enhanced_sso.up.sql`):
-
-```sql
--- SSO provider configurations (multi-provider support)
-CREATE TABLE sso_providers (
-    id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name                  VARCHAR(50) UNIQUE NOT NULL,
-    provider_type         VARCHAR(20) NOT NULL, -- google, github, azure, okta, oidc
-    client_id             VARCHAR(255) NOT NULL,
-    client_secret_encrypted TEXT NOT NULL,
-    redirect_url          TEXT NOT NULL,
-    issuer_url            TEXT,
-    tenant_id             VARCHAR(255),
-    auto_provision        BOOLEAN NOT NULL DEFAULT FALSE,
-    default_org_role      VARCHAR(50) DEFAULT 'member',
-    default_team_role     VARCHAR(50) DEFAULT 'member',
-    allowed_domains       TEXT,
-    claim_mappings        JSONB DEFAULT '[]',
-    custom_claims         JSONB DEFAULT '[]',
-    enabled               BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- User SSO identities (multi-provider per user)
-CREATE TABLE user_sso_identities (
-    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    provider      VARCHAR(50) NOT NULL,
-    subject       VARCHAR(255) NOT NULL,
-    email         VARCHAR(255),
-    display_name  VARCHAR(255),
-    metadata      JSONB DEFAULT '{}',
-    linked_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    last_used_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(provider, subject)
-);
-
-CREATE INDEX idx_user_sso_identities_user_id ON user_sso_identities(user_id);
-CREATE INDEX idx_user_sso_identities_provider_subject ON user_sso_identities(provider, subject);
-
--- Migrate existing SSO data from users table to user_sso_identities
-INSERT INTO user_sso_identities (id, user_id, provider, subject, email, display_name, linked_at, last_used_at)
-SELECT gen_random_uuid(), u.id, u.sso_provider, u.sso_subject, u.email, u.display_name, u.created_at, u.updated_at
-FROM users u
-WHERE u.sso_provider IS NOT NULL AND u.sso_subject IS NOT NULL;
-
--- Add SSO provider name to sessions for session binding
-ALTER TABLE sessions ADD COLUMN sso_provider_name VARCHAR(50);
-
--- Comment deprecated columns (cannot drop for backward compatibility)
-COMMENT ON COLUMN users.sso_provider IS 'DEPRECATED: Use user_sso_identities table instead';
-COMMENT ON COLUMN users.sso_subject IS 'DEPRECATED: Use user_sso_identities table instead';
-```
-
-**Down migration** (`migrations/000035_enhanced_sso.down.sql`):
-
-```sql
--- Remove SSO provider name from sessions
-ALTER TABLE sessions DROP COLUMN IF EXISTS sso_provider_name;
-
--- Remove deprecated column comments
-COMMENT ON COLUMN users.sso_provider IS NULL;
-COMMENT ON COLUMN users.sso_subject IS NULL;
-
--- Drop new tables
-DROP TABLE IF EXISTS user_sso_identities;
-DROP TABLE IF EXISTS sso_providers;
-```
-
-### Table Schemas
-
-#### `sso_providers`
-
-| Column | Type | Default | Description |
-|--------|------|---------|-------------|
-| id | UUID PK | gen_random_uuid() | Primary key |
-| name | VARCHAR(50) UNIQUE | — | Provider display name / slug (e.g., "google", "github-corp") |
-| provider_type | VARCHAR(20) | — | Protocol type: google, github, azure, okta, oidc |
-| client_id | VARCHAR(255) | — | OAuth2 client ID |
-| client_secret_encrypted | TEXT | — | AES-256-GCM encrypted client secret |
-| redirect_url | TEXT | — | OAuth2 callback URL |
-| issuer_url | TEXT | NULL | OIDC issuer URL (for okta, oidc types) |
-| tenant_id | VARCHAR(255) | NULL | Azure AD tenant ID |
-| auto_provision | BOOLEAN | FALSE | Auto-create user on first SSO login |
-| default_org_role | VARCHAR(50) | 'member' | Role for auto-provisioned users |
-| default_team_role | VARCHAR(50) | 'member' | Team role for auto-provisioned users |
-| allowed_domains | TEXT | NULL | Comma-separated allowed email domains |
-| claim_mappings | JSONB | '[]' | Array of ClaimMapping objects |
-| custom_claims | JSONB | '[]' | Array of custom claim names to extract |
-| enabled | BOOLEAN | TRUE | Whether provider is active |
-| created_at | TIMESTAMPTZ | NOW() | Creation timestamp |
-| updated_at | TIMESTAMPTZ | NOW() | Last update timestamp |
-
-#### `user_sso_identities`
-
-| Column | Type | Default | Description |
-|--------|------|---------|-------------|
-| id | UUID PK | gen_random_uuid() | Primary key |
-| user_id | UUID FK→users | — | Owning user |
-| provider | VARCHAR(50) | — | Provider name matching sso_providers.name |
-| subject | VARCHAR(255) | — | IdP subject identifier |
-| email | VARCHAR(255) | NULL | Email from IdP at link time |
-| display_name | VARCHAR(255) | NULL | Display name from IdP at link time |
-| metadata | JSONB | '{}' | Additional IdP claims/metadata |
-| linked_at | TIMESTAMPTZ | NOW() | When identity was linked |
-| last_used_at | TIMESTAMPTZ | NOW() | Last SSO login with this identity |
-
-#### `sessions` (updated)
-
-| Column | Type | Default | Description |
-|--------|------|---------|-------------|
-| sso_provider_name | VARCHAR(50) | NULL | SSO provider used for this session (NULL = password login) |
-
-### Claim Mappings JSONB Schema
-
-```json
-[
-    {
-        "claim_name": "groups",
-        "claim_value": "engineering",
-        "org_role": "member",
-        "team_id": "uuid-of-engineering-team",
-        "team_role": "member"
-    },
-    {
-        "claim_name": "groups",
-        "claim_value": "platform-admins",
-        "org_role": "admin",
-        "team_id": null,
-        "team_role": null
-    }
-]
-```
-
+9. **No Summary Stats (Defect 9)**: The component does not compute or display aggregate statistics. The provider list data contains `linked_user_count` per provider but no totals are calculated. Domain mappings counts per provider are not fetched at the list level.
 
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system — essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+Property 1: Bug Condition - Auto-Provision UX Always Shows Role Selectors
 
-### Property 1: GitHub redirect URL uses correct OAuth2 endpoint
+_For any_ SSO provider edit/create form state (whether auto-provision is enabled or disabled), the fixed component SHALL always render the default org role and default team role selectors with a visual hint indicating they apply when auto-provision is enabled, and SHALL always render the auto-provision toggle with a clear description.
 
-*For any* SSO provider configuration with provider_type="github" and any valid client_id and redirect_url, the generated authorization redirect URL SHALL start with `https://github.com/login/oauth/authorize` and never use the GitHub Actions OIDC token endpoint.
+**Validates: Requirements 2.1**
 
-**Validates: Requirements 1.1**
+Property 2: Bug Condition - Claim Mappings Use Spacious Layout
 
-### Property 2: GitHub callback extracts correct user fields
+_For any_ claim mapping entry in the provider edit form, the fixed component SHALL render the fields in a stacked or multi-row layout with visible labels for each field (claim name, claim value, org role, team ID, team role), rather than cramming all fields into a single narrow row.
 
-*For any* valid GitHub User API response containing id, login, name, and email fields, the SSO callback result SHALL have provider="github", subject equal to the string representation of the numeric GitHub user ID, email matching the API response email, and display_name matching the API response name (or login as fallback).
+**Validates: Requirements 2.2**
 
-**Validates: Requirements 1.4**
+Property 3: Bug Condition - Required Fields Show Inline Validation
 
-### Property 3: Multi-provider redirect dispatches to correct provider
-
-*For any* set of configured SSO providers and any provider name from that set, calling RedirectURL with that provider name SHALL return a URL corresponding to that provider's authorization endpoint, and calling RedirectURL with a name not in the set SHALL return an error.
-
-**Validates: Requirements 2.2, 2.4**
-
-### Property 4: SSO status returns all configured providers
-
-*For any* list of SSO provider configurations with varying enabled states, the SSO status response SHALL contain exactly the same set of provider names with matching enabled flags and correct labels.
+_For any_ required field (name, client ID, client secret, redirect URL) in the provider edit form, the fixed component SHALL display a required indicator, and for the redirect URL field, SHALL validate URL format in real-time and display an error message for invalid URLs.
 
 **Validates: Requirements 2.3**
 
-### Property 5: SSO identity linking creates correct record
+Property 4: Bug Condition - Provider Cards Show Key Configuration Details
 
-*For any* authenticated user and valid SSO callback result where no conflicts exist, calling LinkSSOIdentity SHALL create a record in user_sso_identities with the correct user_id, provider, subject, email, and display_name, and subsequently calling ListByUser SHALL include that identity.
+_For any_ SSO provider in the provider list, the fixed component SHALL display the redirect URL (truncated), allowed domains (as badges), auto-provision status indicator, and domain mappings count badge on the provider card.
 
-**Validates: Requirements 3.2**
+**Validates: Requirements 2.4, 2.6**
 
-### Property 6: SSO identity linking detects conflicts
+Property 5: Bug Condition - Delete Requires Confirmation Dialog
 
-*For any* SSO identity (provider, subject) that is already linked to user A, attempting to link the same identity to user B SHALL return an error. Additionally, *for any* user who already has an identity linked for provider P, attempting to link a different identity from provider P SHALL return an error.
+_For any_ delete action on an SSO provider, the fixed component SHALL display a ConfirmDialog showing the provider name, linked user count, and an impact warning before executing the deletion.
 
-**Validates: Requirements 3.3, 3.4**
+**Validates: Requirements 2.5**
 
-### Property 7: SSO unlink safety guards
+Property 6: Bug Condition - Test Email Preview Accessible Outside Edit Form
 
-*For any* user whose only authentication method is SSO (password_hash is nil), attempting to unlink their SSO identity SHALL be rejected. Additionally, *for any* user in an organization with enforce_sso enabled, attempting to unlink any SSO identity SHALL be rejected regardless of whether they have a password.
+_For any_ SSO provider in the provider list, the fixed component SHALL provide access to the test email domain mapping preview from the provider card area or a dedicated section, without requiring the admin to open the full edit form.
 
-**Validates: Requirements 4.2, 4.6**
+**Validates: Requirements 2.7**
 
-### Property 8: Claim extraction completeness
+Property 7: Bug Condition - Tab Header Has Consistent Visual Treatment
 
-*For any* IdP token claim map and any set of configured custom claim names, the extracted claims SHALL include all standard claims (email, name, given_name, family_name, picture, locale) that are present in the token, plus all configured custom claims that are present in the token, and SHALL not include claims that are absent from the token.
+_For any_ render of the SSO tab, the fixed component SHALL display a styled header card with a gradient accent bar, an icon badge (Shield icon in a colored rounded container), the "SSO Providers" title, a descriptive subtitle, and the "Add Provider" button — consistent with the visual treatment of other settings tabs.
 
-**Validates: Requirements 6.2, 7.1, 7.5**
+**Validates: Requirements 2.8**
 
-### Property 9: Claim mapping produces correct role assignments
+Property 8: Bug Condition - Summary Stats Displayed
 
-*For any* set of claim mapping rules and any IdP token claims, the resulting role assignments SHALL match the mapping rules: each claim value that matches a rule SHALL produce the corresponding org role and optional team assignment, and claim values that match no rule SHALL result in the default org role being applied.
+_For any_ render of the SSO tab with one or more providers, the fixed component SHALL display summary statistics showing the count of enabled providers, total linked users across all providers, and total domain mappings configured.
 
-**Validates: Requirements 6.3, 6.4, 6.5**
+**Validates: Requirements 2.9**
 
-### Property 10: Role assignments update on re-login with changed claims
+Property 9: Preservation - CRUD and API Interactions Unchanged
 
-*For any* user with existing role assignments from previous SSO login, when the user logs in again with different IdP group claims, the resulting role assignments SHALL reflect the new claims (not the old ones).
+_For any_ SSO provider create, update, delete, test connection, domain mapping CRUD, or domain mapping preview operation, the fixed component SHALL produce the same API calls, cache invalidation, toast notifications, and state updates as the original component, preserving all existing functionality.
 
-**Validates: Requirements 6.8**
+**Validates: Requirements 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8**
 
-### Property 11: Avatar set from picture claim only when user has no avatar
+## Fix Implementation
 
-*For any* user and SSO callback result, the user's avatar_url SHALL be set to the picture claim value only when the user's current avatar_url is nil/empty AND the picture claim is present. If the user already has an avatar_url, it SHALL remain unchanged regardless of the picture claim.
+### Changes Required
 
-**Validates: Requirements 7.2**
+Assuming our root cause analysis is correct:
 
-### Property 12: Display name construction from given_name and family_name
+**File**: `web/src/app/settings/page.tsx`
 
-*For any* IdP token containing given_name and family_name claims but no name claim, the constructed display name SHALL equal the concatenation of given_name, a space, and family_name. When a name claim is present, it SHALL be used directly regardless of given_name/family_name.
+**Component**: `SSOProvidersTab`
 
-**Validates: Requirements 7.3**
+**Specific Changes**:
 
-### Property 13: SSO sessions store provider metadata
+1. **Always-Visible Role Selectors (Defect 1)**: Remove the `{editing.auto_provision && (...)}` conditional wrapper around the default org role and default team role selectors. Always render them. Add a muted hint text below the selectors: "These roles are applied when auto-provision is enabled." When auto-provision is off, render the selectors with reduced opacity or a subtle disabled visual cue (but keep them interactive so the admin can pre-configure).
 
-*For any* session created via SSO login with provider P, the session record SHALL have sso_provider_name equal to P. *For any* session created via password login, sso_provider_name SHALL be nil.
+2. **Spacious Claim Mappings Layout (Defect 2)**: Replace the `grid grid-cols-5 gap-1` layout with a stacked card-per-mapping layout. Each mapping renders as a bordered card with two rows: Row 1 has claim name and claim value (grid-cols-2); Row 2 has org role, team ID, and team role (grid-cols-3). Each field has a visible `<Label>`. The delete button is positioned in the top-right corner of the card.
 
-**Validates: Requirements 9.1**
+3. **Inline Validation (Defect 3)**: Add a validation state object tracking errors for required fields. Add a `validateUrl` helper that checks URL format. Render a red asterisk (`*`) next to required field labels (Name, Client ID, Client Secret, Redirect URL). Show inline error messages below the redirect URL field when the format is invalid. Disable the Save button when required fields are empty or validation fails.
 
-### Property 14: Client secret encryption round-trip
+4. **Information-Dense Provider Cards (Defect 4)**: Add a details section below the existing card header showing: truncated redirect URL (monospace, max 50 chars with ellipsis), allowed domains as small badges, an auto-provision indicator badge, and a domain mappings count badge. Fetch domain mappings counts by adding a `useQuery` for each provider's domain mappings or by computing from a batch fetch.
 
-*For any* valid client secret string, encrypting it via the Encryptor, storing the ciphertext in sso_providers.client_secret_encrypted, and then reading and decrypting it SHALL produce the original client secret.
+5. **Delete Confirmation Dialog (Defect 5)**: Replace the direct `onClick={() => handleDelete(p)}` on the delete button with a `<ConfirmDialog>` wrapper (already imported and used in `DomainMappingsSection`). The dialog title shows "Delete SSO provider?", the description shows the provider name, linked user count, and a warning about the impact on linked users.
 
-**Validates: Requirements 11.3**
+6. **Domain Mappings Quick View (Defect 6)**: Add a domain mappings count badge to each provider card (from the batch fetch in change 4). Add an expandable section or a Dialog-based quick view that shows domain mappings for a provider without entering the full edit form. The `DomainMappingsSection` component can be reused in a read-only mode or within a Dialog.
 
-### Property 15: Client secret masking on admin read
+7. **Test Email Preview Promotion (Defect 7)**: Extract the test email preview into a standalone section or make it accessible via a "Test Email" button on the provider card that opens a Dialog. The Dialog contains the email input, preview button, and result display — reusing the existing preview logic from `DomainMappingsSection`.
 
-*For any* SSO provider configuration returned by the admin GET endpoint, the client_secret field SHALL always be "••••••••" regardless of the actual stored secret value.
+8. **Styled Tab Header (Defect 8)**: Replace the plain `<div>` header with a `<Card>` component matching the pattern used by other tabs: `<Card className="overflow-hidden">` with a `<div className="h-2 bg-gradient-to-r from-emerald-500/80 to-emerald-500/20" />` gradient bar, a `<CardHeader>` with a `<CardTitle>` containing a Shield icon in a colored rounded container, the "SSO Providers" title, a `<CardDescription>` subtitle, and the "Add Provider" button positioned in the header area.
 
-**Validates: Requirements 11.4**
+9. **Summary Stats (Defect 9)**: Compute summary stats from the existing provider list response: count of enabled providers (`providers.filter(p => p.enabled).length`), total linked users (`providers.reduce((sum, p) => sum + (p.linked_user_count ?? 0), 0)`), and total domain mappings (from the batch domain mappings fetch or a new lightweight endpoint). Display these as a row of stat cards below the header, using the same small-card pattern seen in the System/Overview tab.
 
-### Property 16: Enforce SSO login policy
+**File**: `web/src/components/confirm-dialog.tsx` (no changes needed — reuse as-is)
 
-*For any* user with at least one linked SSO identity in an organization with enforce_sso enabled, password login SHALL be rejected with an SSO redirect message. *For any* user with no linked SSO identities, password login SHALL be allowed regardless of the enforce_sso setting (assuming correct credentials).
+**File**: `internal/handler/admin.go` (optional)
 
-**Validates: Requirements 12.1, 12.2**
-
-### Property 17: Enforce SSO registration policy
-
-*For any* organization with enforce_sso enabled, password-based registration attempts SHALL be rejected with a message directing users to authenticate via SSO.
-
-**Validates: Requirements 12.5**
-
-## Error Handling
-
-### SSO Manager Errors
-
-| Error Scenario | HTTP Status | Error Code | Message |
-|---------------|-------------|------------|---------|
-| Provider not configured | 404 | not_found | "SSO provider '{name}' not configured" |
-| Provider disabled | 403 | forbidden | "SSO provider '{name}' is currently disabled" |
-| OIDC discovery failure | 500 | internal_error | "Failed to discover OIDC configuration for {provider}" |
-| Token exchange failure | 401 | unauthenticated | "SSO token exchange failed: {reason}" |
-| ID token verification failure | 401 | unauthenticated | "SSO token verification failed: {reason}" |
-| Missing email claim | 401 | unauthenticated | "Email claim missing from SSO token" |
-| GitHub user API failure | 401 | unauthenticated | "Failed to retrieve GitHub user info: {reason}" |
-| GitHub no verified email | 401 | unauthenticated | "No verified email found on GitHub account" |
-| Invalid state parameter | 400 | validation_error | "Invalid state parameter" |
-| Connection test timeout | 408 | error | "SSO connection test timed out after 10 seconds" |
-
-### Account Linking Errors
-
-| Error Scenario | HTTP Status | Error Code | Message |
-|---------------|-------------|------------|---------|
-| Identity already linked to another user | 409 | conflict | "This SSO identity is already linked to another account" |
-| Provider already linked for user | 409 | conflict | "You already have a {provider} account linked" |
-| Unlink without password | 400 | validation_error | "You must set a password before unlinking your SSO provider" |
-| Unlink with enforce_sso | 403 | forbidden | "Cannot unlink SSO — your organization requires SSO authentication" |
-
-### Enforce SSO Errors
-
-| Error Scenario | HTTP Status | Error Code | Message |
-|---------------|-------------|------------|---------|
-| Password login blocked by enforce_sso | 403 | forbidden | "SSO login required for your organization. Please sign in with your SSO provider." |
-| Password registration blocked by enforce_sso | 403 | forbidden | "Your organization requires SSO authentication. Please sign in with your SSO provider." |
-
-### Admin SSO Errors
-
-| Error Scenario | HTTP Status | Error Code | Message |
-|---------------|-------------|------------|---------|
-| Duplicate provider name | 409 | conflict | "A provider with name '{name}' already exists" |
-| Invalid provider type | 400 | validation_error | "Invalid provider type. Must be one of: google, github, azure, okta, oidc" |
-| Missing required fields | 400 | validation_error | "client_id and client_secret are required" |
-| Missing issuer_url for OIDC/Okta | 400 | validation_error | "issuer_url is required for {type} providers" |
-| Missing tenant_id for Azure | 400 | validation_error | "tenant_id is required for Azure AD providers" |
-| Delete provider with linked users (warning) | 200 | — | Response includes `linked_user_count` for confirmation |
-| Encryption key not configured | 500 | internal_error | "Encryption key required for storing SSO provider secrets" |
-
-### Allowed Domain Errors
-
-| Error Scenario | HTTP Status | Error Code | Message |
-|---------------|-------------|------------|---------|
-| Email domain not allowed | 403 | forbidden | "Email domain {domain} is not allowed for SSO provider {name}" |
+**Optional Backend Change**: Add a `GET /admin/sso/stats` endpoint that returns `{ total_providers, enabled_providers, total_linked_users, total_domain_mappings }` computed via SQL aggregation. This avoids N+1 queries for domain mappings counts. However, this can also be computed client-side from the existing provider list response (which includes `linked_user_count`) plus a single batch query for domain mappings counts.
 
 ## Testing Strategy
 
+### Validation Approach
+
+The testing strategy follows a two-phase approach: first, surface counterexamples that demonstrate the deficient UI states on unfixed code, then verify the fix works correctly and preserves existing behavior.
+
+### Exploratory Bug Condition Checking
+
+**Goal**: Surface counterexamples that demonstrate the UI deficiencies BEFORE implementing the fix. Confirm or refute the root cause analysis. If we refute, we will need to re-hypothesize.
+
+**Test Plan**: Write React Testing Library tests that render the `SSOProvidersTab` component with mock provider data and assert the presence/absence of UI elements. Run these tests on the UNFIXED code to observe failures and confirm the deficiencies.
+
+**Test Cases**:
+1. **Auto-Provision Role Selectors Test**: Render the edit form with `auto_provision: false` and assert that default org role and default team role selectors are present (will fail on unfixed code — they are conditionally hidden)
+2. **Claim Mappings Layout Test**: Render the edit form with claim mappings and assert that field labels are present and layout is not `grid-cols-5` (will fail on unfixed code — uses cramped single-row layout)
+3. **Inline Validation Test**: Render the edit form, type an invalid URL in redirect URL field, and assert that an error message appears (will fail on unfixed code — no validation exists)
+4. **Provider Card Info Density Test**: Render the provider list with providers that have redirect URLs and allowed domains, and assert these are displayed on the cards (will fail on unfixed code — not rendered)
+5. **Delete Confirmation Test**: Click the delete button and assert that a confirmation dialog appears (will fail on unfixed code — deletion is immediate)
+6. **Domain Mappings Visibility Test**: Render the provider list and assert that domain mappings count badges are visible on cards (will fail on unfixed code — only visible in edit form)
+7. **Tab Header Style Test**: Render the SSO tab and assert that the header contains a gradient accent bar and icon badge (will fail on unfixed code — plain header)
+8. **Summary Stats Test**: Render the SSO tab with providers and assert that summary stat values are displayed (will fail on unfixed code — no stats rendered)
+
+**Expected Counterexamples**:
+- Role selectors not found in DOM when auto-provision is off
+- No field labels in claim mapping rows
+- No validation error messages rendered for invalid inputs
+- Provider cards missing redirect URL, allowed domains, auto-provision badge
+- No AlertDialog rendered after clicking delete
+- No domain mappings count on provider cards
+- No gradient bar or icon badge in tab header
+- No summary statistics rendered
+
+### Fix Checking
+
+**Goal**: Verify that for all inputs where the bug condition holds, the fixed component produces the expected behavior.
+
+**Pseudocode:**
+```
+FOR ALL uiState WHERE isBugCondition(uiState) DO
+  result := renderSSOTab_fixed(uiState)
+  ASSERT expectedBehavior(result)
+END FOR
+```
+
+### Preservation Checking
+
+**Goal**: Verify that for all inputs where the bug condition does NOT hold, the fixed component produces the same result as the original component.
+
+**Pseudocode:**
+```
+FOR ALL uiState WHERE NOT isBugCondition(uiState) DO
+  ASSERT renderSSOTab_original(uiState).apiCalls = renderSSOTab_fixed(uiState).apiCalls
+  ASSERT renderSSOTab_original(uiState).stateUpdates = renderSSOTab_fixed(uiState).stateUpdates
+END FOR
+```
+
+**Testing Approach**: Property-based testing is recommended for preservation checking because:
+- It generates many combinations of provider configurations, form states, and user interactions
+- It catches edge cases in API call payloads that manual unit tests might miss
+- It provides strong guarantees that CRUD behavior is unchanged across all non-buggy input combinations
+
+**Test Plan**: Observe behavior on UNFIXED code first for all CRUD operations and interactions, then write property-based tests capturing that behavior.
+
+**Test Cases**:
+1. **Provider Create Preservation**: Observe that creating a provider with valid data calls `POST /admin/sso/providers` with the correct payload on unfixed code, then verify this continues after fix
+2. **Provider Update Preservation**: Observe that updating a provider calls `PUT /admin/sso/providers/{id}` with the correct payload on unfixed code, then verify this continues after fix
+3. **Test Connection Preservation**: Observe that testing a connection calls `POST /admin/sso/test` and displays results inline on unfixed code, then verify this continues after fix
+4. **Domain Mapping CRUD Preservation**: Observe that domain mapping create/update/delete calls the correct endpoints on unfixed code, then verify this continues after fix
+5. **Provider-Type Fields Preservation**: Observe that Azure shows Tenant ID and Okta/OIDC shows Issuer URL on unfixed code, then verify this continues after fix
+6. **Empty State Preservation**: Observe that the empty state card renders when no providers exist on unfixed code, then verify this continues after fix
+7. **Enabled/Disabled Status Preservation**: Observe that the gradient bar and badge reflect provider status on unfixed code, then verify this continues after fix
+
 ### Unit Tests
 
-Unit tests cover specific examples, edge cases, and error conditions:
-
-- **GitHub OAuth2 flow**: Mock GitHub endpoints, test token exchange, user API call, email fallback, error cases
-- **OIDC flow**: Mock OIDC discovery, test token verification, claim extraction
-- **Account linking**: Test link success, conflict detection (same identity different user, same provider same user), unlink with/without password, unlink with enforce_sso
-- **Claim mapping**: Test mapping with matching rules, no matching rules (default), multiple matching rules, empty claims
-- **Enforce SSO policy**: Test password login blocked/allowed based on SSO identity presence, registration blocked
-- **Admin CRUD**: Test provider create/read/update/delete, secret masking, validation errors
-- **Connection test**: Mock endpoints for success, failure, timeout scenarios
-- **Session metadata**: Test SSO provider name stored on SSO sessions, null on password sessions
-- **Migration data**: Test existing SSO data migrated correctly to user_sso_identities
+- Test that role selectors render regardless of auto-provision state
+- Test that claim mapping fields have labels and use multi-row layout
+- Test inline validation for required fields (empty name, empty client ID, invalid URL)
+- Test that provider cards render redirect URL, allowed domains, auto-provision badge, domain mappings count
+- Test that delete button triggers ConfirmDialog with correct provider name and linked user count
+- Test that domain mappings count badge renders on provider cards
+- Test that test email preview is accessible outside the edit form
+- Test that tab header renders with gradient bar, icon badge, title, and subtitle
+- Test that summary stats compute correctly from provider data
 
 ### Property-Based Tests
 
-Property-based tests use [pgregory.net/rapid](https://pgregory.net/rapid/) (the Go PBT library already used in this project) to verify universal properties across generated inputs. Each test runs a minimum of 100 iterations.
-
-| Property | Test Description | Tag |
-|----------|-----------------|-----|
-| Property 1 | Generate random GitHub provider configs, verify redirect URL prefix | Feature: enhanced-sso, Property 1: GitHub redirect URL uses correct OAuth2 endpoint |
-| Property 2 | Generate random GitHub API responses, verify extracted fields | Feature: enhanced-sso, Property 2: GitHub callback extracts correct user fields |
-| Property 3 | Generate random provider sets, verify dispatch correctness | Feature: enhanced-sso, Property 3: Multi-provider redirect dispatches to correct provider |
-| Property 4 | Generate random provider lists, verify status response completeness | Feature: enhanced-sso, Property 4: SSO status returns all configured providers |
-| Property 5 | Generate random users + callback results, verify identity creation | Feature: enhanced-sso, Property 5: SSO identity linking creates correct record |
-| Property 6 | Generate random conflict scenarios, verify rejection | Feature: enhanced-sso, Property 6: SSO identity linking detects conflicts |
-| Property 7 | Generate random users without passwords + enforce_sso states, verify unlink rejection | Feature: enhanced-sso, Property 7: SSO unlink safety guards |
-| Property 8 | Generate random token claims + custom claim configs, verify extraction | Feature: enhanced-sso, Property 8: Claim extraction completeness |
-| Property 9 | Generate random mapping rules + claims, verify role assignments | Feature: enhanced-sso, Property 9: Claim mapping produces correct role assignments |
-| Property 10 | Generate random before/after claim sets, verify role updates | Feature: enhanced-sso, Property 10: Role assignments update on re-login |
-| Property 11 | Generate random users (with/without avatar) + picture claims, verify avatar logic | Feature: enhanced-sso, Property 11: Avatar set from picture claim only when no avatar |
-| Property 12 | Generate random given_name/family_name/name combinations, verify display name | Feature: enhanced-sso, Property 12: Display name construction |
-| Property 13 | Generate random SSO and password login scenarios, verify session metadata | Feature: enhanced-sso, Property 13: SSO sessions store provider metadata |
-| Property 14 | Generate random secret strings, verify encrypt-then-decrypt round-trip | Feature: enhanced-sso, Property 14: Client secret encryption round-trip |
-| Property 15 | Generate random provider configs, verify secret always masked | Feature: enhanced-sso, Property 15: Client secret masking on admin read |
-| Property 16 | Generate random users with/without SSO identities + enforce_sso states, verify login policy | Feature: enhanced-sso, Property 16: Enforce SSO login policy |
-| Property 17 | Generate random registration attempts with enforce_sso enabled, verify rejection | Feature: enhanced-sso, Property 17: Enforce SSO registration policy |
+- Generate random provider configurations (varying enabled/disabled, auto-provision on/off, 0-10 claim mappings, 0-5 allowed domains) and verify all card details render correctly
+- Generate random form states (valid/invalid URLs, empty/filled required fields) and verify validation messages appear correctly
+- Generate random provider lists (0-20 providers with varying linked user counts) and verify summary stats compute correctly
+- Generate random CRUD operations and verify API call payloads match the original component behavior
 
 ### Integration Tests
 
-Integration tests verify end-to-end flows with real database and mocked external IdPs:
-
-- **Full SSO login flow**: Redirect → mock IdP → callback → session creation → token response
-- **Full linking flow**: Authenticated redirect with intent=link → mock IdP → callback → identity created
-- **Migration verification**: Run migration 000035, verify data migrated from users to user_sso_identities
-- **Provider CRUD lifecycle**: Create → read (masked secret) → update → test connection → delete
-- **Multi-provider coexistence**: Configure Google + GitHub, verify both work independently
-- **Enforce SSO end-to-end**: Enable enforce_sso, verify password login blocked for SSO users, allowed for non-SSO users
+- Test full provider creation flow: fill form → validate → save → verify card appears with all details
+- Test full provider deletion flow: click delete → confirm dialog → confirm → verify card removed
+- Test domain mappings quick view: click domain mappings badge → view mappings → close
+- Test email preview from provider card: click test email → enter email → preview → verify results
+- Test tab header and summary stats update after adding/removing providers
