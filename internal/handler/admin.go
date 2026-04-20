@@ -55,6 +55,7 @@ func (h *AdminHandler) Routes(r chi.Router) {
 		r.Get("/admin/users", h.ListUsers)
 		r.Delete("/admin/users/{userId}", h.DeleteUser)
 		r.Patch("/admin/users/{userId}", h.UpdateUser)
+		r.Post("/admin/users/{userId}/migrate-auth", h.MigrateAuth)
 		r.Get("/admin/health", h.Health)
 		r.Get("/admin/platform", h.GetPlatformSettings)
 		r.Put("/admin/platform", h.UpdatePlatformSettings)
@@ -163,10 +164,11 @@ func (h *AdminHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var input struct {
-		DisplayName   *string `json:"display_name,omitempty"`
-		AvatarURL     *string `json:"avatar_url,omitempty"`
-		IsSystemAdmin *bool   `json:"is_system_admin,omitempty"`
-		EmailVerified *bool   `json:"email_verified,omitempty"`
+		DisplayName    *string `json:"display_name,omitempty"`
+		AvatarURL      *string `json:"avatar_url,omitempty"`
+		IsSystemAdmin  *bool   `json:"is_system_admin,omitempty"`
+		EmailVerified  *bool   `json:"email_verified,omitempty"`
+		AuthMethodLock *string `json:"auth_method_lock,omitempty"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -187,12 +189,73 @@ func (h *AdminHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	meta := map[string]any{"email": user.Email, "display_name": input.DisplayName, "is_system_admin": input.IsSystemAdmin, "email_verified": input.EmailVerified}
+	// Handle auth_method_lock if provided
+	if input.AuthMethodLock != nil {
+		lockUser, lockErr := h.authSvc.SetAuthMethodLock(r.Context(), userID, input.AuthMethodLock)
+		if lockErr != nil {
+			writeError(w, http.StatusBadRequest, lockErr.Error())
+			return
+		}
+		user = lockUser
+		auditRecordEnhanced(r, uuid.Nil, "admin.auth_method_lock_changed", "user", userID, user.Email, map[string]any{
+			"auth_method_lock": *input.AuthMethodLock,
+		})
+	}
+
+	meta := map[string]any{"email": user.Email, "display_name": input.DisplayName, "is_system_admin": input.IsSystemAdmin, "email_verified": input.EmailVerified, "auth_method_lock": input.AuthMethodLock}
 	if beforeUser != nil {
 		meta["before"] = map[string]any{"display_name": beforeUser.DisplayName, "avatar_url": beforeUser.AvatarURL, "is_system_admin": beforeUser.IsSystemAdmin, "email_verified": beforeUser.EmailVerified}
 		meta["after"] = map[string]any{"display_name": user.DisplayName, "avatar_url": user.AvatarURL, "is_system_admin": user.IsSystemAdmin, "email_verified": user.EmailVerified}
 	}
 	auditRecordEnhanced(r, uuid.Nil, "admin.user_updated", "user", userID, user.Email, meta)
+	writeJSON(w, http.StatusOK, user)
+}
+
+func (h *AdminHandler) MigrateAuth(w http.ResponseWriter, r *http.Request) {
+	userID, err := uuid.Parse(chi.URLParam(r, "userId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid user ID")
+		return
+	}
+	var input struct {
+		Target      string `json:"target"`
+		NewPassword string `json:"new_password,omitempty"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	// Fetch target user before migration for audit
+	beforeUser, _ := h.authSvc.GetMe(r.Context(), userID)
+	targetEmail := ""
+	if beforeUser != nil {
+		targetEmail = beforeUser.Email
+	}
+
+	var user *domain.User
+	switch input.Target {
+	case "sso":
+		user, err = h.authSvc.MigrateToSSO(r.Context(), userID)
+	case "password":
+		if input.NewPassword == "" {
+			writeError(w, http.StatusBadRequest, "new_password is required when migrating to password")
+			return
+		}
+		user, err = h.authSvc.MigrateToPassword(r.Context(), userID, input.NewPassword)
+	default:
+		writeError(w, http.StatusBadRequest, "target must be \"sso\" or \"password\"")
+		return
+	}
+
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	auditRecordEnhanced(r, uuid.Nil, "admin.auth_migrated", "user", userID, targetEmail, map[string]any{
+		"target": input.Target, "email": targetEmail,
+	})
 	writeJSON(w, http.StatusOK, user)
 }
 
