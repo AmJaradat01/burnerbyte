@@ -1,13 +1,37 @@
 ---
 title: Single Sign-On (SSO)
-description: OIDC-based SSO integration.
+description: Multi-provider OIDC-based SSO integration with auto-provisioning, domain mappings, and claim-based role assignments.
 ---
+
+## Overview
+
+BurnerByte supports multiple SSO providers simultaneously. Providers are stored in the database and managed through the Admin API. A file-based fallback is available for single-provider setups.
+
+Each provider is an OIDC (or OAuth2) integration that lets users authenticate with an external identity provider instead of a password.
+
+## Supported Provider Types
+
+| Type | Key | Notes |
+|---|---|---|
+| Google | `google` | Uses `https://accounts.google.com` as issuer |
+| GitHub | `github` | OAuth2-based (not OIDC discovery) |
+| Azure AD | `azure` | Requires `tenant_id`; issuer is `https://login.microsoftonline.com/{tenant}/v2.0` |
+| Okta | `okta` | Requires `issuer_url` (e.g. `https://your-org.okta.com`) |
+| Generic OIDC | `oidc` | Any OIDC-compliant provider; requires `issuer_url` |
 
 ## Configuration
 
+### Database Providers (Recommended)
+
+Providers are created and managed via the Admin SSO API. Each provider record includes client credentials, issuer URL, auto-provisioning settings, allowed domains, and claim mappings. Client secrets are encrypted at rest using the configured `encryption.key`.
+
+### File-Based Fallback
+
+A single provider can be configured in `config.yaml` for simple deployments:
+
 ```yaml
 sso:
-  provider: https://accounts.google.com
+  provider: google
   client_id: your-client-id
   client_secret: your-client-secret
   redirect_url: http://localhost:8080/api/v1/auth/sso/google/callback
@@ -19,16 +43,79 @@ sso:
   allowed_domains: example.com,corp.example.com
 ```
 
-## Flow
+If database providers are also configured, both the file-based provider and database providers are loaded.
+
+## Authentication Flow
 
 1. User clicks "Sign in with SSO" on the login page
 2. Frontend redirects to `GET /auth/sso/{provider}`
-3. Server generates a state cookie (600s TTL) and redirects to the OIDC provider
+3. Server generates a state cookie (600s TTL) and redirects to the OIDC provider with `prompt=select_account` to force the account picker on every login
 4. User authenticates with the provider
 5. Provider redirects back to `GET /auth/sso/{provider}/callback`
 6. Server validates the state, exchanges the code for tokens, and extracts user info
-7. If the user exists, they're logged in. If not, a new account is created
-8. Server redirects to the frontend with access and refresh tokens as query parameters
+7. If the user exists, they're logged in. If not and auto-provisioning is enabled, a new account is created
+8. Server redirects to the frontend with access and refresh tokens as URL fragment parameters
+
+The same flow supports **account linking** — authenticated users can link additional SSO identities by initiating the flow with `?intent=link`. Linked identities are listed at `GET /auth/me/sso` and can be removed with `DELETE /auth/me/sso/{provider}`.
+
+## Auto-Provisioning
+
+When `auto_provision` is enabled on a provider, new users are created automatically on first SSO login. The provider configuration controls the defaults:
+
+| Field | Description |
+|---|---|
+| `default_org_role` | Org role assigned to new users (e.g. `member`, `admin`) |
+| `default_team_role` | Team role when assigned to a default team |
+| `default_team_id` | Team to add the user to on first login (optional) |
+
+If domain mappings exist for the user's email domain, those take precedence over the default team and role settings.
+
+## Domain Mappings
+
+Domain mappings route users from specific email domains to teams automatically during SSO login. Multiple mappings can exist for the same domain and provider, enabling one domain rule to assign users to multiple teams simultaneously.
+
+### Fields
+
+| Field | Description |
+|---|---|
+| `domain` | Email domain to match (e.g. `example.com`) |
+| `org_role` | Org role to assign (defaults to `member`) |
+| `team_id` | Team to add the user to |
+| `team_role` | Role within the team (defaults to `member`) |
+
+### Preview / Dry-Run
+
+Before creating mappings, you can preview what would happen for a given email:
+
+```bash
+POST /admin/sso/domain-mappings/preview
+{
+  "email": "alice@example.com",
+  "provider": "google"
+}
+```
+
+Returns the matching rules, predicted org role, and team assignments without making any changes.
+
+## Claim Mappings
+
+Claim mappings let you map IdP claims to BurnerByte role and team assignments. Each mapping specifies a claim name, expected value, and the resulting org role and/or team assignment:
+
+```json
+{
+  "claim_name": "groups",
+  "claim_value": "engineering",
+  "org_role": "member",
+  "team_id": "uuid-of-team",
+  "team_role": "admin"
+}
+```
+
+Claim mappings are configured per provider via the `claim_mappings` field. The `custom_claims` field on the provider specifies which additional claims to request from the IdP.
+
+## Allowed Domains
+
+Each provider can restrict which email domains are permitted to authenticate. Set the `allowed_domains` field to a comma-separated list of domains (e.g. `example.com,corp.example.com`). Users with email addresses outside the allowed domains are rejected during SSO login.
 
 ## Enforcing SSO
 
@@ -39,7 +126,37 @@ PUT /orgs/{orgId}/settings
 {"enforce_sso": true}
 ```
 
-When enforced, password-based login is disabled for org members.
+When enforced, password-based login is disabled for org members. The `enforce_sso` flag is also surfaced in the SSO status endpoint.
+
+## Auth Method Lock and Migration
+
+### Auth Method Lock
+
+Each user has an optional `auth_method_lock` field that restricts which authentication method they can use:
+
+| Value | Effect |
+|---|---|
+| `null` | Any method allowed (default) |
+| `"sso"` | Only SSO login permitted |
+| `"password"` | Only password login permitted |
+
+Platform admins can set the lock via `PATCH /admin/users/:id` with the `auth_method_lock` field.
+
+### Auth Migration
+
+Platform admins can migrate users between authentication methods:
+
+```bash
+POST /admin/users/{userId}/migrate-auth
+{"target": "sso"}
+```
+
+```bash
+POST /admin/users/{userId}/migrate-auth
+{"target": "password", "new_password": "securePassword123"}
+```
+
+Migrating to SSO clears the user's password hash and sets the auth method lock to `sso`. Migrating to password requires a `new_password` and sets the lock to `password`.
 
 ## SSO Status
 
@@ -49,15 +166,58 @@ Check whether SSO is configured and available:
 GET /auth/sso-status
 ```
 
-Returns the current SSO configuration status (enabled/disabled, provider name) without exposing secrets.
+Returns the current SSO status including:
+- `enabled` — whether any SSO provider is configured
+- `providers` — list of configured providers (name, type, label, enabled status)
+- `enforce_sso` — whether the org enforces SSO-only login
+- `allow_registration` — whether self-registration is enabled
+- `password_policy` — current password policy settings
 
-## Admin SSO Management
+No secrets are exposed.
 
-Platform admins can view and update SSO configuration via the admin API:
+## Connection Testing
+
+Platform admins can test an SSO provider's connectivity before saving:
 
 ```bash
-GET /admin/sso
-PUT /admin/sso
+POST /admin/sso/test
+{
+  "name": "google",
+  "provider_type": "google",
+  "client_id": "your-client-id",
+  "client_secret": "your-client-secret"
+}
 ```
 
-The `PUT` endpoint accepts the full SSO configuration object. Sensitive fields (client secret) are encrypted at rest using the configured `encryption.key`.
+Returns success/failure, the discovered endpoint, HTTP status code, response time, and a diagnostic message.
+
+## Admin API Endpoints
+
+### SSO Providers
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/admin/sso/providers` | List all SSO providers |
+| `POST` | `/admin/sso/providers` | Create a new provider |
+| `GET` | `/admin/sso/providers/:pid` | Get a single provider |
+| `PUT` | `/admin/sso/providers/:pid` | Update a provider |
+| `DELETE` | `/admin/sso/providers/:pid` | Delete a provider |
+| `POST` | `/admin/sso/test` | Test provider connectivity |
+
+### Domain Mappings
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/admin/sso/providers/:pid/domain-mappings` | Create a domain mapping |
+| `GET` | `/admin/sso/providers/:pid/domain-mappings` | List mappings for a provider |
+| `PUT` | `/admin/sso/providers/:pid/domain-mappings/:mid` | Update a domain mapping |
+| `DELETE` | `/admin/sso/providers/:pid/domain-mappings/:mid` | Delete a domain mapping |
+| `POST` | `/admin/sso/domain-mappings/preview` | Preview mapping results (dry-run) |
+
+### Auth Migration
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/admin/users/:id/migrate-auth` | Migrate user auth method (`target`: `sso` or `password`) |
+
+All admin endpoints require the `SystemAdmin` role.
