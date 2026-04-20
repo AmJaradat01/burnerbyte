@@ -17,6 +17,7 @@ type User struct {
 	IsSystemAdmin     bool       `json:"is_system_admin"`
 	EmailVerified     bool       `json:"email_verified"`
 	PasswordChangedAt *time.Time `json:"-"`
+	AuthMethodLock    *string    `json:"auth_method_lock,omitempty"`
 	Timezone          *string    `json:"timezone,omitempty"`
 	DateFormat        *string    `json:"date_format,omitempty"`
 	TimeFormat        *string    `json:"time_format,omitempty"`
