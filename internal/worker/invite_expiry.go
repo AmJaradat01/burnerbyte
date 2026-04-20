@@ -11,9 +11,10 @@ import (
 )
 
 // InviteExpiryJob returns a worker function that finds invites expiring within
-// 24 hours and sends reminder emails to the inviters.
+// 24 hours and sends reminder emails to the inviters, then cleans up already-expired invites.
 func InviteExpiryJob(orgRepo *postgres.OrgRepo, userRepo *postgres.UserRepo, ml *mailer.Mailer, baseURL string) func(ctx context.Context) error {
 	return func(ctx context.Context) error {
+		// Phase 1: Send reminders for invites expiring soon
 		invites, err := orgRepo.FindExpiringInvites(ctx, 24*time.Hour)
 		if err != nil {
 			return fmt.Errorf("query expiring invites: %w", err)
@@ -44,8 +45,17 @@ func InviteExpiryJob(orgRepo *postgres.OrgRepo, userRepo *postgres.UserRepo, ml 
 		}
 
 		if len(invites) > 0 {
-			slog.Info("invite expiry worker completed", "expiring", len(invites), "emails_sent", sent)
+			slog.Info("invite expiry worker: reminders sent", "expiring", len(invites), "emails_sent", sent)
 		}
+
+		// Phase 2: Clean up already-expired invites
+		deleted, err := orgRepo.DeleteExpiredInvites(ctx)
+		if err != nil {
+			slog.Error("expiry worker: failed to delete expired invites", "error", err)
+		} else if deleted > 0 {
+			slog.Info("invite expiry worker: cleaned up expired invites", "deleted", deleted)
+		}
+
 		return nil
 	}
 }

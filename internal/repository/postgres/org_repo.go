@@ -542,3 +542,14 @@ func (r *OrgRepo) FindExpiringInvites(ctx context.Context, window time.Duration)
 	}
 	return invites, nil
 }
+
+// DeleteExpiredInvites removes all pending invites that have passed their expiry time.
+// Returns the number of deleted invites.
+func (r *OrgRepo) DeleteExpiredInvites(ctx context.Context) (int, error) {
+	tag, err := r.db.Exec(ctx,
+		`DELETE FROM invites WHERE accepted_at IS NULL AND expires_at < NOW()`)
+	if err != nil {
+		return 0, fmt.Errorf("delete expired invites: %w", err)
+	}
+	return int(tag.RowsAffected()), nil
+}
