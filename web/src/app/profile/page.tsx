@@ -71,30 +71,34 @@ export default function ProfilePage() {
       </Card>
 
       {/* Identity banner */}
-      <Card>
+      <Card className="overflow-hidden">
+        <div className="h-1.5 bg-gradient-to-r from-cyan-500/60 to-cyan-500/10" />
         <CardContent className="flex items-center gap-4 py-6">
-          <Avatar className="h-16 w-16 text-lg">
+          <Avatar className="h-16 w-16 text-lg ring-2 ring-cyan-500/20 ring-offset-2">
             <AvatarImage src={user.avatar_url} alt={user.display_name} />
-            <AvatarFallback>{initials}</AvatarFallback>
+            <AvatarFallback className="bg-gradient-to-br from-cyan-500/20 to-cyan-500/5 text-cyan-700 font-bold">{initials}</AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <p className="truncate text-lg font-semibold">{user.display_name || "Unnamed"}</p>
-              {user.is_system_admin && <Badge variant="secondary">Admin</Badge>}
+              {user.is_system_admin && <Badge className="bg-amber-100 text-amber-700 border-amber-200">Admin</Badge>}
             </div>
-            <p className="truncate text-sm font-medium text-muted-foreground">{user.email}</p>
-            <div className="mt-1 flex flex-wrap gap-2">
+            <p className="truncate text-sm font-medium text-muted-foreground font-mono">{user.email}</p>
+            <div className="mt-1.5 flex flex-wrap gap-2">
               {user.email_verified ? (
-                <Badge variant="outline" className="text-green-600 border-green-600">Email verified</Badge>
+                <Badge className="bg-green-100 text-green-700 border-green-200 gap-1"><Shield className="h-3 w-3" /> Verified</Badge>
               ) : (
-                <Badge variant="outline" className="text-amber-600 border-amber-600">Email not verified</Badge>
+                <Badge className="bg-amber-100 text-amber-700 border-amber-200 gap-1">Unverified</Badge>
               )}
-              {isSSO && <Badge variant="outline">SSO via {user.sso_provider}</Badge>}
+              {isSSO && <Badge variant="outline" className="gap-1"><KeyRound className="h-3 w-3" /> SSO via {user.sso_provider}</Badge>}
+              {user.auth_method_lock && <Badge variant="outline" className="gap-1 text-violet-600 border-violet-200"><Shield className="h-3 w-3" /> Locked to {user.auth_method_lock}</Badge>}
             </div>
           </div>
-          <p className="hidden text-xs text-muted-foreground sm:block">
-            Member since {new Date(user.created_at).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}
-          </p>
+          <div className="hidden sm:block text-right">
+            <p className="text-xs text-muted-foreground">Member since</p>
+            <p className="text-sm font-medium">{new Date(user.created_at).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}</p>
+            {user.last_login_at && <p className="text-xs text-muted-foreground mt-1">Last login {new Date(user.last_login_at).toLocaleDateString()}</p>}
+          </div>
         </CardContent>
       </Card>
 
@@ -109,14 +113,39 @@ export default function ProfilePage() {
           {/* Quick links */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base"><Monitor className="h-4 w-4" /> Account</CardTitle>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <div className="h-6 w-6 rounded-md bg-slate-100 flex items-center justify-center">
+                  <Monitor className="h-3.5 w-3.5 text-slate-600" />
+                </div>
+                Account
+              </CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-wrap gap-3">
-              <Link href="/profile/sessions">
-                <Button variant="outline" size="sm" className="gap-2"><Monitor className="h-3.5 w-3.5" /> Manage Sessions</Button>
+            <CardContent className="space-y-2">
+              <Link href="/profile/sessions" className="block">
+                <div className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50">
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-md bg-blue-100 flex items-center justify-center shrink-0">
+                      <Monitor className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Manage Sessions</p>
+                      <p className="text-xs text-muted-foreground">View and revoke active sessions</p>
+                    </div>
+                  </div>
+                </div>
               </Link>
-              <Link href="/profile/delete">
-                <Button variant="destructive" size="sm" className="gap-2"><Trash2 className="h-3.5 w-3.5" /> Delete Account</Button>
+              <Link href="/profile/delete" className="block">
+                <div className="flex items-center justify-between rounded-lg border border-destructive/30 p-3 transition-colors hover:bg-destructive/5">
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-md bg-red-100 flex items-center justify-center shrink-0">
+                      <Trash2 className="h-4 w-4 text-red-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-destructive">Delete Account</p>
+                      <p className="text-xs text-muted-foreground">Permanently remove your account</p>
+                    </div>
+                  </div>
+                </div>
               </Link>
             </CardContent>
           </Card>
@@ -129,7 +158,12 @@ export default function ProfilePage() {
           {!isSSO ? <ChangePasswordForm /> : (
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base"><KeyRound className="h-4 w-4" /> Password</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <div className="h-6 w-6 rounded-md bg-violet-100 flex items-center justify-center">
+                    <KeyRound className="h-3.5 w-3.5 text-violet-600" />
+                  </div>
+                  Password
+                </CardTitle>
                 <CardDescription>Your account uses SSO ({user.sso_provider}). Password management is handled by your identity provider.</CardDescription>
               </CardHeader>
             </Card>
@@ -164,7 +198,12 @@ function ProfileForm({ user, onSaved }: { user: NonNullable<ReturnType<typeof us
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base"><Shield className="h-4 w-4" /> Account Details</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <div className="h-6 w-6 rounded-md bg-blue-100 flex items-center justify-center">
+            <Shield className="h-3.5 w-3.5 text-blue-600" />
+          </div>
+          Account Details
+        </CardTitle>
         <CardDescription>Update your display name and avatar.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -215,7 +254,12 @@ function ChangePasswordForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base"><LogOut className="h-4 w-4" /> Change Password</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <div className="h-6 w-6 rounded-md bg-violet-100 flex items-center justify-center">
+            <LogOut className="h-3.5 w-3.5 text-violet-600" />
+          </div>
+          Change Password
+        </CardTitle>
         <CardDescription>You will be signed out of all sessions after changing your password.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -286,7 +330,12 @@ function DateTimePreferencesCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base"><Clock className="h-4 w-4" /> Date & Time Preferences</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <div className="h-6 w-6 rounded-md bg-amber-100 flex items-center justify-center">
+            <Clock className="h-3.5 w-3.5 text-amber-600" />
+          </div>
+          Date & Time Preferences
+        </CardTitle>
         <CardDescription>Choose your timezone and display formats.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -398,7 +447,12 @@ function ConnectedAccountsCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base"><Link2 className="h-4 w-4" /> Connected Accounts</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <div className="h-6 w-6 rounded-md bg-emerald-100 flex items-center justify-center">
+            <Link2 className="h-3.5 w-3.5 text-emerald-600" />
+          </div>
+          Connected Accounts
+        </CardTitle>
         <CardDescription>Manage your linked SSO identities.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -407,11 +461,16 @@ function ConnectedAccountsCard() {
         ) : (
           <>
             {(identities ?? []).map((identity) => (
-              <div key={identity.id} className="flex items-center justify-between rounded-lg border p-3">
-                <div>
-                  <p className="text-sm font-medium capitalize">{identity.provider}</p>
-                  <p className="text-xs text-muted-foreground">{identity.email}</p>
-                  <p className="text-xs text-muted-foreground">Linked {new Date(identity.linked_at).toLocaleDateString()}</p>
+              <div key={identity.id} className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-md bg-emerald-100 flex items-center justify-center shrink-0">
+                    <KeyRound className="h-4 w-4 text-emerald-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium capitalize">{identity.provider}</p>
+                    <p className="text-xs text-muted-foreground">{identity.email}</p>
+                    <p className="text-xs text-muted-foreground">Linked {new Date(identity.linked_at).toLocaleDateString()}</p>
+                  </div>
                 </div>
                 <ConfirmDialog
                   trigger={
