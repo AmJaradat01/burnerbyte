@@ -111,15 +111,26 @@ export default function WebhooksPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Webhooks</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {data?.data?.length ? `${data.total ?? data.data.length} webhook${(data.total ?? data.data.length) !== 1 ? "s" : ""} · ${data.data.filter(w => w.active).length} active` : "Receive HTTP callbacks when events occur in your team."}
-          </p>
-        </div>
-        <CreateWebhookDialog orgId={currentOrg!.id} teamId={currentTeam.id} />
-      </div>
+      {/* Header */}
+      <Card className="overflow-hidden">
+        <div className="h-2 bg-gradient-to-r from-orange-500/80 to-orange-500/20" />
+        <CardContent className="pt-5 pb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-7 w-7 rounded-md bg-orange-500/10 flex items-center justify-center">
+                <Globe className="h-4 w-4 text-orange-600" />
+              </div>
+              <div>
+                <h1 className="text-base font-semibold">Webhooks</h1>
+                <p className="text-sm text-muted-foreground">
+                  {data?.data?.length ? `${data.total ?? data.data.length} webhook${(data.total ?? data.data.length) !== 1 ? "s" : ""} · ${data.data.filter(w => w.active).length} active · Receive HTTP callbacks when events occur.` : "Receive HTTP callbacks when events occur in your team."}
+                </p>
+              </div>
+            </div>
+            <CreateWebhookDialog orgId={currentOrg!.id} teamId={currentTeam.id} />
+          </div>
+        </CardContent>
+      </Card>
 
       {data?.data && data.data.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-3">
@@ -128,7 +139,7 @@ export default function WebhooksPage() {
             { label: "Active", value: data.data.filter(w => w.active).length, icon: CheckCircle2, bg: "bg-emerald-100 text-emerald-600" },
             { label: "Failing", value: data.data.filter(w => w.failure_count > 0).length, icon: AlertCircle, bg: "bg-red-100 text-red-600" },
           ].map((s) => (
-            <Card key={s.label}>
+            <Card key={s.label} className="transition-all hover:shadow-md hover:-translate-y-0.5">
               <CardContent className="pt-5 pb-4">
                 <div className="flex justify-between mb-3">
                   <span className="text-sm font-medium text-muted-foreground">{s.label}</span>
