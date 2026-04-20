@@ -635,15 +635,26 @@ function HealthTab() {
   return (
     <div className="space-y-4">
       {services.length > 0 && (
-        <div className="flex items-center gap-4 text-sm">
-          <div className="flex items-center gap-2">
-            {allHealthy
-              ? <Badge className="gap-1 bg-green-100 text-green-700 border-green-200"><CheckCircle2 className="h-3 w-3" /> All systems operational</Badge>
-              : <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3" /> Degraded</Badge>
-            }
-          </div>
-          {uptime && <span className="text-muted-foreground">Uptime: {uptime}</span>}
-        </div>
+        <Card className="overflow-hidden">
+          <div className={`h-1.5 ${allHealthy ? "bg-gradient-to-r from-green-500/80 to-green-500/20" : "bg-gradient-to-r from-red-500/80 to-red-500/20"}`} />
+          <CardContent className="pt-4 pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${allHealthy ? "bg-green-100" : "bg-red-100"}`}>
+                  {allHealthy ? <CheckCircle2 className="h-4 w-4 text-green-600" /> : <AlertTriangle className="h-4 w-4 text-red-600" />}
+                </div>
+                <div>
+                  <p className="text-sm font-medium">{allHealthy ? "All systems operational" : "Service degradation detected"}</p>
+                  {uptime && <p className="text-xs text-muted-foreground">Uptime: {uptime}</p>}
+                </div>
+              </div>
+              <Badge variant={allHealthy ? "default" : "destructive"} className="gap-1">
+                {allHealthy ? <CheckCircle2 className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
+                {services.filter(([, s]) => s.status === "ok").length}/{services.length} healthy
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -656,8 +667,9 @@ function HealthTab() {
             const ok = svc.status === "ok";
             const Icon = SERVICE_ICONS[name] ?? Database;
             return (
-              <Card key={name} className={ok ? "" : "border-destructive/50"}>
-                <CardContent className="pt-6">
+              <Card key={name} className={`overflow-hidden transition-all hover:shadow-md hover:-translate-y-0.5 ${ok ? "" : "border-destructive/50"}`}>
+                <div className={`h-1.5 ${ok ? "bg-gradient-to-r from-green-500/60 to-green-500/10" : "bg-gradient-to-r from-red-500/60 to-red-500/10"}`} />
+                <CardContent className="pt-5">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
                       <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${ok ? "bg-green-100" : "bg-red-100"}`}>
@@ -825,20 +837,31 @@ function SSOProvidersTab() {
       </div>
 
       {/* Provider list */}
-      {(providers ?? []).map((p) => (
-        <Card key={p.id}>
+      {(providers ?? []).map((p) => {
+        const providerColors: Record<string, string> = {
+          github: "bg-gray-900 text-white",
+          google: "bg-blue-100 text-blue-600",
+          azure: "bg-sky-100 text-sky-600",
+          okta: "bg-indigo-100 text-indigo-600",
+          oidc: "bg-violet-100 text-violet-600",
+        };
+        const iconBg = p.enabled ? (providerColors[p.provider_type] ?? "bg-green-100 text-green-600") : "bg-gray-100 text-gray-400";
+        return (
+        <Card key={p.id} className="overflow-hidden transition-all hover:shadow-md">
+          <div className={`h-1.5 ${p.enabled ? "bg-gradient-to-r from-green-500/80 to-green-500/20" : "bg-gradient-to-r from-gray-300/80 to-gray-300/20"}`} />
           <CardContent className="pt-5 pb-4">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
-                <div className={`h-10 w-10 rounded-lg flex items-center justify-center shadow-sm ${p.enabled ? "bg-green-100" : "bg-gray-100"}`}>
-                  <Shield className={`h-5 w-5 ${p.enabled ? "text-green-600" : "text-gray-400"}`} />
+                <div className={`h-10 w-10 rounded-lg flex items-center justify-center shadow-sm ${iconBg}`}>
+                  <Shield className="h-5 w-5" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
                     <p className="font-medium">{p.name}</p>
                     <Badge variant={p.enabled ? "default" : "secondary"} className="text-xs">{p.enabled ? "Enabled" : "Disabled"}</Badge>
+                    <Badge variant="outline" className="text-xs capitalize">{p.provider_type}</Badge>
                   </div>
-                  <p className="text-xs text-muted-foreground capitalize">{p.provider_type} · {p.linked_user_count ?? 0} linked users</p>
+                  <p className="text-xs text-muted-foreground">{p.linked_user_count ?? 0} linked users · Created {new Date(p.created_at).toLocaleDateString()}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -857,10 +880,15 @@ function SSOProvidersTab() {
 
             {/* Test result */}
             {testResults[p.id] && (
-              <div className={`mt-3 p-2 rounded text-xs ${testResults[p.id].success ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
-                {testResults[p.id].success ? "✓" : "✗"} {testResults[p.id].message}
-                {testResults[p.id].endpoint && <span className="ml-2 font-mono">{testResults[p.id].endpoint}</span>}
-                {testResults[p.id].response_time && <span className="ml-2">({testResults[p.id].response_time})</span>}
+              <div className={`mt-3 p-3 rounded-lg border text-xs ${testResults[p.id].success ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-700 border-red-200"}`}>
+                <div className="flex items-center gap-1.5">
+                  {testResults[p.id].success ? <CheckCircle2 className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
+                  <span className="font-medium">{testResults[p.id].success ? "Connection successful" : "Connection failed"}</span>
+                </div>
+                <p className="mt-1 text-[11px] opacity-80">{testResults[p.id].message}
+                {testResults[p.id].endpoint && <span className="ml-1 font-mono">{testResults[p.id].endpoint}</span>}
+                {testResults[p.id].response_time && <span className="ml-1">({testResults[p.id].response_time})</span>}
+                </p>
               </div>
             )}
 
@@ -879,21 +907,32 @@ function SSOProvidersTab() {
             )}
           </CardContent>
         </Card>
-      ))}
+        );
+      })}
 
       {(providers ?? []).length === 0 && (
-        <Card>
-          <CardContent className="pt-6 text-center">
-            <p className="text-sm text-muted-foreground">No SSO providers configured. Click &quot;Add Provider&quot; to get started.</p>
+        <Card className="border-dashed">
+          <CardContent className="pt-8 pb-8 text-center">
+            <div className="mx-auto h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
+              <Key className="h-6 w-6 text-primary" />
+            </div>
+            <p className="font-medium">No SSO providers configured</p>
+            <p className="text-sm text-muted-foreground mt-1">Click &quot;Add Provider&quot; above to get started.</p>
           </CardContent>
         </Card>
       )}
 
       {/* Edit/Create dialog - inline card */}
       {editing && (
-        <Card className="border-primary/50">
+        <Card className="overflow-hidden border-primary/50">
+          <div className="h-2 bg-gradient-to-r from-primary/80 to-primary/20" />
           <CardHeader>
-            <CardTitle className="text-base">{editing.id ? "Edit Provider" : "Add Provider"}</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center">
+                <Key className="h-4 w-4 text-primary" />
+              </div>
+              {editing.id ? "Edit Provider" : "Add Provider"}
+            </CardTitle>
             <CardDescription>Configure SSO provider settings.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
