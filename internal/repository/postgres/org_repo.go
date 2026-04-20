@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -514,4 +515,30 @@ func (r *OrgRepo) RevokePendingInvitesByLegacyTeamID(ctx context.Context, teamID
 		return fmt.Errorf("revoke pending invites by legacy team id: %w", err)
 	}
 	return nil
+}
+
+// FindExpiringInvites returns pending invites that expire within the given window.
+func (r *OrgRepo) FindExpiringInvites(ctx context.Context, window time.Duration) ([]domain.Invite, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT id, org_id, team_id, email, org_role, team_role, invited_by, expires_at, created_at, allowed_auth
+		 FROM invites
+		 WHERE accepted_at IS NULL AND expires_at BETWEEN NOW() AND NOW() + $1::interval
+		 ORDER BY expires_at ASC`, window)
+	if err != nil {
+		return nil, fmt.Errorf("find expiring invites: %w", err)
+	}
+	defer rows.Close()
+	var invites []domain.Invite
+	for rows.Next() {
+		var inv domain.Invite
+		var allowedAuth []byte
+		if err := rows.Scan(&inv.ID, &inv.OrgID, &inv.TeamID, &inv.Email, &inv.OrgRole, &inv.TeamRole, &inv.InvitedBy, &inv.ExpiresAt, &inv.CreatedAt, &allowedAuth); err != nil {
+			return nil, err
+		}
+		if len(allowedAuth) > 0 {
+			_ = json.Unmarshal(allowedAuth, &inv.AllowedAuth)
+		}
+		invites = append(invites, inv)
+	}
+	return invites, nil
 }
