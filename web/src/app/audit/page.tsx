@@ -115,18 +115,29 @@ export default function AuditPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Audit Log</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{data?.total ?? 0} entries{hasFilters ? " (filtered)" : ""}</p>
-        </div>
-        <Button variant="outline" size="sm" className="gap-1.5" onClick={exportAll} disabled={!data?.data?.length || exporting}>
-          <Download className="h-3.5 w-3.5" /> {exporting ? "Exporting…" : "Export CSV"}
-        </Button>
-      </div>
+      {/* Header */}
+      <Card className="overflow-hidden">
+        <div className="h-2 bg-gradient-to-r from-amber-500/80 to-amber-500/20" />
+        <CardContent className="pt-5 pb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-7 w-7 rounded-md bg-amber-500/10 flex items-center justify-center">
+                <Shield className="h-4 w-4 text-amber-600" />
+              </div>
+              <div>
+                <h1 className="text-base font-semibold">Audit Log</h1>
+                <p className="text-sm text-muted-foreground">{data?.total ?? 0} entries{hasFilters ? " (filtered)" : ""} · Track all actions across your organization.</p>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={exportAll} disabled={!data?.data?.length || exporting}>
+              <Download className="h-3.5 w-3.5" /> {exporting ? "Exporting…" : "Export CSV"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <Card>
+      <div className="grid grid-cols-3 gap-4">
+        <Card className="transition-all hover:shadow-md hover:-translate-y-0.5">
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-muted-foreground">Total Entries</span>
@@ -137,7 +148,7 @@ export default function AuditPage() {
             <p className="text-2xl font-bold tabular-nums">{data?.total ?? 0}</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="transition-all hover:shadow-md hover:-translate-y-0.5">
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-muted-foreground">Actions (page)</span>
@@ -148,7 +159,7 @@ export default function AuditPage() {
             <p className="text-2xl font-bold tabular-nums">{new Set(data?.data?.map(e => e.action)).size ?? 0}</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="transition-all hover:shadow-md hover:-translate-y-0.5">
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-muted-foreground">Actors (page)</span>
