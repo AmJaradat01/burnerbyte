@@ -305,8 +305,49 @@ func (h *OrgHandler) InviteMember(w http.ResponseWriter, r *http.Request) {
 			meta["team_role"] = *invite.TeamRole
 		}
 	}
+	if len(input.AllowedAuth) > 0 {
+		meta["allowed_auth"] = input.AllowedAuth
+	}
+	if len(input.TeamAssignments) > 0 {
+		meta["team_assignments"] = input.TeamAssignments
+	}
 	auditRecordEnhanced(r, orgID, "member.invited", "org", orgID, input.Email, meta)
 	writeJSON(w, http.StatusCreated, invite)
+}
+
+func (h *OrgHandler) BulkInviteMembers(w http.ResponseWriter, r *http.Request) {
+	uc := auth.GetUser(r.Context())
+	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid org ID")
+		return
+	}
+	if checkOrgPermission(w, r, orgID, "org.members.invite") {
+		return
+	}
+
+	var input domain.BulkInviteMemberInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	result, err := h.svc.BulkInviteMembers(r.Context(), orgID, input, uc.UserID)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+
+	orgName := ""
+	if org, err := h.svc.GetOrg(r.Context(), orgID); err == nil && org != nil {
+		orgName = org.Name
+	}
+	auditRecordEnhanced(r, orgID, "member.bulk_invited", "org", orgID, orgName, map[string]any{
+		"email_count": len(input.Emails), "created": result.Created,
+		"skipped": len(result.Skipped), "failed": len(result.Failed),
+		"org_role": input.OrgRole, "org_name": orgName,
+	})
+	writeJSON(w, http.StatusOK, result)
 }
 
 func (h *OrgHandler) ListMembers(w http.ResponseWriter, r *http.Request) {
