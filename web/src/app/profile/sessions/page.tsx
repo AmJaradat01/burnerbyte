@@ -46,21 +46,31 @@ export default function SessionsPage() {
 
   return (
     <div className="max-w-3xl space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Active Sessions</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Manage your active sessions across devices.</p>
-        </div>
-        <ConfirmDialog
-          trigger={<Button variant="destructive" size="sm">Revoke All</Button>}
-          title="Revoke all sessions?"
-          description="You will be signed out of all devices including this one."
-          onConfirm={() => revokeAll.mutate()}
-        />
-      </div>
+      <Card className="overflow-hidden">
+        <div className="h-2 bg-gradient-to-r from-blue-500/80 to-blue-500/20" />
+        <CardContent className="pt-5 pb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-7 w-7 rounded-md bg-blue-500/10 flex items-center justify-center">
+                <Monitor className="h-4 w-4 text-blue-600" />
+              </div>
+              <div>
+                <h1 className="text-base font-semibold">Active Sessions</h1>
+                <p className="text-sm text-muted-foreground">Manage your active sessions across devices.</p>
+              </div>
+            </div>
+            <ConfirmDialog
+              trigger={<Button variant="destructive" size="sm">Revoke All</Button>}
+              title="Revoke all sessions?"
+              description="You will be signed out of all devices including this one."
+              onConfirm={() => revokeAll.mutate()}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-2 gap-4">
-        <Card>
+        <Card className="transition-all hover:shadow-md hover:-translate-y-0.5">
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-muted-foreground">Active Sessions</span>
@@ -71,7 +81,7 @@ export default function SessionsPage() {
             <p className="text-2xl font-bold tabular-nums">{sessions?.length ?? 0}</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="transition-all hover:shadow-md hover:-translate-y-0.5">
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-muted-foreground">Current Session</span>

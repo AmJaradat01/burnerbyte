@@ -234,7 +234,7 @@ export default function InboxDetailPage() {
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
       {/* ── Top bar ── */}
-      <div className="shrink-0 border-b bg-background px-4 py-3">
+      <div className="shrink-0 bg-background px-4 py-3 border-b-2 border-b-orange-500/20">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <Button variant="outline" size="sm" className="shrink-0 h-8 w-8 p-0" onClick={() => router.push("/")}>
