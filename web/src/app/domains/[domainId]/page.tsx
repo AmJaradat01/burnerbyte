@@ -116,35 +116,48 @@ export default function DomainDetailPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <Link href="/domains" className="flex h-8 w-8 items-center justify-center rounded-lg border bg-card hover:bg-accent transition-colors">
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        {isLoading ? (
-          <div className="flex items-center gap-3"><Skeleton className="h-7 w-48" /><Skeleton className="h-5 w-20 rounded-full" /></div>
-        ) : (
-          <>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-3xl font-bold tracking-tight">{domain?.domain_name}</h1>
-                {allVerified ? (
-                  <Badge className="gap-1 bg-emerald-100 text-emerald-700 border-emerald-200">
-                    <CheckCircle2 className="h-3 w-3" /> Verified
-                  </Badge>
-                ) : (
-                  <Badge className="gap-1 bg-amber-100 text-amber-700 border-amber-200">
-                    <Clock className="h-3 w-3" /> Setup Required
-                  </Badge>
-                )}
+      <Card className="overflow-hidden">
+        <div className={`h-2 bg-gradient-to-r ${allVerified ? "from-emerald-500/80 to-emerald-500/20" : "from-amber-500/80 to-amber-500/20"}`} />
+        <CardContent className="pt-5 pb-4">
+          <div className="flex items-center gap-3">
+            <Link href="/domains" className="flex h-8 w-8 items-center justify-center rounded-lg border bg-card hover:bg-accent transition-colors shrink-0">
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+            {isLoading ? (
+              <div className="flex items-center gap-3"><Skeleton className="h-7 w-48" /><Skeleton className="h-5 w-20 rounded-full" /></div>
+            ) : (
+              <div className="flex items-center gap-3 flex-1">
+                <div className="h-7 w-7 rounded-md bg-emerald-500/10 flex items-center justify-center shrink-0">
+                  <Globe className="h-4 w-4 text-emerald-600" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-base font-semibold font-mono">{domain?.domain_name}</h1>
+                    {allVerified ? (
+                      <Badge className="gap-1 bg-emerald-100 text-emerald-700 border-emerald-200">
+                        <CheckCircle2 className="h-3 w-3" /> Verified
+                      </Badge>
+                    ) : (
+                      <Badge className="gap-1 bg-amber-100 text-amber-700 border-amber-200">
+                        <Clock className="h-3 w-3" /> Setup Required
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Added {new Date(domain?.created_at ?? "").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                    {domain?.dns_last_checked_at && <> · Last checked {new Date(domain.dns_last_checked_at).toLocaleTimeString()}</>}
+                  </p>
+                </div>
               </div>
-              <p className="text-sm text-muted-foreground mt-0.5">
-                Added {new Date(domain?.created_at ?? "").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
-                {domain?.dns_last_checked_at && <> · Last checked {new Date(domain.dns_last_checked_at).toLocaleTimeString()}</>}
-              </p>
-            </div>
-          </>
-        )}
-      </div>
+            )}
+            {domain && !allVerified && (
+              <Button variant="outline" size="sm" className="gap-1.5 shrink-0" onClick={() => verify.mutate()} disabled={verify.isPending}>
+                <RefreshCw className={`h-3.5 w-3.5 ${verify.isPending ? "animate-spin" : ""}`} /> Verify DNS
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {domain && (
         <>
@@ -309,7 +322,7 @@ function DetailRow({ label, value, mono }: { label: string; value: string; mono?
 
 function QuickStat({ icon: Icon, label, value, accent }: { icon: typeof Globe; label: string; value: number | string; accent: string }) {
   return (
-    <Card>
+    <Card className="transition-all hover:shadow-md hover:-translate-y-0.5">
       <CardContent className="pt-5 pb-4">
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-medium text-muted-foreground">{label}</span>
