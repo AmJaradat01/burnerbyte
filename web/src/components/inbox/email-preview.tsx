@@ -74,7 +74,7 @@ export function EmailPreview({ email, onBack, onToggleRead, onDelete }: EmailPre
   return (
     <>
       {/* Header */}
-      <div className="shrink-0 border-b bg-background px-5 py-4">
+      <div className="shrink-0 bg-background px-5 py-4 border-b-2 border-b-blue-500/10">
         {/* Mobile back */}
         <button onClick={onBack} className="md:hidden flex items-center gap-1.5 text-xs text-muted-foreground mb-3 hover:text-foreground transition-colors">
           <ArrowLeft className="h-3.5 w-3.5" /> Back to list
@@ -83,7 +83,12 @@ export function EmailPreview({ email, onBack, onToggleRead, onDelete }: EmailPre
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
             {/* Subject */}
-            <h2 className="text-lg font-semibold leading-tight">{email.subject || "(no subject)"}</h2>
+            <div className="flex items-center gap-2">
+              <div className="h-6 w-6 rounded-md bg-blue-100 flex items-center justify-center shrink-0">
+                <Mail className="h-3 w-3 text-blue-600" />
+              </div>
+              <h2 className="text-lg font-semibold leading-tight">{email.subject || "(no subject)"}</h2>
+            </div>
 
             {/* Sender info */}
             <div className="flex items-center gap-3 mt-3">
@@ -128,7 +133,7 @@ export function EmailPreview({ email, onBack, onToggleRead, onDelete }: EmailPre
 
         {/* Attachments */}
         {email.attachments && email.attachments.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t">
+          <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t bg-muted/20 -mx-5 px-5 pb-3 rounded-b-lg">
             <span className="flex items-center gap-1 text-xs text-muted-foreground mr-1">
               <Paperclip className="h-3 w-3" /> {email.attachments.length} attachment{email.attachments.length > 1 ? "s" : ""}
             </span>

@@ -563,8 +563,8 @@ function LandingPage() {
             })}
           </div>
         </section>
-        <section className="border-t bg-muted/30">
-          <div className="mx-auto max-w-3xl px-6 py-20 text-center">
+        <section className="border-t bg-gradient-to-b from-muted/50 to-background">
+          <div className="mx-auto max-w-3xl px-6 py-24 text-center">
             <h2 className="text-3xl font-bold tracking-tight">{t("readyToStart")}</h2>
             <p className="mt-3 text-muted-foreground">{t("deployInMinutes")}</p>
             {allowRegistration ? (
@@ -575,9 +575,24 @@ function LandingPage() {
           </div>
         </section>
       </main>
-      <footer className="border-t py-8 text-center text-sm text-muted-foreground">
-        <p>{t("footer")}</p>
-        <p className="mt-1 text-xs">{t("license")}</p>
+      <footer className="border-t py-12 bg-muted/20">
+        <div className="mx-auto max-w-5xl px-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🔥</span>
+              <span className="font-semibold">BurnerByte</span>
+            </div>
+            <div className="flex items-center gap-6 text-sm text-muted-foreground">
+              <Link href="/docs" className="hover:text-foreground transition-colors">Documentation</Link>
+              <Link href="/docs/api" className="hover:text-foreground transition-colors">API Reference</Link>
+              <Link href="/docs/self-hosting/production" className="hover:text-foreground transition-colors">Self-Hosting</Link>
+            </div>
+          </div>
+          <div className="mt-6 pt-6 border-t text-center text-sm text-muted-foreground">
+            <p>{t("footer")}</p>
+            <p className="mt-1 text-xs">{t("license")}</p>
+          </div>
+        </div>
       </footer>
     </div>
   );
