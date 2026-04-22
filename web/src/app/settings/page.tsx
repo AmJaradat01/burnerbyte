@@ -1056,10 +1056,10 @@ function SSOProvidersTab() {
               <div className={`${!editing.auto_provision ? "opacity-60" : ""}`}>
                 <div className="space-y-1">
                   <Label className="text-xs">Default Team</Label>
-                  <Select value={editing.default_team_id ?? ""} onValueChange={(v) => set("default_team_id", v || undefined)}>
+                  <Select value={editing.default_team_id ?? "__none__"} onValueChange={(v) => set("default_team_id", v === "__none__" ? undefined : v)}>
                     <SelectTrigger className="h-8"><SelectValue placeholder="No default team" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">None</SelectItem>
+                      <SelectItem value="__none__">None</SelectItem>
                       {teams.map((t) => (
                         <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
                       ))}
