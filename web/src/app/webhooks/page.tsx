@@ -270,6 +270,7 @@ function DeliveryLogPanel({ orgId, teamId, webhookId }: { orgId: string; teamId:
 
   return (
     <div>
+      <div className="overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
@@ -299,6 +300,7 @@ function DeliveryLogPanel({ orgId, teamId, webhookId }: { orgId: string; teamId:
           ))}
         </TableBody>
       </Table>
+      </div>
       {(data.total_pages ?? 1) > 1 && <Pagination page={logPage} totalPages={data.total_pages} onPageChange={setLogPage} />}
     </div>
   );

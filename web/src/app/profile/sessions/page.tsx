@@ -96,7 +96,7 @@ export default function SessionsPage() {
 
       <Card>
         <CardHeader><CardTitle>Sessions</CardTitle></CardHeader>
-        <CardContent>
+        <CardContent className="overflow-x-auto">
           {isLoading ? (
             <div className="space-y-2">{[1,2,3].map(i => <Skeleton key={i} className="h-10 w-full" />)}</div>
           ) : (!sessions || sessions.length === 0) ? (
@@ -106,8 +106,8 @@ export default function SessionsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>IP Address</TableHead>
-                  <TableHead>User Agent</TableHead>
-                  <TableHead>Created</TableHead>
+                  <TableHead className="hidden sm:table-cell">User Agent</TableHead>
+                  <TableHead className="hidden md:table-cell">Created</TableHead>
                   <TableHead>Expires</TableHead>
                   <TableHead></TableHead>
                 </TableRow>
@@ -126,8 +126,8 @@ export default function SessionsPage() {
                         {isCurrent && <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[10px] px-1">Current</Badge>}
                       </div>
                     </TableCell>
-                    <TableCell className="max-w-[200px] truncate text-sm">{s.user_agent ?? "—"}</TableCell>
-                    <TableCell className="text-sm">{new Date(s.created_at).toLocaleDateString()}</TableCell>
+                    <TableCell className="max-w-[200px] truncate text-sm hidden sm:table-cell">{s.user_agent ?? "—"}</TableCell>
+                    <TableCell className="text-sm hidden md:table-cell">{new Date(s.created_at).toLocaleDateString()}</TableCell>
                     <TableCell className="text-sm">{new Date(s.expires_at).toLocaleDateString()}</TableCell>
                     <TableCell>
                       {!isCurrent && <Button variant="ghost" size="sm" onClick={() => revoke.mutate(s.id)}>Revoke</Button>}
