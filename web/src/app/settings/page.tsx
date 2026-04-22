@@ -1228,7 +1228,7 @@ function ProviderCard({
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button variant="outline" size="sm" className="gap-1" onClick={() => onTest(p)} disabled={testing === p.id}>
               {testing === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
               Test

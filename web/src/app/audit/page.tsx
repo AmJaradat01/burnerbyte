@@ -136,7 +136,7 @@ export default function AuditPage() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card className="transition-all hover:shadow-md hover:-translate-y-0.5">
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
