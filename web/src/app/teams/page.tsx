@@ -112,7 +112,7 @@ export default function TeamsPage() {
       </Card>
 
       {isAdmin && teamsData?.data && teamsData.data.length > 0 && (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <MiniStat icon={Users} label="Total Teams" value={teamsData.data.length} accent="text-blue-600 bg-blue-100" />
           <MiniStat icon={Users} label="Total Members" value={teamsData.data.reduce((s, t) => s + (t.member_count ?? 0), 0)} accent="text-emerald-600 bg-emerald-100" />
           <MiniStat icon={Inbox} label="Total Inboxes" value={teamsData.data.reduce((s, t) => s + (t.active_inboxes ?? 0), 0)} accent="text-violet-600 bg-violet-100" />
