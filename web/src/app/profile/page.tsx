@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -72,32 +71,36 @@ export default function ProfilePage() {
 
       {/* Identity banner */}
       <Card className="overflow-hidden">
-        <div className="h-1.5 bg-gradient-to-r from-cyan-500/60 to-cyan-500/10" />
-        <CardContent className="flex items-center gap-4 py-6">
-          <Avatar className="h-16 w-16 text-lg ring-2 ring-cyan-500/20 ring-offset-2">
-            <AvatarImage src={user.avatar_url} alt={user.display_name} />
-            <AvatarFallback className="bg-gradient-to-br from-cyan-500/20 to-cyan-500/5 text-cyan-700 font-bold">{initials}</AvatarFallback>
-          </Avatar>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <p className="truncate text-lg font-semibold">{user.display_name || "Unnamed"}</p>
-              {user.is_system_admin && <Badge className="bg-amber-100 text-amber-700 border-amber-200">Admin</Badge>}
+        <div className="h-24 bg-gradient-to-r from-cyan-500/20 via-blue-500/10 to-violet-500/20 relative">
+          <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "radial-gradient(circle, rgba(0,0,0,0.8) 1px, transparent 1px)", backgroundSize: "16px 16px" }} />
+        </div>
+        <CardContent className="relative -mt-10 pb-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
+            <Avatar className="h-20 w-20 text-xl ring-4 ring-background shadow-lg">
+              <AvatarImage src={user.avatar_url} alt={user.display_name} />
+              <AvatarFallback className="bg-gradient-to-br from-cyan-500 to-blue-600 text-white font-bold">{initials}</AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0 pt-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="text-xl font-bold truncate">{user.display_name || "Unnamed"}</p>
+                {user.is_system_admin && <Badge className="bg-amber-100 text-amber-700 border-amber-200">Admin</Badge>}
+              </div>
+              <p className="text-sm text-muted-foreground font-mono truncate">{user.email}</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {user.email_verified ? (
+                  <Badge className="bg-green-100 text-green-700 border-green-200 gap-1"><Shield className="h-3 w-3" /> Verified</Badge>
+                ) : (
+                  <Badge className="bg-amber-100 text-amber-700 border-amber-200 gap-1">Unverified</Badge>
+                )}
+                {isSSO && <Badge variant="outline" className="gap-1"><KeyRound className="h-3 w-3" /> SSO via {user.sso_provider}</Badge>}
+                {user.auth_method_lock && <Badge variant="outline" className="gap-1 text-violet-600 border-violet-200"><Shield className="h-3 w-3" /> Locked to {user.auth_method_lock}</Badge>}
+              </div>
             </div>
-            <p className="truncate text-sm font-medium text-muted-foreground font-mono">{user.email}</p>
-            <div className="mt-1.5 flex flex-wrap gap-2">
-              {user.email_verified ? (
-                <Badge className="bg-green-100 text-green-700 border-green-200 gap-1"><Shield className="h-3 w-3" /> Verified</Badge>
-              ) : (
-                <Badge className="bg-amber-100 text-amber-700 border-amber-200 gap-1">Unverified</Badge>
-              )}
-              {isSSO && <Badge variant="outline" className="gap-1"><KeyRound className="h-3 w-3" /> SSO via {user.sso_provider}</Badge>}
-              {user.auth_method_lock && <Badge variant="outline" className="gap-1 text-violet-600 border-violet-200"><Shield className="h-3 w-3" /> Locked to {user.auth_method_lock}</Badge>}
+            <div className="hidden sm:block text-right shrink-0">
+              <p className="text-xs text-muted-foreground">Member since</p>
+              <p className="text-sm font-medium">{new Date(user.created_at).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}</p>
+              {user.last_login_at && <p className="text-xs text-muted-foreground mt-1">Last login {new Date(user.last_login_at).toLocaleDateString()}</p>}
             </div>
-          </div>
-          <div className="hidden sm:block text-right">
-            <p className="text-xs text-muted-foreground">Member since</p>
-            <p className="text-sm font-medium">{new Date(user.created_at).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}</p>
-            {user.last_login_at && <p className="text-xs text-muted-foreground mt-1">Last login {new Date(user.last_login_at).toLocaleDateString()}</p>}
           </div>
         </CardContent>
       </Card>
@@ -206,23 +209,34 @@ function ProfileForm({ user, onSaved }: { user: NonNullable<ReturnType<typeof us
         </CardTitle>
         <CardDescription>Update your display name and avatar.</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input id="email" value={user.email} disabled className="bg-muted" />
+      <CardContent className="space-y-3">
+        <div className="flex items-center justify-between rounded-lg border p-3 bg-muted/30">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-md bg-slate-100 flex items-center justify-center shrink-0">
+              <Shield className="h-4 w-4 text-slate-500" />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Email</Label>
+              <p className="text-sm font-mono">{user.email}</p>
+            </div>
+          </div>
+          <Badge variant="outline" className="text-[10px]">Read-only</Badge>
         </div>
-        <div className="space-y-2">
+        <div className="rounded-lg border p-3 space-y-2">
           <Label htmlFor="displayName">Display Name</Label>
           <Input id="displayName" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Your name" />
         </div>
-        <div className="space-y-2">
+        <div className="rounded-lg border p-3 space-y-2">
           <Label htmlFor="avatar">Avatar URL</Label>
           <Input id="avatar" value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} placeholder="https://example.com/avatar.png" />
           <p className="text-xs text-muted-foreground">Direct link to an image. Leave empty to use initials.</p>
         </div>
-        <Button onClick={handleSave} disabled={saving || !dirty}>
-          {saving ? "Saving…" : "Save Changes"}
-        </Button>
+        {dirty && (
+          <Button onClick={handleSave} disabled={saving} className="w-full gap-2">
+            <Shield className="h-4 w-4" />
+            {saving ? "Saving…" : "Save Changes"}
+          </Button>
+        )}
       </CardContent>
     </Card>
   );
@@ -262,25 +276,33 @@ function ChangePasswordForm() {
         </CardTitle>
         <CardDescription>You will be signed out of all sessions after changing your password.</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
+      <CardContent className="space-y-3">
+        <div className="rounded-lg border p-3 space-y-2">
           <Label htmlFor="currentPw">Current Password</Label>
           <Input id="currentPw" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} autoComplete="current-password" />
         </div>
-        <Separator />
-        <div className="space-y-2">
+        <div className="rounded-lg border p-3 space-y-2">
           <Label htmlFor="newPw">New Password</Label>
           <Input id="newPw" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} autoComplete="new-password" />
           {newPassword.length > 0 && newPassword.length < 8 && (
             <p className="text-xs text-destructive">Must be at least 8 characters</p>
           )}
+          {newPassword.length >= 8 && (
+            <div className="flex items-center gap-2">
+              <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                <div className={`h-full rounded-full transition-all ${newPassword.length >= 12 ? "w-full bg-green-500" : newPassword.length >= 10 ? "w-2/3 bg-amber-500" : "w-1/3 bg-red-500"}`} />
+              </div>
+              <span className="text-[10px] text-muted-foreground">{newPassword.length >= 12 ? "Strong" : newPassword.length >= 10 ? "Medium" : "Weak"}</span>
+            </div>
+          )}
         </div>
-        <div className="space-y-2">
+        <div className="rounded-lg border p-3 space-y-2">
           <Label htmlFor="confirmPw">Confirm New Password</Label>
           <Input id="confirmPw" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" />
           {mismatch && <p className="text-xs text-destructive">Passwords do not match</p>}
         </div>
-        <Button onClick={handleChange} disabled={changing || !valid}>
+        <Button onClick={handleChange} disabled={changing || !valid} className="w-full gap-2" variant={valid ? "default" : "outline"}>
+          <KeyRound className="h-4 w-4" />
           {changing ? "Changing…" : "Change Password"}
         </Button>
       </CardContent>
@@ -348,30 +370,35 @@ function DateTimePreferencesCard() {
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-2">
-          <Label>Date Format</Label>
-          <Select value={dateFmt} onValueChange={setDateFmt}>
-            <SelectTrigger><SelectValue placeholder="Select format" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="YYYY-MM-DD">YYYY-MM-DD</SelectItem>
-              <SelectItem value="DD/MM/YYYY">DD/MM/YYYY</SelectItem>
-              <SelectItem value="MM/DD/YYYY">MM/DD/YYYY</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <Label>Date Format</Label>
+            <Select value={dateFmt} onValueChange={setDateFmt}>
+              <SelectTrigger><SelectValue placeholder="Select format" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="YYYY-MM-DD">YYYY-MM-DD</SelectItem>
+                <SelectItem value="DD/MM/YYYY">DD/MM/YYYY</SelectItem>
+                <SelectItem value="MM/DD/YYYY">MM/DD/YYYY</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Time Format</Label>
+            <Select value={timeFmt} onValueChange={setTimeFmt}>
+              <SelectTrigger><SelectValue placeholder="Select format" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="24h">24-hour</SelectItem>
+                <SelectItem value="12h">12-hour</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        <div className="space-y-2">
-          <Label>Time Format</Label>
-          <Select value={timeFmt} onValueChange={setTimeFmt}>
-            <SelectTrigger><SelectValue placeholder="Select format" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="24h">24-hour</SelectItem>
-              <SelectItem value="12h">12-hour</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <Button onClick={save} disabled={saving || !dirty}>
-          {saving ? "Saving…" : "Save Preferences"}
-        </Button>
+        {dirty && (
+          <Button onClick={save} disabled={saving} className="w-full gap-2">
+            <Clock className="h-4 w-4" />
+            {saving ? "Saving…" : "Save Preferences"}
+          </Button>
+        )}
       </CardContent>
     </Card>
   );
