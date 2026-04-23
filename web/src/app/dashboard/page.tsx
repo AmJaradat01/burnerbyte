@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth-store";
@@ -14,6 +15,8 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { timeAgo } from "@/lib/time";
 import { Activity, Globe, Inbox as InboxIcon, Mail, Plus, Users } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { LastUpdated } from "@/components/last-updated";
 
 const RechartsBarChart = dynamic(() => import("recharts").then((m) => m.BarChart), { ssr: false });
 const RechartsAreaChart = dynamic(() => import("recharts").then((m) => m.AreaChart), { ssr: false });
@@ -117,9 +120,14 @@ function MemberDashboard({ org, user, greeting }: { org: { id: string; name: str
 /* ── Admin Dashboard ── */
 
 function AdminDashboard({ org, user, greeting }: { org: { id: string; name: string }; user: any; greeting: string }) {
-  const { data: stats, isLoading, isError, refetch } = useQuery({
+  const [autoRefresh, setAutoRefresh] = useState(() =>
+    typeof window !== "undefined" ? localStorage.getItem("auto-refresh-enabled") === "true" : false
+  );
+
+  const { data: stats, isLoading, isError, refetch, dataUpdatedAt } = useQuery({
     queryKey: ["org-analytics", org.id],
     queryFn: () => api.get<AnalyticsStats>(`/orgs/${org.id}/analytics`),
+    refetchInterval: autoRefresh ? 30_000 : false,
   });
 
   const { data: chart, isError: chartError } = useQuery({
@@ -182,6 +190,17 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
               <p className="text-muted-foreground text-sm mt-0.5">Here&apos;s what&apos;s happening with {org.name}</p>
             </div>
             <div className="flex items-center gap-2">
+              <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+                Auto-refresh
+                <Switch
+                  checked={autoRefresh}
+                  onCheckedChange={(checked) => {
+                    setAutoRefresh(checked);
+                    localStorage.setItem("auto-refresh-enabled", String(checked));
+                  }}
+                  size="sm"
+                />
+              </label>
               <Button asChild variant="outline" size="sm">
                 <Link href="/" className="gap-1.5"><Plus className="h-3.5 w-3.5" /> New Inbox</Link>
               </Button>
@@ -191,6 +210,9 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
       </Card>
 
       {/* Primary stats */}
+      <div className="flex items-center justify-between">
+        <LastUpdated dataUpdatedAt={dataUpdatedAt} />
+      </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           icon={Mail}
