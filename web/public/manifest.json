@@ -1,0 +1,12 @@
+{
+  "name": "BurnerByte",
+  "short_name": "BurnerByte",
+  "description": "Self-hosted temporary email platform",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ],
+  "theme_color": "#4F46E5",
+  "background_color": "#fafaf8",
+  "display": "standalone",
+  "start_url": "/"
+}

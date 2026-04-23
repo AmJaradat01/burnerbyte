@@ -12,7 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Shield, Zap, Clock, Eye, EyeOff, Loader2, KeyRound } from "lucide-react";
+import { Eye, EyeOff, Loader2, KeyRound, Shield } from "lucide-react";
+import { Logo } from "@/components/logo";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
 
@@ -135,33 +136,13 @@ export default function LoginPage() {
   const ssoProviders = (sso?.providers ?? []).filter((p) => p.enabled);
 
   return (
-    <div className="flex min-h-[calc(100vh-8rem)]">
-      {/* Left branding panel */}
-      <div className="hidden lg:flex lg:w-2/5 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex-col justify-center px-12 py-12 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-[0.05]" style={{ backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.8) 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
-        <div className="relative z-10 space-y-8">
-          <div>
-            <span className="text-4xl">🔥</span>
-            <h1 className="text-2xl font-bold mt-3">BurnerByte</h1>
-            <p className="text-sm text-white/60 mt-1">Self-hosted temporary email</p>
-          </div>
-          <div className="space-y-3">
-            {[{ icon: Shield, title: "Privacy First", desc: "Your data stays on your server. No third-party access." }, { icon: Zap, title: "Instant Inboxes", desc: "Create disposable emails in seconds. Auto-expire when done." }, { icon: Clock, title: "Full Control", desc: "Self-hosted with custom domains, teams, and RBAC." }].map(({ icon: Icon, title, desc }) => (
-              <div key={title} className="flex items-start gap-3">
-                <div className="rounded-md bg-white/10 p-1.5 shrink-0 mt-0.5"><Icon className="h-4 w-4 text-white/80" /></div>
-                <div><p className="font-medium text-white text-sm">{title}</p><p className="text-white/50 text-xs mt-0.5 leading-relaxed">{desc}</p></div>
-              </div>
-            ))}
-          </div>
-          <p className="text-white/30 text-xs pt-4 border-t border-white/10">Trusted by teams who value privacy</p>
+    <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center bg-gradient-to-b from-muted/50 to-background p-6">
+      <div className="w-full max-w-md space-y-6">
+        <div className="text-center">
+          <Logo size="lg" />
         </div>
-      </div>
-
-      {/* Right form panel */}
-      <div className="flex flex-1 items-center justify-center bg-gradient-to-b from-muted/50 to-background p-6">
-        <Card className="w-full max-w-md shadow-xl">
+        <Card className="w-full shadow-xl">
           <CardHeader className="text-center">
-            <div className="text-3xl mb-2 lg:hidden">🔥</div>
             <CardTitle className="text-2xl">Sign in to BurnerByte</CardTitle>
             <CardDescription>
               {enforceSSO ? "Sign in with SSO to continue" : "Enter your credentials to continue"}

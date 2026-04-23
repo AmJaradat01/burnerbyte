@@ -102,7 +102,7 @@ export default function SessionsPage() {
           ) : (!sessions || sessions.length === 0) ? (
             <EmptyState icon="🖥️" title="No active sessions" description="No active sessions found." />
           ) : (
-            <Table>
+            <Table className="table-striped">
               <TableHeader>
                 <TableRow>
                   <TableHead>IP Address</TableHead>
