@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { EmptyState } from "@/components/empty-state";
 import { ErrorState } from "@/components/error-state";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { TeamIllustration } from "@/components/illustrations";
 import { useRoles } from "@/hooks/use-roles";
 import { ArrowLeft, AlertTriangle, CheckCircle2, Clock, Globe, Inbox, Loader2, Plus, Search, Settings, Trash2, UserPlus, Users, XCircle } from "lucide-react";
 import type { Team, Membership, Domain } from "@/types";
@@ -123,7 +124,7 @@ export default function TeamsPage() {
         <ErrorState message="Failed to load teams" onRetry={() => refetch()} />
       ) : (
         (!teamsData?.data || teamsData.data.length === 0) ? (
-          <EmptyState icon="👥" title="No teams yet" description="Create a team to organize your domains and inboxes." />
+          <EmptyState illustration={<TeamIllustration />} title="No teams yet" description="Create a team to organize your domains and inboxes." />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {teamsData.data.map((t) => (

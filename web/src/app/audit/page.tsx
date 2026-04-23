@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Pagination } from "@/components/pagination";
 import { ErrorState } from "@/components/error-state";
 import { EmptyState } from "@/components/empty-state";
+import { AuditIllustration } from "@/components/illustrations";
 import { toast } from "sonner";
 import { timeAgo } from "@/lib/time";
 import { Activity, Download, Globe, Inbox, Key, Shield, User, Users, Webhook } from "lucide-react";
@@ -210,7 +211,7 @@ export default function AuditPage() {
       isLoading ? <AuditSkeleton /> : (
       <>
         {(!data?.data || data.data.length === 0) ? (
-          <EmptyState icon="📋" title="No audit entries" description={hasFilters ? "Try adjusting your filters." : "Actions will appear here as they happen."} />
+          <EmptyState illustration={<AuditIllustration />} title="No audit entries" description={hasFilters ? "Try adjusting your filters." : "Actions will appear here as they happen."} />
         ) : (
           <div className="space-y-2">
             {data.data.map((e) => <AuditRow key={e.id} entry={e} />)}
