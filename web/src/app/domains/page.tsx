@@ -87,8 +87,7 @@ export default function DomainsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card className="overflow-hidden">
-        <div className="h-2 bg-gradient-to-r from-emerald-500/80 to-emerald-500/20" />
+      <Card className="card-header-accent">
         <CardContent className="pt-5 pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -194,7 +193,7 @@ export default function DomainsPage() {
 
 function MiniStat({ icon: Icon, label, value, accent }: { icon: typeof Globe; label: string; value: number; accent: string }) {
   return (
-    <Card className="transition-all hover:shadow-md hover:-translate-y-0.5">
+    <Card className="transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:-translate-y-px">
       <CardContent className="pt-5 pb-4">
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-medium text-muted-foreground">{label}</span>
@@ -226,7 +225,7 @@ function DomainCard({ domain: d, onVerify, onDelete, verifying }: {
   };
 
   return (
-    <Card className={`group hover:shadow-md transition-all duration-200 ${fullyVerified ? "hover:border-emerald-200" : "hover:border-amber-200 border-dashed"}`}>
+    <Card className={`group hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] transition-all duration-200 ${fullyVerified ? "hover:border-emerald-200" : "hover:border-amber-200 border-dashed"}`}>
 
       {/* Header with icon + domain name */}
       <CardContent className="pt-5 pb-0 pl-10">
