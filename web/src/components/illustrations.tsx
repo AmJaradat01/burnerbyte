@@ -74,3 +74,38 @@ export function NotificationIllustration() {
     </svg>
   );
 }
+
+export function SessionIllustration() {
+  return (
+    <svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-primary/20">
+      <rect x="10" y="16" width="60" height="40" rx="4" stroke="currentColor" strokeWidth="2" />
+      <rect x="28" y="56" width="24" height="4" rx="1" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="24" y="60" width="32" height="2" rx="1" fill="currentColor" opacity="0.3" />
+      <circle cx="40" cy="36" r="6" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M36 42C36 39.8 37.8 38 40 38C42.2 38 44 39.8 44 42" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function DomainTeamIllustration() {
+  return (
+    <svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-primary/20">
+      <circle cx="30" cy="30" r="8" stroke="currentColor" strokeWidth="2" />
+      <path d="M18 50C18 43.4 23.4 38 30 38C36.6 38 42 43.4 42 50" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="52" cy="30" r="6" stroke="currentColor" strokeWidth="1.5" opacity="0.5" />
+      <path d="M44 48C44 43 48 39 52 39C56 39 60 43 60 48" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.5" />
+    </svg>
+  );
+}
+
+export function GlobeIllustration() {
+  return (
+    <svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-primary/20">
+      <circle cx="40" cy="40" r="22" stroke="currentColor" strokeWidth="2" />
+      <ellipse cx="40" cy="40" rx="10" ry="22" stroke="currentColor" strokeWidth="1.5" />
+      <line x1="18" y1="40" x2="62" y2="40" stroke="currentColor" strokeWidth="1.5" />
+      <line x1="22" y1="28" x2="58" y2="28" stroke="currentColor" strokeWidth="1" opacity="0.5" />
+      <line x1="22" y1="52" x2="58" y2="52" stroke="currentColor" strokeWidth="1" opacity="0.5" />
+    </svg>
+  );
+}

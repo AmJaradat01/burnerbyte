@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/error-state";
 import { EmptyState } from "@/components/empty-state";
+import { DomainTeamIllustration, GlobeIllustration } from "@/components/illustrations";
 import { toast } from "sonner";
 import { ArrowLeft, Check, CheckCircle2, Circle, Clock, Copy, FileText, Globe, Inbox, Info, RefreshCw, Settings2, Shield, Users } from "lucide-react";
 import type { Domain, DomainAssignment, Team } from "@/types";
@@ -274,7 +275,7 @@ export default function DomainDetailPage() {
                   ))}
                 </div>
               ) : (
-                <EmptyState icon="👥" title="No teams assigned" description="Assign this domain to a team to start creating inboxes." />
+                <EmptyState illustration={<DomainTeamIllustration />} title="No teams assigned" description="Assign this domain to a team to start creating inboxes." />
               )}
             </CardContent>
           </Card>

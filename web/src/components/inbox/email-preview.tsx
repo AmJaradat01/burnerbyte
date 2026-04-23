@@ -120,7 +120,7 @@ export function EmailPreview({ email, onBack, onToggleRead, onDelete }: EmailPre
             </Button>
             <ConfirmDialog
               trigger={
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive hover:text-destructive">
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive hover:text-destructive" aria-label="Delete email">
                   <Trash2 className="h-4 w-4" />
                 </Button>
               }
