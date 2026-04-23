@@ -69,7 +69,7 @@ export default function AnalyticsPage() {
       <Tabs defaultValue="org">
         <TabsList>
           <TabsTrigger value="org">Organization</TabsTrigger>
-          {currentTeam && <TabsTrigger value="team">{currentTeam.name}</TabsTrigger>}
+          {currentTeam && <TabsTrigger value="team">Team: {currentTeam.name}</TabsTrigger>}
         </TabsList>
         <TabsContent value="org"><OrgAnalytics orgId={currentOrg.id} /></TabsContent>
         {currentTeam && <TabsContent value="team"><TeamAnalytics orgId={currentOrg.id} teamId={currentTeam.id} /></TabsContent>}

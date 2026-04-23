@@ -22,6 +22,7 @@ import { UnifiedUsersTab } from "@/components/settings/unified-users-tab";
 import { RolesTab } from "@/components/settings/roles-tab";
 import { useRoles } from "@/hooks/use-roles";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { ProviderIcon } from "@/components/provider-icon";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import type { Organization, OrgSettings, SystemStats } from "@/types";
 
@@ -1226,7 +1227,7 @@ function ProviderCard({
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className={`h-10 w-10 rounded-lg flex items-center justify-center shadow-sm ${iconBg}`}>
-              <Shield className="h-5 w-5" />
+              <ProviderIcon providerType={p.provider_type} />
             </div>
             <div>
               <div className="flex items-center gap-2">
