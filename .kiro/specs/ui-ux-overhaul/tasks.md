@@ -278,14 +278,14 @@ Systematic UI/UX overhaul of the BurnerByte frontend, organized into 6 phases or
   - Run `npm run build` to verify no TypeScript errors or missing imports.
 
 - [ ] 10. Branding, Performance, Data Freshness
-  - [ ] 10.1 Create branding assets and PWA manifest
+  - [x] 10.1 Create branding assets and PWA manifest
     - Create `web/public/favicon.svg`: simple "B" lettermark in primary color
     - Create `web/public/icon-192.png`: 192×192 PNG version of the lettermark
     - Create `web/public/manifest.json` with PWA metadata (name, short_name, icons, theme_color `#4f46e5`, background_color `#fafaf8`, display standalone)
     - Add `<link rel="manifest" href="/manifest.json" />` to root layout
     - _Requirements: 17.1, 17.2_
 
-  - [ ] 10.2 Add dynamic page titles and Open Graph meta tags
+  - [x] 10.2 Add dynamic page titles and Open Graph meta tags
     - Add Next.js `metadata` export to each page for dynamic titles (e.g., "Dashboard — BurnerByte", "Inboxes — BurnerByte")
     - Add `og:title`, `og:description`, `og:image`, `og:url` to root layout or landing page metadata
     - _Requirements: 17.3, 17.4_
