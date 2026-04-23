@@ -20,7 +20,7 @@ import { toast } from "sonner";
 import { EmptyState } from "@/components/empty-state";
 import { ErrorState } from "@/components/error-state";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { TeamIllustration } from "@/components/illustrations";
+import { TeamIllustration, DomainTeamIllustration, GlobeIllustration } from "@/components/illustrations";
 import { useRoles } from "@/hooks/use-roles";
 import { ArrowLeft, AlertTriangle, CheckCircle2, Clock, Globe, Inbox, Loader2, Plus, Search, Settings, Trash2, UserPlus, Users, XCircle } from "lucide-react";
 import type { Team, Membership, Domain } from "@/types";
@@ -695,10 +695,10 @@ function TeamMembersTab({ orgId, teamId, isAdmin }: { orgId: string; teamId: str
         ) : (
           <>
               {filtered.length === 0 && !search && (
-                <EmptyState icon="👥" title="No members yet" description="Invite team members to collaborate." />
+                <EmptyState illustration={<DomainTeamIllustration />} title="No members yet" description="Invite team members to collaborate." />
               )}
               {filtered.length === 0 && search && (
-                <Table>
+                <Table className="table-striped">
                   <TableHeader>
                     <TableRow className="bg-muted/50">
                       <TableHead className="font-medium">Member</TableHead>
@@ -713,7 +713,7 @@ function TeamMembersTab({ orgId, teamId, isAdmin }: { orgId: string; teamId: str
                 </Table>
               )}
               {filtered.length > 0 && (
-                <Table>
+                <Table className="table-striped">
                   <TableHeader>
                     <TableRow className="bg-muted/50">
                       <TableHead className="font-medium">Member</TableHead>
@@ -754,7 +754,7 @@ function TeamMembersTab({ orgId, teamId, isAdmin }: { orgId: string; teamId: str
                   {isAdmin && (
                   <TableCell className="text-right">
                     <ConfirmDialog
-                      trigger={<Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button>}
+                      trigger={<Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" aria-label="Remove member"><Trash2 className="h-3.5 w-3.5" /></Button>}
                       title="Remove member?"
                       description={`${m.display_name || m.email} will lose access to this team.`}
                       onConfirm={() => removeMember.mutate(m.user_id)}
@@ -871,12 +871,12 @@ function DomainAssignmentsTab({ orgId, teamId, isAdmin }: { orgId: string; teamI
         ) : (
           filtered.length === 0 ? (
             assignmentList.length === 0 ? (
-              <EmptyState icon="🌐" title="No domains assigned" description="Assign verified domains to this team to start creating inboxes." />
+              <EmptyState illustration={<GlobeIllustration />} title="No domains assigned" description="Assign verified domains to this team to start creating inboxes." />
             ) : (
               <div className="py-8 text-center text-sm text-muted-foreground">No domains match &quot;{search}&quot;</div>
             )
           ) : (
-          <Table>
+          <Table className="table-striped">
             <TableHeader>
               <TableRow className="bg-muted/50">
                 <TableHead className="font-medium">Domain</TableHead>
@@ -1079,7 +1079,7 @@ function UnassignDomainDialog({ orgId, teamId, assignment, onConfirm }: {
 
   return (
     <>
-      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => setOpen(true)}>
+      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" aria-label="Unassign domain" onClick={() => setOpen(true)}>
         <Trash2 className="h-3.5 w-3.5" />
       </Button>
       <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setConfirmText(""); }}>

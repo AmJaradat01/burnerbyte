@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { Logo } from "@/components/logo";
 
 const STEPS = [
   { key: "admin", label: "Admin Account", required: true },
@@ -124,7 +125,7 @@ export default function SetupPage() {
     <div className="flex min-h-screen items-center justify-center p-4">
       <div className="w-full max-w-2xl space-y-6">
         <div className="text-center">
-          <h1 className="text-3xl font-bold">🔥 BurnerByte Setup</h1>
+          <h1 className="text-3xl font-bold flex items-center justify-center gap-2"><Logo size="lg" /> Setup</h1>
           <p className="text-muted-foreground mt-1">One-time platform configuration</p>
         </div>
 
