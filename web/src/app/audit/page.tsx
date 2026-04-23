@@ -149,6 +149,7 @@ export default function AuditPage() {
   const { currentOrg, hasPermission } = useOrgStore();
   const { user } = useAuthStore();
   const [action, setAction] = useState("");
+  const [actorEmail, setActorEmail] = useState("");
   const [resource, setResource] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -157,18 +158,19 @@ export default function AuditPage() {
 
   const params: Record<string, string> = { page: String(page), per_page: "50" };
   if (action) params.action = action;
+  if (actorEmail) params.actor_email = actorEmail;
   if (resource) params.resource_type = resource;
   if (dateFrom) params.date_from = new Date(dateFrom).toISOString();
   if (dateTo) params.date_to = new Date(dateTo + "T23:59:59").toISOString();
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["audit", currentOrg?.id, action, resource, dateFrom, dateTo, page],
+    queryKey: ["audit", currentOrg?.id, action, actorEmail, resource, dateFrom, dateTo, page],
     queryFn: () => api.get<PaginatedResponse<AuditEntry>>(`/orgs/${currentOrg!.id}/audit`, params),
     enabled: !!currentOrg,
   });
 
-  const clearFilters = () => { setAction(""); setResource(""); setDateFrom(""); setDateTo(""); setPage(1); };
-  const hasFilters = action || resource || dateFrom || dateTo;
+  const clearFilters = () => { setAction(""); setActorEmail(""); setResource(""); setDateFrom(""); setDateTo(""); setPage(1); };
+  const hasFilters = action || actorEmail || resource || dateFrom || dateTo;
 
   const handleQuickFilter = useCallback((value: string) => {
     setAction((prev) => (prev === value ? "" : value));
@@ -181,6 +183,7 @@ export default function AuditPage() {
     try {
       const filterParams: Record<string, string> = {};
       if (action) filterParams.action = action;
+      if (actorEmail) filterParams.actor_email = actorEmail;
       if (resource) filterParams.resource_type = resource;
       if (dateFrom) filterParams.date_from = new Date(dateFrom).toISOString();
       if (dateTo) filterParams.date_to = new Date(dateTo + "T23:59:59").toISOString();
@@ -276,6 +279,13 @@ export default function AuditPage() {
               <div className="relative">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                 <Input value={action} onChange={(e) => { setAction(e.target.value); setPage(1); }} placeholder="e.g. domain.created" className="w-48 h-8 pl-8" />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Actor</Label>
+              <div className="relative">
+                <User className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input value={actorEmail} onChange={(e) => { setActorEmail(e.target.value); setPage(1); }} placeholder="e.g. admin@example.com" className="w-48 h-8 pl-8" />
               </div>
             </div>
             <div className="space-y-1">
