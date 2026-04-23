@@ -44,6 +44,12 @@ func (r *AuditRepo) List(ctx context.Context, orgID uuid.UUID, filter domain.Aud
 		args = append(args, *filter.ActorID)
 		idx++
 	}
+	if filter.ActorEmail != nil {
+		query += fmt.Sprintf(` AND u.email ILIKE '%%' || $%d || '%%'`, idx)
+		countQuery += fmt.Sprintf(` AND EXISTS (SELECT 1 FROM users u2 WHERE u2.id = a.actor_id AND u2.email ILIKE '%%' || $%d || '%%')`, idx)
+		args = append(args, *filter.ActorEmail)
+		idx++
+	}
 	if filter.Action != nil {
 		query += fmt.Sprintf(` AND a.action LIKE '%%' || $%d || '%%'`, idx)
 		countQuery += fmt.Sprintf(` AND a.action LIKE '%%' || $%d || '%%'`, idx)
@@ -126,6 +132,11 @@ func (r *AuditRepo) ListAll(ctx context.Context, orgID uuid.UUID, filter domain.
 	if filter.ActorID != nil {
 		query += fmt.Sprintf(` AND a.actor_id = $%d`, idx)
 		args = append(args, *filter.ActorID)
+		idx++
+	}
+	if filter.ActorEmail != nil {
+		query += fmt.Sprintf(` AND u.email ILIKE '%%' || $%d || '%%'`, idx)
+		args = append(args, *filter.ActorEmail)
 		idx++
 	}
 	if filter.Action != nil {
