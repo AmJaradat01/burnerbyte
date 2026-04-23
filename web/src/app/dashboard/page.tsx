@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/error-state";
+import { Sparkline } from "@/components/sparkline";
 import type { AnalyticsStats, AuditEntry, EmailsPerDay, Inbox, PaginatedResponse } from "@/types";
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -146,6 +147,7 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
   const todayDelta = todayCount - yesterdayCount;
 
   const chartData = chart?.data ?? [];
+  const weekTrend = chartWeek?.data?.map((d) => d.count);
 
   // Enhancement 5: greeting emoji
   const greetingEmoji = (() => {
@@ -196,6 +198,7 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
           value={stats?.total_emails_received ?? stats?.total_emails}
           loading={isLoading}
           accent="text-blue-600 bg-blue-100"
+          sparkline={weekTrend}
           footer={
             <span className="text-xs text-muted-foreground">
               {formatBytes(stats?.total_storage_bytes ?? stats?.storage_used_bytes ?? 0)} all-time storage
@@ -208,6 +211,7 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
           value={stats?.active_inboxes}
           loading={isLoading}
           accent="text-emerald-600 bg-emerald-100"
+          sparkline={weekTrend}
           footer={
             <Link href="/" className="text-xs text-primary hover:underline">
               Create inbox →
@@ -392,13 +396,14 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
 
 /* ── Stat Card ── */
 
-function StatCard({ icon: Icon, label, value, loading, accent, footer }: {
+function StatCard({ icon: Icon, label, value, loading, accent, footer, sparkline }: {
   icon: typeof Mail;
   label: string;
   value?: number;
   loading: boolean;
   accent: string;
   footer?: React.ReactNode;
+  sparkline?: number[];
 }) {
   return (
     <Card className="transition-all hover:shadow-md hover:-translate-y-0.5">
@@ -409,11 +414,20 @@ function StatCard({ icon: Icon, label, value, loading, accent, footer }: {
             <Icon className="h-4 w-4" />
           </div>
         </div>
-        {loading ? (
-          <Skeleton className="h-8 w-20" />
-        ) : (
-          <p className="text-2xl font-bold tabular-nums">{(value ?? 0).toLocaleString()}</p>
-        )}
+        <div className="flex items-end justify-between gap-2">
+          <div>
+            {loading ? (
+              <Skeleton className="h-8 w-20" />
+            ) : (
+              <p className="text-2xl font-bold tabular-nums">{(value ?? 0).toLocaleString()}</p>
+            )}
+          </div>
+          {loading ? (
+            <Skeleton className="h-6 w-16" />
+          ) : (
+            sparkline && <Sparkline data={sparkline} />
+          )}
+        </div>
         {footer && <div className="mt-1.5">{footer}</div>}
       </CardContent>
     </Card>

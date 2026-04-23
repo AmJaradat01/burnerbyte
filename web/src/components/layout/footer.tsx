@@ -2,24 +2,21 @@
 
 import Link from "next/link";
 import { Logo } from "@/components/logo";
-import { useEffect, useState } from "react";
-
-const appVersion = process.env.NEXT_PUBLIC_APP_VERSION || "dev";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import { useAuthStore } from "@/stores/auth-store";
 
 export function Footer() {
-  const [hasNewVersion, setHasNewVersion] = useState(false);
+  const user = useAuthStore((s) => s.user);
 
-  useEffect(() => {
-    const lastSeen = localStorage.getItem("last-seen-version");
-    if (lastSeen && lastSeen !== appVersion && appVersion !== "dev") {
-      setHasNewVersion(true);
-    }
-  }, []);
+  const { data: versionData } = useQuery({
+    queryKey: ["app-version"],
+    queryFn: () => api.get<{ version: string }>("/admin/version"),
+    staleTime: 300_000,
+    enabled: !!user?.is_system_admin,
+  });
 
-  const dismissVersionDot = () => {
-    localStorage.setItem("last-seen-version", appVersion);
-    setHasNewVersion(false);
-  };
+  const version = versionData?.version;
 
   return (
     <footer className="border-t bg-muted/30 mt-auto">
@@ -33,16 +30,9 @@ export function Footer() {
             <Link href="/docs" className="hover:text-foreground transition-colors">Docs</Link>
             <a href="https://gitlab.com/burnerbyte/burnerbyte" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">GitLab</a>
             <span>Apache 2.0</span>
-            <button
-              onClick={dismissVersionDot}
-              className="relative hover:text-foreground transition-colors"
-              title={hasNewVersion ? "New version available — click to dismiss" : `Version ${appVersion}`}
-            >
-              v{appVersion}
-              {hasNewVersion && (
-                <span className="absolute -top-1 -right-2 h-2 w-2 rounded-full bg-primary" />
-              )}
-            </button>
+            {version && (
+              <span title={`Version ${version}`}>v{version}</span>
+            )}
           </div>
         </div>
       </div>
