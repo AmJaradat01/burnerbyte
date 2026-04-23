@@ -201,7 +201,7 @@ Systematic UI/UX overhaul of the BurnerByte frontend, organized into 6 phases or
     - In inbox active/expired status displays, add corresponding icons alongside color
     - _Requirements: 12.4_
 
-  - [ ] 6.8 Enhance `web/src/components/empty-state.tsx` — illustration support
+  - [x] 6.8 Enhance `web/src/components/empty-state.tsx` — illustration support
     - Add optional `illustration` prop (ReactNode) to `EmptyState` component
     - Render SVG illustration above the message when provided
     - Add simple line-art SVG illustrations for key content types (inboxes, domains, teams)
@@ -233,7 +233,7 @@ Systematic UI/UX overhaul of the BurnerByte frontend, organized into 6 phases or
     - Apply to data tables on list pages (inboxes, domains, teams, webhooks, api-keys, audit)
     - _Requirements: 16.2_
 
-  - [ ] 8.2 Add pull-to-refresh on list pages for touch devices
+  - [x] 8.2 Add pull-to-refresh on list pages for touch devices
     - Create `web/src/hooks/use-pull-to-refresh.ts` hook using `touchstart`/`touchmove`/`touchend` events
     - Detect downward pull gesture at scroll position 0, then call provided `refetch()` callback
     - No-op on non-touch devices
