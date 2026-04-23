@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { api, WS_BASE } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth-store";
 import { useOrgStore } from "@/stores/org-store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -120,6 +120,7 @@ function MemberDashboard({ org, user, greeting }: { org: { id: string; name: str
 /* ── Admin Dashboard ── */
 
 function AdminDashboard({ org, user, greeting }: { org: { id: string; name: string }; user: any; greeting: string }) {
+  const qc = useQueryClient();
   const [autoRefresh, setAutoRefresh] = useState(() =>
     typeof window !== "undefined" ? localStorage.getItem("auto-refresh-enabled") === "true" : false
   );
@@ -144,6 +145,53 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
     queryKey: ["dashboard-audit", org.id],
     queryFn: () => api.get<PaginatedResponse<AuditEntry>>(`/orgs/${org.id}/audit`, { per_page: "5", page: "1" }),
   });
+
+  // Real-time admin stats via WebSocket
+  useEffect(() => {
+    if (!autoRefresh) return;
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
+
+    const wsUrl = `${WS_BASE}/admin-stats?token=${token}`;
+    let ws: WebSocket | null = null;
+    let reconnectTimeout: ReturnType<typeof setTimeout>;
+    let disposed = false;
+
+    function connect() {
+      if (disposed) return;
+      ws = new WebSocket(wsUrl);
+      ws.onmessage = (e) => {
+        try {
+          const msg = JSON.parse(e.data);
+          if (msg.type === "admin.stats" && msg.data) {
+            qc.setQueryData(["org-analytics", org.id], (prev: AnalyticsStats | undefined) => {
+              if (!prev) return prev;
+              return {
+                ...prev,
+                total_emails: msg.data.total_emails,
+                active_inboxes: msg.data.active_inboxes,
+                total_domains: msg.data.total_domains,
+                total_members: msg.data.total_users,
+                total_teams: msg.data.total_teams,
+                storage_used_bytes: msg.data.storage_used_bytes,
+              };
+            });
+          }
+        } catch { /* ignore parse errors */ }
+      };
+      ws.onclose = () => {
+        if (!disposed) reconnectTimeout = setTimeout(connect, 5000);
+      };
+      ws.onerror = () => ws?.close();
+    }
+
+    connect();
+    return () => {
+      disposed = true;
+      clearTimeout(reconnectTimeout);
+      ws?.close();
+    };
+  }, [autoRefresh, org.id, qc]);
 
   if (isError) return <ErrorState message="Failed to load dashboard" onRetry={() => refetch()} />;
 
