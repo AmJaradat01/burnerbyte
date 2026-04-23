@@ -57,6 +57,9 @@ func parseAuditFilter(w http.ResponseWriter, r *http.Request) (domain.AuditFilte
 	if v := r.URL.Query().Get("action"); v != "" {
 		filter.Action = &v
 	}
+	if v := r.URL.Query().Get("actor_email"); v != "" {
+		filter.ActorEmail = &v
+	}
 	if v := r.URL.Query().Get("resource_type"); v != "" {
 		filter.ResourceType = &v
 	}
