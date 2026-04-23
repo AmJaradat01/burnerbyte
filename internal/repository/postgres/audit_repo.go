@@ -45,8 +45,8 @@ func (r *AuditRepo) List(ctx context.Context, orgID uuid.UUID, filter domain.Aud
 		idx++
 	}
 	if filter.Action != nil {
-		query += fmt.Sprintf(` AND a.action LIKE $%d || '%%'`, idx)
-		countQuery += fmt.Sprintf(` AND a.action LIKE $%d || '%%'`, idx)
+		query += fmt.Sprintf(` AND a.action LIKE '%%' || $%d || '%%'`, idx)
+		countQuery += fmt.Sprintf(` AND a.action LIKE '%%' || $%d || '%%'`, idx)
 		args = append(args, *filter.Action)
 		idx++
 	}
@@ -129,7 +129,7 @@ func (r *AuditRepo) ListAll(ctx context.Context, orgID uuid.UUID, filter domain.
 		idx++
 	}
 	if filter.Action != nil {
-		query += fmt.Sprintf(` AND a.action LIKE $%d || '%%'`, idx)
+		query += fmt.Sprintf(` AND a.action LIKE '%%' || $%d || '%%'`, idx)
 		args = append(args, *filter.Action)
 		idx++
 	}
