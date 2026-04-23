@@ -11,8 +11,22 @@ const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 const jetbrainsMono = JetBrains_Mono({ variable: "--font-jetbrains-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "BurnerByte",
+  title: {
+    default: "BurnerByte",
+    template: "%s — BurnerByte",
+  },
   description: "Self-hosted temporary email platform",
+  icons: {
+    icon: "/favicon.svg",
+  },
+  manifest: "/manifest.json",
+  openGraph: {
+    title: "BurnerByte",
+    description: "Self-hosted temporary email platform. Create disposable inboxes, protect your privacy, and keep full control of your data.",
+    url: "https://burnerbyte.com",
+    siteName: "BurnerByte",
+    type: "website",
+  },
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

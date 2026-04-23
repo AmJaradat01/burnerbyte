@@ -21,6 +21,7 @@ import { Pagination } from "@/components/pagination";
 import { Check, ChevronDown, Clock, Copy, ExternalLink, Key, Link as LinkIcon, Mail, RefreshCw, Server, Timer, Trash2, Users, Zap } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { copyToClipboard } from "@/lib/clipboard";
+import { Logo } from "@/components/logo";
 import type { Inbox, PaginatedResponse, DomainAssignment } from "@/types";
 
 export default function RootPage() {
@@ -507,7 +508,7 @@ function LandingPage() {
     <div className="min-h-screen bg-background">
       <header className="border-b backdrop-blur-sm bg-background/80 sticky top-0 z-50">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <span className="text-xl font-bold tracking-tight">🔥 BurnerByte</span>
+          <Logo />
           <div className="flex items-center gap-3">
             {allowRegistration ? (
               <>
@@ -579,8 +580,7 @@ function LandingPage() {
         <div className="mx-auto max-w-5xl px-6">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <span className="text-lg">🔥</span>
-              <span className="font-semibold">BurnerByte</span>
+              <Logo />
             </div>
             <div className="flex items-center gap-6 text-sm text-muted-foreground">
               <Link href="/docs" className="hover:text-foreground transition-colors">Documentation</Link>
