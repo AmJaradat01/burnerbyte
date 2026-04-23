@@ -163,6 +163,7 @@ func main() {
 	// WebSocket hubs
 	hub := realtime.NewHub()
 	notifHub := realtime.NewNotifHub()
+	adminHub := realtime.NewAdminHub()
 	notifRepo := postgres.NewNotificationRepo(pool)
 	realtime.Subscribe(ctx, rdb, hub, notifHub, notifRepo, counterRepo)
 
@@ -190,6 +191,7 @@ func main() {
 	setupHandler := handler.NewSetupHandler(pool, userRepo, orgRepo, domainRepo, teamRepo, sessionRepo, sysConfigRepo, tokenMgr, ml, cfg)
 	wsHandler := handler.NewWSHandler(hub, inboxRepo, cfg.CORS.AllowedOrigins)
 	notifWSHandler := handler.NewNotifWSHandler(notifHub, cfg.CORS.AllowedOrigins)
+	adminWSHandler := handler.NewAdminWSHandler(adminHub, cfg.CORS.AllowedOrigins)
 
 	// Auth middleware
 	authMw := auth.Middleware(tokenMgr, userRepo, apikeyRepo)
@@ -622,6 +624,7 @@ func main() {
 			// WebSocket
 			r.Get("/ws/inboxes/{inboxId}", wsHandler.InboxWS)
 			r.Get("/ws/notifications", notifWSHandler.NotificationsWS)
+			r.Get("/ws/admin-stats", adminWSHandler.AdminStatsWS)
 		})
 	})
 
@@ -646,6 +649,7 @@ func main() {
 	wm.Add("webhook_retry", cfg.Workers.WebhookRetryInterval, worker.WebhookRetryJob(webhookRepo, webhookDispatcher))
 	wm.Add("analytics", cfg.Workers.AnalyticsInterval, worker.AnalyticsJob(analyticsRepo, rdb, cfg.Defaults.AnalyticsCacheTTL))
 	wm.Add("invite_expiry", 24*time.Hour, worker.InviteExpiryJob(orgRepo, userRepo, ml, cfg.Server.FrontendURL))
+	wm.Add("admin_stats", 10*time.Second, worker.AdminStatsJob(analyticsRepo, adminHub))
 	go wm.Start(workerCtx)
 
 	go func() {
@@ -669,6 +673,7 @@ func main() {
 
 	hub.CloseAll()
 	notifHub.CloseAll()
+	adminHub.CloseAll()
 	rateLimiter.Stop()
 
 	// Stop background workers and wait for in-flight jobs.
