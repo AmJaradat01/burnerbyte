@@ -88,7 +88,7 @@ function MemberDashboard({ org, user, greeting }: { org: { id: string; name: str
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Card>
+        <Card className="transition-all hover:shadow-md hover:-translate-y-0.5">
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-medium text-muted-foreground">Active Inboxes</span>
@@ -104,7 +104,7 @@ function MemberDashboard({ org, user, greeting }: { org: { id: string; name: str
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="transition-all hover:shadow-md hover:-translate-y-0.5">
           <CardContent className="pt-5 pb-4 flex flex-col justify-between h-full">
             <span className="text-sm font-medium text-muted-foreground mb-3">Quick Actions</span>
             <Button asChild>
