@@ -198,7 +198,7 @@ export function UnifiedUsersTab({ orgId }: { orgId: string }) {
       ) : (
         <div className="rounded-lg border overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm table-striped">
               <thead>
                 <tr className="border-b bg-muted/50">
                   <th className="text-left font-medium text-xs text-muted-foreground px-4 py-3">User</th>
