@@ -252,7 +252,7 @@ Systematic UI/UX overhaul of the BurnerByte frontend, organized into 6 phases or
     - Apply to settings, profile, and other form pages with save/submit buttons
     - _Requirements: 23.1_
 
-  - [ ] 8.5 Create `web/src/hooks/use-unsaved-changes.ts` — navigation guard hook
+  - [x] 8.5 Create `web/src/hooks/use-unsaved-changes.ts` — navigation guard hook
     - Export `useUnsavedChanges(isDirty: boolean)` hook
     - Register `beforeunload` event when `isDirty` is true
     - Add Next.js router interception to show confirmation dialog on navigation
@@ -263,7 +263,7 @@ Systematic UI/UX overhaul of the BurnerByte frontend, organized into 6 phases or
     - Show inline "Saved" badge indicator near the form after successful save
     - _Requirements: 23.3, 23.4_
 
-  - [ ] 8.7 Ensure password visibility toggle on all password fields
+  - [x] 8.7 Ensure password visibility toggle on all password fields
     - Verify show/hide toggle exists on login password field (already implemented)
     - Add same toggle pattern to register and reset-password page password fields
     - _Requirements: 23.5_
@@ -301,13 +301,13 @@ Systematic UI/UX overhaul of the BurnerByte frontend, organized into 6 phases or
     - Set `staleTime: 30_000` (30s) for inbox list queries
     - _Requirements: 18.3_
 
-  - [ ] 10.5 Create `web/src/components/last-updated.tsx` — data freshness indicator
+  - [x] 10.5 Create `web/src/components/last-updated.tsx` — data freshness indicator
     - Export `LastUpdated` component with `dataUpdatedAt: number` prop (from TanStack Query)
     - Render "Last updated: [relative time]" text
     - Add to dashboard and key list pages near data sections
     - _Requirements: 24.1_
 
-  - [ ] 10.6 Add dashboard auto-refresh toggle
+  - [x] 10.6 Add dashboard auto-refresh toggle
     - Add `<Switch>` control in dashboard header to enable/disable auto-refresh
     - When enabled, set `refetchInterval` on analytics queries (default: 30s)
     - Persist preference in `localStorage["auto-refresh-enabled"]`
