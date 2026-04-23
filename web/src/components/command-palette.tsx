@@ -1,27 +1,62 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, type ElementType } from "react";
 import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/stores/auth-store";
+import {
+  Home,
+  BookOpen,
+  LayoutDashboard,
+  Inbox,
+  Globe,
+  Users,
+  Webhook,
+  KeyRound,
+  ClipboardList,
+  BarChart3,
+  Settings,
+  User,
+  Monitor,
+  FileText,
+  ShieldCheck,
+  Plus,
+  LogOut,
+} from "lucide-react";
 
-const routes = [
-  { label: "Dashboard", path: "/dashboard" },
-  { label: "Inboxes", path: "/inboxes" },
-  { label: "Domains", path: "/domains" },
-  { label: "Teams", path: "/teams" },
-  { label: "Webhooks", path: "/webhooks" },
-  { label: "API Keys", path: "/api-keys" },
-  { label: "Audit Log", path: "/audit" },
-  { label: "Analytics", path: "/analytics" },
-  { label: "Settings", path: "/settings" },
-  { label: "Profile", path: "/profile" },
-  { label: "Profile Sessions", path: "/profile/sessions" },
-  { label: "Documentation", path: "/docs" },
+interface CommandItem {
+  label: string;
+  icon: ElementType;
+  group: "Navigation" | "Actions";
+  path?: string;
+  action?: string;
+}
+
+const navigationItems: CommandItem[] = [
+  { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard, group: "Navigation" },
+  { label: "Inboxes", path: "/inboxes", icon: Inbox, group: "Navigation" },
+  { label: "Domains", path: "/domains", icon: Globe, group: "Navigation" },
+  { label: "Teams", path: "/teams", icon: Users, group: "Navigation" },
+  { label: "Webhooks", path: "/webhooks", icon: Webhook, group: "Navigation" },
+  { label: "API Keys", path: "/api-keys", icon: KeyRound, group: "Navigation" },
+  { label: "Audit Log", path: "/audit", icon: ClipboardList, group: "Navigation" },
+  { label: "Analytics", path: "/analytics", icon: BarChart3, group: "Navigation" },
+  { label: "Settings", path: "/settings", icon: Settings, group: "Navigation" },
+  { label: "Profile", path: "/profile", icon: User, group: "Navigation" },
+  { label: "Profile Sessions", path: "/profile/sessions", icon: Monitor, group: "Navigation" },
+  { label: "Documentation", path: "/docs", icon: BookOpen, group: "Navigation" },
+  { label: "Home", path: "/", icon: Home, group: "Navigation" },
 ];
 
-const adminRoutes = [{ label: "Admin", path: "/admin" }];
+const adminNavigationItems: CommandItem[] = [
+  { label: "Admin", path: "/admin", icon: ShieldCheck, group: "Navigation" },
+];
+
+const actionItems: CommandItem[] = [
+  { label: "Create Inbox", path: "/inboxes", icon: Plus, group: "Actions", action: "create-inbox" },
+  { label: "Sign Out", icon: LogOut, group: "Actions", action: "logout" },
+];
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
@@ -29,6 +64,7 @@ export function CommandPalette() {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -42,22 +78,36 @@ export function CommandPalette() {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  const allRoutes = user?.is_system_admin ? [...routes, ...adminRoutes] : routes;
-  const filtered = allRoutes.filter((r) =>
-    r.label.toLowerCase().includes(query.toLowerCase())
+  const allNavItems = user?.is_system_admin
+    ? [...navigationItems, ...adminNavigationItems]
+    : navigationItems;
+
+  const allItems = [...allNavItems, ...actionItems];
+
+  const filtered = allItems.filter((item) =>
+    item.label.toLowerCase().includes(query.toLowerCase())
   );
+
+  // Group filtered items by category
+  const navFiltered = filtered.filter((item) => item.group === "Navigation");
+  const actionFiltered = filtered.filter((item) => item.group === "Actions");
+  const groupedFiltered = [...navFiltered, ...actionFiltered];
 
   // Reset selection when query changes
   useEffect(() => { setSelectedIndex(0); }, [query]);
 
-  const navigate = useCallback(
-    (path: string) => {
-      router.push(path);
+  const executeItem = useCallback(
+    (item: CommandItem) => {
+      if (item.action === "logout") {
+        logout();
+      } else if (item.path) {
+        router.push(item.path);
+      }
       setOpen(false);
       setQuery("");
       setSelectedIndex(0);
     },
-    [router]
+    [router, logout]
   );
 
   // Clear query when dialog closes
@@ -68,21 +118,23 @@ export function CommandPalette() {
 
   // Scroll selected item into view
   useEffect(() => {
-    const el = listRef.current?.children[selectedIndex] as HTMLElement | undefined;
+    const el = listRef.current?.querySelector("[data-selected='true']") as HTMLElement | undefined;
     el?.scrollIntoView({ block: "nearest" });
   }, [selectedIndex]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setSelectedIndex((i) => Math.min(i + 1, filtered.length - 1));
+      setSelectedIndex((i) => Math.min(i + 1, groupedFiltered.length - 1));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setSelectedIndex((i) => Math.max(i - 1, 0));
-    } else if (e.key === "Enter" && filtered.length > 0) {
-      navigate(filtered[selectedIndex].path);
+    } else if (e.key === "Enter" && groupedFiltered.length > 0) {
+      executeItem(groupedFiltered[selectedIndex]);
     }
   };
+
+  let itemIndex = 0;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -97,19 +149,57 @@ export function CommandPalette() {
           onKeyDown={handleKeyDown}
         />
         <div className="max-h-64 overflow-auto" ref={listRef}>
-          {filtered.map((r, i) => (
-            <button
-              key={r.path}
-              onClick={() => navigate(r.path)}
-              onMouseEnter={() => setSelectedIndex(i)}
-              className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
-                i === selectedIndex ? "bg-primary/10 text-primary" : "hover:bg-muted"
-              }`}
-            >
-              {r.label}
-            </button>
-          ))}
-          {filtered.length === 0 && (
+          {navFiltered.length > 0 && (
+            <>
+              <div className="px-4 py-1.5 text-[10px] font-semibold text-muted-foreground/50 uppercase tracking-widest">
+                Navigation
+              </div>
+              {navFiltered.map((item) => {
+                const idx = itemIndex++;
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.label}
+                    data-selected={idx === selectedIndex}
+                    onClick={() => executeItem(item)}
+                    onMouseEnter={() => setSelectedIndex(idx)}
+                    className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center gap-2.5 ${
+                      idx === selectedIndex ? "bg-primary/10 text-primary" : "hover:bg-muted"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    {item.label}
+                  </button>
+                );
+              })}
+            </>
+          )}
+          {actionFiltered.length > 0 && (
+            <>
+              <div className="px-4 py-1.5 text-[10px] font-semibold text-muted-foreground/50 uppercase tracking-widest">
+                Actions
+              </div>
+              {actionFiltered.map((item) => {
+                const idx = itemIndex++;
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.label}
+                    data-selected={idx === selectedIndex}
+                    onClick={() => executeItem(item)}
+                    onMouseEnter={() => setSelectedIndex(idx)}
+                    className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center gap-2.5 ${
+                      idx === selectedIndex ? "bg-primary/10 text-primary" : "hover:bg-muted"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    {item.label}
+                  </button>
+                );
+              })}
+            </>
+          )}
+          {groupedFiltered.length === 0 && (
             <p className="px-4 py-3 text-sm text-muted-foreground">No results</p>
           )}
         </div>

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ChevronRight } from "lucide-react";
 
 const labels: Record<string, string> = {
   dashboard: "Dashboard",
@@ -35,7 +36,7 @@ export function Breadcrumbs() {
           const isLast = i === segments.length - 1;
           return (
             <li key={href} className="flex items-center gap-1">
-              {i > 0 && <span>/</span>}
+              {i > 0 && <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" />}
               {isLast ? (
                 <span className="text-foreground font-medium">{label}</span>
               ) : (

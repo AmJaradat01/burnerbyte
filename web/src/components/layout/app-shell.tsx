@@ -4,7 +4,7 @@ import { useAuthStore } from "@/stores/auth-store";
 import { useOrgStore } from "@/stores/org-store";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { Sidebar } from "./sidebar";
 import { TopNav } from "./top-nav";
 import { Footer } from "./footer";
@@ -12,10 +12,16 @@ import { Breadcrumbs } from "@/components/breadcrumbs";
 import { CommandPalette } from "@/components/command-palette";
 import { NotificationCenter } from "@/components/notification-center";
 import { ShortcutHelp } from "@/components/shortcut-help";
+import { SkipToContent } from "@/components/skip-to-content";
+import { PageProgress } from "@/components/page-progress";
+import { OfflineBanner } from "@/components/offline-banner";
+import { Logo } from "@/components/logo";
+import { Badge } from "@/components/ui/badge";
 import { useKeyboardShortcuts, useShortcutHelp } from "@/hooks/use-keyboard-shortcuts";
 import { useOrgBootstrap } from "@/hooks/use-org-bootstrap";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
+import { Menu } from "lucide-react";
 import { api } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 
@@ -124,7 +130,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   // Loading states — don't block public pages (onboarding, invite, etc.)
   if (!setupChecked || loading || (user && !roleResolved && !isPublic)) {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="flex h-screen flex-col items-center justify-center gap-4">
+        <Logo size="lg" />
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" role="status">
           <span className="sr-only">Loading</span>
         </div>
@@ -150,12 +157,17 @@ export function AppShell({ children }: { children: ReactNode }) {
   if (isOrgAdmin) {
     return (
       <div className="flex h-screen">
+        <SkipToContent />
+        <PageProgress />
+        <OfflineBanner />
         <div className="hidden md:block">
           <Sidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
         </div>
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="sm" className="fixed top-3 left-3 z-50 md:hidden" aria-label="Open menu">☰</Button>
+            <Button variant="ghost" size="sm" className="fixed top-3 left-3 z-50 md:hidden" aria-label="Open menu">
+              <Menu className="h-5 w-5" />
+            </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-64 p-0">
             <SheetTitle className="sr-only">Navigation</SheetTitle>
@@ -163,12 +175,19 @@ export function AppShell({ children }: { children: ReactNode }) {
           </SheetContent>
         </Sheet>
         <div className="flex-1 flex flex-col min-h-0 bg-mesh">
-          <main className="flex-1 overflow-auto p-4 pt-14 md:p-6 md:pt-6">
+          <main id="main-content" className="flex-1 overflow-auto p-4 pt-14 md:p-6 md:pt-6">
             <div className="flex items-center justify-between mb-4">
-              <Breadcrumbs />
+              <div className="flex items-center gap-2">
+                <Breadcrumbs />
+                <Badge variant="outline" className="hidden sm:inline-flex text-[10px] px-1.5 py-0 font-mono">⌘K</Badge>
+              </div>
               <NotificationCenter />
             </div>
-            {children}
+            <Suspense fallback={<div className="h-32 animate-pulse rounded-lg bg-muted" />}>
+              <div className="animate-in fade-in duration-200">
+                {children}
+              </div>
+            </Suspense>
           </main>
           <Footer />
         </div>
@@ -181,13 +200,23 @@ export function AppShell({ children }: { children: ReactNode }) {
   // ── Regular user layout: top nav + footer ──
   return (
     <div className="flex flex-col min-h-screen bg-mesh">
+      <SkipToContent />
+      <PageProgress />
+      <OfflineBanner />
       <TopNav />
-      <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 py-6">
+      <main id="main-content" className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 py-6">
         <div className="flex items-center justify-between mb-4">
-          <Breadcrumbs />
+          <div className="flex items-center gap-2">
+            <Breadcrumbs />
+            <Badge variant="outline" className="hidden sm:inline-flex text-[10px] px-1.5 py-0 font-mono">⌘K</Badge>
+          </div>
           <NotificationCenter />
         </div>
-        {children}
+        <Suspense fallback={<div className="h-32 animate-pulse rounded-lg bg-muted" />}>
+          <div className="animate-in fade-in duration-200">
+            {children}
+          </div>
+        </Suspense>
       </main>
       <Footer />
       <CommandPalette />
@@ -206,9 +235,14 @@ function UnauthPublicLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex flex-col min-h-screen bg-mesh">
+      <SkipToContent />
+      <PageProgress />
+      <OfflineBanner />
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
-          <Link href="/" className="text-lg font-bold">🔥 BurnerByte</Link>
+          <Link href="/">
+            <Logo />
+          </Link>
           <nav className="flex items-center gap-4 text-sm">
             <Link href="/login" className="text-muted-foreground hover:text-foreground">Sign In</Link>
             {allowRegistration && (
@@ -217,7 +251,7 @@ function UnauthPublicLayout({ children }: { children: ReactNode }) {
           </nav>
         </div>
       </header>
-      <main className="flex-1">{children}</main>
+      <main id="main-content" className="flex-1">{children}</main>
       <footer className="border-t py-6 text-center text-xs text-muted-foreground">© {new Date().getFullYear()} BurnerByte</footer>
     </div>
   );
