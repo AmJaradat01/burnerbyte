@@ -103,6 +103,11 @@
     radial-gradient(ellipse 50% 40% at 50% 10%, oklch(0.90 0.02 220 / 10%), transparent);
 }
 
+/* ── Header card accent ── */
+.card-header-accent {
+  border-top: 2px solid oklch(0.55 0.20 260 / 0.15);
+}
+
 /* ── Table striped rows ── */
 .table-striped tbody tr:nth-child(even) {
   @apply bg-muted/30;

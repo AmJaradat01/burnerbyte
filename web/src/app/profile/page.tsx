@@ -54,8 +54,7 @@ export default function ProfilePage() {
   return (
     <div className="mx-auto max-w-5xl space-y-8">
       {/* Header */}
-      <Card className="overflow-hidden">
-        <div className="h-2 bg-gradient-to-r from-cyan-500/80 to-cyan-500/20" />
+      <Card className="card-header-accent">
         <CardContent className="pt-5 pb-4">
           <div className="flex items-center gap-3">
             <div className="h-7 w-7 rounded-md bg-cyan-500/10 flex items-center justify-center">
@@ -70,11 +69,8 @@ export default function ProfilePage() {
       </Card>
 
       {/* Identity banner */}
-      <Card className="overflow-hidden">
-        <div className="h-24 bg-gradient-to-r from-cyan-500/20 via-blue-500/10 to-violet-500/20 relative">
-          <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "radial-gradient(circle, rgba(0,0,0,0.8) 1px, transparent 1px)", backgroundSize: "16px 16px" }} />
-        </div>
-        <CardContent className="relative -mt-10 pb-6">
+      <Card>
+        <CardContent className="pt-6 pb-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
             <Avatar className="h-20 w-20 text-xl ring-4 ring-background shadow-lg">
               <AvatarImage src={user.avatar_url} alt={user.display_name} />

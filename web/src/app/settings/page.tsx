@@ -121,8 +121,7 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
       <div className="grid gap-6 md:grid-cols-2">
         <div className="space-y-6">
           {/* Org identity */}
-          <Card className="overflow-hidden">
-            <div className="h-2 bg-gradient-to-r from-primary/80 to-primary/20" />
+          <Card className="card-header-accent">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center">
@@ -168,8 +167,7 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
 
         <div className="space-y-6">
           {/* Policies */}
-          <Card className="overflow-hidden">
-            <div className="h-2 bg-gradient-to-r from-violet-500/80 to-violet-500/20" />
+          <Card className="card-header-accent">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <div className="h-7 w-7 rounded-md bg-violet-100 flex items-center justify-center">
@@ -268,8 +266,7 @@ function DangerZone({ org, onDeleted }: { org: Organization; onDeleted: () => vo
   };
 
   return (
-    <Card className="overflow-hidden border-destructive/40">
-      <div className="h-2 bg-gradient-to-r from-destructive/80 to-destructive/20" />
+    <Card className="border-destructive/40">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base text-destructive">
           <div className="h-7 w-7 rounded-md bg-red-100 flex items-center justify-center">
@@ -348,16 +345,15 @@ function OverviewTab() {
           );
           return s.href ? (
             <Link key={s.label} href={s.href} className="block">
-              <Card className="transition-all hover:border-primary/40 hover:shadow-md hover:-translate-y-0.5">{inner}</Card>
+              <Card className="transition-all hover:border-primary/40 hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:-translate-y-px">{inner}</Card>
             </Link>
           ) : (
-            <Card key={s.label} className="transition-all hover:shadow-md hover:-translate-y-0.5">{inner}</Card>
+            <Card key={s.label} className="transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:-translate-y-px">{inner}</Card>
           );
         })}
       </div>
       <PlatformSettingsCard />
-      <Card className="overflow-hidden">
-        <div className="h-2 bg-gradient-to-r from-blue-500/80 to-blue-500/20" />
+      <Card className="card-header-accent">
         <CardContent className="pt-5 pb-4">
           <div className="flex items-center gap-2 mb-3">
             <div className="h-6 w-6 rounded-md bg-blue-100 flex items-center justify-center">
@@ -433,8 +429,7 @@ function PlatformSettingsCard() {
   if (isLoading) return <Card><CardContent className="pt-6"><Skeleton className="h-40 w-full" /></CardContent></Card>;
 
   return (
-    <Card className="overflow-hidden">
-      <div className="h-2 bg-gradient-to-r from-slate-500/80 to-slate-500/20" />
+    <Card className="card-header-accent">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <div className="h-7 w-7 rounded-md bg-slate-100 flex items-center justify-center">
@@ -667,8 +662,7 @@ function HealthSection() {
         <p className="text-xs text-muted-foreground">· Auto-refreshing every 15s</p>
       </div>
       {services.length > 0 && (
-        <Card className="overflow-hidden">
-          <div className={`h-1.5 ${allHealthy ? "bg-gradient-to-r from-green-500/80 to-green-500/20" : "bg-gradient-to-r from-red-500/80 to-red-500/20"}`} />
+        <Card>
           <CardContent className="pt-4 pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -699,8 +693,7 @@ function HealthSection() {
             const ok = svc.status === "ok";
             const Icon = SERVICE_ICONS[name] ?? Database;
             return (
-              <Card key={name} className={`overflow-hidden transition-all hover:shadow-md hover:-translate-y-0.5 ${ok ? "" : "border-destructive/50"}`}>
-                <div className={`h-1.5 ${ok ? "bg-gradient-to-r from-green-500/60 to-green-500/10" : "bg-gradient-to-r from-red-500/60 to-red-500/10"}`} />
+              <Card key={name} className={`transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:-translate-y-px ${ok ? "" : "border-destructive/50"}`}>
                 <CardContent className="pt-5">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
@@ -910,8 +903,7 @@ function SSOProvidersTab() {
   return (
     <div className="space-y-4">
       {/* Styled header card */}
-      <Card className="overflow-hidden">
-        <div className="h-2 bg-gradient-to-r from-emerald-500/80 to-emerald-500/20" />
+      <Card className="card-header-accent">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -976,8 +968,7 @@ function SSOProvidersTab() {
 
       {/* Edit/Create dialog - inline card */}
       {editing && (
-        <Card className="overflow-hidden border-primary/50">
-          <div className="h-2 bg-gradient-to-r from-primary/80 to-primary/20" />
+        <Card className="card-header-accent border-primary/50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center">
@@ -1230,8 +1221,7 @@ function ProviderCard({
     : [];
 
   return (
-    <Card className="overflow-hidden transition-all hover:shadow-md">
-      <div className={`h-1.5 ${p.enabled ? "bg-gradient-to-r from-green-500/80 to-green-500/20" : "bg-gradient-to-r from-gray-300/80 to-gray-300/20"}`} />
+    <Card className="transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
       <CardContent className="pt-5 pb-4">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">

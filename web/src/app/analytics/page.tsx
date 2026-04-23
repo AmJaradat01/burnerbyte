@@ -51,8 +51,7 @@ export default function AnalyticsPage() {
 
   return (
     <div className="space-y-6">
-      <Card className="overflow-hidden">
-        <div className="h-2 bg-gradient-to-r from-rose-500/80 to-rose-500/20" />
+      <Card className="card-header-accent">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -320,7 +319,7 @@ function StatCard({ icon: Icon, label, value, subtitle, color = "blue", link }: 
   const display = typeof value === "number" ? (value ?? 0).toLocaleString() : value;
   const c = STAT_COLORS[color];
   const inner = (
-    <Card className="transition-all hover:shadow-md hover:-translate-y-0.5">
+    <Card className="transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:-translate-y-px">
       <CardContent className="pt-5 pb-4">
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-medium text-muted-foreground">{label}</span>
