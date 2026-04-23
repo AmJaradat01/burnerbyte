@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { Loader2, Shield, Users, KeyRound } from "lucide-react";
+import { Logo } from "@/components/logo";
 
 interface InviteTeamAssignment {
   team_id: string;
@@ -312,7 +313,7 @@ export default function InvitePage() {
     <div className="flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="text-3xl mb-2">🔥</div>
+          <div className="mb-2"><Logo /></div>
           <CardTitle>Join {preview?.org_name}</CardTitle>
           <CardDescription>
             You&apos;ve been invited as <strong>{preview?.org_role}</strong>
