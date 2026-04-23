@@ -222,7 +222,7 @@ function WebhookCard({ webhook: w, expanded, onToggleExpand, onToggleActive, onD
             <Switch checked={w.active} onCheckedChange={onToggleActive} aria-label="Toggle webhook" />
             <EditWebhookDialog orgId={orgId} teamId={teamId} webhook={w} />
             <ConfirmDialog
-              trigger={<Button variant="ghost" size="sm" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>}
+              trigger={<Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" aria-label="Delete webhook"><Trash2 className="h-4 w-4" /></Button>}
               title="Delete webhook?"
               description={`${w.url} will stop receiving events.`}
               onConfirm={onDelete}
@@ -272,7 +272,7 @@ function DeliveryLogPanel({ orgId, teamId, webhookId }: { orgId: string; teamId:
   return (
     <div>
       <div className="overflow-x-auto">
-      <Table>
+      <Table className="table-striped">
         <TableHeader>
           <TableRow>
             <TableHead className="text-xs">Time</TableHead>
@@ -551,7 +551,7 @@ function EditWebhookDialog({ orgId, teamId, webhook }: { orgId: string; teamId: 
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (v) { setUrl(webhook.url); setEvents(webhook.events ?? []); } }}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="sm"><Pencil className="h-4 w-4" /></Button>
+        <Button variant="ghost" size="sm" aria-label="Edit webhook"><Pencil className="h-4 w-4" /></Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>

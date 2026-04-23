@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { Pagination } from "@/components/pagination";
 import { ErrorState } from "@/components/error-state";
 import { EmptyState } from "@/components/empty-state";
+import { DomainIllustration } from "@/components/illustrations";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { AlertTriangle, Check, CheckCircle2, ChevronDown, ChevronUp, Circle, Copy, Globe, Inbox, Loader2, Plus, RefreshCw, Search, Shield, Trash2, Users, X } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -163,7 +164,7 @@ export default function DomainsPage() {
       <>
         {filtered.length === 0 ? (
           <EmptyState
-            icon="🌐"
+            illustration={<DomainIllustration />}
             title={search ? "No matching domains" : "No domains yet"}
             description={search ? "Try a different search term." : "Add your first domain to start receiving emails."}
           />

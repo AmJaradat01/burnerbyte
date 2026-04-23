@@ -419,6 +419,7 @@ export function NotificationCenter() {
                               variant="ghost"
                               size="sm"
                               className="h-5 w-5 p-0 shrink-0 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100"
+                              aria-label="Dismiss notification"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 dismiss(n.id);
@@ -472,6 +473,7 @@ export function NotificationCenter() {
                     variant="ghost"
                     size="sm"
                     className="h-6 w-6 p-0 shrink-0 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100"
+                    aria-label="Dismiss notification"
                     onClick={(e) => {
                       e.stopPropagation();
                       dismiss(item.id);
