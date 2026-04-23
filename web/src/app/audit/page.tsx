@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { api } from "@/lib/api";
 import { useOrgStore } from "@/stores/org-store";
 import { useAuthStore } from "@/stores/auth-store";
@@ -18,30 +18,86 @@ import { EmptyState } from "@/components/empty-state";
 import { AuditIllustration } from "@/components/illustrations";
 import { toast } from "sonner";
 import { timeAgo } from "@/lib/time";
-import { Activity, Download, Globe, Inbox, Key, Shield, User, Users, Webhook } from "lucide-react";
+import {
+  Activity, ChevronDown, ChevronRight, Clock, Copy, Download,
+  Filter, Globe, Inbox, Key, LogIn, LogOut, Mail, Search, Shield,
+  User, Users, Webhook,
+} from "lucide-react";
 import type { AuditEntry, PaginatedResponse } from "@/types";
+
+/* ─── Constants ─── */
 
 const RESOURCE_TYPES = ["user", "org", "team", "domain", "domain_assignment", "inbox", "email", "webhook", "api_key"];
 
-const ACTION_COLORS: Record<string, string> = {
-  created: "bg-green-100 text-green-700 border-green-200",
-  updated: "bg-blue-100 text-blue-700 border-blue-200",
-  deleted: "bg-red-100 text-red-700 border-red-200",
-  revoked: "bg-red-100 text-red-700 border-red-200",
-  verified: "bg-green-100 text-green-700 border-green-200",
+const RESOURCE_LABELS: Record<string, string> = {
+  user: "User",
+  org: "Organization",
+  team: "Team",
+  domain: "Domain",
+  domain_assignment: "Domain Assignment",
+  inbox: "Inbox",
+  email: "Email",
+  webhook: "Webhook",
+  api_key: "API Key",
 };
-
-function getActionColor(action: string): string {
-  for (const [key, cls] of Object.entries(ACTION_COLORS)) {
-    if (action.includes(key)) return cls;
-  }
-  return "";
-}
 
 const RESOURCE_ICONS: Record<string, typeof User> = {
-  user: User, org: Shield, team: User, domain: Globe,
-  domain_assignment: Globe, inbox: Inbox, webhook: Webhook, api_key: Key,
+  user: User,
+  org: Shield,
+  team: Users,
+  domain: Globe,
+  domain_assignment: Globe,
+  inbox: Inbox,
+  email: Mail,
+  webhook: Webhook,
+  api_key: Key,
 };
+
+const RESOURCE_COLORS: Record<string, { bg: string; text: string; ring: string }> = {
+  user:              { bg: "bg-blue-100",    text: "text-blue-600",    ring: "ring-blue-200" },
+  org:               { bg: "bg-amber-100",   text: "text-amber-600",   ring: "ring-amber-200" },
+  team:              { bg: "bg-violet-100",  text: "text-violet-600",  ring: "ring-violet-200" },
+  domain:            { bg: "bg-emerald-100", text: "text-emerald-600", ring: "ring-emerald-200" },
+  domain_assignment: { bg: "bg-teal-100",    text: "text-teal-600",    ring: "ring-teal-200" },
+  inbox:             { bg: "bg-sky-100",     text: "text-sky-600",     ring: "ring-sky-200" },
+  email:             { bg: "bg-pink-100",    text: "text-pink-600",    ring: "ring-pink-200" },
+  webhook:           { bg: "bg-orange-100",  text: "text-orange-600",  ring: "ring-orange-200" },
+  api_key:           { bg: "bg-rose-100",    text: "text-rose-600",    ring: "ring-rose-200" },
+};
+
+const ACTION_COLORS: Record<string, { bg: string; text: string; border: string; dot: string }> = {
+  created:     { bg: "bg-emerald-50",  text: "text-emerald-700", border: "border-emerald-200", dot: "bg-emerald-500" },
+  updated:     { bg: "bg-blue-50",     text: "text-blue-700",    border: "border-blue-200",    dot: "bg-blue-500" },
+  deleted:     { bg: "bg-red-50",      text: "text-red-700",     border: "border-red-200",     dot: "bg-red-500" },
+  revoked:     { bg: "bg-red-50",      text: "text-red-700",     border: "border-red-200",     dot: "bg-red-500" },
+  verified:    { bg: "bg-emerald-50",  text: "text-emerald-700", border: "border-emerald-200", dot: "bg-emerald-500" },
+  login:       { bg: "bg-purple-50",   text: "text-purple-700",  border: "border-purple-200",  dot: "bg-purple-500" },
+  logout:      { bg: "bg-purple-50",   text: "text-purple-700",  border: "border-purple-200",  dot: "bg-purple-500" },
+  invited:     { bg: "bg-indigo-50",   text: "text-indigo-700",  border: "border-indigo-200",  dot: "bg-indigo-500" },
+  accepted:    { bg: "bg-emerald-50",  text: "text-emerald-700", border: "border-emerald-200", dot: "bg-emerald-500" },
+  migrated:    { bg: "bg-cyan-50",     text: "text-cyan-700",    border: "border-cyan-200",    dot: "bg-cyan-500" },
+  archived:    { bg: "bg-gray-50",     text: "text-gray-700",    border: "border-gray-200",    dot: "bg-gray-400" },
+  restored:    { bg: "bg-emerald-50",  text: "text-emerald-700", border: "border-emerald-200", dot: "bg-emerald-500" },
+  transferred: { bg: "bg-blue-50",     text: "text-blue-700",    border: "border-blue-200",    dot: "bg-blue-500" },
+};
+
+const DEFAULT_ACTION_COLOR = { bg: "bg-gray-50", text: "text-gray-700", border: "border-gray-200", dot: "bg-gray-400" };
+
+function getActionColor(action: string) {
+  for (const [key, color] of Object.entries(ACTION_COLORS)) {
+    if (action.includes(key)) return color;
+  }
+  return DEFAULT_ACTION_COLOR;
+}
+
+const QUICK_FILTERS: { label: string; value: string; color: string; activeColor: string; icon: typeof Activity }[] = [
+  { label: "Created",  value: "created",  color: "text-emerald-600 border-emerald-200 hover:bg-emerald-50", activeColor: "bg-emerald-100 text-emerald-700 border-emerald-300", icon: Activity },
+  { label: "Updated",  value: "updated",  color: "text-blue-600 border-blue-200 hover:bg-blue-50",         activeColor: "bg-blue-100 text-blue-700 border-blue-300",         icon: Activity },
+  { label: "Deleted",  value: "deleted",  color: "text-red-600 border-red-200 hover:bg-red-50",             activeColor: "bg-red-100 text-red-700 border-red-300",             icon: Activity },
+  { label: "Login",    value: "login",    color: "text-purple-600 border-purple-200 hover:bg-purple-50",   activeColor: "bg-purple-100 text-purple-700 border-purple-300",   icon: LogIn },
+];
+
+/* ─── Helpers ─── */
 
 function exportCSV(entries: AuditEntry[]) {
   const header = "Time,Actor,Action,Resource Type,Resource ID,IP Address,Details";
@@ -60,8 +116,35 @@ function exportCSV(entries: AuditEntry[]) {
   toast.success("CSV exported");
 }
 
+function copyToClipboard(text: string) {
+  navigator.clipboard.writeText(text).then(() => toast.success("Copied to clipboard"));
+}
+
+function getActorInitial(entry: AuditEntry): string {
+  if (entry.actor_email) return entry.actor_email[0].toUpperCase();
+  return "S";
+}
+
+function formatMetadataValue(value: unknown): string {
+  if (value === null || value === undefined) return "—";
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (typeof value === "object") return JSON.stringify(value, null, 2);
+  return String(value);
+}
+
+function isBeforeAfterMetadata(metadata: Record<string, unknown>): boolean {
+  return (
+    typeof metadata.before === "object" &&
+    metadata.before !== null &&
+    typeof metadata.after === "object" &&
+    metadata.after !== null
+  );
+}
+
+/* ─── Main Page ─── */
+
 export default function AuditPage() {
-  const { currentOrg, currentRole, hasPermission } = useOrgStore();
+  const { currentOrg, hasPermission } = useOrgStore();
   const { user } = useAuthStore();
   const [action, setAction] = useState("");
   const [resource, setResource] = useState("");
@@ -84,6 +167,11 @@ export default function AuditPage() {
 
   const clearFilters = () => { setAction(""); setResource(""); setDateFrom(""); setDateTo(""); setPage(1); };
   const hasFilters = action || resource || dateFrom || dateTo;
+
+  const handleQuickFilter = useCallback((value: string) => {
+    setAction((prev) => (prev === value ? "" : value));
+    setPage(1);
+  }, []);
 
   const exportAll = async () => {
     if (!currentOrg) return;
@@ -137,6 +225,7 @@ export default function AuditPage() {
         </CardContent>
       </Card>
 
+      {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card className="transition-all hover:shadow-md hover:-translate-y-0.5">
           <CardContent className="pt-5 pb-4">
@@ -174,20 +263,32 @@ export default function AuditPage() {
       </div>
 
       {/* Filters */}
-      <Card>
+      <Card className="overflow-hidden">
+        <div className="h-1 bg-gradient-to-r from-blue-500/60 via-purple-500/40 to-blue-500/10" />
         <CardContent className="py-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Filters</span>
+          </div>
           <div className="flex flex-wrap gap-4 items-end">
             <div className="space-y-1">
               <Label className="text-xs">Action</Label>
-              <Input value={action} onChange={(e) => { setAction(e.target.value); setPage(1); }} placeholder="e.g. domain.created" className="w-44 h-8" />
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input value={action} onChange={(e) => { setAction(e.target.value); setPage(1); }} placeholder="e.g. domain.created" className="w-48 h-8 pl-8" />
+              </div>
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Resource</Label>
               <Select value={resource || "all"} onValueChange={(v) => { setResource(v === "all" ? "" : v); setPage(1); }}>
-                <SelectTrigger className="w-44 h-8"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-48 h-8"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All resources</SelectItem>
-                  {RESOURCE_TYPES.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                  {RESOURCE_TYPES.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {RESOURCE_LABELS[r] || r}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -206,6 +307,26 @@ export default function AuditPage() {
         </CardContent>
       </Card>
 
+      {/* Quick Filter Chips */}
+      <div className="flex flex-wrap gap-2">
+        <span className="text-xs text-muted-foreground self-center mr-1">Quick filters:</span>
+        {QUICK_FILTERS.map((qf) => {
+          const isActive = action === qf.value;
+          return (
+            <button
+              key={qf.value}
+              onClick={() => handleQuickFilter(qf.value)}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-all duration-150 cursor-pointer ${
+                isActive ? qf.activeColor : qf.color
+              }`}
+            >
+              <qf.icon className="h-3 w-3" />
+              {qf.label}
+            </button>
+          );
+        })}
+      </div>
+
       {/* Entries */}
       {isError ? <ErrorState message="Failed to load audit log" onRetry={() => refetch()} /> :
       isLoading ? <AuditSkeleton /> : (
@@ -213,8 +334,18 @@ export default function AuditPage() {
         {(!data?.data || data.data.length === 0) ? (
           <EmptyState illustration={<AuditIllustration />} title="No audit entries" description={hasFilters ? "Try adjusting your filters." : "Actions will appear here as they happen."} />
         ) : (
-          <div className="space-y-2">
-            {data.data.map((e) => <AuditRow key={e.id} entry={e} />)}
+          <div>
+            {/* Timeline container */}
+            <div className="relative">
+              {data.data.map((e, idx) => (
+                <AuditRow
+                  key={e.id}
+                  entry={e}
+                  isFirst={idx === 0}
+                  isLast={idx === data.data.length - 1}
+                />
+              ))}
+            </div>
             <Pagination page={page} totalPages={data.total_pages} onPageChange={setPage} />
           </div>
         )}
@@ -224,62 +355,255 @@ export default function AuditPage() {
   );
 }
 
-function AuditRow({ entry: e }: { entry: AuditEntry }) {
+
+/* ─── Timeline Audit Row ─── */
+
+function AuditRow({ entry: e, isFirst, isLast }: { entry: AuditEntry; isFirst: boolean; isLast: boolean }) {
   const [expanded, setExpanded] = useState(false);
   const Icon = RESOURCE_ICONS[e.resource_type] || Shield;
-  const colorCls = getActionColor(e.action);
+  const actionColor = getActionColor(e.action);
+  const resourceColor = RESOURCE_COLORS[e.resource_type] || { bg: "bg-gray-100", text: "text-gray-600", ring: "ring-gray-200" };
+  const actorInitial = getActorInitial(e);
 
   return (
-    <Card className="cursor-pointer hover:shadow-sm transition-all duration-200" onClick={() => setExpanded(!expanded)}>
-      <CardContent className="py-3 px-4">
-        <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
-            <Icon className="h-4 w-4 text-muted-foreground" />
-          </div>
-          <Badge variant="outline" className={`shrink-0 text-xs ${colorCls}`}>{e.action}</Badge>
-          <span className="text-sm truncate flex-1">
-            <span className="text-muted-foreground">{e.resource_type}/</span>
-            <span className="font-mono">{e.resource_id.slice(0, 8)}</span>
-          </span>
-          <span className="text-xs text-muted-foreground shrink-0 hidden sm:block">
-            {e.actor_email || (e.actor_id ? e.actor_id.slice(0, 8) : "system")}
-          </span>
-          {e.ip_address && <span className="text-xs font-mono text-muted-foreground shrink-0 hidden md:block">{e.ip_address}</span>}
-          <span className="text-xs text-muted-foreground shrink-0" title={new Date(e.created_at).toLocaleString()}>
-            {timeAgo(e.created_at)}
-          </span>
-        </div>
-        {expanded && (
-          <div className="mt-3 pt-3 border-t grid gap-2 text-xs sm:grid-cols-2">
-            <div><span className="text-muted-foreground">Actor: </span>{e.actor_email || e.actor_id}</div>
-            <div><span className="text-muted-foreground">Resource ID: </span><span className="font-mono text-[11px]">{e.resource_id}</span></div>
-            <div><span className="text-muted-foreground">IP: </span><span className="font-mono">{e.ip_address || "—"}</span></div>
-            <div><span className="text-muted-foreground">Time: </span>{new Date(e.created_at).toLocaleString()}</div>
-            {e.metadata && typeof e.metadata === "object" && Object.keys(e.metadata).length > 0 && (
-              <div className="sm:col-span-2 mt-1">
-                <span className="text-muted-foreground block mb-1.5">Details:</span>
-                <div className="rounded-lg bg-muted/50 border divide-y">
-                  {Object.entries(e.metadata).map(([k, v]) => (
-                    <div key={k} className="flex items-center justify-between px-3 py-1.5">
-                      <span className="text-muted-foreground">{k.replace(/_/g, " ")}</span>
-                      <span className="font-mono text-[11px] text-right max-w-[60%] truncate">{typeof v === "boolean" ? (v ? "Yes" : "No") : String(v ?? "—")}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+    <div className="relative flex gap-4 group">
+      {/* Timeline column */}
+      <div className="flex flex-col items-center w-8 shrink-0">
+        {/* Line above dot */}
+        {!isFirst && (
+          <div className="w-px flex-1 bg-border group-hover:bg-muted-foreground/30 transition-colors" />
         )}
-      </CardContent>
-    </Card>
+        {isFirst && <div className="flex-1" />}
+
+        {/* Timeline dot */}
+        <div className={`w-3 h-3 rounded-full ${actionColor.dot} ring-4 ring-background shrink-0 transition-transform group-hover:scale-110`} />
+
+        {/* Line below dot */}
+        {!isLast && (
+          <div className="w-px flex-1 bg-border group-hover:bg-muted-foreground/30 transition-colors" />
+        )}
+        {isLast && <div className="flex-1" />}
+      </div>
+
+      {/* Content */}
+      <div className={`flex-1 mb-3 ${isFirst ? "" : ""}`}>
+        <Card
+          className="cursor-pointer hover:shadow-md transition-all duration-200 overflow-hidden"
+          onClick={() => setExpanded(!expanded)}
+        >
+          <CardContent className="py-3 px-4">
+            <div className="flex items-center gap-3">
+              {/* Resource icon in colored container */}
+              <div className={`h-9 w-9 rounded-lg ${resourceColor.bg} flex items-center justify-center shrink-0 ring-1 ${resourceColor.ring}`}>
+                <Icon className={`h-4 w-4 ${resourceColor.text}`} />
+              </div>
+
+              {/* Action badge */}
+              <Badge
+                variant="outline"
+                className={`shrink-0 text-xs ${actionColor.bg} ${actionColor.text} ${actionColor.border}`}
+              >
+                {e.action}
+              </Badge>
+
+              {/* Resource info */}
+              <span className="text-sm truncate flex-1">
+                <span className="text-muted-foreground">{RESOURCE_LABELS[e.resource_type] || e.resource_type} / </span>
+                <span className="font-mono text-xs">{e.resource_id.slice(0, 8)}</span>
+              </span>
+
+              {/* Actor avatar */}
+              <div className="hidden sm:flex items-center gap-2 shrink-0">
+                <div className="h-6 w-6 rounded-full bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center text-[10px] font-semibold text-slate-600">
+                  {actorInitial}
+                </div>
+                <span className="text-xs text-muted-foreground max-w-[140px] truncate">
+                  {e.actor_email || (e.actor_id ? e.actor_id.slice(0, 8) : "system")}
+                </span>
+              </div>
+
+              {/* IP address */}
+              {e.ip_address && (
+                <span className="text-xs font-mono text-muted-foreground shrink-0 hidden md:block">
+                  {e.ip_address}
+                </span>
+              )}
+
+              {/* Timestamp */}
+              <div className="flex items-center gap-1 shrink-0" title={new Date(e.created_at).toLocaleString()}>
+                <Clock className="h-3 w-3 text-muted-foreground hidden sm:block" />
+                <span className="text-xs text-muted-foreground">
+                  {timeAgo(e.created_at)}
+                </span>
+              </div>
+
+              {/* Expand/collapse chevron */}
+              <div className="shrink-0 text-muted-foreground">
+                {expanded ? (
+                  <ChevronDown className="h-4 w-4 transition-transform" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 transition-transform" />
+                )}
+              </div>
+            </div>
+
+            {/* Expanded details */}
+            {expanded && <ExpandedDetails entry={e} />}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 }
 
+/* ─── Expanded Details Panel ─── */
+
+function ExpandedDetails({ entry: e }: { entry: AuditEntry }) {
+  return (
+    <div className="mt-3 pt-3 border-t space-y-3" onClick={(ev) => ev.stopPropagation()}>
+      {/* Info grid */}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <DetailField label="Actor" value={e.actor_email || e.actor_id} />
+        <DetailField label="Resource ID" value={e.resource_id} mono copyable />
+        <DetailField label="IP Address" value={e.ip_address || "—"} mono />
+        <DetailField label="Timestamp" value={new Date(e.created_at).toLocaleString()} />
+        <DetailField label="Resource Type" value={RESOURCE_LABELS[e.resource_type] || e.resource_type} />
+        <DetailField label="Action" value={e.action} />
+      </div>
+
+      {/* Metadata */}
+      {e.metadata && typeof e.metadata === "object" && Object.keys(e.metadata).length > 0 && (
+        <div className="space-y-2">
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Details</span>
+
+          {isBeforeAfterMetadata(e.metadata) ? (
+            <BeforeAfterDiff
+              before={e.metadata.before as Record<string, unknown>}
+              after={e.metadata.after as Record<string, unknown>}
+            />
+          ) : (
+            <MetadataTable metadata={e.metadata} />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Detail Field ─── */
+
+function DetailField({ label, value, mono, copyable }: { label: string; value: string; mono?: boolean; copyable?: boolean }) {
+  return (
+    <div className="rounded-lg border bg-muted/30 px-3 py-2">
+      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span>
+      <div className="flex items-center gap-1.5 mt-0.5">
+        <span className={`text-sm truncate ${mono ? "font-mono text-xs" : ""}`}>{value}</span>
+        {copyable && (
+          <button
+            onClick={() => copyToClipboard(value)}
+            className="shrink-0 p-0.5 rounded hover:bg-muted transition-colors"
+            title="Copy to clipboard"
+          >
+            <Copy className="h-3 w-3 text-muted-foreground" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Metadata Table ─── */
+
+function MetadataTable({ metadata }: { metadata: Record<string, unknown> }) {
+  return (
+    <div className="rounded-lg border bg-muted/20 divide-y overflow-hidden">
+      {Object.entries(metadata).map(([key, value]) => (
+        <div key={key} className="flex items-start justify-between px-3 py-2 gap-4">
+          <span className="text-xs text-muted-foreground shrink-0 capitalize">{key.replace(/_/g, " ")}</span>
+          <span className="text-xs font-mono text-right break-all max-w-[65%]">
+            {typeof value === "object" && value !== null ? (
+              <pre className="text-[11px] whitespace-pre-wrap text-left bg-muted/50 rounded p-1.5 mt-0.5">
+                {JSON.stringify(value, null, 2)}
+              </pre>
+            ) : (
+              formatMetadataValue(value)
+            )}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ─── Before/After Diff ─── */
+
+function BeforeAfterDiff({ before, after }: { before: Record<string, unknown>; after: Record<string, unknown> }) {
+  const allKeys = Array.from(new Set([...Object.keys(before), ...Object.keys(after)]));
+  const changedKeys = allKeys.filter((k) => JSON.stringify(before[k]) !== JSON.stringify(after[k]));
+
+  if (changedKeys.length === 0) {
+    return (
+      <div className="rounded-lg border bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+        No changes detected in metadata.
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border overflow-hidden">
+      {/* Header */}
+      <div className="grid grid-cols-[1fr_1fr_1fr] bg-muted/40 px-3 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground font-medium border-b">
+        <span>Field</span>
+        <span>Before</span>
+        <span>After</span>
+      </div>
+      {/* Rows */}
+      <div className="divide-y">
+        {changedKeys.map((key) => (
+          <div key={key} className="grid grid-cols-[1fr_1fr_1fr] px-3 py-2 gap-2 text-xs">
+            <span className="text-muted-foreground capitalize">{key.replace(/_/g, " ")}</span>
+            <span className="font-mono text-[11px] text-red-600 bg-red-50 rounded px-1.5 py-0.5 break-all">
+              {formatMetadataValue(before[key])}
+            </span>
+            <span className="font-mono text-[11px] text-emerald-600 bg-emerald-50 rounded px-1.5 py-0.5 break-all">
+              {formatMetadataValue(after[key])}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Skeleton ─── */
+
 function AuditSkeleton() {
   return (
-    <div className="space-y-2">
+    <div className="relative">
       {Array.from({ length: 8 }).map((_, i) => (
-        <Card key={i}><CardContent className="py-3 px-4"><Skeleton className="h-5 w-full" /></CardContent></Card>
+        <div key={i} className="relative flex gap-4">
+          <div className="flex flex-col items-center w-8 shrink-0">
+            {i > 0 && <div className="w-px flex-1 bg-border" />}
+            {i === 0 && <div className="flex-1" />}
+            <div className="w-3 h-3 rounded-full bg-muted shrink-0 ring-4 ring-background" />
+            {i < 7 && <div className="w-px flex-1 bg-border" />}
+            {i === 7 && <div className="flex-1" />}
+          </div>
+          <div className="flex-1 mb-3">
+            <Card>
+              <CardContent className="py-3 px-4">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-9 w-9 rounded-lg" />
+                  <Skeleton className="h-5 w-20 rounded-full" />
+                  <Skeleton className="h-4 w-32" />
+                  <div className="flex-1" />
+                  <Skeleton className="h-6 w-6 rounded-full" />
+                  <Skeleton className="h-4 w-24" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       ))}
     </div>
   );
