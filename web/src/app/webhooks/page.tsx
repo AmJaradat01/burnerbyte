@@ -113,8 +113,7 @@ export default function WebhooksPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card className="overflow-hidden">
-        <div className="h-2 bg-gradient-to-r from-orange-500/80 to-orange-500/20" />
+      <Card className="card-header-accent">
         <CardContent className="pt-5 pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -140,7 +139,7 @@ export default function WebhooksPage() {
             { label: "Active", value: data.data.filter(w => w.active).length, icon: CheckCircle2, bg: "bg-emerald-100 text-emerald-600" },
             { label: "Failing", value: data.data.filter(w => w.failure_count > 0).length, icon: AlertCircle, bg: "bg-red-100 text-red-600" },
           ].map((s) => (
-            <Card key={s.label} className="transition-all hover:shadow-md hover:-translate-y-0.5">
+            <Card key={s.label} className="transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:-translate-y-px">
               <CardContent className="pt-5 pb-4">
                 <div className="flex justify-between mb-3">
                   <span className="text-sm font-medium text-muted-foreground">{s.label}</span>
@@ -202,7 +201,7 @@ function WebhookCard({ webhook: w, expanded, onToggleExpand, onToggleActive, onD
         : "bg-muted text-muted-foreground";
 
   return (
-    <Card className={`hover:shadow-md transition-all ${!w.active ? "border-dashed opacity-70" : ""}`}>
+    <Card className={`hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] transition-all ${!w.active ? "border-dashed opacity-70" : ""}`}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3 min-w-0 flex-1 space-y-1">

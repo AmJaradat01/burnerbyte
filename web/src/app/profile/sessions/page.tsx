@@ -47,8 +47,7 @@ export default function SessionsPage() {
 
   return (
     <div className="max-w-3xl space-y-6">
-      <Card className="overflow-hidden">
-        <div className="h-2 bg-gradient-to-r from-blue-500/80 to-blue-500/20" />
+      <Card className="card-header-accent">
         <CardContent className="pt-5 pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -71,7 +70,7 @@ export default function SessionsPage() {
       </Card>
 
       <div className="grid grid-cols-2 gap-4">
-        <Card className="transition-all hover:shadow-md hover:-translate-y-0.5">
+        <Card className="transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:-translate-y-px">
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-muted-foreground">Active Sessions</span>
@@ -82,7 +81,7 @@ export default function SessionsPage() {
             <p className="text-2xl font-bold tabular-nums">{sessions?.length ?? 0}</p>
           </CardContent>
         </Card>
-        <Card className="transition-all hover:shadow-md hover:-translate-y-0.5">
+        <Card className="transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:-translate-y-px">
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-muted-foreground">Current Session</span>

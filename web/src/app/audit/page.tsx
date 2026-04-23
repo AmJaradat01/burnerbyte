@@ -205,8 +205,7 @@ export default function AuditPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card className="overflow-hidden">
-        <div className="h-2 bg-gradient-to-r from-amber-500/80 to-amber-500/20" />
+      <Card className="card-header-accent">
         <CardContent className="pt-5 pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -227,7 +226,7 @@ export default function AuditPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="transition-all hover:shadow-md hover:-translate-y-0.5">
+        <Card className="transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:-translate-y-px">
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-muted-foreground">Total Entries</span>
@@ -238,7 +237,7 @@ export default function AuditPage() {
             <p className="text-2xl font-bold tabular-nums">{data?.total ?? 0}</p>
           </CardContent>
         </Card>
-        <Card className="transition-all hover:shadow-md hover:-translate-y-0.5">
+        <Card className="transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:-translate-y-px">
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-muted-foreground">Actions (page)</span>
@@ -249,7 +248,7 @@ export default function AuditPage() {
             <p className="text-2xl font-bold tabular-nums">{new Set(data?.data?.map(e => e.action)).size ?? 0}</p>
           </CardContent>
         </Card>
-        <Card className="transition-all hover:shadow-md hover:-translate-y-0.5">
+        <Card className="transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:-translate-y-px">
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-muted-foreground">Actors (page)</span>
@@ -263,8 +262,7 @@ export default function AuditPage() {
       </div>
 
       {/* Filters */}
-      <Card className="overflow-hidden">
-        <div className="h-1 bg-gradient-to-r from-blue-500/60 via-purple-500/40 to-blue-500/10" />
+      <Card>
         <CardContent className="py-4">
           <div className="flex items-center gap-2 mb-3">
             <Filter className="h-3.5 w-3.5 text-muted-foreground" />
@@ -388,7 +386,7 @@ function AuditRow({ entry: e, isFirst, isLast }: { entry: AuditEntry; isFirst: b
       {/* Content */}
       <div className={`flex-1 mb-3 ${isFirst ? "" : ""}`}>
         <Card
-          className="cursor-pointer hover:shadow-md transition-all duration-200 overflow-hidden"
+          className="cursor-pointer hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] transition-all duration-200"
           onClick={() => setExpanded(!expanded)}
         >
           <CardContent className="py-3 px-4">
