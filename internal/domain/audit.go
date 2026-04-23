@@ -26,6 +26,7 @@ type AuditEntry struct {
 
 type AuditFilter struct {
 	ActorID      *uuid.UUID `json:"actor_id,omitempty"`
+	ActorEmail   *string    `json:"actor_email,omitempty"`
 	Action       *string    `json:"action,omitempty"`
 	ResourceType *string    `json:"resource_type,omitempty"`
 	DateFrom     *time.Time `json:"date_from,omitempty"`
