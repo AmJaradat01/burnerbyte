@@ -21,6 +21,7 @@ import { Pagination } from "@/components/pagination";
 import { ErrorState } from "@/components/error-state";
 import { EmptyState } from "@/components/empty-state";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { WebhookIllustration } from "@/components/illustrations";
 import { AlertCircle, AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Clock, Code2, Copy, ExternalLink, Globe, Info, Link2, Pencil, Plus, Trash2, XCircle } from "lucide-react";
 import type { Webhook, PaginatedResponse } from "@/types";
 
@@ -156,7 +157,7 @@ export default function WebhooksPage() {
       isLoading ? <WebhookListSkeleton /> : (
       <>
         {(!data?.data || data.data.length === 0) ? (
-          <EmptyState icon="🔗" title="No webhooks" description="Add a webhook to receive event notifications via HTTP." />
+          <EmptyState illustration={<WebhookIllustration />} title="No webhooks" description="Add a webhook to receive event notifications via HTTP." />
         ) : (
           <div className="space-y-4">
             {data.data.map((w) => (

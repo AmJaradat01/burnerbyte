@@ -17,6 +17,9 @@ import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EmptyState } from "@/components/empty-state";
 import { ErrorState } from "@/components/error-state";
+import { InboxIllustration } from "@/components/illustrations";
+import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
+import { PullToRefreshIndicator } from "@/components/pull-to-refresh-indicator";
 import { Pagination } from "@/components/pagination";
 import { Check, ChevronDown, Clock, Copy, ExternalLink, Key, Link as LinkIcon, Mail, RefreshCw, Server, Timer, Trash2, Users, Zap } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -76,6 +79,11 @@ function HomePage() {
     refetchOnWindowFocus: true,
   });
 
+  const { pulling, refreshing, pullDistance } = usePullToRefresh({
+    onRefresh: async () => { await refetch(); },
+    enabled: true,
+  });
+
   const extend = useMutation({
     mutationFn: (id: string) => api.post(`/inboxes/${id}/extend`, {}),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["home-inboxes"] }); toast.success(t("extendedBy1h")); },
@@ -90,6 +98,7 @@ function HomePage() {
 
   return (
     <div className="space-y-8">
+      <PullToRefreshIndicator pulling={pulling} refreshing={refreshing} pullDistance={pullDistance} />
       {/* Greeting */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">{greeting}, {user?.display_name?.split(" ")[0] || "there"} 👋</h1>
@@ -111,7 +120,7 @@ function HomePage() {
         {isError ? <ErrorState message="Failed to load inboxes" onRetry={() => refetch()} /> :
          isLoading ? <InboxGridSkeleton /> :
          (!data?.data || data.data.length === 0) ? (
-          <EmptyState icon="📭" title={t("noActiveInboxes")} description={t("createToStart")} />
+          <EmptyState illustration={<InboxIllustration />} title={t("noActiveInboxes")} description={t("createToStart")} />
         ) : (
           <>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
