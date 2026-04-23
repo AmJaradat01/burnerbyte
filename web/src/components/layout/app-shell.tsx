@@ -16,7 +16,6 @@ import { SkipToContent } from "@/components/skip-to-content";
 import { PageProgress } from "@/components/page-progress";
 import { OfflineBanner } from "@/components/offline-banner";
 import { Logo } from "@/components/logo";
-import { Badge } from "@/components/ui/badge";
 import { useKeyboardShortcuts, useShortcutHelp } from "@/hooks/use-keyboard-shortcuts";
 import { useOrgBootstrap } from "@/hooks/use-org-bootstrap";
 import { Button } from "@/components/ui/button";
@@ -179,7 +178,6 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Breadcrumbs />
-                <Badge variant="outline" className="hidden sm:inline-flex text-[10px] px-1.5 py-0 font-mono">⌘K</Badge>
               </div>
               <NotificationCenter />
             </div>
@@ -208,7 +206,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Breadcrumbs />
-            <Badge variant="outline" className="hidden sm:inline-flex text-[10px] px-1.5 py-0 font-mono">⌘K</Badge>
           </div>
           <NotificationCenter />
         </div>
