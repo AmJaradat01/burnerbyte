@@ -6,10 +6,26 @@ import { useAuthStore } from "@/stores/auth-store";
 import { useOrgStore } from "@/stores/org-store";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/logo";
 import { useTranslations } from "next-intl";
-import { ChevronsLeft, ChevronsRight, LogOut } from "lucide-react";
+import {
+  ChevronsLeft,
+  ChevronsRight,
+  LogOut,
+  Home,
+  BookOpen,
+  LayoutDashboard,
+  Globe,
+  Users,
+  Webhook,
+  KeyRound,
+  ClipboardList,
+  BarChart3,
+  Settings,
+  type LucideIcon,
+} from "lucide-react";
 
-function NavLink({ href, icon, label, active, collapsed }: { href: string; icon: string; label: string; active: boolean; collapsed: boolean }) {
+function NavLink({ href, icon: Icon, label, active, collapsed }: { href: string; icon: LucideIcon; label: string; active: boolean; collapsed: boolean }) {
   return (
     <Link
       href={href}
@@ -21,7 +37,7 @@ function NavLink({ href, icon, label, active, collapsed }: { href: string; icon:
       )}
     >
       {active && <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-0.5 rounded-full bg-primary" />}
-      <span className={cn("text-base", collapsed && "text-lg")}>{icon}</span>
+      <Icon className={cn("h-4 w-4 shrink-0", collapsed && "h-5 w-5")} />
       {!collapsed && label}
     </Link>
   );
@@ -41,34 +57,33 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const tc = useTranslations("common");
 
   const navItems = [
-    { href: "/", label: t("home"), icon: "🏠" },
-    { href: "/docs", label: t("docs"), icon: "📖" },
+    { href: "/", label: t("home"), icon: Home },
+    { href: "/docs", label: t("docs"), icon: BookOpen },
   ];
 
   const manageItems = [
-    { href: "/dashboard", label: t("dashboard"), icon: "📊" },
-    { href: "/domains", label: t("domains"), icon: "🌐" },
-    { href: "/teams", label: t("teams"), icon: "👥" },
-    { href: "/webhooks", label: t("webhooks"), icon: "🔗" },
-    { href: "/api-keys", label: t("apiKeys"), icon: "🔑" },
-    { href: "/audit", label: t("auditLog"), icon: "📋" },
-    { href: "/analytics", label: t("analytics"), icon: "📈" },
-    { href: "/settings", label: t("settings"), icon: "⚙️" },
+    { href: "/dashboard", label: t("dashboard"), icon: LayoutDashboard },
+    { href: "/domains", label: t("domains"), icon: Globe },
+    { href: "/teams", label: t("teams"), icon: Users },
+    { href: "/webhooks", label: t("webhooks"), icon: Webhook },
+    { href: "/api-keys", label: t("apiKeys"), icon: KeyRound },
+    { href: "/audit", label: t("auditLog"), icon: ClipboardList },
+    { href: "/analytics", label: t("analytics"), icon: BarChart3 },
+    { href: "/settings", label: t("settings"), icon: Settings },
   ];
 
   return (
     <aside className={cn(
-      "flex h-screen flex-col border-r bg-background/95 backdrop-blur-xl transition-all duration-200",
+      "flex h-screen flex-col border-r bg-sidebar backdrop-blur-xl transition-all duration-200",
       collapsed ? "w-[60px]" : "w-60"
     )}>
       {/* Logo + collapse toggle */}
       <div className={cn("flex items-center px-3 py-4", collapsed ? "justify-center" : "justify-between")}>
-        <Link href="/" className="flex items-center gap-2 font-bold tracking-tight">
-          <span className="text-lg">🔥</span>
-          {!collapsed && <span>BurnerByte</span>}
+        <Link href="/" className="flex items-center gap-2">
+          <Logo collapsed={collapsed} />
         </Link>
         {!collapsed && (
-          <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground" onClick={onToggle} title="Collapse sidebar">
+          <Button variant="ghost" size="sm" className="min-w-8 min-h-8 h-8 w-8 p-0 text-muted-foreground" onClick={onToggle} title="Collapse sidebar">
             <ChevronsLeft className="h-4 w-4" />
           </Button>
         )}
@@ -77,7 +92,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       {/* Expand button when collapsed */}
       {collapsed && (
         <div className="px-2 mb-2">
-          <Button variant="ghost" size="sm" className="h-7 w-full p-0 text-muted-foreground" onClick={onToggle} title="Expand sidebar">
+          <Button variant="ghost" size="sm" className="min-w-8 min-h-8 h-7 w-full p-0 text-muted-foreground" onClick={onToggle} title="Expand sidebar">
             <ChevronsRight className="h-4 w-4" />
           </Button>
         </div>

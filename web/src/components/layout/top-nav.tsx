@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useTranslations } from "next-intl";
 import { LogOut } from "lucide-react";
+import { Logo } from "@/components/logo";
 
 export function TopNav() {
   const pathname = usePathname();
@@ -25,9 +26,9 @@ export function TopNav() {
       <div className="flex h-14 items-center justify-between px-4 sm:px-6">
         {/* Left: logo + nav */}
         <div className="flex items-center gap-6">
-          <Link href="/" className="flex items-center gap-2 font-bold tracking-tight">
-            <span className="text-lg">🔥</span>
-            <span className="hidden sm:inline">BurnerByte</span>
+          <Link href="/" className="flex items-center gap-2">
+            <span className="sm:hidden"><Logo collapsed /></span>
+            <span className="hidden sm:inline"><Logo /></span>
           </Link>
           <nav className="flex items-center gap-1">
             {links.map((link) => {
