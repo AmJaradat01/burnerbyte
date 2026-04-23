@@ -429,7 +429,7 @@ function InboxCard({ inbox, onExtend, onDelete }: { inbox: Inbox; onExtend: () =
           )}
           <ConfirmDialog
             trigger={
-              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:text-destructive">
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:text-destructive" aria-label="Delete inbox">
                 <Trash2 className="h-3 w-3" />
               </Button>
             }
