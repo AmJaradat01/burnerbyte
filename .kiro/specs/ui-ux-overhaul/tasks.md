@@ -240,7 +240,7 @@ Systematic UI/UX overhaul of the BurnerByte frontend, organized into 6 phases or
     - Integrate into list pages (inboxes, domains, teams)
     - _Requirements: 16.3_
 
-  - [ ] 8.3 Update `web/src/components/notification-center.tsx` — responsive width, browser notifications, grouping
+  - [x] 8.3 Update `web/src/components/notification-center.tsx` — responsive width, browser notifications, grouping
     - Set popover width to `w-[calc(100vw-2rem)] sm:w-96` for responsive sizing
     - Add browser notification permission request on first open
     - Use `new Notification()` API in WebSocket `onmessage` handler when permission granted
@@ -258,7 +258,7 @@ Systematic UI/UX overhaul of the BurnerByte frontend, organized into 6 phases or
     - Add Next.js router interception to show confirmation dialog on navigation
     - _Requirements: 23.2_
 
-  - [ ] 8.6 Add settings autosave with debounce
+  - [x] 8.6 Add settings autosave with debounce
     - In `web/src/app/settings/page.tsx`, add 2-second debounced autosave using `useEffect` + `setTimeout`
     - Show inline "Saved" badge indicator near the form after successful save
     - _Requirements: 23.3, 23.4_
@@ -290,7 +290,7 @@ Systematic UI/UX overhaul of the BurnerByte frontend, organized into 6 phases or
     - Add `og:title`, `og:description`, `og:image`, `og:url` to root layout or landing page metadata
     - _Requirements: 17.3, 17.4_
 
-  - [ ] 10.3 Optimize avatar images with Next.js Image component
+  - [x] 10.3 Optimize avatar images with Next.js Image component
     - Replace `<img>` tags with `<Image>` from `next/image` for user avatars and org logos
     - Set appropriate `width`, `height`, and `loading="lazy"` attributes
     - _Requirements: 18.2_
