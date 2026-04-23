@@ -67,6 +67,7 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
   const [logoUrl, setLogoUrl] = useState(org.logo_url ?? "");
   const [settings, setSettings] = useState<OrgSettings>(org.settings || {});
   const [saving, setSaving] = useState(false);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
 
   // Re-sync local state when org refreshes after save
   const orgKey = `${org.id}-${org.updated_at}`;
@@ -79,6 +80,25 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
   }
 
   const dirty = name !== org.name || logoUrl !== (org.logo_url ?? "") || JSON.stringify(settings) !== JSON.stringify(org.settings || {});
+
+  // Autosave with 2-second debounce
+  useEffect(() => {
+    if (!dirty) { setAutoSaveStatus("idle"); return; }
+    setAutoSaveStatus("idle");
+    const timeout = setTimeout(async () => {
+      setAutoSaveStatus("saving");
+      try {
+        await api.patch(`/orgs/${org.id}`, { name, logo_url: logoUrl || undefined });
+        await api.put(`/orgs/${org.id}/settings`, settings);
+        onSaved();
+        setAutoSaveStatus("saved");
+        setTimeout(() => setAutoSaveStatus("idle"), 2000);
+      } catch {
+        setAutoSaveStatus("idle");
+      }
+    }, 2000);
+    return () => clearTimeout(timeout);
+  }, [dirty, name, logoUrl, settings]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = async () => {
     setSaving(true);
@@ -216,7 +236,9 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
       </div>
 
       {dirty && (
-        <div className="sticky bottom-4 flex justify-end">
+        <div className="sticky bottom-4 flex items-center justify-end gap-3">
+          {autoSaveStatus === "saving" && <span className="text-xs text-muted-foreground animate-pulse">Saving...</span>}
+          {autoSaveStatus === "saved" && <span className="text-xs text-emerald-600">✓ Saved</span>}
           <Button onClick={save} disabled={saving} size="lg" className="shadow-lg gap-2">
             <Save className="h-4 w-4" />
             {saving ? "Saving…" : "Save Settings"}

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useAuthStore } from "@/stores/auth-store";
 import { useOrgStore } from "@/stores/org-store";
@@ -103,8 +104,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         <div className="mx-3 mb-3 rounded-lg border bg-muted/30 px-3 py-2.5">
           <div className="flex items-center gap-2.5">
             {currentOrg.logo_url ? (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img src={currentOrg.logo_url} alt="" className="h-7 w-7 rounded-md object-cover" />
+              <Image src={currentOrg.logo_url} alt="" width={28} height={28} className="h-7 w-7 rounded-md object-cover" unoptimized />
             ) : (
               <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-xs font-bold text-primary">
                 {currentOrg.name.charAt(0).toUpperCase()}
