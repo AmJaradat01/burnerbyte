@@ -95,6 +95,8 @@ const QUICK_FILTERS: { label: string; value: string; color: string; activeColor:
   { label: "Updated",  value: "updated",  color: "text-blue-600 border-blue-200 hover:bg-blue-50",         activeColor: "bg-blue-100 text-blue-700 border-blue-300",         icon: Activity },
   { label: "Deleted",  value: "deleted",  color: "text-red-600 border-red-200 hover:bg-red-50",             activeColor: "bg-red-100 text-red-700 border-red-300",             icon: Activity },
   { label: "Login",    value: "login",    color: "text-purple-600 border-purple-200 hover:bg-purple-50",   activeColor: "bg-purple-100 text-purple-700 border-purple-300",   icon: LogIn },
+  { label: "Invited",  value: "invited",  color: "text-indigo-600 border-indigo-200 hover:bg-indigo-50",   activeColor: "bg-indigo-100 text-indigo-700 border-indigo-300",   icon: Activity },
+  { label: "Settings", value: "settings", color: "text-slate-600 border-slate-200 hover:bg-slate-50",       activeColor: "bg-slate-100 text-slate-700 border-slate-300",       icon: Activity },
 ];
 
 /* ─── Helpers ─── */
