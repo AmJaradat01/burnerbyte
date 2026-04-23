@@ -184,8 +184,7 @@ export default function ApiKeysPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card className="overflow-hidden">
-        <div className="h-2 bg-gradient-to-r from-violet-500/80 to-violet-500/20" />
+      <Card className="card-header-accent">
         <CardContent className="pt-5 pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -237,7 +236,7 @@ export default function ApiKeysPage() {
               bg: "bg-red-100 text-red-600",
             },
           ].map((s) => (
-            <Card key={s.label} className="transition-all hover:shadow-md hover:-translate-y-0.5">
+            <Card key={s.label} className="transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:-translate-y-px">
               <CardContent className="pt-5 pb-4">
                 <div className="flex justify-between mb-3">
                   <span className="text-sm font-medium text-muted-foreground">{s.label}</span>
@@ -331,7 +330,7 @@ function ApiKeyCard({
 
   return (
     <Card
-      className={`hover:shadow-md transition-all cursor-pointer ${dimmed ? "border-dashed opacity-60" : ""}`}
+      className={`hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] transition-all cursor-pointer ${dimmed ? "border-dashed opacity-60" : ""}`}
       onClick={onClick}
     >
       <CardHeader className="pb-3">
