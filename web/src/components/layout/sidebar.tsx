@@ -109,6 +109,8 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   ];
 
   const version = versionData?.version;
+  // Strip leading 'v' if present to avoid double-v display
+  const displayVersion = version?.replace(/^v/, "");
   const userInitial = user?.display_name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || "?";
 
   return (
@@ -246,10 +248,10 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           collapsed ? "flex-col gap-1" : "justify-between px-1"
         )}>
           {/* Version badge (expanded only) */}
-          {!collapsed && version && (
-            <span className="text-[10px] text-muted-foreground/50 font-mono">v{version}</span>
+          {!collapsed && displayVersion && (
+            <span className="text-[10px] text-muted-foreground/50 font-mono">v{displayVersion}</span>
           )}
-          {!collapsed && !version && <span />}
+          {!collapsed && !displayVersion && <span />}
 
           {/* Logout button */}
           <Button
