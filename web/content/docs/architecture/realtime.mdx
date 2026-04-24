@@ -5,7 +5,7 @@ description: How BurnerByte delivers emails and notifications in real-time.
 
 ## WebSocket Hubs
 
-BurnerByte uses two separate WebSocket hubs:
+BurnerByte uses three separate WebSocket hubs:
 
 ### Inbox Hub
 
@@ -18,6 +18,12 @@ Streams new emails to a specific inbox in real-time. When the SMTP handler store
 Endpoint: `GET /ws/notifications?token=<jwt>`
 
 Streams all notifications for the authenticated user. Powers the notification bell in the top-right corner of the UI.
+
+### Admin Stats Hub
+
+Endpoint: `GET /ws/admin-stats?token=<jwt>`
+
+Streams real-time platform statistics to system admins. The admin stats worker pushes updated counts (emails, inboxes, domains, users, teams, storage) at regular intervals. Used by the dashboard when auto-refresh is enabled.
 
 ## Connection Lifecycle
 

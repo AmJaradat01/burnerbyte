@@ -101,6 +101,55 @@ X-RateLimit-Reset: 1709251200
 | Admin Roles | `POST /admin/roles`, `PATCH /admin/roles/:id`, `DELETE /admin/roles/:id` |
 | Notifications | `GET /notifications`, `POST /notifications/mark-all-read`, `PATCH /notifications/:id/read`, `DELETE /notifications`, `DELETE /notifications/:id` |
 | Roles | `GET /roles` |
-| WebSocket | `GET /ws/inboxes/:id`, `GET /ws/notifications` |
+| WebSocket | `GET /ws/inboxes/:id`, `GET /ws/notifications`, `GET /ws/admin-stats` |
 | Docs | `GET /docs`, `GET /docs/openapi.json` |
 | Health | `GET /healthz`, `GET /readyz`, `GET /metrics` (root level, not under `/api/v1`) |
+
+## WebSocket Endpoints
+
+All WebSocket endpoints authenticate via a `token` query parameter containing a valid JWT.
+
+### Inbox Stream
+
+```
+GET /ws/inboxes/{inboxId}?token=<jwt>
+```
+
+Streams new emails to a specific inbox in real-time. Messages are JSON with `type: "email.received"` and the email data in `data`.
+
+### Notification Stream
+
+```
+GET /ws/notifications?token=<jwt>
+```
+
+Streams all notifications for the authenticated user. Powers the notification bell in the UI. Messages include `type` (e.g., `email.received`, `inbox.created`, `inbox.expired`) and `data` with event details.
+
+### Admin Stats Stream
+
+```
+GET /ws/admin-stats?token=<jwt>
+```
+
+**Requires system admin.** Streams real-time platform statistics. Messages have `type: "admin.stats"` with `data` containing:
+
+| Field | Type | Description |
+|---|---|---|
+| `total_emails` | number | Total emails received |
+| `active_inboxes` | number | Currently active inboxes |
+| `total_domains` | number | Registered domains |
+| `total_users` | number | Platform users |
+| `total_teams` | number | Teams |
+| `storage_used_bytes` | number | Total storage used |
+
+Used by the dashboard for live stat updates when auto-refresh is enabled.
+
+## OpenAPI Specification
+
+A machine-readable OpenAPI 3.0 specification is available at:
+
+```
+GET /docs/openapi.json
+```
+
+This can be imported into tools like Postman, Insomnia, or used to generate client SDKs.
