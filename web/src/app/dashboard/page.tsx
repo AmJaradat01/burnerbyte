@@ -317,7 +317,19 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
               <h1 className="text-xl font-bold tracking-tight">
                 {greetingEmoji} {greeting}, {user?.display_name?.split(" ")[0] || "there"}
               </h1>
-              <p className="text-muted-foreground text-sm mt-0.5">Here&apos;s what&apos;s happening with {org.name}</p>
+              <p className="text-muted-foreground text-sm mt-0.5">
+                Here&apos;s what&apos;s happening with {org.name}
+                {dataUpdatedAt ? <> · <LastUpdated dataUpdatedAt={dataUpdatedAt} /></> : null}
+                {autoRefresh && (
+                  <span className="inline-flex items-center gap-1.5 ml-2 text-emerald-600">
+                    <span className="relative inline-flex h-1.5 w-1.5">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                      <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                    </span>
+                    Live
+                  </span>
+                )}
+              </p>
             </div>
             <div className="flex items-center gap-3">
               <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none">
@@ -342,20 +354,6 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
           </div>
         </CardContent>
       </Card>
-
-      {/* Last updated */}
-      <div className="flex items-center justify-between">
-        <LastUpdated dataUpdatedAt={dataUpdatedAt} />
-        {autoRefresh && (
-          <span className="flex items-center gap-1.5 text-xs text-emerald-600">
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
-            </span>
-            Live
-          </span>
-        )}
-      </div>
 
       {/* Primary stats — 5 cards */}
       <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
@@ -440,8 +438,8 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
                   <RechartsAreaChart data={chartData}>
                     <defs>
                       <linearGradient id="emailGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.2} />
-                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2} />
+                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
@@ -449,7 +447,7 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
                     <YAxis tick={{ fontSize: 11 }} allowDecimals={false} stroke="hsl(var(--muted-foreground))" />
                     <Tooltip contentStyle={tooltipStyle} labelFormatter={(v) => `Date: ${v}`} formatter={(v) => [`${Number(v).toLocaleString()}`, "Emails"]} />
                     <ReferenceLine y={chartAvg} stroke="hsl(var(--muted-foreground))" strokeDasharray="6 4" strokeOpacity={0.5} />
-                    <Area type="monotone" dataKey="count" stroke="hsl(var(--primary))" strokeWidth={2} fill="url(#emailGradient)" />
+                    <Area type="monotone" dataKey="count" stroke="#6366f1" strokeWidth={2} fill="url(#emailGradient)" />
                   </RechartsAreaChart>
                 </ResponsiveContainer>
               ) : (
@@ -484,7 +482,7 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
                     <XAxis dataKey="hour" tick={{ fontSize: 10 }} tickFormatter={formatHour} stroke="hsl(var(--muted-foreground))" />
                     <YAxis tick={{ fontSize: 10 }} allowDecimals={false} stroke="hsl(var(--muted-foreground))" />
                     <Tooltip contentStyle={tooltipStyle} labelFormatter={(v) => formatHour(Number(v))} formatter={(v) => [`${Number(v).toLocaleString()}`, "Emails"]} />
-                    <Bar dataKey="count" fill="hsl(var(--primary))" radius={[3, 3, 0, 0]} fillOpacity={0.8} />
+                    <Bar dataKey="count" fill="#6366f1" radius={[3, 3, 0, 0]} fillOpacity={0.85} />
                   </RechartsBarChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -528,7 +526,7 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
                       return d.toLocaleDateString(undefined, { weekday: "short" });
                     }} stroke="hsl(var(--muted-foreground))" />
                     <Tooltip contentStyle={tooltipStyle} labelFormatter={(v) => v} formatter={(v) => [`${Number(v).toLocaleString()}`, "Emails"]} />
-                    <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="count" fill="#6366f1" radius={[4, 4, 0, 0]} />
                   </RechartsBarChart>
                 </ResponsiveContainer>
               ) : (
@@ -627,8 +625,8 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
                       </div>
                       <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                         <div
-                          className="h-full rounded-full bg-primary transition-all"
-                          style={{ width: `${(sd.count / maxSenderCount) * 100}%` }}
+                          className="h-full rounded-full bg-blue-500 transition-all"
+                          style={{ width: `${Math.max((sd.count / maxSenderCount) * 100, 4)}%` }}
                         />
                       </div>
                     </div>
@@ -662,7 +660,7 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
                         </span>
                       </div>
                       <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                        <div className="h-full rounded-full bg-violet-500 transition-all" style={{ width: `${pct}%` }} />
+                        <div className="h-full rounded-full bg-violet-400 transition-all" style={{ width: `${Math.max(pct, 4)}%` }} />
                       </div>
                     </div>
                   );
@@ -738,7 +736,7 @@ function StatCard({ icon: Icon, label, value, loading, accent, footer, sparkline
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-medium text-muted-foreground">{label}</span>
           <div className={`h-9 w-9 rounded-xl flex items-center justify-center shadow-sm ${accent}`}>
-            <Icon className="h-4.5 w-4.5" />
+            <Icon className="h-[18px] w-[18px]" />
           </div>
         </div>
         <div className="flex items-end justify-between gap-2">

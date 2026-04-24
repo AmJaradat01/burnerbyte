@@ -8,6 +8,8 @@ const ResponsiveContainer = dynamic(() => import("recharts").then((m) => m.Respo
 
 export function Sparkline({ data }: { data: number[] }) {
   if (!data || data.length < 2) return null;
+  // Hide sparkline if all values are zero
+  if (data.every((v) => v === 0)) return null;
   const chartData = data.map((value, index) => ({ index, value }));
   return (
     <div className="h-6 w-16">
@@ -16,8 +18,8 @@ export function Sparkline({ data }: { data: number[] }) {
           <Area
             type="monotone"
             dataKey="value"
-            stroke="hsl(var(--primary))"
-            fill="hsl(var(--primary))"
+            stroke="#6366f1"
+            fill="#6366f1"
             fillOpacity={0.15}
             strokeWidth={1.5}
             dot={false}
