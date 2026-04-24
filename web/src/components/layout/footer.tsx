@@ -18,6 +18,8 @@ export function Footer() {
   });
 
   const version = versionData?.version;
+  // Strip leading 'v' if present to avoid double-v display
+  const displayVersion = version?.replace(/^v/, "");
 
   return (
     <footer className="border-t bg-muted/20 mt-auto">
@@ -39,8 +41,8 @@ export function Footer() {
               <ExternalLink className="h-2.5 w-2.5" />
             </a>
             <span className="text-muted-foreground/50">Apache 2.0</span>
-            {version && (
-              <span className="font-mono text-muted-foreground/50" title={`Version ${version}`}>v{version}</span>
+            {displayVersion && (
+              <span className="font-mono text-muted-foreground/50" title={`Version ${displayVersion}`}>v{displayVersion}</span>
             )}
           </div>
         </div>
