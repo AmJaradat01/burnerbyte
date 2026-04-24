@@ -15,7 +15,7 @@ import { EmailList } from "@/components/inbox/email-list";
 import { EmailPreview } from "@/components/inbox/email-preview";
 import { InboxEmptyPreview } from "@/components/inbox/inbox-empty-preview";
 import {
-  ArrowLeft, Check, Clock, Copy, Mail, MailOpen, CheckCheck, Timer, Trash2, Wifi, WifiOff,
+  ArrowLeft, Check, CheckCircle2, Clock, Copy, Mail, MailOpen, CheckCheck, Timer, Trash2, Wifi, WifiOff, XCircle,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { EmailSummary, Email, Inbox, PaginatedResponse } from "@/types";
@@ -265,7 +265,8 @@ export default function InboxDetailPage() {
                             <Countdown expiresAt={inbox.expires_at} />
                           </span>
                         )}
-                        <Badge variant={inbox?.is_active ? "default" : "secondary"} className="text-[10px] px-1.5 py-0">
+                        <Badge variant={inbox?.is_active ? "default" : "secondary"} className="gap-1 text-[10px] px-1.5 py-0">
+                          {inbox?.is_active ? <CheckCircle2 className="h-2.5 w-2.5" /> : <XCircle className="h-2.5 w-2.5" />}
                           {inbox?.is_active ? "Active" : "Expired"}
                         </Badge>
                         <SocketIndicator status={socketStatus} />

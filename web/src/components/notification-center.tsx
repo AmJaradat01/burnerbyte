@@ -116,6 +116,7 @@ export function NotificationCenter() {
     queryKey: ["notifications"],
     queryFn: () => api.get<Notification[]>("/notifications"),
     enabled: !!user,
+    staleTime: 60_000,
   });
 
   const unread = notifications.filter((n) => !n.is_read).length;
