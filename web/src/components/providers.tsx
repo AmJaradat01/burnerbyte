@@ -8,7 +8,7 @@ import { Toaster } from "@/components/ui/sonner";
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient({
-    defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
+    defaultOptions: { queries: { staleTime: 30_000, retry: 1, refetchOnWindowFocus: true } },
   }));
   const [mounted, setMounted] = useState(false);
   const fetchMe = useAuthStore((s) => s.fetchMe);

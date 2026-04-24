@@ -22,6 +22,7 @@ import { useRoles } from "@/hooks/use-roles";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertTriangle, CheckCircle2, Clock, Copy, KeyRound, Lock, LogOut, Mail, Minus, Plus, RefreshCw, Shield, Trash2, Upload, UserPlus, Users, XCircle } from "lucide-react";
 import type { User, Membership, Invite, PaginatedResponse } from "@/types";
+import { ProviderIcon } from "@/components/provider-icon";
 
 interface SSOStatusProvider { name: string; provider_type: string; label: string; enabled: boolean; }
 interface SSOStatus { enabled: boolean; allow_registration: boolean; enforce_sso?: boolean; providers?: SSOStatusProvider[]; }
@@ -977,7 +978,7 @@ function InviteDialog({ orgId }: { orgId: string }) {
               {ssoProviders.map((p) => (
                 <div key={p.name} className="flex items-center justify-between rounded-lg border p-3">
                   <div className="flex items-center gap-2">
-                    <Shield className="h-4 w-4 text-muted-foreground" />
+                    <ProviderIcon providerType={p.provider_type} className="h-4 w-4" />
                     <span className="text-sm capitalize">{p.label || p.name}</span>
                   </div>
                   <Switch checked={authAny || (authSSO[p.name] ?? false)} disabled={authAny} onCheckedChange={(v) => setAuthSSO({ ...authSSO, [p.name]: v })} />
@@ -1216,7 +1217,7 @@ function BulkInviteDialog({ orgId }: { orgId: string }) {
               {ssoProviders.map((p) => (
                 <div key={p.name} className="flex items-center justify-between rounded-lg border p-3">
                   <div className="flex items-center gap-2">
-                    <Shield className="h-4 w-4 text-muted-foreground" />
+                    <ProviderIcon providerType={p.provider_type} className="h-4 w-4" />
                     <span className="text-sm capitalize">{p.label || p.name}</span>
                   </div>
                   <Switch checked={authAny || (authSSO[p.name] ?? false)} disabled={authAny} onCheckedChange={(v) => setAuthSSO({ ...authSSO, [p.name]: v })} />
