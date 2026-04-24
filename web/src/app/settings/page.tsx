@@ -22,7 +22,7 @@ import { UnifiedUsersTab } from "@/components/settings/unified-users-tab";
 import { RolesTab } from "@/components/settings/roles-tab";
 import { useRoles } from "@/hooks/use-roles";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { ProviderIcon } from "@/components/provider-icon";
+import { ProviderIcon, providerTypeLabel } from "@/components/provider-icon";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import type { Organization, OrgSettings, SystemStats } from "@/types";
 
@@ -304,6 +304,7 @@ function OverviewTab() {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["admin-stats"],
     queryFn: () => api.get<SystemStats>("/admin/stats"),
+    staleTime: 60_000,
   });
 
   const { data: versionData } = useQuery({
@@ -396,6 +397,7 @@ function PlatformSettingsCard() {
       default_inbox_ttl: string; max_inbox_ttl: string;
       max_attachment_size_mb: number; max_domains: number; max_teams: number; max_inboxes_per_domain: number;
     }>("/admin/platform"),
+    staleTime: 300_000,
   });
   const qc = useQueryClient();
   const [form, setForm] = useState({
@@ -1233,7 +1235,7 @@ function ProviderCard({
               <div className="flex items-center gap-2">
                 <p className="font-medium">{p.name}</p>
                 <Badge variant={p.enabled ? "default" : "secondary"} className="text-xs">{p.enabled ? "Enabled" : "Disabled"}</Badge>
-                <Badge variant="outline" className="text-xs capitalize">{p.provider_type}</Badge>
+                <Badge variant="outline" className="text-xs capitalize">{providerTypeLabel(p.provider_type)}</Badge>
               </div>
               <p className="text-xs text-muted-foreground">
                 {p.linked_user_count ?? 0} linked users · Created {new Date(p.created_at).toLocaleDateString()}

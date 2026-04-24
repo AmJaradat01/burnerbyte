@@ -16,6 +16,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { toast } from "sonner";
 import { Eye, EyeOff, Check, X, User, Mail, Lock, Info } from "lucide-react";
 import { Logo } from "@/components/logo";
+import { ProviderIcon } from "@/components/provider-icon";
 
 interface PasswordPolicy {
   min_length: number;
@@ -166,8 +167,9 @@ export default function RegisterPage() {
                   <>
                     <div className="space-y-2">
                       {sso.providers.filter(p => p.enabled).map((p) => (
-                        <Button key={p.name} variant="outline" className="w-full h-11" asChild>
+                        <Button key={p.name} variant="outline" className="w-full h-11 gap-2" asChild>
                           <a href={`/api/v1/auth/sso/${p.name}`}>
+                            <ProviderIcon providerType={p.provider_type} />
                             Continue with {p.label}
                           </a>
                         </Button>
