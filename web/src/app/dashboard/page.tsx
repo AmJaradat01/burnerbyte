@@ -10,14 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/error-state";
-import { Sparkline } from "@/components/sparkline";
 import type { AnalyticsStats, AuditEntry, EmailsPerDay, Inbox, PaginatedResponse } from "@/types";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { timeAgo } from "@/lib/time";
 import {
   Activity, ArrowDownRight, ArrowUpRight, BarChart3, Clock, Globe, HardDrive,
-  Inbox as InboxIcon, Key, Mail, Minus, Plus, RefreshCw, Settings, Shield,
+  Inbox as InboxIcon, Key, Mail, Plus, RefreshCw, Settings, Shield,
   TrendingUp, Users, Webhook, Zap,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
@@ -355,61 +354,12 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
         </CardContent>
       </Card>
 
-      {/* Primary stats — 5 cards */}
-      <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
-        <StatCard
-          icon={Mail}
-          label="Total Emails"
-          value={stats?.total_emails_received ?? stats?.total_emails}
-          loading={isLoading}
-          accent="text-blue-600 bg-blue-100"
-          sparkline={weekTrend}
-          delta={todayDelta}
-          deltaLabel="vs yesterday"
-          footer={
-            <span className="text-xs text-muted-foreground">
-              {formatBytes(stats?.total_storage_bytes ?? stats?.storage_used_bytes ?? 0)} storage
-            </span>
-          }
-        />
-        <StatCard
-          icon={InboxIcon}
-          label="Active Inboxes"
-          value={stats?.active_inboxes}
-          loading={isLoading}
-          accent="text-emerald-600 bg-emerald-100"
-          sparkline={weekTrend}
-          footer={
-            <span className="text-xs text-muted-foreground">
-              {(stats?.total_inboxes_created ?? stats?.total_inboxes ?? 0).toLocaleString()} total created
-            </span>
-          }
-        />
-        <StatCard
-          icon={Globe}
-          label="Domains"
-          value={stats?.total_domains}
-          loading={isLoading}
-          accent="text-violet-600 bg-violet-100"
-          link="/domains"
-        />
-        <StatCard
-          icon={Users}
-          label="Members"
-          value={stats?.total_members}
-          loading={isLoading}
-          accent="text-amber-600 bg-amber-100"
-          footer={<span className="text-xs text-muted-foreground">{stats?.total_teams ?? 0} teams</span>}
-          link="/settings"
-        />
-        <StatCard
-          icon={HardDrive}
-          label="Storage"
-          value={formatBytes(stats?.total_storage_bytes ?? stats?.storage_used_bytes ?? 0)}
-          loading={isLoading}
-          accent="text-slate-600 bg-slate-100"
-          isString
-        />
+      {/* Primary stats — 4 cards, uniform height */}
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        <StatCard icon={Mail} label="Total Emails" value={stats?.total_emails_received ?? stats?.total_emails} loading={isLoading} accent="text-blue-600 bg-blue-100" sub={`${formatBytes(stats?.total_storage_bytes ?? stats?.storage_used_bytes ?? 0)} storage`} delta={todayDelta} deltaLabel="vs yesterday" />
+        <StatCard icon={InboxIcon} label="Active Inboxes" value={stats?.active_inboxes} loading={isLoading} accent="text-emerald-600 bg-emerald-100" sub={`${(stats?.total_inboxes_created ?? stats?.total_inboxes ?? 0).toLocaleString()} total created`} />
+        <StatCard icon={Globe} label="Domains" value={stats?.total_domains} loading={isLoading} accent="text-violet-600 bg-violet-100" sub={`${stats?.total_members ?? 0} members · ${stats?.total_teams ?? 0} teams`} link="/domains" />
+        <StatCard icon={HardDrive} label="Storage" value={formatBytes(stats?.total_storage_bytes ?? stats?.storage_used_bytes ?? 0)} loading={isLoading} accent="text-slate-600 bg-slate-100" isString sub="All-time usage" />
       </div>
 
       {/* Charts + sidebar */}
@@ -458,7 +408,7 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
             </CardContent>
           </Card>
 
-          {/* Peak hours heatmap */}
+          {/* Peak hours */}
           {insights?.peak_hours && insights.peak_hours.length > 0 && (
             <Card className="overflow-hidden">
               <CardHeader className="pb-2 bg-muted/20">
@@ -488,6 +438,74 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
               </CardContent>
             </Card>
           )}
+
+          {/* Top Senders + Domain Breakdown side by side */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            {topSenders && topSenders.length > 0 && (
+              <Card className="overflow-hidden">
+                <CardHeader className="pb-2 bg-muted/20">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="h-6 w-6 rounded-md bg-rose-100 flex items-center justify-center">
+                        <TrendingUp className="h-3.5 w-3.5 text-rose-600" />
+                      </div>
+                      <CardTitle className="text-sm">Top Senders</CardTitle>
+                    </div>
+                    <Link href="/analytics" className="text-xs text-primary font-medium hover:underline">Details →</Link>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {topSenders.map((sd, i) => {
+                    const pct = totalSenderEmails > 0 ? (sd.count / totalSenderEmails) * 100 : 0;
+                    return (
+                      <div key={sd.domain}>
+                        <div className="flex items-center justify-between text-sm mb-1">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-[10px] text-muted-foreground w-3 text-right shrink-0">{i + 1}</span>
+                            <span className="font-mono text-xs truncate">{sd.domain}</span>
+                          </div>
+                          <span className="text-[11px] text-muted-foreground tabular-nums shrink-0 ml-2">{sd.count} ({pct.toFixed(0)}%)</span>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                          <div className="h-full rounded-full bg-blue-500 transition-all" style={{ width: `${Math.max((sd.count / maxSenderCount) * 100, 4)}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+            )}
+
+            {insights?.domain_breakdown && insights.domain_breakdown.length > 0 && (
+              <Card className="overflow-hidden">
+                <CardHeader className="pb-2 bg-muted/20">
+                  <div className="flex items-center gap-2">
+                    <div className="h-6 w-6 rounded-md bg-violet-100 flex items-center justify-center">
+                      <Globe className="h-3.5 w-3.5 text-violet-600" />
+                    </div>
+                    <CardTitle className="text-sm">Emails by Domain</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {insights.domain_breakdown.map((d) => {
+                    const total = insights.domain_breakdown.reduce((s, x) => s + x.count, 0);
+                    const pct = total > 0 ? (d.count / total) * 100 : 0;
+                    return (
+                      <div key={d.domain}>
+                        <div className="flex items-center justify-between text-sm mb-1">
+                          <span className="font-mono text-xs truncate">{d.domain}</span>
+                          <span className="text-[11px] text-muted-foreground tabular-nums shrink-0 ml-2">{d.count} ({pct.toFixed(0)}%)</span>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                          <div className="h-full rounded-full bg-violet-400 transition-all" style={{ width: `${Math.max(pct, 4)}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </div>
 
         {/* Right column */}
@@ -594,80 +612,6 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
               )}
             </CardContent>
           </Card>
-
-          {/* Top Senders */}
-          {topSenders && topSenders.length > 0 && (
-            <Card className="overflow-hidden">
-              <CardHeader className="pb-2 bg-muted/20">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="h-6 w-6 rounded-md bg-rose-100 flex items-center justify-center">
-                      <TrendingUp className="h-3.5 w-3.5 text-rose-600" />
-                    </div>
-                    <CardTitle className="text-base">Top Senders</CardTitle>
-                  </div>
-                  <Link href="/analytics" className="text-xs text-primary font-medium hover:underline">Details →</Link>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-2.5">
-                {topSenders.map((sd, i) => {
-                  const pct = totalSenderEmails > 0 ? (sd.count / totalSenderEmails) * 100 : 0;
-                  return (
-                    <div key={sd.domain}>
-                      <div className="flex items-center justify-between text-sm mb-1">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-xs text-muted-foreground w-4 text-right shrink-0">{i + 1}</span>
-                          <span className="font-mono text-xs truncate">{sd.domain}</span>
-                        </div>
-                        <span className="text-xs text-muted-foreground tabular-nums shrink-0 ml-2">
-                          {sd.count.toLocaleString()} ({pct.toFixed(0)}%)
-                        </span>
-                      </div>
-                      <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-blue-500 transition-all"
-                          style={{ width: `${Math.max((sd.count / maxSenderCount) * 100, 4)}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Domain breakdown from insights */}
-          {insights?.domain_breakdown && insights.domain_breakdown.length > 0 && (
-            <Card className="overflow-hidden">
-              <CardHeader className="pb-2 bg-muted/20">
-                <div className="flex items-center gap-2">
-                  <div className="h-6 w-6 rounded-md bg-violet-100 flex items-center justify-center">
-                    <Globe className="h-3.5 w-3.5 text-violet-600" />
-                  </div>
-                  <CardTitle className="text-base">Emails by Domain</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-2.5">
-                {insights.domain_breakdown.map((d) => {
-                  const total = insights.domain_breakdown.reduce((s, x) => s + x.count, 0);
-                  const pct = total > 0 ? (d.count / total) * 100 : 0;
-                  return (
-                    <div key={d.domain}>
-                      <div className="flex items-center justify-between text-sm mb-1">
-                        <span className="font-mono text-xs truncate">{d.domain}</span>
-                        <span className="text-xs text-muted-foreground tabular-nums shrink-0 ml-2">
-                          {d.count.toLocaleString()} ({pct.toFixed(0)}%)
-                        </span>
-                      </div>
-                      <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                        <div className="h-full rounded-full bg-violet-400 transition-all" style={{ width: `${Math.max(pct, 4)}%` }} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
 
@@ -707,77 +651,48 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
   );
 }
 
-/* ── Stat Card ── */
+/* ── Stat Card (compact, uniform height) ── */
 
-function StatCard({ icon: Icon, label, value, loading, accent, footer, sparkline, delta, deltaLabel, link, isString }: {
+function StatCard({ icon: Icon, label, value, loading, accent, sub, delta, deltaLabel, link, isString }: {
   icon: typeof Mail;
   label: string;
   value?: number | string;
   loading: boolean;
   accent: string;
-  footer?: React.ReactNode;
-  sparkline?: number[];
+  sub?: string;
   delta?: number;
   deltaLabel?: string;
   link?: string;
   isString?: boolean;
 }) {
-  // Extract the color name from accent for the top border tint
-  const borderColor = accent.includes("blue") ? "border-t-blue-200"
-    : accent.includes("emerald") ? "border-t-emerald-200"
-    : accent.includes("violet") ? "border-t-violet-200"
-    : accent.includes("amber") ? "border-t-amber-200"
-    : accent.includes("slate") ? "border-t-slate-200"
-    : "border-t-primary/20";
-
   const inner = (
-    <Card className={`transition-all duration-200 hover:shadow-[0_6px_16px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 border-t-2 ${borderColor} ${link ? "cursor-pointer" : ""}`}>
-      <CardContent className="pt-5 pb-4">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-sm font-medium text-muted-foreground">{label}</span>
-          <div className={`h-9 w-9 rounded-xl flex items-center justify-center shadow-sm ${accent}`}>
-            <Icon className="h-[18px] w-[18px]" />
+    <Card className={`transition-all duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:-translate-y-px ${link ? "cursor-pointer" : ""}`}>
+      <CardContent className="pt-4 pb-3">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-medium text-muted-foreground">{label}</span>
+          <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${accent}`}>
+            <Icon className="h-4 w-4" />
           </div>
         </div>
-        <div className="flex items-end justify-between gap-2">
-          <div>
-            {loading ? (
-              <Skeleton className="h-8 w-20" />
-            ) : (
-              <p className="text-2xl font-bold tabular-nums tracking-tight">
-                {isString ? String(value ?? "—") : (typeof value === "number" ? value.toLocaleString() : "0")}
-              </p>
-            )}
-            {/* Delta indicator */}
-            {!loading && delta !== undefined && delta !== 0 && (
-              <div className={`flex items-center gap-1 mt-1 text-xs font-medium ${delta > 0 ? "text-emerald-600" : "text-red-600"}`}>
-                <span className={`inline-flex items-center justify-center h-4 w-4 rounded-full ${delta > 0 ? "bg-emerald-100" : "bg-red-100"}`}>
-                  {delta > 0 ? <ArrowUpRight className="h-2.5 w-2.5" /> : <ArrowDownRight className="h-2.5 w-2.5" />}
-                </span>
-                {delta > 0 ? "+" : ""}{delta} {deltaLabel}
-              </div>
-            )}
-            {!loading && delta !== undefined && delta === 0 && (
-              <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
-                <span className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-muted">
-                  <Minus className="h-2.5 w-2.5" />
-                </span>
-                No change {deltaLabel}
-              </div>
-            )}
-          </div>
-          {loading ? (
-            <Skeleton className="h-6 w-16" />
-          ) : (
-            sparkline && <Sparkline data={sparkline} />
-          )}
-        </div>
-        {footer && <div className="mt-2 pt-2 border-t border-border/50">{footer}</div>}
-        {link && !loading && (
-          <div className="mt-2 pt-2 border-t border-border/50">
-            <span className="text-xs text-primary font-medium hover:underline">Manage →</span>
-          </div>
+        {loading ? (
+          <Skeleton className="h-7 w-20" />
+        ) : (
+          <p className="text-2xl font-bold tabular-nums tracking-tight">
+            {isString ? String(value ?? "—") : (typeof value === "number" ? value.toLocaleString() : "0")}
+          </p>
         )}
+        <div className="mt-1 h-4 flex items-center">
+          {!loading && delta !== undefined && delta !== 0 ? (
+            <span className={`flex items-center gap-1 text-[11px] font-medium ${delta > 0 ? "text-emerald-600" : "text-red-600"}`}>
+              {delta > 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+              {delta > 0 ? "+" : ""}{delta} {deltaLabel}
+            </span>
+          ) : sub ? (
+            <span className="text-[11px] text-muted-foreground truncate">{sub}</span>
+          ) : link ? (
+            <span className="text-[11px] text-primary font-medium">Manage →</span>
+          ) : null}
+        </div>
       </CardContent>
     </Card>
   );
