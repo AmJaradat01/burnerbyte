@@ -5,6 +5,7 @@ import { Logo } from "@/components/logo";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth-store";
+import { ExternalLink } from "lucide-react";
 
 export function Footer() {
   const user = useAuthStore((s) => s.user);
@@ -19,19 +20,27 @@ export function Footer() {
   const version = versionData?.version;
 
   return (
-    <footer className="border-t bg-muted/30 mt-auto">
-      <div className="px-4 sm:px-6 py-6">
+    <footer className="border-t bg-muted/20 mt-auto">
+      <div className="px-4 sm:px-6 py-4">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground">
           <div className="flex items-center gap-1.5">
             <Logo size="sm" />
-            <span>— Self-hosted temporary email</span>
+            <span className="hidden sm:inline">— Self-hosted temporary email</span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
             <Link href="/docs" className="hover:text-foreground transition-colors">Docs</Link>
-            <a href="https://gitlab.com/burnerbyte/burnerbyte" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">GitLab</a>
-            <span>Apache 2.0</span>
+            <a
+              href="https://gitlab.com/burnerbyte/burnerbyte"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+            >
+              GitLab
+              <ExternalLink className="h-2.5 w-2.5" />
+            </a>
+            <span className="text-muted-foreground/50">Apache 2.0</span>
             {version && (
-              <span title={`Version ${version}`}>v{version}</span>
+              <span className="font-mono text-muted-foreground/50" title={`Version ${version}`}>v{version}</span>
             )}
           </div>
         </div>
