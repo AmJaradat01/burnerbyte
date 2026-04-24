@@ -1,0 +1,121 @@
+---
+title: Troubleshooting
+description: Common issues and solutions when running BurnerByte.
+---
+
+## Emails Not Being Received
+
+**Symptoms:** Inboxes are created but no emails arrive.
+
+**Check these in order:**
+
+1. **SMTP server running?** — Verify `cmd/smtpd` is running and listening on port 2525
+2. **DNS records configured?** — Both MX and TXT records must be verified. Check with `dig MX yourdomain.com` and `dig TXT yourdomain.com`
+3. **Domain verified?** — Go to **Domains** and check that both MX and TXT show green checkmarks
+4. **Inbox active?** — Expired inboxes stop receiving. Check the TTL countdown
+5. **Port forwarding?** — If running behind a firewall, port 25 must be forwarded to 2525. See [Reverse Proxy](/docs/self-hosting/reverse-proxy)
+6. **Redis running?** — The SMTP router uses Redis for fast inbox lookups. Check `GET /readyz`
+
+```bash
+# Test SMTP directly
+swaks --to test@yourdomain.com --server localhost:2525
+
+# Check health
+curl http://localhost:8080/readyz
+```
+
+## WebSocket Not Connecting
+
+**Symptoms:** Real-time updates don't work, inbox page shows "Disconnected".
+
+1. **Reverse proxy configured for WebSocket?** — Nginx needs `proxy_http_version 1.1` and `Upgrade` headers. See [Reverse Proxy](/docs/self-hosting/reverse-proxy)
+2. **CORS origins correct?** — `BB_CORS_ALLOWED_ORIGINS` must include your frontend URL
+3. **JWT valid?** — WebSocket connections authenticate via `?token=<jwt>` query parameter
+
+## Setup Wizard Loops
+
+**Symptoms:** Redirected back to `/setup` after completing it.
+
+The setup state is stored in the `setup_state` database table. If the table is empty or the `completed` flag is false:
+
+```sql
+-- Check setup state
+SELECT * FROM setup_state;
+
+-- Force completion (if setup was done manually)
+INSERT INTO setup_state (id, completed, completed_at)
+VALUES (gen_random_uuid(), true, now())
+ON CONFLICT DO NOTHING;
+```
+
+## Database Connection Errors
+
+**Symptoms:** API returns 500 errors, `/readyz` fails.
+
+1. **Connection string correct?** — Check `DATABASE_URL` format: `postgres://user:pass@host:5432/dbname?sslmode=disable`
+2. **Migrations applied?** — Run `make migrate-up`
+3. **Connection pool exhausted?** — Increase `BB_DATABASE_MAX_OPEN_CONNS` (default: 25)
+
+## SSO Login Fails
+
+**Symptoms:** "SSO login failed" error after redirect.
+
+1. **Redirect URL matches?** — The callback URL in your provider must exactly match the `redirect_url` configured in BurnerByte
+2. **Client ID/Secret correct?** — Use the **Test** button on the SSO provider card to verify connectivity
+3. **Allowed domains?** — If `allowed_domains` is set, the user's email domain must be in the list
+4. **Encryption key set?** — SSO secrets are encrypted at rest. Ensure `BB_ENCRYPTION_KEY` is a 64-character hex string
+
+```bash
+# Generate an encryption key
+openssl rand -hex 32
+```
+
+## Attachments Not Saving
+
+**Symptoms:** Emails arrive but attachments are missing.
+
+1. **Attachments enabled?** — Check org settings (`attachments_enabled`) and domain assignment settings
+2. **MinIO running?** — Check `GET /admin/health` for MinIO status
+3. **Bucket exists?** — The bucket specified in `BB_MINIO_BUCKET` must exist. MinIO auto-creates it on first use if permissions allow
+4. **File size limit?** — Check `BB_DEFAULTS_MAX_ATTACHMENT_SIZE_MB` (default: 25 MB)
+
+## Rate Limiting
+
+**Symptoms:** 429 Too Many Requests errors.
+
+Default limits:
+- Authenticated: 100 requests/minute
+- Unauthenticated: 20 requests/minute
+- Login: 5 attempts/minute per IP
+- Password reset: 3 requests/hour per IP
+
+Adjust via config:
+
+```yaml
+rate_limit:
+  authenticated: 200
+  unauthenticated: 50
+  login: 10
+```
+
+## Account Lockout
+
+**Symptoms:** "Account locked" error on login.
+
+After 5 failed login attempts (configurable), the account is locked for 15 minutes. Wait for the lockout to expire, or have an admin unlock via the user detail dialog in **Settings → Users**.
+
+## Performance Issues
+
+**Symptoms:** Slow page loads, high API latency.
+
+1. **Check health endpoint** — `GET /admin/health` shows service latencies
+2. **Database indexes** — Ensure all migrations are applied (52+ indexes)
+3. **Redis cache** — Analytics and inbox routing are cached in Redis. Verify Redis is running
+4. **Connection pool** — Increase `BB_DATABASE_MAX_OPEN_CONNS` for high-traffic deployments
+5. **Worker intervals** — The analytics worker pre-computes stats every 5 minutes. Reduce `BB_WORKERS_ANALYTICS_INTERVAL` for fresher data
+
+## Getting Help
+
+- **GitLab Issues:** [gitlab.com/burnerbyte/burnerbyte/-/issues](https://gitlab.com/burnerbyte/burnerbyte/-/issues)
+- **API Docs:** [/docs/api](/docs/api) — Full endpoint reference
+- **Health Check:** `GET /admin/health` — Service status and latencies
