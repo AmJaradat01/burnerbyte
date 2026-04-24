@@ -419,10 +419,13 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
         {/* Left column: charts */}
         <div className="lg:col-span-2 space-y-4">
           {/* 30-day volume chart */}
-          <Card>
-            <CardHeader className="pb-2">
+          <Card className="overflow-hidden">
+            <CardHeader className="pb-2 bg-muted/20">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
+                  <div className="h-6 w-6 rounded-md bg-primary/10 flex items-center justify-center">
+                    <Mail className="h-3.5 w-3.5 text-primary" />
+                  </div>
                   <CardTitle className="text-base">Email Volume</CardTitle>
                   {chartAvg > 0 && (
                     <Badge variant="outline" className="text-[10px] font-mono">avg {chartAvg}/day</Badge>
@@ -459,10 +462,13 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
 
           {/* Peak hours heatmap */}
           {insights?.peak_hours && insights.peak_hours.length > 0 && (
-            <Card>
-              <CardHeader className="pb-2">
+            <Card className="overflow-hidden">
+              <CardHeader className="pb-2 bg-muted/20">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
+                    <div className="h-6 w-6 rounded-md bg-amber-100 flex items-center justify-center">
+                      <Clock className="h-3.5 w-3.5 text-amber-600" />
+                    </div>
                     <CardTitle className="text-base">Activity by Hour</CardTitle>
                     {peakHour && (
                       <Badge variant="outline" className="text-[10px]">Peak: {formatHour(peakHour.hour)}</Badge>
@@ -489,11 +495,16 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
         {/* Right column */}
         <div className="space-y-4">
           {/* Weekly summary */}
-          <Card>
-            <CardHeader className="pb-2">
+          <Card className="overflow-hidden">
+            <CardHeader className="pb-2 bg-muted/20">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base">This Week</CardTitle>
-                <span className="flex items-center gap-1 text-xs text-muted-foreground"><Activity className="h-3 w-3" /> 7 days</span>
+                <div className="flex items-center gap-2">
+                  <div className="h-6 w-6 rounded-md bg-indigo-100 flex items-center justify-center">
+                    <Activity className="h-3.5 w-3.5 text-indigo-600" />
+                  </div>
+                  <CardTitle className="text-base">This Week</CardTitle>
+                </div>
+                <Badge variant="outline" className="text-[10px]">7 days</Badge>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -541,11 +552,16 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
           </Card>
 
           {/* Recent Activity */}
-          <Card>
-            <CardHeader className="pb-2">
+          <Card className="overflow-hidden">
+            <CardHeader className="pb-2 bg-muted/20">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base">Recent Activity</CardTitle>
-                <Link href="/audit" className="text-xs text-primary hover:underline">View all →</Link>
+                <div className="flex items-center gap-2">
+                  <div className="h-6 w-6 rounded-md bg-cyan-100 flex items-center justify-center">
+                    <Shield className="h-3.5 w-3.5 text-cyan-600" />
+                  </div>
+                  <CardTitle className="text-base">Recent Activity</CardTitle>
+                </div>
+                <Link href="/audit" className="text-xs text-primary font-medium hover:underline">View all →</Link>
               </div>
             </CardHeader>
             <CardContent>
@@ -583,11 +599,16 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
 
           {/* Top Senders */}
           {topSenders && topSenders.length > 0 && (
-            <Card>
-              <CardHeader className="pb-2">
+            <Card className="overflow-hidden">
+              <CardHeader className="pb-2 bg-muted/20">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">Top Senders</CardTitle>
-                  <Link href="/analytics" className="text-xs text-primary hover:underline">Details →</Link>
+                  <div className="flex items-center gap-2">
+                    <div className="h-6 w-6 rounded-md bg-rose-100 flex items-center justify-center">
+                      <TrendingUp className="h-3.5 w-3.5 text-rose-600" />
+                    </div>
+                    <CardTitle className="text-base">Top Senders</CardTitle>
+                  </div>
+                  <Link href="/analytics" className="text-xs text-primary font-medium hover:underline">Details →</Link>
                 </div>
               </CardHeader>
               <CardContent className="space-y-2.5">
@@ -619,9 +640,14 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
 
           {/* Domain breakdown from insights */}
           {insights?.domain_breakdown && insights.domain_breakdown.length > 0 && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Emails by Domain</CardTitle>
+            <Card className="overflow-hidden">
+              <CardHeader className="pb-2 bg-muted/20">
+                <div className="flex items-center gap-2">
+                  <div className="h-6 w-6 rounded-md bg-violet-100 flex items-center justify-center">
+                    <Globe className="h-3.5 w-3.5 text-violet-600" />
+                  </div>
+                  <CardTitle className="text-base">Emails by Domain</CardTitle>
+                </div>
               </CardHeader>
               <CardContent className="space-y-2.5">
                 {insights.domain_breakdown.map((d) => {
@@ -653,20 +679,27 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
           <CardTitle className="text-base">Quick Links</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {[
-              { href: "/", icon: InboxIcon, label: "Inboxes", color: "text-orange-600 bg-orange-100" },
-              { href: "/domains", icon: Globe, label: "Domains", color: "text-emerald-600 bg-emerald-100" },
-              { href: "/teams", icon: Users, label: "Teams", color: "text-indigo-600 bg-indigo-100" },
-              { href: "/webhooks", icon: Webhook, label: "Webhooks", color: "text-amber-600 bg-amber-100" },
-              { href: "/api-keys", icon: Key, label: "API Keys", color: "text-violet-600 bg-violet-100" },
-              { href: "/analytics", icon: BarChart3, label: "Analytics", color: "text-rose-600 bg-rose-100" },
+              { href: "/", icon: InboxIcon, label: "Inboxes", desc: "Create & manage", color: "text-orange-600 bg-orange-100", border: "hover:border-orange-200" },
+              { href: "/domains", icon: Globe, label: "Domains", desc: "DNS & verification", color: "text-emerald-600 bg-emerald-100", border: "hover:border-emerald-200" },
+              { href: "/teams", icon: Users, label: "Teams", desc: "Members & access", color: "text-indigo-600 bg-indigo-100", border: "hover:border-indigo-200" },
+              { href: "/webhooks", icon: Webhook, label: "Webhooks", desc: "Event callbacks", color: "text-amber-600 bg-amber-100", border: "hover:border-amber-200" },
+              { href: "/api-keys", icon: Key, label: "API Keys", desc: "Programmatic access", color: "text-violet-600 bg-violet-100", border: "hover:border-violet-200" },
+              { href: "/analytics", icon: BarChart3, label: "Analytics", desc: "Usage & trends", color: "text-rose-600 bg-rose-100", border: "hover:border-rose-200" },
             ].map((item) => (
-              <Link key={item.href} href={item.href} className="flex items-center gap-2.5 rounded-lg border p-3 hover:bg-muted/50 transition-colors group">
-                <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${item.color}`}>
-                  <item.icon className="h-4 w-4" />
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex flex-col items-center gap-2 rounded-xl border p-4 hover:bg-muted/50 hover:shadow-sm transition-all duration-200 group text-center ${item.border}`}
+              >
+                <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${item.color} transition-transform duration-200 group-hover:scale-110`}>
+                  <item.icon className="h-5 w-5" />
                 </div>
-                <span className="text-sm font-medium group-hover:text-primary transition-colors">{item.label}</span>
+                <div>
+                  <span className="text-sm font-semibold group-hover:text-primary transition-colors block">{item.label}</span>
+                  <span className="text-[10px] text-muted-foreground hidden sm:block">{item.desc}</span>
+                </div>
               </Link>
             ))}
           </div>
@@ -691,13 +724,21 @@ function StatCard({ icon: Icon, label, value, loading, accent, footer, sparkline
   link?: string;
   isString?: boolean;
 }) {
+  // Extract the color name from accent for the top border tint
+  const borderColor = accent.includes("blue") ? "border-t-blue-200"
+    : accent.includes("emerald") ? "border-t-emerald-200"
+    : accent.includes("violet") ? "border-t-violet-200"
+    : accent.includes("amber") ? "border-t-amber-200"
+    : accent.includes("slate") ? "border-t-slate-200"
+    : "border-t-primary/20";
+
   const inner = (
-    <Card className={`transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:-translate-y-px ${link ? "cursor-pointer" : ""}`}>
+    <Card className={`transition-all duration-200 hover:shadow-[0_6px_16px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 border-t-2 ${borderColor} ${link ? "cursor-pointer" : ""}`}>
       <CardContent className="pt-5 pb-4">
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-medium text-muted-foreground">{label}</span>
-          <div className={`h-8 w-8 rounded-lg flex items-center justify-center shadow-sm ${accent}`}>
-            <Icon className="h-4 w-4" />
+          <div className={`h-9 w-9 rounded-xl flex items-center justify-center shadow-sm ${accent}`}>
+            <Icon className="h-4.5 w-4.5" />
           </div>
         </div>
         <div className="flex items-end justify-between gap-2">
@@ -705,20 +746,25 @@ function StatCard({ icon: Icon, label, value, loading, accent, footer, sparkline
             {loading ? (
               <Skeleton className="h-8 w-20" />
             ) : (
-              <p className="text-2xl font-bold tabular-nums">
+              <p className="text-2xl font-bold tabular-nums tracking-tight">
                 {isString ? String(value ?? "—") : (typeof value === "number" ? value.toLocaleString() : "0")}
               </p>
             )}
             {/* Delta indicator */}
             {!loading && delta !== undefined && delta !== 0 && (
-              <div className={`flex items-center gap-1 mt-0.5 text-xs font-medium ${delta > 0 ? "text-emerald-600" : "text-red-600"}`}>
-                {delta > 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+              <div className={`flex items-center gap-1 mt-1 text-xs font-medium ${delta > 0 ? "text-emerald-600" : "text-red-600"}`}>
+                <span className={`inline-flex items-center justify-center h-4 w-4 rounded-full ${delta > 0 ? "bg-emerald-100" : "bg-red-100"}`}>
+                  {delta > 0 ? <ArrowUpRight className="h-2.5 w-2.5" /> : <ArrowDownRight className="h-2.5 w-2.5" />}
+                </span>
                 {delta > 0 ? "+" : ""}{delta} {deltaLabel}
               </div>
             )}
             {!loading && delta !== undefined && delta === 0 && (
-              <div className="flex items-center gap-1 mt-0.5 text-xs text-muted-foreground">
-                <Minus className="h-3 w-3" /> No change {deltaLabel}
+              <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+                <span className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-muted">
+                  <Minus className="h-2.5 w-2.5" />
+                </span>
+                No change {deltaLabel}
               </div>
             )}
           </div>
@@ -728,10 +774,10 @@ function StatCard({ icon: Icon, label, value, loading, accent, footer, sparkline
             sparkline && <Sparkline data={sparkline} />
           )}
         </div>
-        {footer && <div className="mt-1.5">{footer}</div>}
+        {footer && <div className="mt-2 pt-2 border-t border-border/50">{footer}</div>}
         {link && !loading && (
-          <div className="mt-1.5">
-            <span className="text-xs text-primary hover:underline">Manage →</span>
+          <div className="mt-2 pt-2 border-t border-border/50">
+            <span className="text-xs text-primary font-medium hover:underline">Manage →</span>
           </div>
         )}
       </CardContent>
