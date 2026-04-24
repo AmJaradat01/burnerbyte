@@ -17,6 +17,7 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Clock, KeyRound, Link2, LogOut, Monitor, Shield, Trash2, Unlink } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useDateFormat } from "@/hooks/use-date-format";
+import { ProviderIcon, providerTypeLabel } from "@/components/provider-icon";
 
 export default function ProfilePage() {
   const { user, fetchMe } = useAuthStore();
@@ -483,14 +484,16 @@ function ConnectedAccountsCard() {
           <p className="text-sm text-muted-foreground">Loading...</p>
         ) : (
           <>
-            {(identities ?? []).map((identity) => (
+            {(identities ?? []).map((identity) => {
+              const matchingProvider = providers.find((p) => p.name === identity.provider);
+              return (
               <div key={identity.id} className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50">
                 <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-md bg-emerald-100 flex items-center justify-center shrink-0">
-                    <KeyRound className="h-4 w-4 text-emerald-600" />
+                  <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center shrink-0">
+                    <ProviderIcon providerType={matchingProvider?.provider_type ?? identity.provider} className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium capitalize">{identity.provider}</p>
+                    <p className="text-sm font-medium">{matchingProvider ? matchingProvider.label : providerTypeLabel(identity.provider)}</p>
                     <p className="text-xs text-muted-foreground">{identity.email}</p>
                     <p className="text-xs text-muted-foreground">Linked {new Date(identity.linked_at).toLocaleDateString()}</p>
                   </div>
@@ -513,13 +516,19 @@ function ConnectedAccountsCard() {
                   onConfirm={() => handleUnlink(identity.provider)}
                 />
               </div>
-            ))}
+              );
+            })}
 
             {unlinkedProviders.map((p) => (
               <div key={p.name} className="flex items-center justify-between rounded-lg border border-dashed p-3">
-                <div>
-                  <p className="text-sm font-medium">{p.label}</p>
-                  <p className="text-xs text-muted-foreground">Not connected</p>
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-md bg-muted/50 flex items-center justify-center shrink-0 opacity-60">
+                    <ProviderIcon providerType={p.provider_type} className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">{p.label}</p>
+                    <p className="text-xs text-muted-foreground">Not connected</p>
+                  </div>
                 </div>
                 <Button variant="outline" size="sm" className="gap-1.5" onClick={() => handleLink(p.name)}>
                   <Link2 className="h-3.5 w-3.5" /> Link Account
