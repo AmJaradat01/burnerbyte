@@ -5,7 +5,6 @@ import { api } from "@/lib/api";
 import { useOrgStore } from "@/stores/org-store";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from "recharts";
@@ -46,8 +45,11 @@ function formatHour(hour: number): string {
 }
 
 export default function AnalyticsPage() {
-  const { currentOrg, currentTeam } = useOrgStore();
+  const { currentOrg, teams } = useOrgStore();
+  const [selectedTeamId, setSelectedTeamId] = useState<string>("");
   if (!currentOrg) return <p className="text-muted-foreground">Select an organization first.</p>;
+
+  const selectedTeam = teams.find((t) => t.id === selectedTeamId);
 
   return (
     <div className="space-y-6">
@@ -66,14 +68,28 @@ export default function AnalyticsPage() {
           </div>
         </CardHeader>
       </Card>
-      <Tabs defaultValue="org">
-        <TabsList>
-          <TabsTrigger value="org">Organization</TabsTrigger>
-          {currentTeam && <TabsTrigger value="team">Team: {currentTeam.name}</TabsTrigger>}
-        </TabsList>
-        <TabsContent value="org"><OrgAnalytics orgId={currentOrg.id} /></TabsContent>
-        {currentTeam && <TabsContent value="team"><TeamAnalytics orgId={currentOrg.id} teamId={currentTeam.id} /></TabsContent>}
-      </Tabs>
+
+      {/* View selector: Organization overview or specific team */}
+      <div className="flex items-center gap-3">
+        <span className="text-sm font-medium text-muted-foreground">View:</span>
+        <Select value={selectedTeamId || "__org__"} onValueChange={(v) => setSelectedTeamId(v === "__org__" ? "" : v)}>
+          <SelectTrigger className="w-64 h-9">
+            <SelectValue placeholder="Organization Overview" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__org__">Organization Overview</SelectItem>
+            {teams.map((t) => (
+              <SelectItem key={t.id} value={t.id}>Team: {t.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {selectedTeamId && selectedTeam ? (
+        <TeamAnalytics orgId={currentOrg.id} teamId={selectedTeam.id} teamName={selectedTeam.name} />
+      ) : (
+        <OrgAnalytics orgId={currentOrg.id} />
+      )}
     </div>
   );
 }
@@ -272,7 +288,7 @@ function OrgAnalytics({ orgId }: { orgId: string }) {
   );
 }
 
-function TeamAnalytics({ orgId, teamId }: { orgId: string; teamId: string }) {
+function TeamAnalytics({ orgId, teamId, teamName }: { orgId: string; teamId: string; teamName?: string }) {
   const [days, setDays] = useState("30");
   const { data: stats, isLoading, isError, refetch } = useQuery({
     queryKey: ["analytics-team", teamId],
