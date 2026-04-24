@@ -42,3 +42,16 @@ BB_SERVER_MAX_BODY_SIZE=5242880
 - **PostgreSQL** — Use `pg_dump` or continuous archiving (WAL)
 - **MinIO** — Use MinIO's built-in replication or backup the data volume
 - **Redis** — Ephemeral cache, no backup needed (reconciler rebuilds from PostgreSQL)
+
+## Deployment Scripts
+
+The `deploy/` directory includes ready-to-use deployment scripts:
+
+| Script | Purpose |
+|---|---|
+| `deploy/vps-setup.sh` | Generic VPS initial setup (Docker, firewall, swap) |
+| `deploy/hetzner-setup.sh` | Hetzner Cloud-specific setup |
+| `deploy/remote-deploy.sh` | Remote deployment via SSH |
+| `deploy/remote-deploy-hetzner.sh` | Hetzner-specific remote deployment |
+
+These scripts handle Docker installation, firewall configuration, SSL certificate setup, and application deployment.

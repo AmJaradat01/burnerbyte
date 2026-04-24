@@ -1,6 +1,6 @@
 ---
 title: Frontend Overview
-description: Next.js frontend architecture, pages, and keyboard shortcuts.
+description: Next.js frontend architecture, pages, components, and keyboard shortcuts.
 ---
 
 ## Tech Stack
@@ -10,11 +10,35 @@ description: Next.js frontend architecture, pages, and keyboard shortcuts.
 | Next.js 16 | App Router, RSC, file-based routing |
 | React 19 | UI rendering |
 | shadcn/ui | Component library (Radix + Tailwind) |
-| Tailwind CSS 4 | Utility-first styling |
+| Tailwind CSS 4 | Utility-first styling with OKLCH color tokens |
 | Zustand | Client state (auth, org/team selection) |
 | TanStack Query v5 | Server state, caching, optimistic updates |
-| Recharts | Analytics charts |
-| Sonner | Toast notifications |
+| Recharts | Analytics charts and sparklines |
+| Sonner | Toast notifications with severity icons |
+| Fumadocs | Documentation site (MDX, full-text search) |
+| next-intl | Internationalization |
+
+## Pages
+
+| Route | Description |
+|---|---|
+| `/` | Home — inbox creation hero + active inbox grid |
+| `/dashboard` | Admin dashboard — stats, charts, activity, quick links |
+| `/domains` | Domain management with DNS verification |
+| `/domains/[id]` | Domain detail with team assignments |
+| `/teams` | Team list with member/domain/inbox counts |
+| `/webhooks` | Webhook management with delivery logs |
+| `/api-keys` | Scoped API key management with permission picker |
+| `/audit` | Timeline audit log with filters and CSV export |
+| `/analytics` | Org/team analytics with charts and insights |
+| `/settings` | Org settings, users, roles, SSO, system config |
+| `/profile` | User profile, connected accounts, sessions |
+| `/inboxes/[id]` | Inbox detail with real-time email list |
+| `/docs` | Documentation site (Fumadocs) |
+| `/login` | Sign in with password or SSO |
+| `/register` | Account creation with password strength |
+| `/setup` | First-run setup wizard |
+| `/onboarding` | Post-setup onboarding flow |
 
 ## Keyboard Shortcuts
 
@@ -22,28 +46,63 @@ description: Next.js frontend architecture, pages, and keyboard shortcuts.
 |---|---|
 | `⌘K` / `Ctrl+K` | Open command palette |
 | `?` | Show keyboard shortcuts help |
-| `n` | Create new inbox |
-| `j` | Next email in list |
-| `k` | Previous email in list |
-| `d` | Delete selected email |
+| `j` / `↓` | Next email in list |
+| `k` / `↑` | Previous email in list |
 | `Esc` | Close modal / deselect |
 
 ## UX Patterns
 
 Every data page consistently uses:
 
-- **Loading skeletons** — `TableSkeleton` or `Skeleton` components
-- **Error states** — `ErrorState` with retry button
-- **Empty states** — `EmptyState` with icon and description
+- **Loading skeletons** — Structural placeholders matching the final layout
+- **Error states** — `ErrorState` component with contextual message and retry button
+- **Empty states** — `EmptyState` with SVG illustration and description
 - **Confirmation dialogs** — `ConfirmDialog` for all destructive actions
-- **Pagination** — `Pagination` component
-- **Toast notifications** — Sonner for success/error feedback
-- **Optimistic updates** — TanStack Query mutation with rollback
+- **Pagination** — `Pagination` component with page numbers
+- **Toast notifications** — Sonner with severity icons (success, error, warning, info)
+- **Optimistic updates** — TanStack Query mutations with rollback on error
+- **Pull-to-refresh** — Touch gesture support on list pages
+
+## Key Components
+
+| Component | Purpose |
+|---|---|
+| `AppShell` | Layout wrapper with sidebar (admin) or top nav (member) |
+| `Sidebar` | Collapsible navigation with Lucide icons and org card |
+| `CommandPalette` | `⌘K` quick navigation with search |
+| `NotificationCenter` | Real-time notification popover with grouping |
+| `Sparkline` | Mini area chart for stat cards |
+| `LastUpdated` | Relative time indicator for data freshness |
+| `ProviderIcon` | SSO provider logos (GitHub, Google, Azure, Okta) |
+| `Logo` | Consistent branding component with size variants |
+| `PageProgress` | Route-change progress bar |
+| `OfflineBanner` | Network status indicator |
+| `SkipToContent` | Accessibility skip link |
+
+## State Management
+
+### Zustand Stores
+
+- **`auth-store`** — User session, login/logout, token refresh
+- **`org-store`** — Current org, teams, role, permissions
+
+### TanStack Query
+
+Server state is managed with TanStack Query v5. Key patterns:
+
+- **Stale times** — 30s default, 60s for notifications, 5min for platform settings
+- **Refetch on window focus** — Enabled globally for fresh data
+- **Optimistic updates** — Webhooks, API keys, and notifications use optimistic mutations
+- **Cache invalidation** — WebSocket messages trigger targeted query invalidation
 
 ## Command Palette
 
-Press `⌘K` to open the command palette for quick navigation to any page. It searches all routes and shows admin routes only for system admins.
+Press `⌘K` to open the command palette for quick navigation. It includes all sidebar routes with matching Lucide icons, action commands (Create Inbox, Sign Out), and grouped sections (Navigation, Actions).
 
 ## Mobile Support
 
-The sidebar collapses into a slide-out sheet on mobile via Radix Sheet component.
+- Sidebar collapses into a slide-out sheet on screens below `md` breakpoint
+- Responsive grid breakpoints (`grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`)
+- Table overflow wrappers with horizontal scroll
+- Responsive column hiding on narrow screens
+- Pull-to-refresh on touch devices
