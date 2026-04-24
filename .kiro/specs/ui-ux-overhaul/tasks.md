@@ -175,13 +175,12 @@ Systematic UI/UX overhaul of the BurnerByte frontend, organized into 6 phases or
     - Replace `🔥` logo with `<Logo />` in header and footer sections
     - _Requirements: 8.1, 8.2, 8.3, 4.3_
 
-  - [ ] 6.3 Create `web/src/components/sparkline.tsx` — mini area chart component
-    - Export `Sparkline` component with `data: number[]` prop
+  - [x] 6.3 Create `web/src/components/sparkline.tsx` — mini area chart component
     - Render tiny `<AreaChart>` from Recharts (lazy-loaded), 60×24px, no axes/labels/tooltips
     - Use primary color fill with low opacity
     - _Requirements: 9.3_
 
-  - [ ] 6.4 Update `web/src/app/dashboard/page.tsx` — sparklines, skeletons, gradients
+  - [x] 6.4 Update `web/src/app/dashboard/page.tsx` — sparklines, skeletons, gradients
     - Add `<Sparkline />` to "Total Emails" and "Active Inboxes" stat cards using 7-day trend data
     - Show `<Skeleton className="h-6 w-16" />` while analytics data is loading
     - Apply consistent gradient header `bg-gradient-to-r from-primary/80 to-primary/20` to gradient-topped cards
@@ -196,7 +195,7 @@ Systematic UI/UX overhaul of the BurnerByte frontend, organized into 6 phases or
     - Configure Sonner `<Toaster />` in `web/src/components/ui/sonner.tsx` with custom severity icons: CheckCircle (green), AlertCircle (red), AlertTriangle (amber), Info (blue)
     - _Requirements: 11.1, 11.3, 11.4, 11.5, 11.6_
 
-  - [ ] 6.7 Add status icons alongside color indicators
+  - [x] 6.7 Add status icons alongside color indicators
     - In domain verification status displays, add Lucide icons: `CheckCircle` for verified, `XCircle` for failed, `Clock` for pending
     - In inbox active/expired status displays, add corresponding icons alongside color
     - _Requirements: 12.4_
@@ -207,7 +206,7 @@ Systematic UI/UX overhaul of the BurnerByte frontend, organized into 6 phases or
     - Add simple line-art SVG illustrations for key content types (inboxes, domains, teams)
     - _Requirements: 15.1_
 
-  - [ ] 6.9 Enhance error messages with context
+  - [x] 6.9 Enhance error messages with context
     - Update `ErrorState` usage across list pages to include contextual messages (e.g., "Failed to load inboxes", "Failed to load domains")
     - Ensure retry button is present on all error states
     - _Requirements: 15.2_
@@ -227,7 +226,7 @@ Systematic UI/UX overhaul of the BurnerByte frontend, organized into 6 phases or
   - Run `npm run build` to verify no TypeScript errors or missing imports.
 
 - [ ] 8. Mobile, Notifications, Forms
-  - [ ] 8.1 Create responsive table wrapper for mobile card layouts
+  - [x] 8.1 Create responsive table wrapper for mobile card layouts
     - Create `web/src/components/responsive-table.tsx` that renders `<table>` on `md+` and stacked cards on mobile
     - Use `md:hidden` / `hidden md:table` pattern for breakpoint switching
     - Apply to data tables on list pages (inboxes, domains, teams, webhooks, api-keys, audit)
@@ -247,7 +246,7 @@ Systematic UI/UX overhaul of the BurnerByte frontend, organized into 6 phases or
     - Group notifications by type within 5-minute window with expandable header showing count
     - _Requirements: 22.1, 22.2, 22.3_
 
-  - [ ] 8.4 Add sticky save button wrapper for forms
+  - [x] 8.4 Add sticky save button wrapper for forms
     - Wrap form submit buttons in `<div className="sticky bottom-0 bg-background/95 backdrop-blur border-t p-4">` across form pages
     - Apply to settings, profile, and other form pages with save/submit buttons
     - _Requirements: 23.1_
@@ -295,7 +294,7 @@ Systematic UI/UX overhaul of the BurnerByte frontend, organized into 6 phases or
     - Set appropriate `width`, `height`, and `loading="lazy"` attributes
     - _Requirements: 18.2_
 
-  - [ ] 10.4 Configure TanStack Query stale times
+  - [x] 10.4 Configure TanStack Query stale times
     - Set `staleTime: 60_000` (60s) for notification count queries
     - Set `staleTime: 300_000` (5min) for org settings queries
     - Set `staleTime: 30_000` (30s) for inbox list queries
@@ -313,7 +312,7 @@ Systematic UI/UX overhaul of the BurnerByte frontend, organized into 6 phases or
     - Persist preference in `localStorage["auto-refresh-enabled"]`
     - _Requirements: 24.2, 24.3_
 
-  - [ ] 10.7 Extend WebSocket for real-time dashboard stats
+  - [x] 10.7 Extend WebSocket for real-time dashboard stats
     - Extend existing notification WebSocket handler to also process stat update messages
     - Update "Total Emails" and "Active Inboxes" stat cards in real-time when WebSocket messages arrive
     - _Requirements: 24.4_
