@@ -3,23 +3,44 @@ package handler
 import (
 	"context"
 	"crypto/rand"
+	"crypto/tls"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
+	"net/smtp"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 
 	"gitlab.com/burnerbyte/burnerbyte/internal/auth"
 	"gitlab.com/burnerbyte/burnerbyte/internal/config"
 	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
 	"gitlab.com/burnerbyte/burnerbyte/internal/mailer"
 	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
+)
+
+// Thin wrappers for testability
+var (
+	smtpDial      = func(addr string) (*smtp.Client, error) { return smtp.Dial(addr) }
+	smtpPlainAuth = smtp.PlainAuth
+	smtpTLSDial   = func(addr, host string) (net.Conn, error) {
+		return tls.DialWithDialer(&net.Dialer{Timeout: 10 * time.Second}, "tcp", addr, &tls.Config{ServerName: host})
+	}
+	smtpNewClient = func(conn net.Conn, host string) (*smtp.Client, error) { return smtp.NewClient(conn, host) }
+	minioNew      = func(endpoint, accessKey, secretKey string, useSSL bool) (*minio.Client, error) {
+		return minio.New(endpoint, &minio.Options{
+			Creds:  credentials.NewStaticV4(accessKey, secretKey, ""),
+			Secure: useSSL,
+		})
+	}
 )
 
 type SetupHandler struct {
@@ -59,6 +80,8 @@ func (h *SetupHandler) Routes(r chi.Router) {
 	r.Route("/setup", func(r chi.Router) {
 		r.Get("/status", h.Status)
 		r.Post("/complete", h.Complete)
+		r.Post("/test-smtp", h.TestSMTP)
+		r.Post("/test-storage", h.TestStorage)
 	})
 }
 
@@ -440,4 +463,154 @@ func generateSlug(name string) string {
 		}
 	}
 	return slug
+}
+
+// TestSMTP tests SMTP connectivity with the provided credentials.
+// This is an unauthenticated endpoint available during setup.
+func (h *SetupHandler) TestSMTP(w http.ResponseWriter, r *http.Request) {
+	completed, _ := h.isSetupCompleted(r.Context())
+	if completed {
+		writeError(w, http.StatusForbidden, "setup already completed")
+		return
+	}
+
+	var input struct {
+		Host     string `json:"host"`
+		Port     int    `json:"port"`
+		Username string `json:"username"`
+		Password string `json:"password"`
+		TLS      bool   `json:"tls"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if input.Host == "" || input.Port == 0 {
+		writeError(w, http.StatusBadRequest, "host and port are required")
+		return
+	}
+
+	start := time.Now()
+	addr := fmt.Sprintf("%s:%d", input.Host, input.Port)
+
+	var testErr error
+	if input.TLS {
+		conn, err := smtpTLSDial(addr, input.Host)
+		if err != nil {
+			testErr = err
+		} else {
+			client, err := smtpNewClient(conn, input.Host)
+			if err != nil {
+				testErr = err
+			} else {
+				if input.Username != "" {
+					if err := client.Auth(smtpPlainAuth("", input.Username, input.Password, input.Host)); err != nil {
+						testErr = fmt.Errorf("authentication failed: %w", err)
+					}
+				}
+				client.Quit()
+				client.Close()
+			}
+		}
+	} else {
+		conn, err := smtpDial(addr)
+		if err != nil {
+			testErr = err
+		} else {
+			if input.Username != "" {
+				if err := conn.Auth(smtpPlainAuth("", input.Username, input.Password, input.Host)); err != nil {
+					testErr = fmt.Errorf("authentication failed: %w", err)
+				}
+			}
+			conn.Quit()
+			conn.Close()
+		}
+	}
+
+	elapsed := time.Since(start)
+	if testErr != nil {
+		writeJSON(w, http.StatusOK, map[string]any{
+			"success":       false,
+			"message":       testErr.Error(),
+			"response_time": elapsed.String(),
+		})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"success":       true,
+		"message":       fmt.Sprintf("Connected to %s successfully", addr),
+		"response_time": elapsed.String(),
+	})
+}
+
+// TestStorage tests S3/MinIO connectivity with the provided credentials.
+// This is an unauthenticated endpoint available during setup.
+func (h *SetupHandler) TestStorage(w http.ResponseWriter, r *http.Request) {
+	completed, _ := h.isSetupCompleted(r.Context())
+	if completed {
+		writeError(w, http.StatusForbidden, "setup already completed")
+		return
+	}
+
+	var input struct {
+		Endpoint  string `json:"endpoint"`
+		AccessKey string `json:"access_key"`
+		SecretKey string `json:"secret_key"`
+		Bucket    string `json:"bucket"`
+		UseSSL    bool   `json:"use_ssl"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if input.Endpoint == "" {
+		writeError(w, http.StatusBadRequest, "endpoint is required")
+		return
+	}
+
+	start := time.Now()
+
+	client, err := minioNew(input.Endpoint, input.AccessKey, input.SecretKey, input.UseSSL)
+	if err != nil {
+		writeJSON(w, http.StatusOK, map[string]any{
+			"success":       false,
+			"message":       fmt.Sprintf("Failed to create client: %s", err.Error()),
+			"response_time": time.Since(start).String(),
+		})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	bucket := input.Bucket
+	if bucket == "" {
+		bucket = "burnerbyte"
+	}
+
+	exists, err := client.BucketExists(ctx, bucket)
+	elapsed := time.Since(start)
+	if err != nil {
+		writeJSON(w, http.StatusOK, map[string]any{
+			"success":       false,
+			"message":       fmt.Sprintf("Connection failed: %s", err.Error()),
+			"response_time": elapsed.String(),
+		})
+		return
+	}
+
+	msg := fmt.Sprintf("Connected to %s successfully", input.Endpoint)
+	if exists {
+		msg += fmt.Sprintf(" (bucket '%s' exists)", bucket)
+	} else {
+		msg += fmt.Sprintf(" (bucket '%s' does not exist — will be created on setup)", bucket)
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"success":       true,
+		"message":       msg,
+		"bucket_exists": exists,
+		"response_time": elapsed.String(),
+	})
 }
