@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { AppShell } from "@/components/layout/app-shell";
+import { ServiceWorkerRegister } from "@/components/sw-register";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { rtlLocales, type Locale } from "@/i18n/request";
@@ -40,6 +41,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <NextIntlClientProvider messages={messages}>
           <Providers>
             <AppShell>{children}</AppShell>
+            <ServiceWorkerRegister />
           </Providers>
         </NextIntlClientProvider>
       </body>
