@@ -7,21 +7,27 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Logo } from "@/components/logo";
+import {
+  ArrowLeft, ArrowRight, Building2, Check, CheckCircle2, Globe, HardDrive,
+  Key, Loader2, Mail, Paintbrush, Plus, RefreshCw, Shield, SkipForward,
+  Trash2, UserPlus, Users,
+} from "lucide-react";
 
 const STEPS = [
-  { key: "admin", label: "Admin Account", required: true },
-  { key: "org", label: "Organization", required: true },
-  { key: "smtp", label: "SMTP / Email", required: true },
-  { key: "storage", label: "Object Storage", required: false },
-  { key: "domain", label: "Domain", required: true },
-  { key: "team", label: "Team", required: false },
-  { key: "branding", label: "Branding", required: false },
-  { key: "invites", label: "Invite Users", required: false },
-  { key: "review", label: "Review & Finish", required: true },
+  { key: "admin", label: "Admin Account", icon: Shield, required: true },
+  { key: "org", label: "Organization", icon: Building2, required: true },
+  { key: "smtp", label: "Outbound Email", icon: Mail, required: true },
+  { key: "storage", label: "Object Storage", icon: HardDrive, required: false },
+  { key: "domain", label: "Domain", icon: Globe, required: true },
+  { key: "team", label: "Team", icon: Users, required: false },
+  { key: "branding", label: "Branding", icon: Paintbrush, required: false },
+  { key: "invites", label: "Invite Users", icon: UserPlus, required: false },
+  { key: "review", label: "Review & Finish", icon: CheckCircle2, required: true },
 ] as const;
 
 interface SetupData {
@@ -64,15 +70,15 @@ export default function SetupPage() {
 
   if (checking) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" role="status">
-          <span className="sr-only">Loading</span>
-        </div>
+      <div className="flex h-screen flex-col items-center justify-center gap-4">
+        <Logo size="lg" />
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
       </div>
     );
   }
 
   const currentStep = STEPS[step];
+  const StepIcon = currentStep.icon;
   const isLast = step === STEPS.length - 1;
 
   const canNext = (): boolean => {
@@ -87,7 +93,6 @@ export default function SetupPage() {
 
   const next = () => { if (step < STEPS.length - 1) setStep(step + 1); };
   const prev = () => { if (step > 0) setStep(step - 1); };
-  const skip = () => next();
 
   const submit = async () => {
     setSubmitting(true);
@@ -124,89 +129,114 @@ export default function SetupPage() {
   return (
     <div className="flex min-h-screen items-center justify-center p-4 bg-gradient-to-b from-muted/50 to-background">
       <div className="w-full max-w-2xl space-y-6">
+        {/* Header */}
         <div className="text-center space-y-1">
           <Logo size="lg" />
           <p className="text-muted-foreground text-sm">One-time platform configuration</p>
         </div>
 
-        {/* Progress */}
-        <div className="flex gap-1">
-          {STEPS.map((s, i) => (
-            <button
-              key={s.key}
-              onClick={() => i < step && setStep(i)}
-              disabled={i >= step}
-              className={`h-1.5 flex-1 rounded-full transition-colors ${
-                i < step ? "bg-primary" : i === step ? "bg-primary/50" : "bg-muted"
-              }`}
-              aria-label={`Step ${i + 1}: ${s.label}`}
-            />
-          ))}
+        {/* Step indicator */}
+        <div className="flex items-center justify-between px-2">
+          {STEPS.map((s, i) => {
+            const Icon = s.icon;
+            const done = i < step;
+            const active = i === step;
+            return (
+              <div key={s.key} className="flex items-center">
+                <button
+                  onClick={() => i < step && setStep(i)}
+                  disabled={i > step}
+                  title={s.label}
+                  className={`flex items-center justify-center h-7 w-7 rounded-full text-xs transition-all ${
+                    done ? "bg-primary text-primary-foreground cursor-pointer" : active ? "bg-primary/20 text-primary ring-2 ring-primary/30" : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {done ? <Check className="h-3.5 w-3.5" /> : <Icon className="h-3 w-3" />}
+                </button>
+                {i < STEPS.length - 1 && (
+                  <div className={`w-3 sm:w-5 lg:w-7 h-0.5 mx-0.5 rounded-full transition-colors ${i < step ? "bg-primary" : "bg-muted"}`} />
+                )}
+              </div>
+            );
+          })}
         </div>
 
+        {/* Card */}
         <Card className="shadow-lg">
           <CardHeader>
-            <div className="flex items-center gap-2">
-              <CardTitle>Step {step + 1}: {currentStep.label}</CardTitle>
-              <Badge variant={currentStep.required ? "default" : "secondary"}>
-                {currentStep.required ? "Required" : "Optional"}
-              </Badge>
+            <div className="flex items-center gap-3">
+              <div className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 ${currentStep.required ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+                <StepIcon className="h-4.5 w-4.5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <CardTitle className="text-lg">{currentStep.label}</CardTitle>
+                  <Badge variant={currentStep.required ? "default" : "secondary"} className="text-[10px]">
+                    {currentStep.required ? "Required" : "Optional"}
+                  </Badge>
+                </div>
+                <CardDescription className="mt-0.5">
+                  {currentStep.key === "admin" && "Create the platform owner account with full system admin privileges."}
+                  {currentStep.key === "org" && "Set up your organization. BurnerByte runs as a single-org platform."}
+                  {currentStep.key === "smtp" && "Configure outbound email for invitations, password resets, and verification."}
+                  {currentStep.key === "storage" && "Configure S3-compatible object storage for email attachments."}
+                  {currentStep.key === "domain" && "Add the domain that will receive temporary emails."}
+                  {currentStep.key === "team" && "Create an initial team and assign the domain to it."}
+                  {currentStep.key === "branding" && "Customize the look and feel of your instance."}
+                  {currentStep.key === "invites" && "Invite team members by email."}
+                  {currentStep.key === "review" && "Review your configuration and finish setup."}
+                </CardDescription>
+              </div>
             </div>
-            <CardDescription>
-              {currentStep.key === "admin" && "Create the platform owner account with full system admin privileges."}
-              {currentStep.key === "org" && "Set up your organization. BurnerByte runs as a single-org platform."}
-              {currentStep.key === "smtp" && "Configure outbound email for invitations, password resets, and verification."}
-              {currentStep.key === "storage" && "Configure S3-compatible object storage for email attachments (MinIO, AWS S3, etc)."}
-              {currentStep.key === "domain" && "Add the domain that will receive temporary emails."}
-              {currentStep.key === "team" && "Optionally create an initial team and assign the domain to it."}
-              {currentStep.key === "branding" && "Customize the look and feel of your BurnerByte instance."}
-              {currentStep.key === "invites" && "Invite team members by email. They'll receive an invitation link."}
-              {currentStep.key === "review" && "Review your configuration and finish setup."}
-            </CardDescription>
           </CardHeader>
 
           <CardContent className="space-y-4">
+            {/* Admin */}
             {currentStep.key === "admin" && (
               <>
                 <div className="space-y-2">
                   <Label htmlFor="admin-name">Display name</Label>
-                  <Input id="admin-name" value={data.admin.display_name} onChange={(e) => setData({ ...data, admin: { ...data.admin, display_name: e.target.value } })} />
+                  <Input id="admin-name" value={data.admin.display_name} onChange={(e) => setData({ ...data, admin: { ...data.admin, display_name: e.target.value } })} placeholder="Your full name" autoFocus />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="admin-email">Email</Label>
-                  <Input id="admin-email" type="email" value={data.admin.email} onChange={(e) => setData({ ...data, admin: { ...data.admin, email: e.target.value } })} />
+                  <Input id="admin-email" type="email" value={data.admin.email} onChange={(e) => setData({ ...data, admin: { ...data.admin, email: e.target.value } })} placeholder="admin@example.com" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="admin-pass">Password</Label>
-                  <Input id="admin-pass" type="password" value={data.admin.password} onChange={(e) => setData({ ...data, admin: { ...data.admin, password: e.target.value } })} />
-                  <p className="text-xs text-muted-foreground">Min 8 chars, uppercase, lowercase, number, special character</p>
+                  <Input id="admin-pass" type="password" value={data.admin.password} onChange={(e) => setData({ ...data, admin: { ...data.admin, password: e.target.value } })} placeholder="••••••••" />
+                  <p className="text-xs text-muted-foreground">Min 8 characters with uppercase, lowercase, number, and special character.</p>
                 </div>
               </>
             )}
 
+            {/* Org */}
             {currentStep.key === "org" && (
               <>
                 <div className="space-y-2">
                   <Label htmlFor="org-name">Organization name</Label>
-                  <Input id="org-name" value={data.org.name} onChange={(e) => setData({ ...data, org: { ...data.org, name: e.target.value } })} />
+                  <Input id="org-name" value={data.org.name} onChange={(e) => setData({ ...data, org: { ...data.org, name: e.target.value } })} placeholder="My Company" autoFocus />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="org-slug">Slug (optional, auto-generated)</Label>
-                  <Input id="org-slug" value={data.org.slug} onChange={(e) => setData({ ...data, org: { ...data.org, slug: e.target.value } })} placeholder="my-org" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="org-logo">Logo URL (optional)</Label>
-                  <Input id="org-logo" value={data.org.logo_url} onChange={(e) => setData({ ...data, org: { ...data.org, logo_url: e.target.value } })} placeholder="https://..." />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="org-slug">Slug <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                    <Input id="org-slug" value={data.org.slug} onChange={(e) => setData({ ...data, org: { ...data.org, slug: e.target.value } })} placeholder="my-company" className="font-mono text-sm" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="org-logo">Logo URL <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                    <Input id="org-logo" value={data.org.logo_url} onChange={(e) => setData({ ...data, org: { ...data.org, logo_url: e.target.value } })} placeholder="https://..." />
+                  </div>
                 </div>
               </>
             )}
 
+            {/* SMTP */}
             {currentStep.key === "smtp" && (
               <>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="col-span-2 space-y-2">
                     <Label htmlFor="smtp-host">SMTP Host</Label>
-                    <Input id="smtp-host" value={data.smtp.host} onChange={(e) => setData({ ...data, smtp: { ...data.smtp, host: e.target.value } })} placeholder="smtp.example.com" />
+                    <Input id="smtp-host" value={data.smtp.host} onChange={(e) => setData({ ...data, smtp: { ...data.smtp, host: e.target.value } })} placeholder="smtp.example.com" autoFocus />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="smtp-port">Port</Label>
@@ -225,200 +255,194 @@ export default function SetupPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="smtp-from">From address</Label>
+                    <Label htmlFor="smtp-from">From address <span className="text-destructive">*</span></Label>
                     <Input id="smtp-from" type="email" value={data.smtp.from_address} onChange={(e) => setData({ ...data, smtp: { ...data.smtp, from_address: e.target.value } })} placeholder="noreply@example.com" />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="smtp-name">From name (optional)</Label>
+                    <Label htmlFor="smtp-name">From name <span className="text-muted-foreground font-normal">(optional)</span></Label>
                     <Input id="smtp-name" value={data.smtp.from_name} onChange={(e) => setData({ ...data, smtp: { ...data.smtp, from_name: e.target.value } })} placeholder="BurnerByte" />
                   </div>
                 </div>
               </>
             )}
 
+            {/* Storage */}
             {currentStep.key === "storage" && (() => {
               const s = data.storage ?? { provider: "minio", endpoint: "", access_key: "", secret_key: "", bucket: "burnerbyte", region: "", use_ssl: false };
               const update = (patch: Partial<typeof s>) => setData({ ...data, storage: { ...s, ...patch } });
               return (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="storage-provider">Provider</Label>
-                    <select
-                      id="storage-provider"
-                      value={s.provider}
-                      onChange={(e) => update({ provider: e.target.value })}
-                      className="w-full rounded-md border px-3 py-2 text-sm"
-                    >
-                      <option value="minio">MinIO</option>
-                      <option value="s3">AWS S3</option>
-                    </select>
+                    <Label>Provider</Label>
+                    <Select value={s.provider} onValueChange={(v) => update({ provider: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="minio">MinIO</SelectItem>
+                        <SelectItem value="s3">AWS S3</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="storage-endpoint">Endpoint</Label>
-                      <Input id="storage-endpoint" value={s.endpoint} onChange={(e) => update({ endpoint: e.target.value })} placeholder={s.provider === "s3" ? "s3.amazonaws.com" : "localhost:9000"} />
+                      <Label>Endpoint</Label>
+                      <Input value={s.endpoint} onChange={(e) => update({ endpoint: e.target.value })} placeholder={s.provider === "s3" ? "s3.amazonaws.com" : "localhost:9000"} />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="storage-bucket">Bucket</Label>
-                      <Input id="storage-bucket" value={s.bucket} onChange={(e) => update({ bucket: e.target.value })} placeholder="burnerbyte" />
+                      <Label>Bucket</Label>
+                      <Input value={s.bucket} onChange={(e) => update({ bucket: e.target.value })} placeholder="burnerbyte" className="font-mono text-sm" />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="storage-key">Access key</Label>
-                      <Input id="storage-key" value={s.access_key} onChange={(e) => update({ access_key: e.target.value })} />
+                      <Label>Access key</Label>
+                      <Input value={s.access_key} onChange={(e) => update({ access_key: e.target.value })} className="font-mono text-sm" />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="storage-secret">Secret key</Label>
-                      <Input id="storage-secret" type="password" value={s.secret_key} onChange={(e) => update({ secret_key: e.target.value })} />
+                      <Label>Secret key</Label>
+                      <Input type="password" value={s.secret_key} onChange={(e) => update({ secret_key: e.target.value })} />
                     </div>
                   </div>
                   {s.provider === "s3" && (
                     <div className="space-y-2">
-                      <Label htmlFor="storage-region">Region</Label>
-                      <Input id="storage-region" value={s.region} onChange={(e) => update({ region: e.target.value })} placeholder="us-east-1" />
+                      <Label>Region</Label>
+                      <Input value={s.region} onChange={(e) => update({ region: e.target.value })} placeholder="us-east-1" />
                     </div>
                   )}
-                  <div className="flex items-center gap-2">
-                    <input type="checkbox" id="storage-ssl" checked={s.use_ssl} onChange={(e) => update({ use_ssl: e.target.checked })} className="rounded" />
-                    <Label htmlFor="storage-ssl">Use SSL/TLS</Label>
+                  <div className="flex items-center justify-between rounded-lg border p-3">
+                    <Label className="cursor-pointer">Use SSL/TLS</Label>
+                    <Switch checked={s.use_ssl} onCheckedChange={(v) => update({ use_ssl: v })} />
                   </div>
-                  <p className="text-xs text-muted-foreground">Skip to use environment variables or config file instead. You can also configure this later.</p>
+                  <p className="text-xs text-muted-foreground">Skip to use environment variables or config file instead.</p>
                 </>
               );
             })()}
 
+            {/* Domain */}
             {currentStep.key === "domain" && (
               <div className="space-y-2">
                 <Label htmlFor="domain-name">Domain name</Label>
-                <Input id="domain-name" value={data.domain.domain_name} onChange={(e) => setData({ ...data, domain: { ...data.domain, domain_name: e.target.value } })} placeholder="mail.example.com" />
-                <p className="text-xs text-muted-foreground">This domain will receive inbound emails. You&apos;ll need to configure MX records after setup.</p>
+                <Input id="domain-name" value={data.domain.domain_name} onChange={(e) => setData({ ...data, domain: { ...data.domain, domain_name: e.target.value } })} placeholder="mail.example.com" autoFocus className="font-mono" />
+                <p className="text-xs text-muted-foreground">This domain will receive inbound emails. You&apos;ll configure MX and TXT records after setup.</p>
               </div>
             )}
 
+            {/* Team */}
             {currentStep.key === "team" && (
               <div className="space-y-2">
                 <Label htmlFor="team-name">Team name</Label>
-                <Input
-                  id="team-name"
-                  value={data.team?.name ?? ""}
-                  onChange={(e) => setData({ ...data, team: e.target.value ? { name: e.target.value } : null })}
-                  placeholder="Engineering"
-                />
-                <p className="text-xs text-muted-foreground">Leave empty to skip. You can create teams later.</p>
+                <Input id="team-name" value={data.team?.name ?? ""} onChange={(e) => setData({ ...data, team: e.target.value ? { name: e.target.value } : null })} placeholder="Engineering" autoFocus />
+                <p className="text-xs text-muted-foreground">The domain will be automatically assigned to this team. Leave empty to skip.</p>
               </div>
             )}
 
+            {/* Branding */}
             {currentStep.key === "branding" && (
               <>
                 <div className="space-y-2">
                   <Label htmlFor="brand-color">Primary color</Label>
                   <div className="flex gap-2">
-                    <Input
-                      id="brand-color"
-                      value={data.branding?.primary_color ?? ""}
-                      onChange={(e) => setData({ ...data, branding: { ...data.branding ?? { primary_color: "", footer_text: "", logo_url: "" }, primary_color: e.target.value } })}
-                      placeholder="#0066ff"
-                    />
+                    <Input id="brand-color" value={data.branding?.primary_color ?? ""} onChange={(e) => setData({ ...data, branding: { ...data.branding ?? { primary_color: "", footer_text: "", logo_url: "" }, primary_color: e.target.value } })} placeholder="#4f46e5" className="font-mono text-sm" />
                     {data.branding?.primary_color && (
-                      <div className="h-10 w-10 rounded border" style={{ backgroundColor: data.branding.primary_color }} />
+                      <div className="h-10 w-10 rounded-lg border shrink-0" style={{ backgroundColor: data.branding.primary_color }} />
                     )}
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="brand-footer">Footer text</Label>
-                  <Input
-                    id="brand-footer"
-                    value={data.branding?.footer_text ?? ""}
-                    onChange={(e) => setData({ ...data, branding: { ...data.branding ?? { primary_color: "", footer_text: "", logo_url: "" }, footer_text: e.target.value } })}
-                    placeholder="Powered by BurnerByte"
-                  />
+                  <Input id="brand-footer" value={data.branding?.footer_text ?? ""} onChange={(e) => setData({ ...data, branding: { ...data.branding ?? { primary_color: "", footer_text: "", logo_url: "" }, footer_text: e.target.value } })} placeholder="Powered by BurnerByte" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="brand-logo">Logo URL</Label>
-                  <Input
-                    id="brand-logo"
-                    value={data.branding?.logo_url ?? ""}
-                    onChange={(e) => setData({ ...data, branding: { ...data.branding ?? { primary_color: "", footer_text: "", logo_url: "" }, logo_url: e.target.value } })}
-                    placeholder="https://..."
-                  />
+                  <Input id="brand-logo" value={data.branding?.logo_url ?? ""} onChange={(e) => setData({ ...data, branding: { ...data.branding ?? { primary_color: "", footer_text: "", logo_url: "" }, logo_url: e.target.value } })} placeholder="https://..." />
                 </div>
-                <p className="text-xs text-muted-foreground">All fields optional. You can configure branding later in Settings.</p>
+                <p className="text-xs text-muted-foreground">All fields optional. Configurable later in Settings.</p>
               </>
             )}
 
+            {/* Invites */}
             {currentStep.key === "invites" && (
               <>
-                {data.invites.map((inv, i) => (
-                  <div key={i} className="flex gap-2">
-                    <Input
-                      value={inv.email}
-                      onChange={(e) => {
-                        const invites = [...data.invites];
-                        invites[i] = { ...invites[i], email: e.target.value };
-                        setData({ ...data, invites });
-                      }}
-                      placeholder="user@example.com"
-                      type="email"
-                    />
-                    <select
-                      value={inv.role}
-                      onChange={(e) => {
-                        const invites = [...data.invites];
-                        invites[i] = { ...invites[i], role: e.target.value };
-                        setData({ ...data, invites });
-                      }}
-                      className="rounded-md border px-3 py-2 text-sm"
-                      aria-label="Role"
-                    >
-                      <option value="admin">Admin</option>
-                      <option value="member">Member</option>
-                    </select>
-                    <Button variant="ghost" size="sm" onClick={() => {
-                      setData({ ...data, invites: data.invites.filter((_, j) => j !== i) });
-                    }}>✕</Button>
-                  </div>
-                ))}
-                <Button variant="outline" size="sm" onClick={() => {
-                  setData({ ...data, invites: [...data.invites, { email: "", role: "member" }] });
-                }}>+ Add invite</Button>
-                <p className="text-xs text-muted-foreground">Invitations will be sent after setup completes. You can invite more users later.</p>
+                <div className="space-y-2">
+                  {data.invites.map((inv, i) => (
+                    <div key={i} className="flex gap-2 items-center">
+                      <Input value={inv.email} onChange={(e) => { const invites = [...data.invites]; invites[i] = { ...invites[i], email: e.target.value }; setData({ ...data, invites }); }} placeholder="user@example.com" type="email" className="flex-1" />
+                      <Select value={inv.role} onValueChange={(v) => { const invites = [...data.invites]; invites[i] = { ...invites[i], role: v }; setData({ ...data, invites }); }}>
+                        <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="member">Member</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive shrink-0" onClick={() => setData({ ...data, invites: data.invites.filter((_, j) => j !== i) })}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setData({ ...data, invites: [...data.invites, { email: "", role: "member" }] })}>
+                  <Plus className="h-3.5 w-3.5" /> Add invite
+                </Button>
+                <p className="text-xs text-muted-foreground">Invitations are sent after setup completes. You can invite more users later.</p>
               </>
             )}
 
+            {/* Review */}
             {currentStep.key === "review" && (
-              <div className="space-y-3 text-sm">
-                <div><span className="font-medium">Admin:</span> {data.admin.display_name} ({data.admin.email})</div>
-                <Separator />
-                <div><span className="font-medium">Organization:</span> {data.org.name}</div>
-                <Separator />
-                <div><span className="font-medium">SMTP:</span> {data.smtp.host}:{data.smtp.port} (from: {data.smtp.from_address})</div>
-                <Separator />
-                <div><span className="font-medium">Domain:</span> {data.domain.domain_name}</div>
-                {data.storage?.endpoint && <><Separator /><div><span className="font-medium">Storage:</span> {data.storage.provider.toUpperCase()} — {data.storage.endpoint} ({data.storage.bucket})</div></>}
-                {data.team?.name && <><Separator /><div><span className="font-medium">Team:</span> {data.team.name}</div></>}
-                {data.branding?.primary_color && <><Separator /><div><span className="font-medium">Brand color:</span> {data.branding.primary_color}</div></>}
-                {data.invites.length > 0 && <><Separator /><div><span className="font-medium">Invites:</span> {data.invites.filter(i => i.email).map(i => i.email).join(", ")}</div></>}
+              <div className="space-y-2">
+                {[
+                  { icon: Shield, label: "Admin", value: `${data.admin.display_name} (${data.admin.email})`, color: "bg-blue-100 text-blue-600" },
+                  { icon: Building2, label: "Organization", value: data.org.name, color: "bg-indigo-100 text-indigo-600" },
+                  { icon: Mail, label: "SMTP", value: `${data.smtp.host}:${data.smtp.port} → ${data.smtp.from_address}`, color: "bg-amber-100 text-amber-600" },
+                  { icon: Globe, label: "Domain", value: data.domain.domain_name, color: "bg-emerald-100 text-emerald-600" },
+                  ...(data.storage?.endpoint ? [{ icon: HardDrive, label: "Storage", value: `${data.storage.provider.toUpperCase()} — ${data.storage.endpoint}`, color: "bg-slate-100 text-slate-600" }] : []),
+                  ...(data.team?.name ? [{ icon: Users, label: "Team", value: data.team.name, color: "bg-violet-100 text-violet-600" }] : []),
+                  ...(data.branding?.primary_color ? [{ icon: Paintbrush, label: "Branding", value: data.branding.primary_color, color: "bg-pink-100 text-pink-600" }] : []),
+                  ...(data.invites.filter(i => i.email).length > 0 ? [{ icon: UserPlus, label: "Invites", value: data.invites.filter(i => i.email).map(i => i.email).join(", "), color: "bg-cyan-100 text-cyan-600" }] : []),
+                ].map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <div key={item.label} className="flex items-center gap-3 rounded-lg border p-3">
+                      <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${item.color}`}>
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs text-muted-foreground">{item.label}</p>
+                        <p className="text-sm font-medium truncate">{item.value}</p>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </CardContent>
 
-          <CardFooter className="flex justify-between">
-            <Button variant="outline" onClick={prev} disabled={step === 0}>Back</Button>
+          <CardFooter className="flex justify-between border-t pt-4">
+            <Button variant="outline" size="sm" onClick={prev} disabled={step === 0} className="gap-1.5">
+              <ArrowLeft className="h-3.5 w-3.5" /> Back
+            </Button>
             <div className="flex gap-2">
               {!currentStep.required && !isLast && (
-                <Button variant="ghost" onClick={skip}>Skip</Button>
+                <Button variant="ghost" size="sm" onClick={next} className="gap-1.5 text-muted-foreground">
+                  <SkipForward className="h-3.5 w-3.5" /> Skip
+                </Button>
               )}
               {isLast ? (
-                <Button onClick={submit} disabled={submitting}>
-                  {submitting ? "Setting up…" : "Complete Setup"}
+                <Button onClick={submit} disabled={submitting} className="gap-1.5">
+                  {submitting ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Setting up…</> : <><CheckCircle2 className="h-3.5 w-3.5" /> Complete Setup</>}
                 </Button>
               ) : (
-                <Button onClick={next} disabled={!canNext()}>Next</Button>
+                <Button onClick={next} disabled={!canNext()} className="gap-1.5">
+                  Next <ArrowRight className="h-3.5 w-3.5" />
+                </Button>
               )}
             </div>
           </CardFooter>
         </Card>
+
+        {/* Step counter */}
+        <p className="text-center text-xs text-muted-foreground">
+          Step {step + 1} of {STEPS.length}
+        </p>
       </div>
     </div>
   );
