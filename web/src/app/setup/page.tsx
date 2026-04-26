@@ -189,7 +189,7 @@ export default function SetupPage() {
           <CardHeader>
             <div className="flex items-center gap-3">
               <div className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 ${currentStep.required ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
-                <StepIcon className="h-4.5 w-4.5" />
+                <StepIcon className="h-[18px] w-[18px]" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
