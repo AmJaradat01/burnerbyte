@@ -2,25 +2,9 @@
 
 import Link from "next/link";
 import { Logo } from "@/components/logo";
-import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
-import { useAuthStore } from "@/stores/auth-store";
 import { ExternalLink } from "lucide-react";
 
 export function Footer() {
-  const user = useAuthStore((s) => s.user);
-
-  const { data: versionData } = useQuery({
-    queryKey: ["app-version"],
-    queryFn: () => api.get<{ version: string }>("/admin/version"),
-    staleTime: 300_000,
-    enabled: !!user?.is_system_admin,
-  });
-
-  const version = versionData?.version;
-  // Strip leading 'v' if present to avoid double-v display
-  const displayVersion = version?.replace(/^v/, "");
-
   return (
     <footer className="border-t bg-muted/20 mt-auto">
       <div className="px-4 sm:px-6 py-4">
@@ -41,9 +25,6 @@ export function Footer() {
               <ExternalLink className="h-2.5 w-2.5" />
             </a>
             <span className="text-muted-foreground/50">Apache 2.0</span>
-            {displayVersion && (
-              <span className="font-mono text-muted-foreground/50" title={`Version ${displayVersion}`}>v{displayVersion}</span>
-            )}
           </div>
         </div>
       </div>
