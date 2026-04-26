@@ -72,6 +72,8 @@ export default function SetupPage() {
   const [data, setData] = useState<SetupData>(initialData);
   const [submitting, setSubmitting] = useState(false);
   const [healthStatus, setHealthStatus] = useState<{ postgres: boolean; redis: boolean } | null>(null);
+  const [smtpTest, setSmtpTest] = useState<{ testing: boolean; result: { success: boolean; message: string; response_time: string } | null }>({ testing: false, result: null });
+  const [storageTest, setStorageTest] = useState<{ testing: boolean; result: { success: boolean; message: string; response_time: string } | null }>({ testing: false, result: null });
 
   useEffect(() => {
     api.get<{ completed: boolean }>("/setup/status")
@@ -116,6 +118,32 @@ export default function SetupPage() {
 
   const next = () => { if (step < STEPS.length - 1) setStep(step + 1); };
   const prev = () => { if (step > 0) setStep(step - 1); };
+
+  const testSMTP = async () => {
+    setSmtpTest({ testing: true, result: null });
+    try {
+      const res = await api.post<{ success: boolean; message: string; response_time: string }>("/setup/test-smtp", {
+        host: data.smtp.host, port: data.smtp.port, username: data.smtp.username, password: data.smtp.password, tls: data.smtp.port === 465,
+      });
+      setSmtpTest({ testing: false, result: res });
+    } catch (err) {
+      setSmtpTest({ testing: false, result: { success: false, message: err instanceof Error ? err.message : "Test failed", response_time: "" } });
+    }
+  };
+
+  const testStorage = async () => {
+    const s = data.storage;
+    if (!s?.endpoint) return;
+    setStorageTest({ testing: true, result: null });
+    try {
+      const res = await api.post<{ success: boolean; message: string; response_time: string }>("/setup/test-storage", {
+        endpoint: s.endpoint, access_key: s.access_key, secret_key: s.secret_key, bucket: s.bucket || "burnerbyte", use_ssl: s.use_ssl,
+      });
+      setStorageTest({ testing: false, result: res });
+    } catch (err) {
+      setStorageTest({ testing: false, result: { success: false, message: err instanceof Error ? err.message : "Test failed", response_time: "" } });
+    }
+  };
 
   const submit = async () => {
     setSubmitting(true);
@@ -332,6 +360,23 @@ export default function SetupPage() {
                     <Input id="smtp-name" value={data.smtp.from_name} onChange={(e) => setData({ ...data, smtp: { ...data.smtp, from_name: e.target.value } })} placeholder="BurnerByte" />
                   </div>
                 </div>
+                {/* Test connection button */}
+                {data.smtp.host && data.smtp.port > 0 && (
+                  <div className="space-y-2">
+                    <Button variant="outline" size="sm" className="gap-1.5" onClick={testSMTP} disabled={smtpTest.testing}>
+                      {smtpTest.testing ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Testing…</> : <><RefreshCw className="h-3.5 w-3.5" /> Test Connection</>}
+                    </Button>
+                    {smtpTest.result && (
+                      <div className={`rounded-lg border p-3 text-sm flex items-start gap-2 ${smtpTest.result.success ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-red-50 border-red-200 text-red-800"}`}>
+                        {smtpTest.result.success ? <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" /> : <Shield className="h-4 w-4 mt-0.5 shrink-0" />}
+                        <div>
+                          <p className="font-medium">{smtpTest.result.success ? "Connection successful" : "Connection failed"}</p>
+                          <p className="text-xs mt-0.5 opacity-80">{smtpTest.result.message}{smtpTest.result.response_time && ` (${smtpTest.result.response_time})`}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </>
             )}
 
@@ -382,6 +427,23 @@ export default function SetupPage() {
                     <Switch checked={s.use_ssl} onCheckedChange={(v) => update({ use_ssl: v })} />
                   </div>
                   <p className="text-xs text-muted-foreground">Skip to use environment variables or config file instead.</p>
+                  {/* Test connection button */}
+                  {s.endpoint && (
+                    <div className="space-y-2">
+                      <Button variant="outline" size="sm" className="gap-1.5" onClick={testStorage} disabled={storageTest.testing}>
+                        {storageTest.testing ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Testing…</> : <><RefreshCw className="h-3.5 w-3.5" /> Test Connection</>}
+                      </Button>
+                      {storageTest.result && (
+                        <div className={`rounded-lg border p-3 text-sm flex items-start gap-2 ${storageTest.result.success ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-red-50 border-red-200 text-red-800"}`}>
+                          {storageTest.result.success ? <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" /> : <Shield className="h-4 w-4 mt-0.5 shrink-0" />}
+                          <div>
+                            <p className="font-medium">{storageTest.result.success ? "Connection successful" : "Connection failed"}</p>
+                            <p className="text-xs mt-0.5 opacity-80">{storageTest.result.message}{storageTest.result.response_time && ` (${storageTest.result.response_time})`}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </>
               );
             })()}
