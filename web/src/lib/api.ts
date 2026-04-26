@@ -61,18 +61,43 @@ async function tryRefresh(): Promise<boolean> {
   refreshPromise = (async () => {
     const refreshToken = localStorage.getItem("refresh_token");
     if (!refreshToken) return false;
+
+    // Prevent refresh token reuse across rapid page refreshes.
+    // If another tab/refresh already started a refresh within the last 5 seconds,
+    // wait briefly for it to complete and use the updated tokens.
+    const lockKey = "bb_refresh_lock";
+    const lockValue = localStorage.getItem(lockKey);
+    if (lockValue) {
+      const lockTime = parseInt(lockValue, 10);
+      if (Date.now() - lockTime < 5000) {
+        // Another refresh is in progress — wait and retry with new tokens
+        await new Promise((r) => setTimeout(r, 1000));
+        const newToken = localStorage.getItem("access_token");
+        if (newToken && newToken !== "undefined") return true;
+        return false;
+      }
+    }
+
+    // Set lock
+    localStorage.setItem(lockKey, String(Date.now()));
+
     try {
       const res = await fetch(`${API_BASE}/auth/refresh`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ refresh_token: refreshToken }),
       });
-      if (!res.ok) return false;
+      if (!res.ok) {
+        localStorage.removeItem(lockKey);
+        return false;
+      }
       const data = await res.json();
       localStorage.setItem("access_token", data.access_token);
       localStorage.setItem("refresh_token", data.refresh_token);
+      localStorage.removeItem(lockKey);
       return true;
     } catch {
+      localStorage.removeItem(lockKey);
       return false;
     }
   })();

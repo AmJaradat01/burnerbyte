@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import type { User, TokenPair } from "@/types";
 
 interface AuthState {
@@ -59,9 +59,12 @@ export const useAuthStore = create<AuthState>((set) => ({
       if (!token) { set({ loading: false }); return; }
       const user = await api.get<User>("/auth/me");
       set({ user, loading: false });
-    } catch {
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("refresh_token");
+    } catch (err) {
+      // Only clear tokens on auth errors (401/403), not on network errors
+      if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
+      }
       set({ user: null, loading: false });
     }
   },
