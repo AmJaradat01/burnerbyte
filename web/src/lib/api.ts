@@ -63,29 +63,43 @@ async function tryRefresh(): Promise<boolean> {
     if (!refreshToken) return false;
 
     // Prevent refresh token reuse across rapid page refreshes.
-    // If another tab/refresh already started a refresh within the last 5 seconds,
-    // wait briefly for it to complete and use the updated tokens.
+    // The backend uses token rotation with reuse detection — if a revoked
+    // refresh token is sent again, the entire token family is killed.
+    // Use a localStorage lock so only one tab/page-load performs the refresh.
     const lockKey = "bb_refresh_lock";
     const lockValue = localStorage.getItem(lockKey);
     if (lockValue) {
       const lockTime = parseInt(lockValue, 10);
-      if (Date.now() - lockTime < 5000) {
-        // Another refresh is in progress — wait and retry with new tokens
-        await new Promise((r) => setTimeout(r, 1000));
-        const newToken = localStorage.getItem("access_token");
-        if (newToken && newToken !== "undefined") return true;
+      if (Date.now() - lockTime < 10000) {
+        // Another refresh is in progress or just completed.
+        // Wait for it to finish, then re-read tokens from localStorage.
+        await new Promise((r) => setTimeout(r, 1500));
+        // Check if the other refresh wrote new tokens
+        const currentToken = localStorage.getItem("refresh_token");
+        // If the refresh token changed, the other tab succeeded
+        if (currentToken && currentToken !== refreshToken) return true;
+        // If unchanged, the other refresh may have failed — don't retry
+        // to avoid reuse detection. Let the caller handle the 401.
         return false;
       }
     }
 
-    // Set lock
+    // Acquire lock
     localStorage.setItem(lockKey, String(Date.now()));
 
     try {
+      // Re-read the refresh token in case another tab updated it
+      // between our initial read and acquiring the lock
+      const currentRefreshToken = localStorage.getItem("refresh_token");
+      if (!currentRefreshToken) {
+        localStorage.removeItem(lockKey);
+        return false;
+      }
+
       const res = await fetch(`${API_BASE}/auth/refresh`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refresh_token: refreshToken }),
+        body: JSON.stringify({ refresh_token: currentRefreshToken }),
       });
       if (!res.ok) {
         localStorage.removeItem(lockKey);
