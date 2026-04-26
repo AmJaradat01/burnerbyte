@@ -122,11 +122,11 @@ export default function SetupPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
+    <div className="flex min-h-screen items-center justify-center p-4 bg-gradient-to-b from-muted/50 to-background">
       <div className="w-full max-w-2xl space-y-6">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold flex items-center justify-center gap-2"><Logo size="lg" /> Setup</h1>
-          <p className="text-muted-foreground mt-1">One-time platform configuration</p>
+        <div className="text-center space-y-1">
+          <Logo size="lg" />
+          <p className="text-muted-foreground text-sm">One-time platform configuration</p>
         </div>
 
         {/* Progress */}
@@ -135,15 +135,16 @@ export default function SetupPage() {
             <button
               key={s.key}
               onClick={() => i < step && setStep(i)}
-              className={`h-2 flex-1 rounded-full transition-colors ${
-                i < step ? "bg-primary" : i === step ? "bg-primary/60" : "bg-muted"
+              disabled={i >= step}
+              className={`h-1.5 flex-1 rounded-full transition-colors ${
+                i < step ? "bg-primary" : i === step ? "bg-primary/50" : "bg-muted"
               }`}
               aria-label={`Step ${i + 1}: ${s.label}`}
             />
           ))}
         </div>
 
-        <Card>
+        <Card className="shadow-lg">
           <CardHeader>
             <div className="flex items-center gap-2">
               <CardTitle>Step {step + 1}: {currentStep.label}</CardTitle>
