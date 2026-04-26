@@ -52,12 +52,26 @@ const initialData: SetupData = {
   invites: [],
 };
 
+function passwordStrength(pw: string): { pct: number; label: string; color: string } {
+  let score = 0;
+  if (pw.length >= 8) score++;
+  if (/[A-Z]/.test(pw)) score++;
+  if (/[a-z]/.test(pw)) score++;
+  if (/\d/.test(pw)) score++;
+  if (/[^A-Za-z0-9]/.test(pw)) score++;
+  const pct = (score / 5) * 100;
+  if (pct <= 40) return { pct, label: "Weak", color: "bg-red-500" };
+  if (pct <= 60) return { pct, label: "Fair", color: "bg-amber-500" };
+  return { pct, label: "Strong", color: "bg-emerald-500" };
+}
+
 export default function SetupPage() {
   const router = useRouter();
   const [checking, setChecking] = useState(true);
   const [step, setStep] = useState(0);
   const [data, setData] = useState<SetupData>(initialData);
   const [submitting, setSubmitting] = useState(false);
+  const [healthStatus, setHealthStatus] = useState<{ postgres: boolean; redis: boolean } | null>(null);
 
   useEffect(() => {
     api.get<{ completed: boolean }>("/setup/status")
@@ -67,6 +81,15 @@ export default function SetupPage() {
       })
       .catch(() => setChecking(false));
   }, [router]);
+
+  // Check infrastructure health on mount
+  useEffect(() => {
+    if (!checking) {
+      fetch("/readyz").then((r) => r.json()).then((data) => {
+        setHealthStatus({ postgres: data.postgres === "ok", redis: data.redis === "ok" });
+      }).catch(() => setHealthStatus(null));
+    }
+  }, [checking]);
 
   if (checking) {
     return (
@@ -194,6 +217,27 @@ export default function SetupPage() {
             {/* Admin */}
             {currentStep.key === "admin" && (
               <>
+                {/* Infrastructure health check */}
+                {healthStatus && (
+                  <div className={`rounded-lg border p-3 flex items-center gap-3 ${healthStatus.postgres && healthStatus.redis ? "bg-emerald-50 border-emerald-200" : "bg-red-50 border-red-200"}`}>
+                    <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${healthStatus.postgres && healthStatus.redis ? "bg-emerald-100" : "bg-red-100"}`}>
+                      {healthStatus.postgres && healthStatus.redis ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <Shield className="h-4 w-4 text-red-600" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-medium ${healthStatus.postgres && healthStatus.redis ? "text-emerald-800" : "text-red-800"}`}>
+                        {healthStatus.postgres && healthStatus.redis ? "Infrastructure ready" : "Infrastructure issue detected"}
+                      </p>
+                      <div className="flex items-center gap-3 mt-0.5">
+                        <span className={`text-xs flex items-center gap-1 ${healthStatus.postgres ? "text-emerald-600" : "text-red-600"}`}>
+                          {healthStatus.postgres ? <Check className="h-3 w-3" /> : <Trash2 className="h-3 w-3" />} PostgreSQL
+                        </span>
+                        <span className={`text-xs flex items-center gap-1 ${healthStatus.redis ? "text-emerald-600" : "text-red-600"}`}>
+                          {healthStatus.redis ? <Check className="h-3 w-3" /> : <Trash2 className="h-3 w-3" />} Redis
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="admin-name">Display name</Label>
                   <Input id="admin-name" value={data.admin.display_name} onChange={(e) => setData({ ...data, admin: { ...data.admin, display_name: e.target.value } })} placeholder="Your full name" autoFocus />
@@ -201,11 +245,36 @@ export default function SetupPage() {
                 <div className="space-y-2">
                   <Label htmlFor="admin-email">Email</Label>
                   <Input id="admin-email" type="email" value={data.admin.email} onChange={(e) => setData({ ...data, admin: { ...data.admin, email: e.target.value } })} placeholder="admin@example.com" />
+                  {data.admin.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.admin.email) && (
+                    <p className="text-xs text-destructive">Please enter a valid email address</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="admin-pass">Password</Label>
                   <Input id="admin-pass" type="password" value={data.admin.password} onChange={(e) => setData({ ...data, admin: { ...data.admin, password: e.target.value } })} placeholder="••••••••" />
-                  <p className="text-xs text-muted-foreground">Min 8 characters with uppercase, lowercase, number, and special character.</p>
+                  {data.admin.password && (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                          <div className={`h-full rounded-full transition-all ${passwordStrength(data.admin.password).color}`} style={{ width: `${passwordStrength(data.admin.password).pct}%` }} />
+                        </div>
+                        <span className="text-[10px] text-muted-foreground w-10">{passwordStrength(data.admin.password).label}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+                        {[
+                          { met: data.admin.password.length >= 8, label: "8+ chars" },
+                          { met: /[A-Z]/.test(data.admin.password), label: "Uppercase" },
+                          { met: /[a-z]/.test(data.admin.password), label: "Lowercase" },
+                          { met: /\d/.test(data.admin.password), label: "Number" },
+                          { met: /[^A-Za-z0-9]/.test(data.admin.password), label: "Special" },
+                        ].map((r) => (
+                          <span key={r.label} className={`text-[10px] flex items-center gap-0.5 ${r.met ? "text-emerald-600" : "text-muted-foreground"}`}>
+                            {r.met ? <Check className="h-2.5 w-2.5" /> : <span className="h-2.5 w-2.5 rounded-full border border-current inline-block" />} {r.label}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </>
             )}
@@ -321,7 +390,13 @@ export default function SetupPage() {
             {currentStep.key === "domain" && (
               <div className="space-y-2">
                 <Label htmlFor="domain-name">Domain name</Label>
-                <Input id="domain-name" value={data.domain.domain_name} onChange={(e) => setData({ ...data, domain: { ...data.domain, domain_name: e.target.value } })} placeholder="mail.example.com" autoFocus className="font-mono" />
+                <Input id="domain-name" value={data.domain.domain_name} onChange={(e) => setData({ ...data, domain: { ...data.domain, domain_name: e.target.value.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, "") } })} placeholder="mail.example.com" autoFocus className="font-mono" />
+                {data.domain.domain_name && !data.domain.domain_name.includes(".") && (
+                  <p className="text-xs text-destructive">Domain must contain at least one dot (e.g., mail.example.com)</p>
+                )}
+                {data.domain.domain_name && data.domain.domain_name.includes(".") && (
+                  <p className="text-xs text-emerald-600 flex items-center gap-1"><Check className="h-3 w-3" /> Valid domain format</p>
+                )}
                 <p className="text-xs text-muted-foreground">This domain will receive inbound emails. You&apos;ll configure MX and TXT records after setup.</p>
               </div>
             )}
