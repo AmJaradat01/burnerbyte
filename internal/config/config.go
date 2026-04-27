@@ -150,6 +150,7 @@ type DefaultsConfig struct {
 	Timezone             string        `mapstructure:"timezone"`
 	DateFormat           string        `mapstructure:"date_format"`
 	TimeFormat           string        `mapstructure:"time_format"`
+	MaxSessionsPerUser   int           `mapstructure:"max_sessions_per_user"`
 }
 
 type EmailVerificationConfig struct {
@@ -185,6 +186,9 @@ func Load() (*Config, error) {
 	v.SetEnvPrefix("BB")
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.AutomaticEnv()
+
+	// Defaults
+	v.SetDefault("defaults.max_sessions_per_user", 5)
 
 	// Map specific env vars to config keys
 	v.BindEnv("database.url", "DATABASE_URL")

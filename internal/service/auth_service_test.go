@@ -63,6 +63,15 @@ func (r *mockRow) Scan(dest ...any) error {
 				t := v.(time.Time)
 				*d = &t
 			}
+		case **int:
+			if v == nil {
+				*d = nil
+			} else if ip, ok := v.(*int); ok {
+				*d = ip
+			} else {
+				n := v.(int)
+				*d = &n
+			}
 		case *any:
 			*d = v
 		default:
@@ -167,6 +176,7 @@ func TestProperty_BugCondition_SSOIdentityLookupSetsEmailVerified(t *testing.T) 
 					// Use typed nil pointers for nullable fields
 					var nilStr *string
 					var nilTime *time.Time
+					var nilInt *int
 					return &mockRow{values: []any{
 						userID,      // id
 						email,       // email
@@ -182,6 +192,7 @@ func TestProperty_BugCondition_SSOIdentityLookupSetsEmailVerified(t *testing.T) 
 						nilStr,      // date_format
 						nilStr,      // time_format
 						nilStr,      // auth_method_lock
+						nilInt,      // max_sessions
 						now,         // created_at
 						now,         // updated_at
 					}}
@@ -319,6 +330,7 @@ func TestProperty_Preservation_AlreadyVerifiedIdentityLookup(t *testing.T) {
 				case strings.Contains(sql, "FROM users"):
 					var nilStr *string
 					var nilTime *time.Time
+					var nilInt *int
 					return &mockRow{values: []any{
 						userID,
 						email,
@@ -334,6 +346,7 @@ func TestProperty_Preservation_AlreadyVerifiedIdentityLookup(t *testing.T) {
 						nilStr,      // date_format
 						nilStr,      // time_format
 						nilStr,      // auth_method_lock
+						nilInt,      // max_sessions
 						now,         // created_at
 						now,         // updated_at
 					}}
@@ -529,6 +542,7 @@ func TestProperty_Preservation_EmailLookupSSO(t *testing.T) {
 					// User found by email with EmailVerified=false
 					var nilStr *string
 					var nilTime *time.Time
+					var nilInt *int
 					return &mockRow{values: []any{
 						userID,
 						email,
@@ -544,6 +558,7 @@ func TestProperty_Preservation_EmailLookupSSO(t *testing.T) {
 						nilStr,  // date_format
 						nilStr,  // time_format
 						nilStr,  // auth_method_lock
+						nilInt,  // max_sessions
 						now,     // created_at
 						now,     // updated_at
 					}}

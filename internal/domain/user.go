@@ -21,6 +21,7 @@ type User struct {
 	Timezone          *string    `json:"timezone,omitempty"`
 	DateFormat        *string    `json:"date_format,omitempty"`
 	TimeFormat        *string    `json:"time_format,omitempty"`
+	MaxSessions       *int       `json:"max_sessions,omitempty"`
 	CreatedAt         time.Time  `json:"created_at"`
 	UpdatedAt         time.Time  `json:"updated_at"`
 	LastLoginAt       *time.Time `json:"last_login_at,omitempty"`

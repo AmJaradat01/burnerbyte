@@ -396,6 +396,7 @@ function PlatformSettingsCard() {
       timezone: string; date_format: string; time_format: string;
       default_inbox_ttl: string; max_inbox_ttl: string;
       max_attachment_size_mb: number; max_domains: number; max_teams: number; max_inboxes_per_domain: number;
+      max_sessions_per_user: number;
     }>("/admin/platform"),
     staleTime: 300_000,
   });
@@ -408,6 +409,7 @@ function PlatformSettingsCard() {
     timezone: "UTC", date_format: "YYYY-MM-DD", time_format: "24h",
     default_inbox_ttl: "", max_inbox_ttl: "",
     max_attachment_size_mb: 0, max_domains: 0, max_teams: 0, max_inboxes_per_domain: 0,
+    max_sessions_per_user: 5,
   });
   const [saving, setSaving] = useState(false);
 
@@ -602,6 +604,24 @@ function PlatformSettingsCard() {
               <div className="space-y-1">
                 <Label className="text-xs">Max inboxes/domain</Label>
                 <Input type="number" min={0} value={form.max_inboxes_per_domain} onChange={(e) => set("max_inboxes_per_domain", Number(e.target.value) || 0)} className="h-8" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Session Limits */}
+        <div className="space-y-3 border-t pt-5">
+          <div className="flex items-center gap-2">
+            <div className="h-6 w-6 rounded-md bg-cyan-100 flex items-center justify-center">
+              <Monitor className="h-3.5 w-3.5 text-cyan-600" />
+            </div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Session Limits</p>
+          </div>
+          <div className="rounded-lg border p-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Max sessions per user</Label>
+                <Input type="number" min={1} max={100} value={form.max_sessions_per_user} onChange={(e) => set("max_sessions_per_user", Math.max(1, Math.min(100, Number(e.target.value) || 1)))} className="h-8" />
               </div>
             </div>
           </div>

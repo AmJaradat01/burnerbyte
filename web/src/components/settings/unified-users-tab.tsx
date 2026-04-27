@@ -44,7 +44,7 @@ function timeAgo(date: string) {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
-type MergedUser = User & { org_role?: string; membership_id?: string; member_created_at?: string; last_login_at?: string };
+type MergedUser = User & { org_role?: string; membership_id?: string; member_created_at?: string; last_login_at?: string; max_sessions?: number | null };
 
 export function UnifiedUsersTab({ orgId }: { orgId: string }) {
   const qc = useQueryClient();
@@ -361,8 +361,9 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
   const [migratePasswordOpen, setMigratePasswordOpen] = useState(false);
   const [migratePassword, setMigratePassword] = useState("");
   const [migrating, setMigrating] = useState(false);
+  const [maxSessions, setMaxSessions] = useState<string>(u.max_sessions != null ? String(u.max_sessions) : "");
 
-  const dirty = displayName !== u.display_name || isAdminFlag !== u.is_system_admin || verified !== u.email_verified || avatarURL !== (u.avatar_url ?? "") || timezone !== (u.timezone ?? "") || dateFormat !== (u.date_format ?? "") || timeFormat !== (u.time_format ?? "") || authMethodLock !== (u.auth_method_lock ?? "any");
+  const dirty = displayName !== u.display_name || isAdminFlag !== u.is_system_admin || verified !== u.email_verified || avatarURL !== (u.avatar_url ?? "") || timezone !== (u.timezone ?? "") || dateFormat !== (u.date_format ?? "") || timeFormat !== (u.time_format ?? "") || authMethodLock !== (u.auth_method_lock ?? "any") || maxSessions !== (u.max_sessions != null ? String(u.max_sessions) : "");
 
   const copyId = () => {
     navigator.clipboard.writeText(u.id);
@@ -374,12 +375,14 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
     setSaving(true);
     try {
       if (isAdmin) {
+        const maxSessionsChanged = maxSessions !== (u.max_sessions != null ? String(u.max_sessions) : "");
         await api.patch(`/admin/users/${u.id}`, {
           display_name: displayName !== u.display_name ? displayName : undefined,
           avatar_url: avatarURL !== (u.avatar_url ?? "") ? avatarURL : undefined,
           is_system_admin: isAdminFlag !== u.is_system_admin ? isAdminFlag : undefined,
           email_verified: verified !== u.email_verified ? verified : undefined,
           auth_method_lock: authMethodLock !== (u.auth_method_lock ?? "any") ? (authMethodLock === "any" ? null : authMethodLock) : undefined,
+          ...(maxSessionsChanged ? { max_sessions: maxSessions === "" ? null : Number(maxSessions) } : {}),
         });
       } else {
         await api.patch("/auth/me", {
@@ -483,7 +486,7 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
   return (
     <Dialog open={open} onOpenChange={(v) => {
       setOpen(v);
-      if (v) { setDisplayName(u.display_name); setIsAdminFlag(u.is_system_admin); setVerified(u.email_verified); setAvatarURL(u.avatar_url ?? ""); setTimezone(u.timezone ?? ""); setDateFormat(u.date_format ?? ""); setTimeFormat(u.time_format ?? ""); setCopied(false); setAuthMethodLock(u.auth_method_lock ?? "any"); setMigratePasswordOpen(false); setMigratePassword(""); }
+      if (v) { setDisplayName(u.display_name); setIsAdminFlag(u.is_system_admin); setVerified(u.email_verified); setAvatarURL(u.avatar_url ?? ""); setTimezone(u.timezone ?? ""); setDateFormat(u.date_format ?? ""); setTimeFormat(u.time_format ?? ""); setCopied(false); setAuthMethodLock(u.auth_method_lock ?? "any"); setMigratePasswordOpen(false); setMigratePassword(""); setMaxSessions(u.max_sessions != null ? String(u.max_sessions) : ""); }
     }}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="w-[95vw] max-w-6xl max-h-[92vh] overflow-y-auto">
@@ -692,6 +695,27 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
                       <SelectItem value="password">Password Only</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="border-t" />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-100">
+                      <Users className="h-4 w-4 text-orange-600" />
+                    </div>
+                    <div>
+                      <Label className="text-sm">Session Limit</Label>
+                      <p className="text-xs text-muted-foreground">Override the platform default max concurrent sessions for this user.</p>
+                    </div>
+                  </div>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={maxSessions}
+                    onChange={(e) => setMaxSessions(e.target.value)}
+                    placeholder="Platform default"
+                    className="w-36 h-8 text-xs"
+                  />
                 </div>
                 <div className="border-t" />
                 <div className="space-y-4">
