@@ -7,6 +7,7 @@
 - Admin user management: per-user session limit override
 - Best-effort enforcement: oldest sessions auto-revoked on login when limit exceeded
 - Frontend: Session Limits section in Platform Settings, Session Limit field in User Detail Dialog
+- Fix: LoadFromDB now restores all platform settings (max_sessions_per_user, inbox TTLs, quotas) from DB on restart
 
 ## v0.24.x (April 2026)
 - Domains page: 6 UI enhancements (bulk actions, sort/filter, DNS copy, health indicator)
