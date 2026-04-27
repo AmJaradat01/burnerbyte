@@ -45,6 +45,13 @@ func (c *Config) LoadFromDB(ctx context.Context, repo SystemConfigLoader) {
 		Timezone             string `json:"timezone"`
 		DateFormat           string `json:"date_format"`
 		TimeFormat           string `json:"time_format"`
+		DefaultInboxTTL      string `json:"default_inbox_ttl"`
+		MaxInboxTTL          string `json:"max_inbox_ttl"`
+		MaxAttachmentSizeMB  int    `json:"max_attachment_size_mb"`
+		MaxDomains           int    `json:"max_domains"`
+		MaxTeams             int    `json:"max_teams"`
+		MaxInboxesPerDomain  int    `json:"max_inboxes_per_domain"`
+		MaxSessionsPerUser   int    `json:"max_sessions_per_user"`
 	}
 	if err := repo.Get(ctx, "platform", &platform); err == nil {
 		c.Defaults.AllowRegistration = platform.AllowRegistration
@@ -65,6 +72,27 @@ func (c *Config) LoadFromDB(ctx context.Context, repo SystemConfigLoader) {
 		c.Defaults.Timezone = platform.Timezone
 		c.Defaults.DateFormat = platform.DateFormat
 		c.Defaults.TimeFormat = platform.TimeFormat
+		if d, err := time.ParseDuration(platform.DefaultInboxTTL); err == nil && d > 0 {
+			c.Defaults.DefaultInboxTTL = d
+		}
+		if d, err := time.ParseDuration(platform.MaxInboxTTL); err == nil && d > 0 {
+			c.Defaults.MaxInboxTTL = d
+		}
+		if platform.MaxAttachmentSizeMB > 0 {
+			c.Defaults.MaxAttachmentSizeMB = platform.MaxAttachmentSizeMB
+		}
+		if platform.MaxDomains > 0 {
+			c.Defaults.MaxDomains = platform.MaxDomains
+		}
+		if platform.MaxTeams > 0 {
+			c.Defaults.MaxTeams = platform.MaxTeams
+		}
+		if platform.MaxInboxesPerDomain > 0 {
+			c.Defaults.MaxInboxesPerDomain = platform.MaxInboxesPerDomain
+		}
+		if platform.MaxSessionsPerUser > 0 {
+			c.Defaults.MaxSessionsPerUser = platform.MaxSessionsPerUser
+		}
 		slog.Info("loaded platform config from database")
 	}
 }
