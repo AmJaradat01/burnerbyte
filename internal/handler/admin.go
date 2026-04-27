@@ -169,6 +169,7 @@ func (h *AdminHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		IsSystemAdmin  *bool   `json:"is_system_admin,omitempty"`
 		EmailVerified  *bool   `json:"email_verified,omitempty"`
 		AuthMethodLock *string `json:"auth_method_lock,omitempty"`
+		MaxSessions    *int    `json:"max_sessions,omitempty"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -179,11 +180,16 @@ func (h *AdminHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "cannot remove your own system admin status")
 		return
 	}
+	// Validate max_sessions when provided
+	if input.MaxSessions != nil && (*input.MaxSessions < 1 || *input.MaxSessions > 100) {
+		writeError(w, http.StatusBadRequest, "max_sessions must be between 1 and 100")
+		return
+	}
 
 	// Fetch user before update for diff
 	beforeUser, _ := h.authSvc.GetMe(r.Context(), userID)
 
-	user, err := h.authSvc.AdminUpdateUser(r.Context(), userID, input.DisplayName, input.AvatarURL, input.IsSystemAdmin, input.EmailVerified)
+	user, err := h.authSvc.AdminUpdateUser(r.Context(), userID, input.DisplayName, input.AvatarURL, input.IsSystemAdmin, input.EmailVerified, input.MaxSessions)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to update user")
 		return
@@ -202,10 +208,10 @@ func (h *AdminHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	meta := map[string]any{"email": user.Email, "display_name": input.DisplayName, "is_system_admin": input.IsSystemAdmin, "email_verified": input.EmailVerified, "auth_method_lock": input.AuthMethodLock}
+	meta := map[string]any{"email": user.Email, "display_name": input.DisplayName, "is_system_admin": input.IsSystemAdmin, "email_verified": input.EmailVerified, "auth_method_lock": input.AuthMethodLock, "max_sessions": input.MaxSessions}
 	if beforeUser != nil {
-		meta["before"] = map[string]any{"display_name": beforeUser.DisplayName, "avatar_url": beforeUser.AvatarURL, "is_system_admin": beforeUser.IsSystemAdmin, "email_verified": beforeUser.EmailVerified}
-		meta["after"] = map[string]any{"display_name": user.DisplayName, "avatar_url": user.AvatarURL, "is_system_admin": user.IsSystemAdmin, "email_verified": user.EmailVerified}
+		meta["before"] = map[string]any{"display_name": beforeUser.DisplayName, "avatar_url": beforeUser.AvatarURL, "is_system_admin": beforeUser.IsSystemAdmin, "email_verified": beforeUser.EmailVerified, "max_sessions": beforeUser.MaxSessions}
+		meta["after"] = map[string]any{"display_name": user.DisplayName, "avatar_url": user.AvatarURL, "is_system_admin": user.IsSystemAdmin, "email_verified": user.EmailVerified, "max_sessions": user.MaxSessions}
 	}
 	auditRecordEnhanced(r, uuid.Nil, "admin.user_updated", "user", userID, user.Email, meta)
 	writeJSON(w, http.StatusOK, user)
@@ -278,6 +284,7 @@ type PlatformSettings struct {
 	MaxDomains           int    `json:"max_domains"`
 	MaxTeams             int    `json:"max_teams"`
 	MaxInboxesPerDomain  int    `json:"max_inboxes_per_domain"`
+	MaxSessionsPerUser   int    `json:"max_sessions_per_user"`
 }
 
 func (h *AdminHandler) GetPlatformSettings(w http.ResponseWriter, r *http.Request) {
@@ -301,6 +308,7 @@ func (h *AdminHandler) GetPlatformSettings(w http.ResponseWriter, r *http.Reques
 		MaxDomains:           h.cfg.Defaults.MaxDomains,
 		MaxTeams:             h.cfg.Defaults.MaxTeams,
 		MaxInboxesPerDomain:  h.cfg.Defaults.MaxInboxesPerDomain,
+		MaxSessionsPerUser:   h.cfg.Defaults.MaxSessionsPerUser,
 	}
 	h.cfgMu.RUnlock()
 	if tz == "" { tz = "UTC" }
@@ -329,6 +337,10 @@ func (h *AdminHandler) UpdatePlatformSettings(w http.ResponseWriter, r *http.Req
 	if input.LockoutDurationMins < 1 {
 		input.LockoutDurationMins = 1
 	}
+	if input.MaxSessionsPerUser < 1 || input.MaxSessionsPerUser > 100 {
+		writeError(w, http.StatusBadRequest, "max_sessions_per_user must be between 1 and 100")
+		return
+	}
 
 	// Capture before state under read lock
 	h.cfgMu.RLock()
@@ -342,6 +354,7 @@ func (h *AdminHandler) UpdatePlatformSettings(w http.ResponseWriter, r *http.Req
 		"password_require_special": h.cfg.Password.RequireSpecial,
 		"lockout_max_attempts":  h.cfg.Lockout.MaxAttempts,
 		"lockout_duration_mins": int(h.cfg.Lockout.Duration.Minutes()),
+		"max_sessions_per_user": h.cfg.Defaults.MaxSessionsPerUser,
 	}
 	h.cfgMu.RUnlock()
 
@@ -373,6 +386,7 @@ func (h *AdminHandler) UpdatePlatformSettings(w http.ResponseWriter, r *http.Req
 	h.cfg.Defaults.MaxDomains = input.MaxDomains
 	h.cfg.Defaults.MaxTeams = input.MaxTeams
 	h.cfg.Defaults.MaxInboxesPerDomain = input.MaxInboxesPerDomain
+	h.cfg.Defaults.MaxSessionsPerUser = input.MaxSessionsPerUser
 	h.cfgMu.Unlock()
 
 	after := map[string]any{
@@ -385,6 +399,7 @@ func (h *AdminHandler) UpdatePlatformSettings(w http.ResponseWriter, r *http.Req
 		"password_require_special": input.PasswordRequireSpec,
 		"lockout_max_attempts":  input.LockoutMaxAttempts,
 		"lockout_duration_mins": input.LockoutDurationMins,
+		"max_sessions_per_user": input.MaxSessionsPerUser,
 	}
 
 	auditRecordEnhanced(r, uuid.Nil, "admin.platform_settings_updated", "platform", uuid.Nil, "platform", map[string]any{

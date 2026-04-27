@@ -796,7 +796,7 @@ func (s *AuthService) DeleteUser(ctx context.Context, userID uuid.UUID) error {
 	return s.userRepo.Delete(ctx, userID)
 }
 
-func (s *AuthService) AdminUpdateUser(ctx context.Context, userID uuid.UUID, displayName, avatarURL *string, isSystemAdmin, emailVerified *bool) (*domain.User, error) {
+func (s *AuthService) AdminUpdateUser(ctx context.Context, userID uuid.UUID, displayName, avatarURL *string, isSystemAdmin, emailVerified *bool, maxSessions *int) (*domain.User, error) {
 	user, err := s.userRepo.GetByID(ctx, userID)
 	if err != nil {
 		return nil, err
@@ -813,10 +813,26 @@ func (s *AuthService) AdminUpdateUser(ctx context.Context, userID uuid.UUID, dis
 	if emailVerified != nil {
 		user.EmailVerified = *emailVerified
 	}
+	if maxSessions != nil {
+		user.MaxSessions = maxSessions
+	}
 	if err := s.userRepo.Update(ctx, user); err != nil {
 		return nil, err
 	}
 	return user, nil
+}
+
+// resolveSessionLimit returns the effective max sessions for a user.
+// Uses the per-user override if set, otherwise falls back to the platform default.
+func (s *AuthService) resolveSessionLimit(user *domain.User) int {
+	if user.MaxSessions != nil && *user.MaxSessions >= 1 {
+		return *user.MaxSessions
+	}
+	limit := s.cfg.Defaults.MaxSessionsPerUser
+	if limit <= 0 {
+		return 5 // safety fallback
+	}
+	return limit
 }
 
 func (s *AuthService) createSession(ctx context.Context, repo *postgres.SessionRepo, user *domain.User, ip, userAgent string, ssoProviderName *string) (*domain.TokenPair, error) {
@@ -828,6 +844,23 @@ func (s *AuthService) createSession(ctx context.Context, repo *postgres.SessionR
 
 	rawRefresh, refreshHash, err := s.tokens.GenerateRefreshToken()
 	if err != nil { return nil, fmt.Errorf("generate refresh token: %w", err) }
+
+	// ── Session limit enforcement (best-effort) ──
+	limit := s.resolveSessionLimit(user)
+	activeCount, countErr := repo.CountActiveByUser(ctx, user.ID)
+	if countErr != nil {
+		slog.Warn("failed to count active sessions for limit enforcement",
+			"user_id", user.ID, "error", countErr)
+	} else if activeCount >= limit {
+		revoked, revokeErr := repo.RevokeOldestExceeding(ctx, user.ID, limit-1)
+		if revokeErr != nil {
+			slog.Warn("failed to revoke excess sessions",
+				"user_id", user.ID, "limit", limit, "error", revokeErr)
+		} else if revoked > 0 {
+			slog.Info("revoked excess sessions due to session limit",
+				"user_id", user.ID, "revoked", revoked, "limit", limit)
+		}
+	}
 
 	var ipPtr, uaPtr *string
 	if ip != "" {
