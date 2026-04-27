@@ -6,6 +6,7 @@
 - Admin platform settings: max_sessions_per_user (1-100, default 5)
 - Admin user management: per-user session limit override
 - Best-effort enforcement: oldest sessions auto-revoked on login when limit exceeded
+- Immediate session invalidation: Redis-based revocation cache rejects old access tokens instantly
 - Frontend: Session Limits section in Platform Settings, Session Limit field in User Detail Dialog
 - Fix: LoadFromDB now restores all platform settings (max_sessions_per_user, inbox TTLs, quotas) from DB on restart
 
