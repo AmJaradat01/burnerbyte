@@ -99,6 +99,7 @@ defaults:
   max_teams: 50
   max_inboxes_per_domain: 100
   enforce_sso: false
+  max_sessions_per_user: 5
   password_reset_ttl: 1h
   invite_expiry_ttl: 48h
   presigned_url_ttl: 15m
