@@ -10,6 +10,7 @@ export interface User {
   date_format?: string;
   time_format?: string;
   auth_method_lock?: string;
+  max_sessions?: number | null;
   last_login_at?: string;
   created_at: string;
   updated_at: string;

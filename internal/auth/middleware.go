@@ -39,7 +39,12 @@ type UserRepo interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*domain.User, error)
 }
 
-func Middleware(tm *TokenManager, userRepo UserRepo, apikeyRepo APIKeyRepo) func(http.Handler) http.Handler {
+// SessionRevocationChecker is the interface the middleware needs to check session revocations.
+type SessionRevocationChecker interface {
+	RevokedAt(ctx context.Context, userID uuid.UUID) int64
+}
+
+func Middleware(tm *TokenManager, userRepo UserRepo, apikeyRepo APIKeyRepo, revocationCache SessionRevocationChecker) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			header := r.Header.Get("Authorization")
@@ -140,6 +145,15 @@ func Middleware(tm *TokenManager, userRepo UserRepo, apikeyRepo APIKeyRepo) func
 			if user.PasswordChangedAt != nil && claims.IssuedAt != nil {
 				if claims.IssuedAt.Before(*user.PasswordChangedAt) {
 					writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "token invalidated by password change"})
+					return
+				}
+			}
+
+			// Check if sessions were revoked after this token was issued (session limit enforcement)
+			if revocationCache != nil && claims.IssuedAt != nil {
+				revokedAt := revocationCache.RevokedAt(r.Context(), userID)
+				if revokedAt > 0 && claims.IssuedAt.Unix() < revokedAt {
+					writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "session revoked"})
 					return
 				}
 			}
