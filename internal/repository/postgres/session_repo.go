@@ -148,6 +148,40 @@ func (r *SessionRepo) DeleteExpired(ctx context.Context) (int64, error) {
 	return tag.RowsAffected(), nil
 }
 
+// CountActiveByUser returns the number of non-revoked, non-expired sessions for a user.
+func (r *SessionRepo) CountActiveByUser(ctx context.Context, userID uuid.UUID) (int, error) {
+	var count int
+	err := r.db.QueryRow(ctx,
+		`SELECT COUNT(*) FROM sessions WHERE user_id = $1 AND revoked = FALSE AND expires_at > NOW()`,
+		userID,
+	).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("count active sessions: %w", err)
+	}
+	return count, nil
+}
+
+// RevokeOldestExceeding revokes the oldest active sessions for a user,
+// keeping only the `keep` most recent sessions active (ordered by last_used_at DESC, created_at DESC).
+// Returns the number of sessions revoked. Idempotent: if active count ≤ keep, revokes nothing and returns 0.
+func (r *SessionRepo) RevokeOldestExceeding(ctx context.Context, userID uuid.UUID, keep int) (int, error) {
+	tag, err := r.db.Exec(ctx,
+		`WITH ranked AS (
+			SELECT id,
+			       ROW_NUMBER() OVER (ORDER BY last_used_at DESC, created_at DESC) AS rn
+			FROM sessions
+			WHERE user_id = $1 AND revoked = FALSE AND expires_at > NOW()
+		)
+		UPDATE sessions SET revoked = TRUE
+		WHERE id IN (SELECT id FROM ranked WHERE rn > $2)`,
+		userID, keep,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("revoke oldest exceeding: %w", err)
+	}
+	return int(tag.RowsAffected()), nil
+}
+
 func (r *SessionRepo) scanOne(ctx context.Context, query string, args ...any) (*domain.Session, error) {
 	var s domain.Session
 	err := r.db.QueryRow(ctx, query, args...).Scan(
