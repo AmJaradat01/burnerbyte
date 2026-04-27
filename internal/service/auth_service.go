@@ -48,6 +48,7 @@ type AuthService struct {
 	lockout           *auth.Lockout
 	mailer            *mailer.Mailer
 	cfg               *config.Config
+	revocationCache   *auth.SessionRevocationCache
 }
 
 func NewAuthService(
@@ -65,6 +66,7 @@ func NewAuthService(
 	lockout *auth.Lockout,
 	mailer *mailer.Mailer,
 	cfg *config.Config,
+	revocationCache *auth.SessionRevocationCache,
 ) *AuthService {
 	return &AuthService{
 		pool: pool, userRepo: userRepo, sessionRepo: sessionRepo,
@@ -72,6 +74,7 @@ func NewAuthService(
 		ssoIdentityRepo: ssoIdentityRepo, ssoProviderRepo: ssoProviderRepo, teamRepo: teamRepo,
 		domainMappingRepo: domainMappingRepo,
 		tokens: tokens, lockout: lockout, mailer: mailer, cfg: cfg,
+		revocationCache: revocationCache,
 	}
 }
 
@@ -859,6 +862,9 @@ func (s *AuthService) createSession(ctx context.Context, repo *postgres.SessionR
 		} else if revoked > 0 {
 			slog.Info("revoked excess sessions due to session limit",
 				"user_id", user.ID, "revoked", revoked, "limit", limit)
+			if s.revocationCache != nil {
+				s.revocationCache.MarkRevoked(ctx, user.ID)
+			}
 		}
 	}
 

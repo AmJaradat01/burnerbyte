@@ -125,7 +125,7 @@ func main() {
 	if s3Client != nil {
 		attachmentSvc = service.NewAttachmentService(attachmentRepo, emailRepo, inboxRepo, s3Client, cfg.MinIO, cfg.Defaults.MaxAttachmentSizeMB, cfg.Defaults.PresignedURLTTL)
 	}
-	authSvc := service.NewAuthService(pool, userRepo, sessionRepo, resetRepo, postgres.NewEmailVerificationRepo(pool), orgRepo, ssoIdentityRepo, ssoProviderRepo, teamRepo, ssoDomainMappingRepo, tokenMgr, lockout, ml, cfg)
+	authSvc := service.NewAuthService(pool, userRepo, sessionRepo, resetRepo, postgres.NewEmailVerificationRepo(pool), orgRepo, ssoIdentityRepo, ssoProviderRepo, teamRepo, ssoDomainMappingRepo, tokenMgr, lockout, ml, cfg, auth.NewSessionRevocationCache(rdb, cfg.JWT.AccessTTL))
 	orgSvc := service.NewOrgService(pool, orgRepo, teamRepo, userRepo, ssoProviderRepo, ml, cfg.Server.FrontendURL, cfg.Defaults.InviteExpiryTTL)
 	redisInboxRepo := redisrepo.NewInboxRepo(rdb)
 	domainSvc := service.NewDomainService(domainRepo, orgRepo, inboxRepo, redisInboxRepo, verHistoryRepo, cfg)
@@ -194,7 +194,7 @@ func main() {
 	adminWSHandler := handler.NewAdminWSHandler(adminHub, cfg.CORS.AllowedOrigins)
 
 	// Auth middleware
-	authMw := auth.Middleware(tokenMgr, userRepo, apikeyRepo)
+	authMw := auth.Middleware(tokenMgr, userRepo, apikeyRepo, auth.NewSessionRevocationCache(rdb, cfg.JWT.AccessTTL))
 
 	// Rate limiter
 	rateLimiter := mw.NewRateLimiter(cfg.RateLimit)
