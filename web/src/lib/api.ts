@@ -44,7 +44,7 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: res.statusText }));
-    throw new ApiError(body.error || res.statusText, res.status);
+    throw new ApiError(body.error || res.statusText, res.status, body);
   }
 
   // Handle 204 No Content and empty responses
@@ -124,7 +124,7 @@ async function tryRefresh(): Promise<boolean> {
 }
 
 export class ApiError extends Error {
-  constructor(message: string, public status: number) {
+  constructor(message: string, public status: number, public data?: unknown) {
     super(message);
   }
 }
