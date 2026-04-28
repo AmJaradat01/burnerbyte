@@ -249,6 +249,7 @@ func TestProperty_BugCondition_SSOIdentityLookupSetsEmailVerified(t *testing.T) 
 			nil, // mailer
 			cfg,
 			nil, // revocationCache
+			nil, // pendingLoginStore
 		)
 
 		// Execute SSOLogin
@@ -378,7 +379,7 @@ func TestProperty_Preservation_AlreadyVerifiedIdentityLookup(t *testing.T) {
 		svc := NewAuthService(
 			nil, userRepo, sessionRepo, nil, nil, nil,
 			ssoIdentityRepo, ssoProviderRepo, nil, nil,
-			tokens, nil, nil, cfg, nil,
+			tokens, nil, nil, cfg, nil, nil,
 		)
 
 		callbackResult := &domain.SSOCallbackResult{
@@ -475,7 +476,7 @@ func TestProperty_Preservation_NewSSOUser(t *testing.T) {
 		svc := NewAuthService(
 			nil, userRepo, sessionRepo, nil, nil, nil,
 			ssoIdentityRepo, ssoProviderRepo, nil, nil,
-			tokens, nil, nil, cfg, nil,
+			tokens, nil, nil, cfg, nil, nil,
 		)
 
 		callbackResult := &domain.SSOCallbackResult{
@@ -598,7 +599,7 @@ func TestProperty_Preservation_EmailLookupSSO(t *testing.T) {
 		svc := NewAuthService(
 			nil, userRepo, sessionRepo, nil, nil, nil,
 			ssoIdentityRepo, ssoProviderRepo, nil, nil,
-			tokens, nil, nil, cfg, nil,
+			tokens, nil, nil, cfg, nil, nil,
 		)
 
 		callbackResult := &domain.SSOCallbackResult{
