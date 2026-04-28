@@ -34,6 +34,7 @@ func NewAuthHandler(svc *service.AuthService, sso *auth.SSOManager, cfg *config.
 func (h *AuthHandler) PublicRoutes(r chi.Router, rl *middleware.RateLimiter) {
 	r.With(rl.LoginLimiter).Post("/auth/register", h.Register)
 	r.With(rl.LoginLimiter).Post("/auth/login", h.Login)
+	r.With(rl.LoginLimiter).Post("/auth/login/resolve", h.ResolveLogin)
 	r.With(rl.LoginLimiter).Post("/auth/refresh", h.Refresh)
 	r.With(rl.ForgotPasswordLimiter).Post("/auth/forgot-password", h.ForgotPassword)
 	r.With(rl.LoginLimiter).Post("/auth/reset-password", h.ResetPassword)
@@ -112,6 +113,22 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusLocked, err.Error())
 			return
 		}
+		var limitErr *service.SessionLimitError
+		if errors.As(err, &limitErr) {
+			auditRecordEnhanced(r, uuid.Nil, "user.login_session_conflict", "user", uuid.Nil, input.Email, map[string]any{
+				"email":           input.Email,
+				"active_sessions": len(limitErr.Sessions),
+				"limit":           limitErr.Limit,
+			})
+			writeJSON(w, http.StatusConflict, map[string]any{
+				"error":         "session limit reached",
+				"code":          "session_limit",
+				"pending_token": limitErr.PendingToken,
+				"sessions":      limitErr.Sessions,
+				"limit":         limitErr.Limit,
+			})
+			return
+		}
 		reason := "invalid_credentials"
 		if strings.Contains(err.Error(), "SSO login required") {
 			reason = "sso_enforced"
@@ -122,6 +139,46 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	auditRecordEnhanced(r, uuid.Nil, "user.login", "user", user.ID, user.Email, map[string]any{"email": user.Email, "user_agent": r.Header.Get("User-Agent"), "ip_address": r.RemoteAddr, "login_method": "password"})
+	writeJSON(w, http.StatusOK, map[string]any{
+		"user":   user,
+		"tokens": tokens,
+	})
+}
+
+func (h *AuthHandler) ResolveLogin(w http.ResponseWriter, r *http.Request) {
+	var input domain.ResolveLoginInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if input.PendingToken == "" || input.RevokeSessionID == uuid.Nil {
+		writeError(w, http.StatusBadRequest, "pending_token and revoke_session_id are required")
+		return
+	}
+
+	user, tokens, err := h.svc.ResolveLogin(r.Context(), input, r.RemoteAddr, r.UserAgent())
+	if err != nil {
+		var limitErr *service.SessionLimitError
+		if errors.As(err, &limitErr) {
+			writeJSON(w, http.StatusConflict, map[string]any{
+				"error":         "session limit reached",
+				"code":          "session_limit",
+				"pending_token": limitErr.PendingToken,
+				"sessions":      limitErr.Sessions,
+				"limit":         limitErr.Limit,
+			})
+			return
+		}
+		writeError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+
+	auditRecordEnhanced(r, uuid.Nil, "user.login", "user", user.ID, user.Email, map[string]any{
+		"email":             user.Email,
+		"login_method":      "password",
+		"resolved_conflict": true,
+	})
 	writeJSON(w, http.StatusOK, map[string]any{
 		"user":   user,
 		"tokens": tokens,
