@@ -9,6 +9,8 @@
 - SSO login retains auto-revoke behavior unchanged
 - Race condition handling with fresh pending tokens on concurrent logins
 - Frontend SessionConflictDialog with device info, IP, last active time
+- Docs: removed outdated BUILDPLAN.md, TODO.md, web/README.md
+- Docs: synced MDX docs with session limits config and conflict resolution API
 
 ## v0.45.0 (April 2026)
 - Session limits: configurable max active sessions per user (platform default + per-user override)
