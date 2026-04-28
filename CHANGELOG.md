@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.46.0 (April 2026)
+- Session conflict resolution: interactive dialog when login hits session limit
+- Two-phase login flow: 409 Conflict with pending token + active sessions list
+- User picks which session to revoke via dialog, or cancels to keep all sessions
+- POST /auth/login/resolve endpoint to complete login after user's choice
+- PendingLoginStore: Redis-backed, single-use tokens with 5-min TTL
+- SSO login retains auto-revoke behavior unchanged
+- Race condition handling with fresh pending tokens on concurrent logins
+- Frontend SessionConflictDialog with device info, IP, last active time
+
 ## v0.45.0 (April 2026)
 - Session limits: configurable max active sessions per user (platform default + per-user override)
 - Migration 000042: nullable max_sessions column on users table
