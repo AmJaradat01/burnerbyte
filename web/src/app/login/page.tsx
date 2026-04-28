@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { ProviderIcon } from "@/components/provider-icon";
+import { SessionConflictDialog } from "@/components/session-conflict-dialog";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
 
@@ -41,6 +42,8 @@ export default function LoginPage() {
   const [ssoLoading, setSsoLoading] = useState<string | null>(null);
   const login = useAuthStore((s) => s.login);
   const fetchMe = useAuthStore((s) => s.fetchMe);
+  const sessionConflict = useAuthStore((s) => s.sessionConflict);
+  const clearSessionConflict = useAuthStore((s) => s.clearSessionConflict);
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -93,6 +96,11 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await login(email, password);
+      // If sessionConflict was set (409), the dialog will handle it — don't navigate
+      const conflict = useAuthStore.getState().sessionConflict;
+      if (conflict) {
+        return;
+      }
       const redirect = searchParams.get("redirect") || "/";
       router.push(redirect);
     } catch (err) {
@@ -100,6 +108,18 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleConflictResolved = async () => {
+    clearSessionConflict();
+    await fetchMe();
+    const redirect = searchParams.get("redirect") || "/";
+    router.push(redirect);
+  };
+
+  const handleConflictClose = () => {
+    clearSessionConflict();
+    // Email and password fields are preserved since we don't clear them
   };
 
   const ssoEnabled = sso?.enabled ?? false;
@@ -206,6 +226,17 @@ export default function LoginPage() {
           )}
         </Card>
       </div>
+
+      {sessionConflict && (
+        <SessionConflictDialog
+          open={!!sessionConflict}
+          onClose={handleConflictClose}
+          pendingToken={sessionConflict.pendingToken}
+          sessions={sessionConflict.sessions}
+          limit={sessionConflict.limit}
+          onResolved={handleConflictResolved}
+        />
+      )}
     </div>
   );
 }

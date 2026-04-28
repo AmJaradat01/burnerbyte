@@ -49,6 +49,7 @@ type AuthService struct {
 	mailer            *mailer.Mailer
 	cfg               *config.Config
 	revocationCache   *auth.SessionRevocationCache
+	pendingLoginStore *auth.PendingLoginStore
 }
 
 func NewAuthService(
@@ -67,6 +68,7 @@ func NewAuthService(
 	mailer *mailer.Mailer,
 	cfg *config.Config,
 	revocationCache *auth.SessionRevocationCache,
+	pendingLoginStore *auth.PendingLoginStore,
 ) *AuthService {
 	return &AuthService{
 		pool: pool, userRepo: userRepo, sessionRepo: sessionRepo,
@@ -74,7 +76,8 @@ func NewAuthService(
 		ssoIdentityRepo: ssoIdentityRepo, ssoProviderRepo: ssoProviderRepo, teamRepo: teamRepo,
 		domainMappingRepo: domainMappingRepo,
 		tokens: tokens, lockout: lockout, mailer: mailer, cfg: cfg,
-		revocationCache: revocationCache,
+		revocationCache:   revocationCache,
+		pendingLoginStore: pendingLoginStore,
 	}
 }
 
@@ -234,7 +237,103 @@ func (s *AuthService) Login(ctx context.Context, input domain.LoginInput, ip, us
 		return nil, nil, fmt.Errorf("SSO login required for your organization")
 	}
 
-	tokenPair, err := s.createSession(ctx, s.sessionRepo, user, ip, userAgent, nil)
+	// ── Session limit check (interactive for password login) ──
+	limit := s.resolveSessionLimit(user)
+	activeCount, countErr := s.sessionRepo.CountActiveByUser(ctx, user.ID)
+	if countErr != nil {
+		slog.Warn("failed to count active sessions for limit check",
+			"user_id", user.ID, "error", countErr)
+		// On count failure, fall through to create session (best-effort)
+	} else if activeCount >= limit {
+		// Return conflict instead of auto-revoking
+		sessions, listErr := s.sessionRepo.ListByUser(ctx, user.ID)
+		if listErr != nil {
+			return nil, nil, fmt.Errorf("failed to list sessions: %w", listErr)
+		}
+		pendingToken, storeErr := s.pendingLoginStore.Store(ctx, auth.PendingLogin{
+			UserID:    user.ID,
+			IP:        ip,
+			UserAgent: userAgent,
+		})
+		if storeErr != nil {
+			return nil, nil, fmt.Errorf("failed to store pending login: %w", storeErr)
+		}
+		return nil, nil, &SessionLimitError{
+			PendingToken: pendingToken,
+			Sessions:     sessions,
+			Limit:        limit,
+		}
+	}
+
+	tokenPair, err := s.createSessionDirect(ctx, s.sessionRepo, user, ip, userAgent)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return user, tokenPair, nil
+}
+
+// ResolveLogin completes a pending login by revoking the chosen session
+// and creating a new session for the user.
+func (s *AuthService) ResolveLogin(ctx context.Context, input domain.ResolveLoginInput, ip, userAgent string) (*domain.User, *domain.TokenPair, error) {
+	ip = stripPort(ip)
+
+	// Step 1: Consume pending token (single-use)
+	pending, err := s.pendingLoginStore.Consume(ctx, input.PendingToken)
+	if err != nil {
+		return nil, nil, fmt.Errorf("invalid or expired pending login token")
+	}
+
+	// Step 2: Log IP mismatch (security telemetry, non-blocking)
+	if pending.IP != ip {
+		slog.Warn("pending login IP mismatch",
+			"user_id", pending.UserID,
+			"original_ip", pending.IP,
+			"resolve_ip", ip)
+	}
+
+	// Step 3: Load user
+	user, err := s.userRepo.GetByID(ctx, pending.UserID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("user not found")
+	}
+
+	// Step 4: Revoke the chosen session
+	if err := s.sessionRepo.RevokeForUser(ctx, user.ID, input.RevokeSessionID); err != nil {
+		return nil, nil, fmt.Errorf("failed to revoke session: %w", err)
+	}
+
+	// Step 5: Mark revocation for immediate token invalidation
+	if s.revocationCache != nil {
+		s.revocationCache.MarkRevoked(ctx, user.ID)
+	}
+
+	// Step 6: Re-check limit (handle race condition)
+	limit := s.resolveSessionLimit(user)
+	activeCount, err := s.sessionRepo.CountActiveByUser(ctx, user.ID)
+	if err != nil {
+		slog.Warn("failed to count sessions after resolve", "user_id", user.ID, "error", err)
+		// Fall through — attempt session creation
+	} else if activeCount >= limit {
+		// Race condition: another login filled the slot
+		sessions, _ := s.sessionRepo.ListByUser(ctx, user.ID)
+		pendingToken, storeErr := s.pendingLoginStore.Store(ctx, auth.PendingLogin{
+			UserID:    user.ID,
+			IP:        pending.IP,
+			UserAgent: pending.UserAgent,
+		})
+		if storeErr != nil {
+			return nil, nil, fmt.Errorf("failed to store new pending login: %w", storeErr)
+		}
+		return nil, nil, &SessionLimitError{
+			PendingToken: pendingToken,
+			Sessions:     sessions,
+			Limit:        limit,
+		}
+	}
+
+	// Step 7: Create new session using original IP/UA from pending login
+	tokenPair, err := s.createSessionDirect(ctx, s.sessionRepo, user, pending.IP, pending.UserAgent)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -898,6 +997,50 @@ func (s *AuthService) createSession(ctx context.Context, repo *postgres.SessionR
 	}, nil
 }
 
+// createSessionDirect creates a session without any session limit enforcement.
+// Used by Login() (under-limit path) and ResolveLogin() after the caller has
+// already verified there is room for a new session.
+func (s *AuthService) createSessionDirect(ctx context.Context, repo *postgres.SessionRepo, user *domain.User, ip, userAgent string) (*domain.TokenPair, error) {
+	ip = stripPort(ip)
+	accessToken, err := s.tokens.GenerateAccessToken(user.ID, user.Email, user.IsSystemAdmin)
+	if err != nil {
+		return nil, err
+	}
+
+	rawRefresh, refreshHash, err := s.tokens.GenerateRefreshToken()
+	if err != nil {
+		return nil, fmt.Errorf("generate refresh token: %w", err)
+	}
+
+	var ipPtr, uaPtr *string
+	if ip != "" {
+		ipPtr = &ip
+	}
+	if userAgent != "" {
+		uaPtr = &userAgent
+	}
+
+	session := &domain.Session{
+		ID:               uuid.New(),
+		UserID:           user.ID,
+		RefreshTokenHash: refreshHash,
+		TokenFamily:      uuid.New(),
+		IPAddress:        ipPtr,
+		UserAgent:        uaPtr,
+		ExpiresAt:        time.Now().Add(s.tokens.RefreshTTL()),
+	}
+
+	if err := repo.Create(ctx, session); err != nil {
+		return nil, err
+	}
+
+	return &domain.TokenPair{
+		AccessToken:  accessToken,
+		RefreshToken: rawRefresh,
+		ExpiresIn:    int64(s.tokens.AccessTTL().Seconds()),
+	}, nil
+}
+
 // LinkSSOIdentity links an SSO identity to an existing user.
 func (s *AuthService) LinkSSOIdentity(ctx context.Context, userID uuid.UUID, result *domain.SSOCallbackResult) error {
 	if s.ssoIdentityRepo == nil {
@@ -1138,6 +1281,18 @@ type LockedError struct {
 
 func (e *LockedError) Error() string {
 	return fmt.Sprintf("account locked, retry after %s", e.RetryAfter)
+}
+
+// SessionLimitError is returned by Login() when the session limit is reached
+// and the user needs to choose which session to revoke.
+type SessionLimitError struct {
+	PendingToken string           `json:"pending_token"`
+	Sessions     []domain.Session `json:"sessions"`
+	Limit        int              `json:"limit"`
+}
+
+func (e *SessionLimitError) Error() string {
+	return "session limit reached"
 }
 
 // checkAuthMethodLock returns an error if the user's auth method lock

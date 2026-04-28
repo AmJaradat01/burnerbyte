@@ -74,6 +74,11 @@ type DeleteAccountInput struct {
 	Password string `json:"password"`
 }
 
+type ResolveLoginInput struct {
+	PendingToken    string    `json:"pending_token"`
+	RevokeSessionID uuid.UUID `json:"revoke_session_id"`
+}
+
 type Session struct {
 	ID               uuid.UUID  `json:"id"`
 	UserID           uuid.UUID  `json:"user_id"`
