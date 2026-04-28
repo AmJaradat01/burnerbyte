@@ -19,6 +19,47 @@ Authorization: Bearer <access_token>
 
 Obtain tokens via `POST /auth/login` or `POST /auth/register`. Access tokens expire after 15 minutes (configurable). Use `POST /auth/refresh` with the refresh token to get new tokens. `GET /auth/sso-status` returns SSO configuration and `password_policy` settings.
 
+### Session Limit Enforcement
+
+When a user logs in via password and has reached their maximum number of active sessions, the API returns a `409 Conflict` instead of automatically revoking the oldest session. The response includes a pending login token and the list of active sessions.
+
+#### Login Response (409 — Session Limit Reached)
+
+```json
+{
+  "error": "session limit reached",
+  "code": "session_limit",
+  "pending_token": "a1b2c3d4...",
+  "sessions": [
+    {
+      "id": "...",
+      "ip_address": "192.168.1.1",
+      "user_agent": "Mozilla/5.0 ...",
+      "last_used_at": "2026-04-28T10:30:00Z",
+      "created_at": "2026-04-25T08:00:00Z"
+    }
+  ],
+  "limit": 5
+}
+```
+
+#### Resolving the Conflict
+
+To complete the login, call `POST /auth/login/resolve` with the pending token and the ID of the session to revoke:
+
+```json
+{
+  "pending_token": "a1b2c3d4...",
+  "revoke_session_id": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+On success, returns the same `200` response as a normal login with `user` and `tokens`. If the session limit is still exceeded (race condition), returns another `409` with a fresh pending token and updated session list.
+
+The pending token expires after 5 minutes. SSO logins are not affected — they continue to auto-revoke the oldest session when the limit is reached.
+
+The default session limit is 5 per user, configurable via `defaults.max_sessions_per_user` in config or `PUT /admin/platform`. Per-user overrides can be set via `PATCH /admin/users/:id` with `max_sessions`.
+
 ### API Key
 
 ```bash
@@ -59,7 +100,7 @@ Response:
 | 401 | Unauthorized (missing or invalid token) | `unauthenticated` |
 | 403 | Forbidden (insufficient permissions) | `forbidden` |
 | 404 | Resource not found | `not_found` |
-| 409 | Conflict (duplicate resource) | `conflict` |
+| 409 | Conflict (duplicate resource or session limit reached) | `conflict` or `session_limit` |
 | 429 | Rate limit exceeded | `rate_limited` |
 | 500 | Internal server error | `internal_error` |
 
@@ -78,7 +119,7 @@ X-RateLimit-Reset: 1709251200
 | Group | Endpoints |
 |---|---|
 | Setup | `GET /setup/status`, `POST /setup/complete` |
-| Auth | `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `GET /auth/me`, `PATCH /auth/me`, `PUT /auth/me/password`, `DELETE /auth/me`, `POST /auth/forgot-password`, `POST /auth/reset-password`, `GET /auth/verify-email/:token`, `GET /auth/sso-status`, `GET /auth/datetime-settings` |
+| Auth | `POST /auth/register`, `POST /auth/login`, `POST /auth/login/resolve`, `POST /auth/refresh`, `GET /auth/me`, `PATCH /auth/me`, `PUT /auth/me/password`, `DELETE /auth/me`, `POST /auth/forgot-password`, `POST /auth/reset-password`, `GET /auth/verify-email/:token`, `GET /auth/sso-status`, `GET /auth/datetime-settings` |
 | Sessions | `GET /auth/sessions`, `DELETE /auth/sessions/:id`, `DELETE /auth/sessions` |
 | SSO | `GET /auth/sso/:provider`, `GET /auth/sso/:provider/callback` |
 | SSO Identities | `GET /auth/me/sso`, `DELETE /auth/me/sso/:provider` |
