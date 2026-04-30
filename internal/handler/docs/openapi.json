@@ -399,6 +399,50 @@
             "type": "integer"
           }
         }
+      },
+      "SessionLimitError": {
+        "type": "object",
+        "description": "Returned when password login hits the session limit (409 Conflict)",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "session limit reached"
+          },
+          "code": {
+            "type": "string",
+            "example": "session_limit"
+          },
+          "pending_token": {
+            "type": "string",
+            "description": "Single-use token for resolving the conflict (5-minute TTL)"
+          },
+          "sessions": {
+            "type": "array",
+            "description": "List of active sessions the user can choose to revoke",
+            "items": {
+              "$ref": "#/components/schemas/Session"
+            }
+          },
+          "limit": {
+            "type": "integer",
+            "description": "The user's effective session limit"
+          }
+        }
+      },
+      "ResolveLoginInput": {
+        "type": "object",
+        "required": ["pending_token", "revoke_session_id"],
+        "properties": {
+          "pending_token": {
+            "type": "string",
+            "description": "The pending login token from the 409 response"
+          },
+          "revoke_session_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the session to revoke"
+          }
+        }
       }
     },
     "parameters": {
@@ -614,8 +658,59 @@
           "401": {
             "description": "Invalid credentials"
           },
+          "409": {
+            "description": "Session limit reached — returns pending token and active sessions list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionLimitError"
+                }
+              }
+            }
+          },
           "423": {
             "description": "Account locked"
+          }
+        }
+      }
+    },
+    "/auth/login/resolve": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Resolve session conflict",
+        "description": "Complete a pending login by revoking the chosen session. Called after POST /auth/login returns 409.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveLoginInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful after session revocation"
+          },
+          "400": {
+            "description": "Missing pending_token or revoke_session_id"
+          },
+          "401": {
+            "description": "Invalid or expired pending login token"
+          },
+          "409": {
+            "description": "Session limit still exceeded (race condition) — returns new pending token and updated sessions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionLimitError"
+                }
+              }
+            }
           }
         }
       }
