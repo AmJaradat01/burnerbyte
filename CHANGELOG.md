@@ -11,6 +11,9 @@
 - Frontend SessionConflictDialog with device info, IP, last active time
 - Docs: removed outdated BUILDPLAN.md, TODO.md, web/README.md
 - Docs: synced MDX docs with session limits config and conflict resolution API
+- Fix: revocation cache now marked on all session revocation paths (user, admin, bulk)
+- Fix: Redis fallback in Login() — auto-revokes oldest session when Redis is unavailable
+- Fix: OpenAPI spec updated with /auth/login/resolve endpoint and 409 schemas
 
 ## v0.45.0 (April 2026)
 - Session limits: configurable max active sessions per user (platform default + per-user override)

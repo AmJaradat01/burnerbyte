@@ -125,7 +125,8 @@ func main() {
 	if s3Client != nil {
 		attachmentSvc = service.NewAttachmentService(attachmentRepo, emailRepo, inboxRepo, s3Client, cfg.MinIO, cfg.Defaults.MaxAttachmentSizeMB, cfg.Defaults.PresignedURLTTL)
 	}
-	authSvc := service.NewAuthService(pool, userRepo, sessionRepo, resetRepo, postgres.NewEmailVerificationRepo(pool), orgRepo, ssoIdentityRepo, ssoProviderRepo, teamRepo, ssoDomainMappingRepo, tokenMgr, lockout, ml, cfg, auth.NewSessionRevocationCache(rdb, cfg.JWT.AccessTTL), auth.NewPendingLoginStore(rdb, 5*time.Minute))
+	sessionRevCache := auth.NewSessionRevocationCache(rdb, cfg.JWT.AccessTTL)
+	authSvc := service.NewAuthService(pool, userRepo, sessionRepo, resetRepo, postgres.NewEmailVerificationRepo(pool), orgRepo, ssoIdentityRepo, ssoProviderRepo, teamRepo, ssoDomainMappingRepo, tokenMgr, lockout, ml, cfg, sessionRevCache, auth.NewPendingLoginStore(rdb, 5*time.Minute))
 	orgSvc := service.NewOrgService(pool, orgRepo, teamRepo, userRepo, ssoProviderRepo, ml, cfg.Server.FrontendURL, cfg.Defaults.InviteExpiryTTL)
 	redisInboxRepo := redisrepo.NewInboxRepo(rdb)
 	domainSvc := service.NewDomainService(domainRepo, orgRepo, inboxRepo, redisInboxRepo, verHistoryRepo, cfg)
@@ -194,7 +195,7 @@ func main() {
 	adminWSHandler := handler.NewAdminWSHandler(adminHub, cfg.CORS.AllowedOrigins)
 
 	// Auth middleware
-	authMw := auth.Middleware(tokenMgr, userRepo, apikeyRepo, auth.NewSessionRevocationCache(rdb, cfg.JWT.AccessTTL))
+	authMw := auth.Middleware(tokenMgr, userRepo, apikeyRepo, sessionRevCache)
 
 	// Rate limiter
 	rateLimiter := mw.NewRateLimiter(cfg.RateLimit)
@@ -413,6 +414,8 @@ func main() {
 					json.NewEncoder(w).Encode(map[string]string{"error": "failed to revoke sessions"})
 					return
 				}
+				// Mark revocation for immediate access token invalidation
+				sessionRevCache.MarkRevoked(r.Context(), userID)
 				handler.Audit.RecordEnhanced(r, uuid.Nil, "admin.sessions_revoked", "user", userID, targetEmail, map[string]any{"target_user_id": userID.String(), "email": targetEmail, "display_name": targetDisplayName})
 				w.Header().Set("Content-Type", "application/json")
 				json.NewEncoder(w).Encode(map[string]string{"message": "all sessions revoked"})
