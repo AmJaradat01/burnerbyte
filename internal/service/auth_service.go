@@ -245,23 +245,52 @@ func (s *AuthService) Login(ctx context.Context, input domain.LoginInput, ip, us
 			"user_id", user.ID, "error", countErr)
 		// On count failure, fall through to create session (best-effort)
 	} else if activeCount >= limit {
-		// Return conflict instead of auto-revoking
-		sessions, listErr := s.sessionRepo.ListByUser(ctx, user.ID)
-		if listErr != nil {
-			return nil, nil, fmt.Errorf("failed to list sessions: %w", listErr)
-		}
-		pendingToken, storeErr := s.pendingLoginStore.Store(ctx, auth.PendingLogin{
-			UserID:    user.ID,
-			IP:        ip,
-			UserAgent: userAgent,
-		})
-		if storeErr != nil {
-			return nil, nil, fmt.Errorf("failed to store pending login: %w", storeErr)
-		}
-		return nil, nil, &SessionLimitError{
-			PendingToken: pendingToken,
-			Sessions:     sessions,
-			Limit:        limit,
+		// Try interactive conflict resolution (requires Redis for pending token)
+		if s.pendingLoginStore != nil {
+			sessions, listErr := s.sessionRepo.ListByUser(ctx, user.ID)
+			if listErr != nil {
+				return nil, nil, fmt.Errorf("failed to list sessions: %w", listErr)
+			}
+			pendingToken, storeErr := s.pendingLoginStore.Store(ctx, auth.PendingLogin{
+				UserID:    user.ID,
+				IP:        ip,
+				UserAgent: userAgent,
+			})
+			if storeErr != nil {
+				// Redis unavailable — fall back to auto-revoking oldest session (same as SSO)
+				slog.Warn("pending login store failed, falling back to auto-revoke",
+					"user_id", user.ID, "error", storeErr)
+				revoked, revokeErr := s.sessionRepo.RevokeOldestExceeding(ctx, user.ID, limit-1)
+				if revokeErr != nil {
+					slog.Warn("fallback auto-revoke failed",
+						"user_id", user.ID, "limit", limit, "error", revokeErr)
+				} else if revoked > 0 {
+					slog.Info("fallback: revoked excess sessions due to session limit",
+						"user_id", user.ID, "revoked", revoked, "limit", limit)
+					if s.revocationCache != nil {
+						s.revocationCache.MarkRevoked(ctx, user.ID)
+					}
+				}
+			} else {
+				return nil, nil, &SessionLimitError{
+					PendingToken: pendingToken,
+					Sessions:     sessions,
+					Limit:        limit,
+				}
+			}
+		} else {
+			// No pending login store configured — auto-revoke (same as SSO)
+			revoked, revokeErr := s.sessionRepo.RevokeOldestExceeding(ctx, user.ID, limit-1)
+			if revokeErr != nil {
+				slog.Warn("auto-revoke failed (no pending login store)",
+					"user_id", user.ID, "limit", limit, "error", revokeErr)
+			} else if revoked > 0 {
+				slog.Info("revoked excess sessions due to session limit (no pending login store)",
+					"user_id", user.ID, "revoked", revoked, "limit", limit)
+				if s.revocationCache != nil {
+					s.revocationCache.MarkRevoked(ctx, user.ID)
+				}
+			}
 		}
 	}
 
@@ -495,7 +524,13 @@ func (s *AuthService) ListSessions(ctx context.Context, userID uuid.UUID) ([]dom
 }
 
 func (s *AuthService) RevokeSession(ctx context.Context, userID, sessionID uuid.UUID) error {
-	return s.sessionRepo.RevokeForUser(ctx, userID, sessionID)
+	if err := s.sessionRepo.RevokeForUser(ctx, userID, sessionID); err != nil {
+		return err
+	}
+	if s.revocationCache != nil {
+		s.revocationCache.MarkRevoked(ctx, userID)
+	}
+	return nil
 }
 
 func (s *AuthService) GetSession(ctx context.Context, userID, sessionID uuid.UUID) (*domain.Session, error) {
@@ -503,7 +538,14 @@ func (s *AuthService) GetSession(ctx context.Context, userID, sessionID uuid.UUI
 }
 
 func (s *AuthService) RevokeAllSessions(ctx context.Context, userID uuid.UUID) (int, error) {
-	return s.sessionRepo.RevokeAllCount(ctx, userID)
+	count, err := s.sessionRepo.RevokeAllCount(ctx, userID)
+	if err != nil {
+		return 0, err
+	}
+	if s.revocationCache != nil && count > 0 {
+		s.revocationCache.MarkRevoked(ctx, userID)
+	}
+	return count, nil
 }
 
 func (s *AuthService) ForgotPassword(ctx context.Context, input domain.ForgotPasswordInput) error {
