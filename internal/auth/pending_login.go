@@ -58,6 +58,28 @@ func (s *PendingLoginStore) Store(ctx context.Context, pending PendingLogin) (st
 	return token, nil
 }
 
+// Peek retrieves a pending login by token without consuming it.
+// Used by the SSO conflict flow to fetch session list for display.
+// Returns ErrPendingLoginNotFound if the token is invalid or expired.
+func (s *PendingLoginStore) Peek(ctx context.Context, token string) (*PendingLogin, error) {
+	key := fmt.Sprintf("pending_login:%s", token)
+
+	val, err := s.rdb.Get(ctx, key).Result()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return nil, ErrPendingLoginNotFound
+		}
+		return nil, fmt.Errorf("peek pending login: %w", err)
+	}
+
+	var pending PendingLogin
+	if err := json.Unmarshal([]byte(val), &pending); err != nil {
+		return nil, fmt.Errorf("unmarshal pending login: %w", err)
+	}
+
+	return &pending, nil
+}
+
 // Consume retrieves and deletes a pending login by token (single-use).
 // Returns ErrPendingLoginNotFound if the token is invalid, expired, or already consumed.
 func (s *PendingLoginStore) Consume(ctx context.Context, token string) (*PendingLogin, error) {

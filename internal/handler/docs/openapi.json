@@ -715,6 +715,56 @@
         }
       }
     },
+    "/auth/login/pending-sessions": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Get pending login sessions",
+        "description": "Returns the active sessions for a pending login token without consuming it. Used by the SSO conflict flow to fetch session list for display.",
+        "security": [],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The pending login token from the SSO session conflict redirect"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sessions and limit for the pending login",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "sessions": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Session"
+                      }
+                    },
+                    "limit": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing token parameter"
+          },
+          "401": {
+            "description": "Invalid or expired pending login token"
+          }
+        }
+      }
+    },
     "/auth/refresh": {
       "post": {
         "tags": [
@@ -824,7 +874,7 @@
         ],
         "responses": {
           "302": {
-            "description": "Redirect to frontend with tokens"
+            "description": "Redirect to frontend with tokens, or redirect to /login#session_conflict=true&pending_token=...&limit=N when session limit is reached"
           }
         }
       }
