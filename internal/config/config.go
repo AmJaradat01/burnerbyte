@@ -128,6 +128,7 @@ type PasswordConfig struct {
 	RequireLowercase bool `mapstructure:"require_lowercase"`
 	RequireNumber    bool `mapstructure:"require_number"`
 	RequireSpecial   bool `mapstructure:"require_special"`
+	BcryptCost       int  `mapstructure:"bcrypt_cost"`
 }
 
 type DefaultsConfig struct {
@@ -154,7 +155,8 @@ type DefaultsConfig struct {
 }
 
 type EmailVerificationConfig struct {
-	Enabled bool `mapstructure:"enabled"`
+	Enabled bool          `mapstructure:"enabled"`
+	TTL     time.Duration `mapstructure:"ttl"`
 }
 
 type LoggingConfig struct {

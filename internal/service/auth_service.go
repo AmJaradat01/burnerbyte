@@ -87,6 +87,10 @@ func (s *AuthService) Register(ctx context.Context, input domain.CreateUserInput
 		return nil, nil, fmt.Errorf("invalid email format")
 	}
 
+	if err := auth.ValidateDisplayName(input.DisplayName); err != nil {
+		return nil, nil, err
+	}
+
 	if err := auth.ValidatePassword(input.Password, s.cfg.Password); err != nil {
 		return nil, nil, err
 	}
@@ -109,7 +113,7 @@ func (s *AuthService) Register(ctx context.Context, input domain.CreateUserInput
 		}
 	}
 
-	hash, err := auth.HashPassword(input.Password)
+	hash, err := auth.HashPassword(input.Password, s.cfg.Password)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -156,7 +160,11 @@ func (s *AuthService) Register(ctx context.Context, input domain.CreateUserInput
 		go func() {
 			token := generateSecureToken(32)
 			tokenHash := postgres.HashToken(token)
-			expiresAt := time.Now().Add(24 * time.Hour)
+			ttl := s.cfg.EmailVerification.TTL
+			if ttl <= 0 {
+				ttl = 24 * time.Hour
+			}
+			expiresAt := time.Now().Add(ttl)
 			if err := s.emailVerifyRepo.Create(context.Background(), user.ID, tokenHash, expiresAt); err != nil {
 				slog.Error("failed to create email verification token", "error", err, "user_id", user.ID)
 				return
@@ -179,6 +187,8 @@ func (s *AuthService) Login(ctx context.Context, input domain.LoginInput, ip, us
 	user, err := s.userRepo.GetByEmail(ctx, input.Email)
 	if err != nil {
 		if errors.Is(err, postgres.ErrNotFound) {
+			// Perform a dummy bcrypt comparison to prevent timing-based user enumeration.
+			auth.DummyCheckPassword(input.Password)
 			return nil, nil, fmt.Errorf("invalid email or password")
 		}
 		return nil, nil, err
@@ -238,66 +248,17 @@ func (s *AuthService) Login(ctx context.Context, input domain.LoginInput, ip, us
 	}
 
 	// ── Session limit check (interactive for password login) ──
-	limit := s.resolveSessionLimit(user)
-	activeCount, countErr := s.sessionRepo.CountActiveByUser(ctx, user.ID)
-	if countErr != nil {
-		slog.Warn("failed to count active sessions for limit check",
-			"user_id", user.ID, "error", countErr)
-		// On count failure, fall through to create session (best-effort)
-	} else if activeCount >= limit {
-		// Try interactive conflict resolution (requires Redis for pending token)
-		if s.pendingLoginStore != nil {
-			sessions, listErr := s.sessionRepo.ListByUser(ctx, user.ID)
-			if listErr != nil {
-				return nil, nil, fmt.Errorf("failed to list sessions: %w", listErr)
-			}
-			pendingToken, storeErr := s.pendingLoginStore.Store(ctx, auth.PendingLogin{
-				UserID:    user.ID,
-				IP:        ip,
-				UserAgent: userAgent,
-			})
-			if storeErr != nil {
-				// Redis unavailable — fall back to auto-revoking oldest session (same as SSO)
-				slog.Warn("pending login store failed, falling back to auto-revoke",
-					"user_id", user.ID, "error", storeErr)
-				revoked, revokeErr := s.sessionRepo.RevokeOldestExceeding(ctx, user.ID, limit-1)
-				if revokeErr != nil {
-					slog.Warn("fallback auto-revoke failed",
-						"user_id", user.ID, "limit", limit, "error", revokeErr)
-				} else if revoked > 0 {
-					slog.Info("fallback: revoked excess sessions due to session limit",
-						"user_id", user.ID, "revoked", revoked, "limit", limit)
-					if s.revocationCache != nil {
-						s.revocationCache.MarkRevoked(ctx, user.ID)
-					}
-				}
-			} else {
-				return nil, nil, &SessionLimitError{
-					PendingToken: pendingToken,
-					Sessions:     sessions,
-					Limit:        limit,
-				}
-			}
-		} else {
-			// No pending login store configured — auto-revoke (same as SSO)
-			revoked, revokeErr := s.sessionRepo.RevokeOldestExceeding(ctx, user.ID, limit-1)
-			if revokeErr != nil {
-				slog.Warn("auto-revoke failed (no pending login store)",
-					"user_id", user.ID, "limit", limit, "error", revokeErr)
-			} else if revoked > 0 {
-				slog.Info("revoked excess sessions due to session limit (no pending login store)",
-					"user_id", user.ID, "revoked", revoked, "limit", limit)
-				if s.revocationCache != nil {
-					s.revocationCache.MarkRevoked(ctx, user.ID)
-				}
-			}
-		}
+	proceed, limitErr := s.enforceSessionLimit(ctx, user, ip, userAgent)
+	if !proceed {
+		return nil, nil, limitErr
 	}
 
 	tokenPair, err := s.createSessionDirect(ctx, s.sessionRepo, user, ip, userAgent)
 	if err != nil {
 		return nil, nil, err
 	}
+
+	s.updateLastLoginAt(ctx, user)
 
 	return user, tokenPair, nil
 }
@@ -425,6 +386,7 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken, ip, userAgent s
 		TokenFamily:      session.TokenFamily, // same family
 		IPAddress:        &ip,
 		UserAgent:        &userAgent,
+		SSOProviderName:  session.SSOProviderName, // carry forward auth method
 		ExpiresAt:        time.Now().Add(s.tokens.RefreshTTL()),
 	}
 
@@ -450,6 +412,9 @@ func (s *AuthService) UpdateProfile(ctx context.Context, userID uuid.UUID, input
 	}
 
 	if input.DisplayName != nil {
+		if err := auth.ValidateDisplayName(*input.DisplayName); err != nil {
+			return nil, err
+		}
 		user.DisplayName = *input.DisplayName
 	}
 	if input.AvatarURL != nil {
@@ -489,7 +454,7 @@ func (s *AuthService) ChangePassword(ctx context.Context, userID uuid.UUID, inpu
 		return err
 	}
 
-	hash, err := auth.HashPassword(input.NewPassword)
+	hash, err := auth.HashPassword(input.NewPassword, s.cfg.Password)
 	if err != nil {
 		return err
 	}
@@ -512,10 +477,19 @@ func (s *AuthService) DeleteAccount(ctx context.Context, userID uuid.UUID, passw
 		return err
 	}
 
-	if user.PasswordHash != nil && !auth.CheckPassword(*user.PasswordHash, password) {
-		return fmt.Errorf("incorrect password")
+	if user.PasswordHash != nil {
+		// Password-based user: verify password
+		if !auth.CheckPassword(*user.PasswordHash, password) {
+			return fmt.Errorf("incorrect password")
+		}
+	} else {
+		// SSO-only user: require a recent SSO session (no password to verify).
+		// We reject the request because there's no way to confirm identity
+		// without a password. The user must re-authenticate via SSO first.
+		return fmt.Errorf("SSO-only accounts must re-authenticate via SSO before deletion")
 	}
 
+	slog.Info("account deleted", "user_id", userID, "email", user.Email)
 	return s.userRepo.Delete(ctx, userID)
 }
 
@@ -605,7 +579,7 @@ func (s *AuthService) ResetPassword(ctx context.Context, input domain.ResetPassw
 		return uuid.Nil, "", fmt.Errorf("user not found")
 	}
 
-	hash, err := auth.HashPassword(input.NewPassword)
+	hash, err := auth.HashPassword(input.NewPassword, s.cfg.Password)
 	if err != nil {
 		return uuid.Nil, "", err
 	}
@@ -624,23 +598,17 @@ func (s *AuthService) SSOLogin(ctx context.Context, result *domain.SSOCallbackRe
 	ip = stripPort(ip)
 	email := strings.ToLower(result.Email)
 
+	// Validate email format using net/mail (consistent with Register)
+	emailDomain, err := extractEmailDomain(email)
+	if err != nil {
+		return nil, nil, fmt.Errorf("invalid email from SSO provider")
+	}
+
 	// Check allowed domains from provider config (if ssoProviderRepo is available)
 	if s.ssoProviderRepo != nil {
 		provCfg, err := s.ssoProviderRepo.GetByName(ctx, result.Provider)
 		if err == nil && provCfg.AllowedDomains != "" {
-			parts := strings.Split(email, "@")
-			if len(parts) != 2 {
-				return nil, nil, fmt.Errorf("invalid email")
-			}
-			emailDomain := parts[1]
-			allowed := false
-			for _, d := range strings.Split(provCfg.AllowedDomains, ",") {
-				if strings.TrimSpace(d) == emailDomain {
-					allowed = true
-					break
-				}
-			}
-			if !allowed {
+			if !isDomainAllowed(emailDomain, provCfg.AllowedDomains) {
 				return nil, nil, fmt.Errorf("email domain %s is not allowed for SSO", emailDomain)
 			}
 		}
@@ -650,19 +618,7 @@ func (s *AuthService) SSOLogin(ctx context.Context, result *domain.SSOCallbackRe
 	if s.ssoProviderRepo == nil {
 		ssoCfg := s.cfg.SSO
 		if ssoCfg.AllowedDomains != "" {
-			parts := strings.Split(email, "@")
-			if len(parts) != 2 {
-				return nil, nil, fmt.Errorf("invalid email")
-			}
-			emailDomain := parts[1]
-			allowed := false
-			for _, d := range strings.Split(ssoCfg.AllowedDomains, ",") {
-				if strings.TrimSpace(d) == emailDomain {
-					allowed = true
-					break
-				}
-			}
-			if !allowed {
+			if !isDomainAllowed(emailDomain, ssoCfg.AllowedDomains) {
 				return nil, nil, fmt.Errorf("email domain %s is not allowed for SSO", emailDomain)
 			}
 		}
@@ -712,21 +668,17 @@ func (s *AuthService) SSOLogin(ctx context.Context, result *domain.SSOCallbackRe
 				if s.ssoProviderRepo != nil && s.domainMappingRepo != nil {
 					provCfg, provErr := s.ssoProviderRepo.GetByName(ctx, result.Provider)
 					if provErr == nil && provCfg != nil {
-						parts := strings.Split(email, "@")
-						if len(parts) == 2 {
-							emailDomain := parts[1]
-							mappings, mapErr := s.domainMappingRepo.FindMatchingRules(ctx, provCfg.ID, emailDomain)
-							if mapErr == nil && len(mappings) > 0 {
-								// Domain mapping found — auto-provision with ALL mapped teams
-								domainMappingMatched = true
-								provisionedUser, provErr := s.createAndProvisionFromMappings(ctx, result, mappings)
-								if provErr != nil {
-									return nil, nil, fmt.Errorf("domain mapping auto-provision failed: %w", provErr)
-								}
-								user = provisionedUser
-								slog.Info("SSO domain mapping: auto-provisioned user",
-									"email", email, "provider", result.Provider, "teams", len(mappings))
+						mappings, mapErr := s.domainMappingRepo.FindMatchingRules(ctx, provCfg.ID, emailDomain)
+						if mapErr == nil && len(mappings) > 0 {
+							// Domain mapping found — auto-provision with ALL mapped teams
+							domainMappingMatched = true
+							provisionedUser, provErr := s.createAndProvisionFromMappings(ctx, result, mappings)
+							if provErr != nil {
+								return nil, nil, fmt.Errorf("domain mapping auto-provision failed: %w", provErr)
 							}
+							user = provisionedUser
+							slog.Info("SSO domain mapping: auto-provisioned user",
+								"email", email, "provider", result.Provider, "teams", len(mappings))
 						}
 					}
 				}
@@ -825,30 +777,9 @@ func (s *AuthService) SSOLogin(ctx context.Context, result *domain.SSOCallbackRe
 	}
 
 	// ── Session limit check (interactive for SSO login) ──
-	limit := s.resolveSessionLimit(user)
-	activeCount, countErr := s.sessionRepo.CountActiveByUser(ctx, user.ID)
-	if countErr != nil {
-		slog.Warn("failed to count active sessions for SSO limit check",
-			"user_id", user.ID, "error", countErr)
-	} else if activeCount >= limit && s.pendingLoginStore != nil {
-		sessions, listErr := s.sessionRepo.ListByUser(ctx, user.ID)
-		if listErr == nil {
-			pendingToken, storeErr := s.pendingLoginStore.Store(ctx, auth.PendingLogin{
-				UserID:    user.ID,
-				IP:        ip,
-				UserAgent: userAgent,
-			})
-			if storeErr == nil {
-				return nil, nil, &SessionLimitError{
-					PendingToken: pendingToken,
-					Sessions:     sessions,
-					Limit:        limit,
-				}
-			}
-			slog.Warn("pending login store failed for SSO, falling back to auto-revoke",
-				"user_id", user.ID, "error", storeErr)
-		}
-		// Fall through to createSession which will auto-revoke
+	proceed, limitErr := s.enforceSessionLimit(ctx, user, ip, userAgent)
+	if !proceed {
+		return nil, nil, limitErr
 	}
 
 	providerName := result.Provider
@@ -856,6 +787,9 @@ func (s *AuthService) SSOLogin(ctx context.Context, result *domain.SSOCallbackRe
 	if err != nil {
 		return nil, nil, err
 	}
+
+	s.updateLastLoginAt(ctx, user)
+
 	return user, tokenPair, nil
 }
 
@@ -1004,6 +938,98 @@ func (s *AuthService) resolveSessionLimit(user *domain.User) int {
 		return 5 // safety fallback
 	}
 	return limit
+}
+
+// extractEmailDomain parses an email address and returns the domain part,
+// normalized to lowercase. Uses net/mail.ParseAddress for robust parsing.
+func extractEmailDomain(email string) (string, error) {
+	addr, err := mail.ParseAddress(email)
+	if err != nil {
+		return "", fmt.Errorf("invalid email: %w", err)
+	}
+	parts := strings.SplitN(addr.Address, "@", 2)
+	if len(parts) != 2 {
+		return "", fmt.Errorf("invalid email format")
+	}
+	return strings.ToLower(parts[1]), nil
+}
+
+// isDomainAllowed checks whether an email domain is in a comma-separated allowlist.
+func isDomainAllowed(emailDomain, allowedDomains string) bool {
+	for _, d := range strings.Split(allowedDomains, ",") {
+		if strings.TrimSpace(strings.ToLower(d)) == emailDomain {
+			return true
+		}
+	}
+	return false
+}
+
+// enforceSessionLimit checks whether the user has reached their session limit.
+// If the limit is reached and a pendingLoginStore is available, it returns a
+// SessionLimitError for interactive resolution. Otherwise it auto-revokes the
+// oldest sessions to make room.
+// Returns (true, nil) if the caller should proceed to create a session,
+// or (false, err) if a SessionLimitError or other error should be returned.
+func (s *AuthService) enforceSessionLimit(ctx context.Context, user *domain.User, ip, userAgent string) (proceed bool, err error) {
+	limit := s.resolveSessionLimit(user)
+	activeCount, countErr := s.sessionRepo.CountActiveByUser(ctx, user.ID)
+	if countErr != nil {
+		slog.Warn("failed to count active sessions for limit check",
+			"user_id", user.ID, "error", countErr)
+		return true, nil // best-effort: allow login on count failure
+	}
+
+	if activeCount < limit {
+		return true, nil
+	}
+
+	// Limit reached — try interactive conflict resolution
+	if s.pendingLoginStore != nil {
+		sessions, listErr := s.sessionRepo.ListByUser(ctx, user.ID)
+		if listErr != nil {
+			return false, fmt.Errorf("failed to list sessions: %w", listErr)
+		}
+		pendingToken, storeErr := s.pendingLoginStore.Store(ctx, auth.PendingLogin{
+			UserID:    user.ID,
+			IP:        ip,
+			UserAgent: userAgent,
+		})
+		if storeErr != nil {
+			// Redis unavailable — fall back to auto-revoking oldest session
+			slog.Warn("pending login store failed, falling back to auto-revoke",
+				"user_id", user.ID, "error", storeErr)
+		} else {
+			return false, &SessionLimitError{
+				PendingToken: pendingToken,
+				Sessions:     sessions,
+				Limit:        limit,
+			}
+		}
+	}
+
+	// Auto-revoke oldest sessions to make room
+	revoked, revokeErr := s.sessionRepo.RevokeOldestExceeding(ctx, user.ID, limit-1)
+	if revokeErr != nil {
+		slog.Warn("auto-revoke failed",
+			"user_id", user.ID, "limit", limit, "error", revokeErr)
+	} else if revoked > 0 {
+		slog.Info("revoked excess sessions due to session limit",
+			"user_id", user.ID, "revoked", revoked, "limit", limit)
+		if s.revocationCache != nil {
+			s.revocationCache.MarkRevoked(ctx, user.ID)
+		}
+	}
+
+	return true, nil
+}
+
+// updateLastLoginAt updates the user's last_login_at timestamp (best-effort).
+func (s *AuthService) updateLastLoginAt(ctx context.Context, user *domain.User) {
+	now := time.Now()
+	user.LastLoginAt = &now
+	if err := s.userRepo.Update(ctx, user); err != nil {
+		slog.Warn("failed to update last_login_at", "user_id", user.ID, "error", err)
+	}
 }
 
 func (s *AuthService) createSession(ctx context.Context, repo *postgres.SessionRepo, user *domain.User, ip, userAgent string, ssoProviderName *string) (*domain.TokenPair, error) {
@@ -1161,6 +1187,11 @@ func (s *AuthService) UnlinkSSOIdentity(ctx context.Context, userID uuid.UUID, p
 		return fmt.Errorf("you must set a password before unlinking SSO")
 	}
 
+	// Check user-level auth method lock
+	if user.AuthMethodLock != nil && *user.AuthMethodLock == "sso" {
+		return fmt.Errorf("cannot unlink SSO: account is locked to SSO login only")
+	}
+
 	// Check enforce_sso is not enabled
 	var enforced bool
 	if err := s.pool.QueryRow(ctx,
@@ -1257,9 +1288,18 @@ func isAuthMethodAllowed(allowedAuth []string, method string) bool {
 // org membership + team memberships based on ALL matching domain mapping rules.
 // The org_role is taken from the first mapping rule. Team memberships are created for
 // all matching rules; archived teams are skipped with a warning log.
+// All operations run inside a single transaction for atomicity.
 func (s *AuthService) createAndProvisionFromMappings(ctx context.Context, result *domain.SSOCallbackResult, mappings []domain.SSODomainMapping) (*domain.User, error) {
 	email := strings.ToLower(result.Email)
 	provider := result.Provider
+
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	userRepoTx := s.userRepo.WithTx(tx)
 
 	user := &domain.User{
 		ID:            uuid.New(),
@@ -1274,7 +1314,7 @@ func (s *AuthService) createAndProvisionFromMappings(ctx context.Context, result
 		user.AvatarURL = &result.AvatarURL
 	}
 
-	if err := s.userRepo.Create(ctx, user); err != nil {
+	if err := userRepoTx.Create(ctx, user); err != nil {
 		return nil, fmt.Errorf("create domain-mapped SSO user: %w", err)
 	}
 
@@ -1338,6 +1378,10 @@ func (s *AuthService) createAndProvisionFromMappings(ctx context.Context, result
 			slog.Info("domain mapping: provisioned user into team",
 				"user", email, "team", team.Name, "role", teamRole)
 		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("commit domain mapping provisioning: %w", err)
 	}
 
 	return user, nil
@@ -1454,6 +1498,10 @@ func (s *AuthService) MigrateToSSO(ctx context.Context, userID uuid.UUID) (*doma
 	// Revoke all sessions — forces re-login via SSO
 	_ = s.sessionRepo.RevokeAll(ctx, userID)
 
+	slog.Info("user migrated to SSO-only auth",
+		"user_id", userID, "email", user.Email,
+		"sso_identities", len(identities))
+
 	return user, nil
 }
 
@@ -1472,7 +1520,7 @@ func (s *AuthService) MigrateToPassword(ctx context.Context, userID uuid.UUID, n
 	}
 
 	// Hash and set password
-	hash, err := auth.HashPassword(newPassword)
+	hash, err := auth.HashPassword(newPassword, s.cfg.Password)
 	if err != nil {
 		return nil, err
 	}
@@ -1492,11 +1540,16 @@ func (s *AuthService) MigrateToPassword(ctx context.Context, userID uuid.UUID, n
 	// Revoke all sessions — forces re-login via password
 	_ = s.sessionRepo.RevokeAll(ctx, userID)
 
+	slog.Info("user migrated to password-only auth",
+		"user_id", userID, "email", user.Email)
+
 	return user, nil
 }
 
 // SetAuthMethodLock sets or clears the auth method lock for a user.
 // Valid values are nil (any method), "sso", or "password".
+// Validates that the user has the required credentials for the chosen lock
+// to prevent unrecoverable lockout.
 func (s *AuthService) SetAuthMethodLock(ctx context.Context, userID uuid.UUID, lock *string) (*domain.User, error) {
 	if lock != nil && *lock != "sso" && *lock != "password" {
 		return nil, fmt.Errorf("invalid auth_method_lock value: must be null, \"sso\", or \"password\"")
@@ -1507,11 +1560,32 @@ func (s *AuthService) SetAuthMethodLock(ctx context.Context, userID uuid.UUID, l
 		return nil, fmt.Errorf("user not found")
 	}
 
+	// Validate the user can actually authenticate with the chosen method
+	if lock != nil {
+		switch *lock {
+		case "sso":
+			if s.ssoIdentityRepo == nil {
+				return nil, fmt.Errorf("cannot lock to SSO: SSO identity repository not configured")
+			}
+			identities, err := s.ssoIdentityRepo.ListByUser(ctx, userID)
+			if err != nil || len(identities) == 0 {
+				return nil, fmt.Errorf("cannot lock to SSO: user has no linked SSO identity")
+			}
+		case "password":
+			if user.PasswordHash == nil {
+				return nil, fmt.Errorf("cannot lock to password: user has no password set")
+			}
+		}
+	}
+
 	user.AuthMethodLock = lock
 
 	if err := s.userRepo.Update(ctx, user); err != nil {
 		return nil, err
 	}
+
+	slog.Info("auth method lock changed",
+		"user_id", userID, "email", user.Email, "lock", lock)
 
 	return user, nil
 }

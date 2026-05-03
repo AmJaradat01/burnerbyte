@@ -208,7 +208,7 @@ func (h *SetupHandler) Complete(w http.ResponseWriter, r *http.Request) {
 	sessionRepoTx := h.sessionRepo.WithTx(tx)
 
 	// Step 1: Create admin user
-	hash, err := auth.HashPassword(input.Admin.Password)
+	hash, err := auth.HashPassword(input.Admin.Password, h.cfg.Password)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to hash password")
 		return
