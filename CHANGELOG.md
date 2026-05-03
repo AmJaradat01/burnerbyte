@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.48.0 (May 2026)
+- Security: fix timing attack in Login — dummy bcrypt comparison on user-not-found path
+- Security: fix DeleteAccount bypass for SSO-only users (now requires re-auth)
+- Security: SetAuthMethodLock validates user has required credentials before locking
+- Security: Refresh token rotation now carries forward SSOProviderName
+- Security: UnlinkSSOIdentity checks AuthMethodLock before allowing unlink
+- Fix: createAndProvisionFromMappings wrapped in transaction for atomicity
+- Fix: SSOLogin email domain validation uses net/mail.ParseAddress consistently
+- Config: configurable bcrypt cost via password_policy.bcrypt_cost
+- Config: configurable email verification TTL via email_verification.ttl
+- Validation: DisplayName required and capped at 200 characters
+- Audit: MigrateToSSO and MigrateToPassword now log auth method changes
+- Tracking: LastLoginAt updated on successful Login and SSOLogin
+- Refactor: extracted shared enforceSessionLimit, extractEmailDomain, isDomainAllowed helpers
+
 ## v0.47.0 (May 2026)
 - SSO session conflict dialog: SSO login now shows the same interactive session picker as password login when limit is reached
 - SSO callback redirects to login page with pending token instead of silently auto-revoking
