@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.48.1 (May 2026)
+- Security: rate limiting added to verify-email endpoint (was unprotected)
+- Security: SSOCallback origin validation now accepts all valid CORS origins
+- Fix: writeServiceError handles auth lock, unlink, and SSO-only error messages correctly
+- Fix: UpdateProfile handler surfaces validation errors instead of generic 500
+- Validation: admin UpdateUser now validates DisplayName via auth.ValidateDisplayName
+- Audit: added severity/category entries for admin.auth_migrated, admin.auth_method_lock_changed, user.login_session_conflict
+
 ## v0.48.0 (May 2026)
 - Security: fix timing attack in Login — dummy bcrypt comparison on user-not-found path
 - Security: fix DeleteAccount bypass for SSO-only users (now requires re-auth)
