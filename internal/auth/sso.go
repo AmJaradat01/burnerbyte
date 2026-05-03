@@ -209,8 +209,9 @@ func (s *SSOManager) GetProviderConfig(name string) (*domain.SSOProvider, error)
 }
 
 // GenerateState creates a random state parameter for CSRF protection.
+// Uses 32 bytes (256 bits) of entropy, consistent with OWASP recommendations.
 func (s *SSOManager) GenerateState() (string, error) {
-	b := make([]byte, 16)
+	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
 		return "", fmt.Errorf("generate state: %w", err)
 	}
