@@ -180,6 +180,12 @@ func (h *AdminHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "cannot remove your own system admin status")
 		return
 	}
+	if input.DisplayName != nil {
+		if err := auth.ValidateDisplayName(*input.DisplayName); err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+	}
 	// Validate max_sessions when provided
 	if input.MaxSessions != nil && (*input.MaxSessions < 1 || *input.MaxSessions > 100) {
 		writeError(w, http.StatusBadRequest, "max_sessions must be between 1 and 100")
