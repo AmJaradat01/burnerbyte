@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.47.0 (May 2026)
+- SSO session conflict dialog: SSO login now shows the same interactive session picker as password login when limit is reached
+- SSO callback redirects to login page with pending token instead of silently auto-revoking
+- New GET /auth/login/pending-sessions endpoint for fetching session list from pending token
+- PendingLoginStore.Peek() for non-consuming token reads (SSO redirect flow)
+- ua-parser-js integration: accurate browser, OS, and device type detection in session displays
+- Device-type icons (desktop/mobile/tablet) in SessionConflictDialog and Sessions page
+- Falls back to auto-revoke if Redis unavailable during SSO conflict detection
+
 ## v0.46.0 (April 2026)
 - Session conflict resolution: interactive dialog when login hits session limit
 - Two-phase login flow: 409 Conflict with pending token + active sessions list

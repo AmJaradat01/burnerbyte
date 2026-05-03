@@ -7,13 +7,36 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Monitor, CheckCircle2 } from "lucide-react";
+import { Monitor, CheckCircle2, Smartphone, Tablet } from "lucide-react";
 import { toast } from "sonner";
 import { ErrorState } from "@/components/error-state";
 import { EmptyState } from "@/components/empty-state";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { SessionIllustration } from "@/components/illustrations";
+import { UAParser } from "ua-parser-js";
 import type { Session } from "@/types";
+
+function parseUserAgent(ua?: string): { browser: string; os: string; device: string } {
+  if (!ua) return { browser: "Unknown browser", os: "Unknown OS", device: "desktop" };
+  const parser = new UAParser(ua);
+  const browser = parser.getBrowser();
+  const os = parser.getOS();
+  const device = parser.getDevice();
+
+  return {
+    browser: browser.name || "Unknown browser",
+    os: os.name ? `${os.name}${os.version ? " " + os.version : ""}` : "Unknown OS",
+    device: device.type || "desktop",
+  };
+}
+
+function getDeviceIcon(deviceType: string) {
+  switch (deviceType) {
+    case "mobile": return <Smartphone className="h-4 w-4 text-muted-foreground shrink-0" />;
+    case "tablet": return <Tablet className="h-4 w-4 text-muted-foreground shrink-0" />;
+    default: return <Monitor className="h-4 w-4 text-muted-foreground shrink-0" />;
+  }
+}
 
 export default function SessionsPage() {
   const qc = useQueryClient();
@@ -106,7 +129,7 @@ export default function SessionsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>IP Address</TableHead>
-                  <TableHead className="hidden sm:table-cell">User Agent</TableHead>
+                  <TableHead className="hidden sm:table-cell">Device</TableHead>
                   <TableHead className="hidden md:table-cell">Created</TableHead>
                   <TableHead>Expires</TableHead>
                   <TableHead></TableHead>
@@ -118,6 +141,7 @@ export default function SessionsPage() {
                   const isCurrent = sessions.length > 0 && s.id === sessions.reduce((a, b) =>
                     new Date(a.last_used_at) > new Date(b.last_used_at) ? a : b
                   ).id;
+                  const parsed = parseUserAgent(s.user_agent);
                   return (
                   <TableRow key={s.id} className={isCurrent ? "bg-emerald-50 border-l-2 border-l-emerald-500" : ""}>
                     <TableCell className="font-mono text-sm">
@@ -126,7 +150,12 @@ export default function SessionsPage() {
                         {isCurrent && <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[10px] px-1">Current</Badge>}
                       </div>
                     </TableCell>
-                    <TableCell className="max-w-[200px] truncate text-sm hidden sm:table-cell">{s.user_agent ?? "—"}</TableCell>
+                    <TableCell className="max-w-[200px] truncate text-sm hidden sm:table-cell">
+                      <div className="flex items-center gap-2">
+                        {getDeviceIcon(parsed.device)}
+                        <span>{parsed.browser} · {parsed.os}</span>
+                      </div>
+                    </TableCell>
                     <TableCell className="text-sm hidden md:table-cell">{new Date(s.created_at).toLocaleDateString()}</TableCell>
                     <TableCell className="text-sm">{new Date(s.expires_at).toLocaleDateString()}</TableCell>
                     <TableCell>

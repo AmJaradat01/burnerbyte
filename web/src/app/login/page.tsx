@@ -16,6 +16,7 @@ import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { ProviderIcon } from "@/components/provider-icon";
 import { SessionConflictDialog } from "@/components/session-conflict-dialog";
+import type { Session } from "@/types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
 
@@ -61,6 +62,28 @@ export default function LoginPage() {
     if (error) {
       toast.error(`SSO login failed: ${error}`);
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
+      return;
+    }
+    // Handle SSO session conflict redirect
+    const sessionConflict = params.get("session_conflict");
+    const ssoConflictToken = params.get("pending_token");
+    const limitParam = params.get("limit");
+    if (sessionConflict === "true" && ssoConflictToken) {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+      // Fetch sessions for this pending token
+      api.get<{ sessions: Session[]; limit: number }>("/auth/login/pending-sessions", { token: ssoConflictToken })
+        .then((res) => {
+          useAuthStore.setState({
+            sessionConflict: {
+              pendingToken: ssoConflictToken,
+              sessions: res.sessions,
+              limit: res.limit,
+            },
+          });
+        })
+        .catch(() => {
+          toast.error("Session conflict expired. Please try again.");
+        });
       return;
     }
     const accessToken = params.get("access_token");

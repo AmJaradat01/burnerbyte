@@ -824,6 +824,33 @@ func (s *AuthService) SSOLogin(ctx context.Context, result *domain.SSOCallbackRe
 		}
 	}
 
+	// ── Session limit check (interactive for SSO login) ──
+	limit := s.resolveSessionLimit(user)
+	activeCount, countErr := s.sessionRepo.CountActiveByUser(ctx, user.ID)
+	if countErr != nil {
+		slog.Warn("failed to count active sessions for SSO limit check",
+			"user_id", user.ID, "error", countErr)
+	} else if activeCount >= limit && s.pendingLoginStore != nil {
+		sessions, listErr := s.sessionRepo.ListByUser(ctx, user.ID)
+		if listErr == nil {
+			pendingToken, storeErr := s.pendingLoginStore.Store(ctx, auth.PendingLogin{
+				UserID:    user.ID,
+				IP:        ip,
+				UserAgent: userAgent,
+			})
+			if storeErr == nil {
+				return nil, nil, &SessionLimitError{
+					PendingToken: pendingToken,
+					Sessions:     sessions,
+					Limit:        limit,
+				}
+			}
+			slog.Warn("pending login store failed for SSO, falling back to auto-revoke",
+				"user_id", user.ID, "error", storeErr)
+		}
+		// Fall through to createSession which will auto-revoke
+	}
+
 	providerName := result.Provider
 	tokenPair, err := s.createSession(ctx, s.sessionRepo, user, ip, userAgent, &providerName)
 	if err != nil {
@@ -1314,6 +1341,25 @@ func (s *AuthService) createAndProvisionFromMappings(ctx context.Context, result
 	}
 
 	return user, nil
+}
+
+// GetPendingSessions returns the active sessions for a pending login token without consuming it.
+// Used by the SSO conflict flow to fetch session list for display in the frontend.
+func (s *AuthService) GetPendingSessions(ctx context.Context, token string) ([]domain.Session, int, error) {
+	pending, err := s.pendingLoginStore.Peek(ctx, token)
+	if err != nil {
+		return nil, 0, fmt.Errorf("invalid or expired pending login token")
+	}
+	user, err := s.userRepo.GetByID(ctx, pending.UserID)
+	if err != nil {
+		return nil, 0, fmt.Errorf("user not found")
+	}
+	sessions, err := s.sessionRepo.ListByUser(ctx, pending.UserID)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to list sessions")
+	}
+	limit := s.resolveSessionLimit(user)
+	return sessions, limit, nil
 }
 
 // LockedError indicates the account is locked.
