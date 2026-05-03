@@ -64,6 +64,10 @@ var SeverityMap = map[string]string{
 	"domain.settings_updated": "info",
 	"notification.deleted":     "info",
 	"notification.all_deleted": "info",
+	// auth migration & method lock
+	"admin.auth_migrated":            "critical",
+	"admin.auth_method_lock_changed": "critical",
+	"user.login_session_conflict":    "warning",
 }
 
 // CategoryMap maps action strings to their category classification.
@@ -155,6 +159,10 @@ var CategoryMap = map[string]string{
 	"domain.settings_updated": "domain",
 	"notification.deleted":     "notification",
 	"notification.all_deleted": "notification",
+	// auth migration & method lock
+	"admin.auth_migrated":            "admin",
+	"admin.auth_method_lock_changed": "admin",
+	"user.login_session_conflict":    "auth",
 }
 
 // GetSeverity returns the severity for the given action, defaulting to "info".
