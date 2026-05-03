@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.48.3 (May 2026)
+- Fix: session revocation race condition — RevokeOldestExceeding uses FOR UPDATE SKIP LOCKED
+- Validation: platform settings upper bounds for all numeric fields
+- Validation: inbox TTL range validation (0-365 days) for default_inbox_ttl and max_inbox_ttl
+- Validation: password_min_length capped at 128, lockout_max_attempts at 100, lockout_duration at 24h
+- Validation: max_attachment_size_mb (0-100), max_domains/max_teams (0-10000), max_inboxes_per_domain (0-100000)
+
 ## v0.48.2 (May 2026)
 - Security: SSO state parameter increased from 128 to 256 bits (OWASP recommendation)
 - Security: WebSocket origin validation removes unsafe fallback comparison path

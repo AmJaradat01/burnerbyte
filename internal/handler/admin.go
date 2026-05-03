@@ -334,17 +334,47 @@ func (h *AdminHandler) UpdatePlatformSettings(w http.ResponseWriter, r *http.Req
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
+
+	// ── Validate and clamp numeric settings ──
 	if input.PasswordMinLength < 6 {
 		input.PasswordMinLength = 6
+	}
+	if input.PasswordMinLength > 128 {
+		writeError(w, http.StatusBadRequest, "password_min_length must not exceed 128")
+		return
 	}
 	if input.LockoutMaxAttempts < 1 {
 		input.LockoutMaxAttempts = 1
 	}
+	if input.LockoutMaxAttempts > 100 {
+		writeError(w, http.StatusBadRequest, "lockout_max_attempts must not exceed 100")
+		return
+	}
 	if input.LockoutDurationMins < 1 {
 		input.LockoutDurationMins = 1
 	}
+	if input.LockoutDurationMins > 1440 {
+		writeError(w, http.StatusBadRequest, "lockout_duration_mins must not exceed 1440 (24 hours)")
+		return
+	}
 	if input.MaxSessionsPerUser < 1 || input.MaxSessionsPerUser > 100 {
 		writeError(w, http.StatusBadRequest, "max_sessions_per_user must be between 1 and 100")
+		return
+	}
+	if input.MaxAttachmentSizeMB < 0 || input.MaxAttachmentSizeMB > 100 {
+		writeError(w, http.StatusBadRequest, "max_attachment_size_mb must be between 0 and 100")
+		return
+	}
+	if input.MaxDomains < 0 || input.MaxDomains > 10000 {
+		writeError(w, http.StatusBadRequest, "max_domains must be between 0 and 10000")
+		return
+	}
+	if input.MaxTeams < 0 || input.MaxTeams > 10000 {
+		writeError(w, http.StatusBadRequest, "max_teams must be between 0 and 10000")
+		return
+	}
+	if input.MaxInboxesPerDomain < 0 || input.MaxInboxesPerDomain > 100000 {
+		writeError(w, http.StatusBadRequest, "max_inboxes_per_domain must be between 0 and 100000")
 		return
 	}
 
@@ -383,9 +413,19 @@ func (h *AdminHandler) UpdatePlatformSettings(w http.ResponseWriter, r *http.Req
 	h.cfg.Defaults.DateFormat = input.DateFormat
 	h.cfg.Defaults.TimeFormat = input.TimeFormat
 	if d, err := time.ParseDuration(input.DefaultInboxTTL); err == nil {
+		if d < 0 || d > 365*24*time.Hour {
+			writeError(w, http.StatusBadRequest, "default_inbox_ttl must be between 0 and 365 days")
+			h.cfgMu.Unlock()
+			return
+		}
 		h.cfg.Defaults.DefaultInboxTTL = d
 	}
 	if d, err := time.ParseDuration(input.MaxInboxTTL); err == nil {
+		if d < 0 || d > 365*24*time.Hour {
+			writeError(w, http.StatusBadRequest, "max_inbox_ttl must be between 0 and 365 days")
+			h.cfgMu.Unlock()
+			return
+		}
 		h.cfg.Defaults.MaxInboxTTL = d
 	}
 	h.cfg.Defaults.MaxAttachmentSizeMB = input.MaxAttachmentSizeMB

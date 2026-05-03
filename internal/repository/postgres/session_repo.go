@@ -164,6 +164,7 @@ func (r *SessionRepo) CountActiveByUser(ctx context.Context, userID uuid.UUID) (
 // RevokeOldestExceeding revokes the oldest active sessions for a user,
 // keeping only the `keep` most recent sessions active (ordered by last_used_at DESC, created_at DESC).
 // Returns the number of sessions revoked. Idempotent: if active count ≤ keep, revokes nothing and returns 0.
+// Uses FOR UPDATE SKIP LOCKED to prevent concurrent requests from revoking the same sessions.
 func (r *SessionRepo) RevokeOldestExceeding(ctx context.Context, userID uuid.UUID, keep int) (int, error) {
 	tag, err := r.db.Exec(ctx,
 		`WITH ranked AS (
@@ -171,6 +172,7 @@ func (r *SessionRepo) RevokeOldestExceeding(ctx context.Context, userID uuid.UUI
 			       ROW_NUMBER() OVER (ORDER BY last_used_at DESC, created_at DESC) AS rn
 			FROM sessions
 			WHERE user_id = $1 AND revoked = FALSE AND expires_at > NOW()
+			FOR UPDATE SKIP LOCKED
 		)
 		UPDATE sessions SET revoked = TRUE
 		WHERE id IN (SELECT id FROM ranked WHERE rn > $2)`,
