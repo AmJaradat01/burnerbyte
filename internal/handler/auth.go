@@ -35,6 +35,7 @@ func (h *AuthHandler) PublicRoutes(r chi.Router, rl *middleware.RateLimiter) {
 	r.With(rl.LoginLimiter).Post("/auth/register", h.Register)
 	r.With(rl.LoginLimiter).Post("/auth/login", h.Login)
 	r.With(rl.LoginLimiter).Post("/auth/login/resolve", h.ResolveLogin)
+	r.With(rl.LoginLimiter).Get("/auth/login/pending-sessions", h.GetPendingSessions)
 	r.With(rl.LoginLimiter).Post("/auth/refresh", h.Refresh)
 	r.With(rl.ForgotPasswordLimiter).Post("/auth/forgot-password", h.ForgotPassword)
 	r.With(rl.LoginLimiter).Post("/auth/reset-password", h.ResetPassword)
@@ -581,6 +582,18 @@ func (h *AuthHandler) SSOCallback(w http.ResponseWriter, r *http.Request) {
 	// Default: login intent
 	user, tokens, err := h.svc.SSOLogin(r.Context(), result, r.RemoteAddr, r.UserAgent())
 	if err != nil {
+		var limitErr *service.SessionLimitError
+		if errors.As(err, &limitErr) {
+			auditRecordEnhanced(r, uuid.Nil, "user.login_session_conflict", "user", uuid.Nil, result.Email, map[string]any{
+				"email": result.Email, "provider": providerName, "active_sessions": len(limitErr.Sessions), "limit": limitErr.Limit,
+			})
+			// Redirect to login page with session conflict data in hash fragment
+			http.Redirect(w, r, fmt.Sprintf("%s/login#session_conflict=true&pending_token=%s&limit=%d",
+				frontendURL,
+				url.QueryEscape(limitErr.PendingToken),
+				limitErr.Limit), http.StatusFound)
+			return
+		}
 		auditRecordEnhanced(r, uuid.Nil, "user.sso_login_failed", "user", uuid.Nil, result.Email, map[string]any{
 			"provider": providerName, "reason": err.Error(), "email": result.Email,
 		})
@@ -597,6 +610,23 @@ func (h *AuthHandler) SSOCallback(w http.ResponseWriter, r *http.Request) {
 		url.QueryEscape(tokens.AccessToken),
 		url.QueryEscape(tokens.RefreshToken),
 		url.QueryEscape(user.ID.String())), http.StatusFound)
+}
+
+func (h *AuthHandler) GetPendingSessions(w http.ResponseWriter, r *http.Request) {
+	token := r.URL.Query().Get("token")
+	if token == "" {
+		writeError(w, http.StatusBadRequest, "token is required")
+		return
+	}
+	sessions, limit, err := h.svc.GetPendingSessions(r.Context(), token)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"sessions": sessions,
+		"limit":    limit,
+	})
 }
 
 func (h *AuthHandler) ListSSOIdentities(w http.ResponseWriter, r *http.Request) {
