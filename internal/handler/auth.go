@@ -39,7 +39,7 @@ func (h *AuthHandler) PublicRoutes(r chi.Router, rl *middleware.RateLimiter) {
 	r.With(rl.LoginLimiter).Post("/auth/refresh", h.Refresh)
 	r.With(rl.ForgotPasswordLimiter).Post("/auth/forgot-password", h.ForgotPassword)
 	r.With(rl.LoginLimiter).Post("/auth/reset-password", h.ResetPassword)
-	r.Get("/auth/verify-email/{token}", h.VerifyEmail)
+	r.With(rl.LoginLimiter).Get("/auth/verify-email/{token}", h.VerifyEmail)
 	r.Get("/auth/sso/{provider}", h.SSORedirect)
 	r.With(rl.LoginLimiter).Get("/auth/sso/{provider}/callback", h.SSOCallback)
 	r.Get("/auth/sso-status", h.SSOStatus)
@@ -272,7 +272,7 @@ func (h *AuthHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.svc.UpdateProfile(r.Context(), uc.UserID, input)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to update profile")
+		writeServiceError(w, err)
 		return
 	}
 
@@ -545,7 +545,17 @@ func (h *AuthHandler) SSOCallback(w http.ResponseWriter, r *http.Request) {
 	// Read and clear origin cookie
 	frontendURL := h.cfg.Server.FrontendURL
 	if oc, err := r.Cookie("sso_origin"); err == nil && oc.Value != "" {
-		if oc.Value == h.cfg.Server.FrontendURL {
+		// Accept origin if it matches any allowed CORS origin or the configured frontend URL
+		validOrigin := oc.Value == h.cfg.Server.FrontendURL
+		if !validOrigin {
+			for _, allowed := range h.cfg.CORS.AllowedOrigins {
+				if oc.Value == allowed {
+					validOrigin = true
+					break
+				}
+			}
+		}
+		if validOrigin {
 			frontendURL = oc.Value
 		}
 	}

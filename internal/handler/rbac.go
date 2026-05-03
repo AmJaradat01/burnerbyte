@@ -108,8 +108,12 @@ func writeServiceError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusForbidden, msg)
 	case strings.Contains(msg, "not found"):
 		writeError(w, http.StatusNotFound, msg)
-	case strings.Contains(msg, "already taken") || strings.Contains(msg, "already exists") || strings.Contains(msg, "already assigned"):
+	case strings.Contains(msg, "already taken") || strings.Contains(msg, "already exists") || strings.Contains(msg, "already assigned") || strings.Contains(msg, "already linked"):
 		writeError(w, http.StatusConflict, msg)
+	case strings.Contains(msg, "cannot lock") || strings.Contains(msg, "cannot unlink") || strings.Contains(msg, "must re-authenticate") || strings.Contains(msg, "must set a password"):
+		writeError(w, http.StatusForbidden, msg)
+	case strings.Contains(msg, "locked to SSO") || strings.Contains(msg, "locked to password"):
+		writeError(w, http.StatusForbidden, msg)
 	default:
 		writeError(w, http.StatusBadRequest, msg)
 	}
