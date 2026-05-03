@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/mail"
 	"net/smtp"
 	"time"
 
@@ -162,6 +163,14 @@ func (h *SetupHandler) Complete(w http.ResponseWriter, r *http.Request) {
 	// Validate required fields
 	if input.Admin.Email == "" || input.Admin.Password == "" || input.Admin.DisplayName == "" {
 		writeError(w, http.StatusBadRequest, "admin email, password, and display name are required")
+		return
+	}
+	if _, err := mail.ParseAddress(input.Admin.Email); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid admin email format")
+		return
+	}
+	if err := auth.ValidateDisplayName(input.Admin.DisplayName); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	if input.Org.Name == "" {
@@ -340,6 +349,10 @@ func (h *SetupHandler) Complete(w http.ResponseWriter, r *http.Request) {
 	var inviteRecords []inviteWithToken
 	for _, inv := range input.Invites {
 		if inv.Email == "" {
+			continue
+		}
+		if _, err := mail.ParseAddress(inv.Email); err != nil {
+			slog.Warn("setup: skipping invite with invalid email", "email", inv.Email)
 			continue
 		}
 		b := make([]byte, 32)

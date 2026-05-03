@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.48.2 (May 2026)
+- Security: SSO state parameter increased from 128 to 256 bits (OWASP recommendation)
+- Security: WebSocket origin validation removes unsafe fallback comparison path
+- Validation: setup wizard validates admin email format and DisplayName
+- Validation: setup wizard validates invite email format (skips invalid with warning)
+
 ## v0.48.1 (May 2026)
 - Security: rate limiting added to verify-email endpoint (was unprotected)
 - Security: SSOCallback origin validation now accepts all valid CORS origins

@@ -66,10 +66,7 @@ func (h *WSHandler) checkOrigin(r *http.Request) bool {
 		}
 		au, err := url.Parse(allowed)
 		if err != nil {
-			if strings.EqualFold(allowed, originHost) {
-				return true
-			}
-			continue
+			continue // Skip unparseable entries
 		}
 		if strings.EqualFold(au.Hostname(), originHost) {
 			return true
