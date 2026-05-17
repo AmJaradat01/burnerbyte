@@ -140,6 +140,7 @@ export default function AuditPage() {
   const [action, setAction] = useState("");
   const [actorEmail, setActorEmail] = useState("");
   const [resource, setResource] = useState("");
+  const [resourceName, setResourceName] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(1);
@@ -149,17 +150,18 @@ export default function AuditPage() {
   if (action) params.action = action;
   if (actorEmail) params.actor_email = actorEmail;
   if (resource) params.resource_type = resource;
+  if (resourceName) params.resource_name = resourceName;
   if (dateFrom) params.date_from = new Date(dateFrom).toISOString();
   if (dateTo) params.date_to = new Date(dateTo + "T23:59:59").toISOString();
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["audit", currentOrg?.id, action, actorEmail, resource, dateFrom, dateTo, page],
+    queryKey: ["audit", currentOrg?.id, action, actorEmail, resource, resourceName, dateFrom, dateTo, page],
     queryFn: () => api.get<PaginatedResponse<AuditEntry>>(`/orgs/${currentOrg!.id}/audit`, params),
     enabled: !!currentOrg,
   });
 
-  const clearFilters = () => { setAction(""); setActorEmail(""); setResource(""); setDateFrom(""); setDateTo(""); setPage(1); };
-  const hasFilters = action || actorEmail || resource || dateFrom || dateTo;
+  const clearFilters = () => { setAction(""); setActorEmail(""); setResource(""); setResourceName(""); setDateFrom(""); setDateTo(""); setPage(1); };
+  const hasFilters = action || actorEmail || resource || resourceName || dateFrom || dateTo;
 
   const handleQuickFilter = useCallback((value: string) => {
     setAction((prev) => (prev === value ? "" : value));
@@ -174,6 +176,7 @@ export default function AuditPage() {
       if (action) filterParams.action = action;
       if (actorEmail) filterParams.actor_email = actorEmail;
       if (resource) filterParams.resource_type = resource;
+      if (resourceName) filterParams.resource_name = resourceName;
       if (dateFrom) filterParams.date_from = new Date(dateFrom).toISOString();
       if (dateTo) filterParams.date_to = new Date(dateTo + "T23:59:59").toISOString();
 
@@ -270,6 +273,16 @@ export default function AuditPage() {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Email / Name</Label>
+            <Input
+              value={resourceName}
+              onChange={(e) => { setResourceName(e.target.value); setPage(1); }}
+              placeholder="e.g. 952yyl0m@gurl.ink"
+              className="w-52 h-8"
+              aria-label="Search by inbox address or resource name"
+            />
           </div>
           <div className="space-y-1">
             <Label className="text-xs">From</Label>
