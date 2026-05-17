@@ -19,8 +19,7 @@ import { toast } from "sonner";
 import { timeAgo } from "@/lib/time";
 import {
   Activity, ChevronDown, ChevronRight, Clock, Copy, Download,
-  Filter, Globe, Inbox, Key, LogIn, LogOut, Mail, Search, Shield,
-  User, Users, Webhook,
+  Globe, Inbox, Key, Mail, Search, Shield, User, Users, Webhook,
 } from "lucide-react";
 import type { AuditEntry, PaginatedResponse } from "@/types";
 
@@ -52,35 +51,26 @@ const RESOURCE_ICONS: Record<string, typeof User> = {
   api_key: Key,
 };
 
-const RESOURCE_COLORS: Record<string, { bg: string; text: string; ring: string }> = {
-  user:              { bg: "bg-info/10",    text: "text-info",    ring: "ring-info/20" },
-  org:               { bg: "bg-warning/10",   text: "text-warning",   ring: "ring-warning/20" },
-  team:              { bg: "bg-primary/10",  text: "text-primary",  ring: "ring-primary/20" },
-  domain:            { bg: "bg-success/10", text: "text-success", ring: "ring-success/20" },
-  domain_assignment: { bg: "bg-info/10",    text: "text-info",    ring: "ring-info/20" },
-  inbox:             { bg: "bg-info/10",     text: "text-info",     ring: "ring-info/20" },
-  email:             { bg: "bg-primary/10",    text: "text-primary",    ring: "ring-primary/20" },
-  webhook:           { bg: "bg-warning/10",  text: "text-warning",  ring: "ring-warning/20" },
-  api_key:           { bg: "bg-destructive/10",    text: "text-destructive",    ring: "ring-destructive/20" },
+/* Action color: the single signal carried on the action badge. Resource type uses
+   a neutral icon swatch; timeline dots are neutral. One color signal per row,
+   not three. */
+const ACTION_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+  created:     { bg: "bg-success/10",     text: "text-success",     border: "border-success/20" },
+  updated:     { bg: "bg-info/10",        text: "text-info",        border: "border-info/20" },
+  deleted:     { bg: "bg-destructive/10", text: "text-destructive", border: "border-destructive/20" },
+  revoked:     { bg: "bg-destructive/10", text: "text-destructive", border: "border-destructive/20" },
+  verified:    { bg: "bg-success/10",     text: "text-success",     border: "border-success/20" },
+  login:       { bg: "bg-primary/10",     text: "text-primary",     border: "border-primary/20" },
+  logout:      { bg: "bg-muted",          text: "text-muted-foreground", border: "border-border" },
+  invited:     { bg: "bg-primary/10",     text: "text-primary",     border: "border-primary/20" },
+  accepted:    { bg: "bg-success/10",     text: "text-success",     border: "border-success/20" },
+  migrated:    { bg: "bg-info/10",        text: "text-info",        border: "border-info/20" },
+  archived:    { bg: "bg-muted",          text: "text-muted-foreground", border: "border-border" },
+  restored:    { bg: "bg-success/10",     text: "text-success",     border: "border-success/20" },
+  transferred: { bg: "bg-info/10",        text: "text-info",        border: "border-info/20" },
 };
 
-const ACTION_COLORS: Record<string, { bg: string; text: string; border: string; dot: string }> = {
-  created:     { bg: "bg-success/5",  text: "text-success", border: "border-success/20", dot: "bg-success/50" },
-  updated:     { bg: "bg-info/5",     text: "text-info",    border: "border-info/20",    dot: "bg-info/50" },
-  deleted:     { bg: "bg-destructive/5",      text: "text-destructive",     border: "border-destructive/20",     dot: "bg-destructive/50" },
-  revoked:     { bg: "bg-destructive/5",      text: "text-destructive",     border: "border-destructive/20",     dot: "bg-destructive/50" },
-  verified:    { bg: "bg-success/5",  text: "text-success", border: "border-success/20", dot: "bg-success/50" },
-  login:       { bg: "bg-primary/5",   text: "text-primary",  border: "border-primary/20",  dot: "bg-primary" },
-  logout:      { bg: "bg-primary/5",   text: "text-primary",  border: "border-primary/20",  dot: "bg-primary" },
-  invited:     { bg: "bg-primary/5",   text: "text-primary",  border: "border-primary/20",  dot: "bg-primary" },
-  accepted:    { bg: "bg-success/5",  text: "text-success", border: "border-success/20", dot: "bg-success/50" },
-  migrated:    { bg: "bg-info/5",     text: "text-info",    border: "border-info/20",    dot: "bg-info" },
-  archived:    { bg: "bg-muted/50",     text: "text-foreground",    border: "border-border",    dot: "bg-muted-foreground" },
-  restored:    { bg: "bg-success/5",  text: "text-success", border: "border-success/20", dot: "bg-success/50" },
-  transferred: { bg: "bg-info/5",     text: "text-info",    border: "border-info/20",    dot: "bg-info/50" },
-};
-
-const DEFAULT_ACTION_COLOR = { bg: "bg-muted/50", text: "text-foreground", border: "border-border", dot: "bg-muted-foreground" };
+const DEFAULT_ACTION_COLOR = { bg: "bg-muted", text: "text-muted-foreground", border: "border-border" };
 
 function getActionColor(action: string) {
   for (const [key, color] of Object.entries(ACTION_COLORS)) {
@@ -89,13 +79,13 @@ function getActionColor(action: string) {
   return DEFAULT_ACTION_COLOR;
 }
 
-const QUICK_FILTERS: { label: string; value: string; color: string; activeColor: string; icon: typeof Activity }[] = [
-  { label: "Created",  value: "created",  color: "text-success border-success/20 hover:bg-success/5", activeColor: "bg-success/10 text-success border-success/30", icon: Activity },
-  { label: "Updated",  value: "updated",  color: "text-info border-info/20 hover:bg-info/5",         activeColor: "bg-info/10 text-info border-info/30",         icon: Activity },
-  { label: "Deleted",  value: "deleted",  color: "text-destructive border-destructive/20 hover:bg-destructive/5",             activeColor: "bg-destructive/10 text-destructive border-destructive/30",             icon: Activity },
-  { label: "Login",    value: "login",    color: "text-primary border-primary/20 hover:bg-primary/5",   activeColor: "bg-primary/10 text-primary border-primary/30",   icon: LogIn },
-  { label: "Invited",  value: "invited",  color: "text-primary border-primary/20 hover:bg-primary/5",   activeColor: "bg-primary/10 text-primary border-primary/30",   icon: Activity },
-  { label: "Settings", value: "settings", color: "text-muted-foreground border-border hover:bg-muted/50",       activeColor: "bg-muted text-foreground border-border",       icon: Activity },
+const QUICK_FILTERS: { label: string; value: string }[] = [
+  { label: "Created",  value: "created"  },
+  { label: "Updated",  value: "updated"  },
+  { label: "Deleted",  value: "deleted"  },
+  { label: "Login",    value: "login"    },
+  { label: "Invited",  value: "invited"  },
+  { label: "Settings", value: "settings" },
 ];
 
 /* ─── Helpers ─── */
@@ -206,134 +196,115 @@ export default function AuditPage() {
   const isAdmin = hasPermission("org.audit.view") || user?.is_system_admin;
   if (!isAdmin) return <div className="flex items-center justify-center min-h-[50vh]"><p className="text-muted-foreground">You don&apos;t have permission to access this page.</p></div>;
 
+  const uniqueActors = new Set(data?.data?.map((e) => e.actor_email)).size;
+  const uniqueActions = new Set(data?.data?.map((e) => e.action)).size;
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card>
-        <CardContent className="pt-5 pb-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-7 w-7 rounded-md bg-warning/50/10 flex items-center justify-center">
-                <Shield className="h-4 w-4 text-warning" />
-              </div>
-              <div>
-                <h1 className="text-base font-semibold tracking-tight">Audit Log</h1>
-                <p className="text-sm text-muted-foreground">{data?.total ?? 0} entries{hasFilters ? " (filtered)" : ""} · Track all actions across your organization.</p>
-              </div>
-            </div>
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={exportAll} disabled={!data?.data?.length || exporting}>
-              <Download className="h-3.5 w-3.5" /> {exporting ? "Exporting…" : "Export CSV"}
-            </Button>
+      <header className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0" aria-hidden="true">
+            <Shield className="h-4 w-4 text-primary" />
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="pt-5 pb-4">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-muted-foreground">Total Entries</span>
-              <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-info/10">
-                <Shield className="h-4 w-4 text-info" />
-              </div>
-            </div>
-            <p className="text-2xl font-bold tabular-nums">{data?.total ?? 0}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-5 pb-4">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-muted-foreground">Actions (page)</span>
-              <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-success/10">
-                <Activity className="h-4 w-4 text-success" />
-              </div>
-            </div>
-            <p className="text-2xl font-bold tabular-nums">{new Set(data?.data?.map(e => e.action)).size ?? 0}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-5 pb-4">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-muted-foreground">Actors (page)</span>
-              <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-warning/10">
-                <Users className="h-4 w-4 text-warning" />
-              </div>
-            </div>
-            <p className="text-2xl font-bold tabular-nums">{new Set(data?.data?.map(e => e.actor_email)).size ?? 0}</p>
-          </CardContent>
-        </Card>
-      </div>
+          <div className="min-w-0">
+            <h1 className="text-headline">Audit Log</h1>
+            <p className="text-sm text-muted-foreground tabular-nums">
+              {(data?.total ?? 0) > 0
+                ? `${data?.total} ${data?.total === 1 ? "entry" : "entries"}${hasFilters ? " (filtered)" : ""} · ${uniqueActions} ${uniqueActions === 1 ? "action" : "actions"}, ${uniqueActors} ${uniqueActors === 1 ? "actor" : "actors"} on this page`
+                : "Track all actions across your organization."}
+            </p>
+          </div>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1.5"
+          onClick={exportAll}
+          disabled={!data?.data?.length || exporting}
+        >
+          <Download className="h-3.5 w-3.5" aria-hidden="true" />
+          {exporting ? "Exporting…" : "Export CSV"}
+        </Button>
+      </header>
 
       {/* Filters */}
-      <Card>
-        <CardContent className="py-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Filter className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Filters</span>
+      <div className="space-y-3">
+        <div className="flex flex-wrap gap-3 items-end">
+          <div className="space-y-1">
+            <Label className="text-xs">Action</Label>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+              <Input
+                value={action}
+                onChange={(e) => { setAction(e.target.value); setPage(1); }}
+                placeholder="e.g. domain.created"
+                className="w-48 h-8 pl-8"
+                aria-label="Filter by action"
+              />
+            </div>
           </div>
-          <div className="flex flex-wrap gap-4 items-end">
-            <div className="space-y-1">
-              <Label className="text-xs">Action</Label>
-              <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                <Input value={action} onChange={(e) => { setAction(e.target.value); setPage(1); }} placeholder="e.g. domain.created" className="w-48 h-8 pl-8" />
-              </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Actor</Label>
+            <div className="relative">
+              <User className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+              <Input
+                value={actorEmail}
+                onChange={(e) => { setActorEmail(e.target.value); setPage(1); }}
+                placeholder="e.g. admin@example.com"
+                className="w-48 h-8 pl-8"
+                aria-label="Filter by actor email"
+              />
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Actor</Label>
-              <div className="relative">
-                <User className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                <Input value={actorEmail} onChange={(e) => { setActorEmail(e.target.value); setPage(1); }} placeholder="e.g. admin@example.com" className="w-48 h-8 pl-8" />
-              </div>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Resource</Label>
-              <Select value={resource || "all"} onValueChange={(v) => { setResource(v === "all" ? "" : v); setPage(1); }}>
-                <SelectTrigger className="w-48 h-8"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All resources</SelectItem>
-                  {RESOURCE_TYPES.map((r) => (
-                    <SelectItem key={r} value={r}>
-                      {RESOURCE_LABELS[r] || r}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">From</Label>
-              <Input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1); }} className="w-40 h-8" />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">To</Label>
-              <Input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1); }} className="w-40 h-8" />
-            </div>
-            {hasFilters && (
-              <Button variant="ghost" size="sm" onClick={clearFilters}>Clear</Button>
-            )}
           </div>
-        </CardContent>
-      </Card>
+          <div className="space-y-1">
+            <Label className="text-xs">Resource</Label>
+            <Select value={resource || "all"} onValueChange={(v) => { setResource(v === "all" ? "" : v); setPage(1); }}>
+              <SelectTrigger className="w-48 h-8" aria-label="Filter by resource type"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All resources</SelectItem>
+                {RESOURCE_TYPES.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {RESOURCE_LABELS[r] || r}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">From</Label>
+            <Input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1); }} className="w-40 h-8" aria-label="Filter from date" />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">To</Label>
+            <Input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1); }} className="w-40 h-8" aria-label="Filter to date" />
+          </div>
+          {hasFilters && (
+            <Button variant="ghost" size="sm" onClick={clearFilters}>Clear</Button>
+          )}
+        </div>
 
-      {/* Quick Filter Chips */}
-      <div className="flex flex-wrap gap-2">
-        <span className="text-xs text-muted-foreground self-center mr-1">Quick filters:</span>
-        {QUICK_FILTERS.map((qf) => {
-          const isActive = action === qf.value;
-          return (
-            <button
-              key={qf.value}
-              onClick={() => handleQuickFilter(qf.value)}
-              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-all duration-150 cursor-pointer ${
-                isActive ? qf.activeColor : qf.color
-              }`}
-            >
-              <qf.icon className="h-3 w-3" />
-              {qf.label}
-            </button>
-          );
-        })}
+        {/* Quick Filter Chips */}
+        <div className="flex flex-wrap items-center gap-1" role="tablist" aria-label="Quick action filter">
+          <span className="text-xs text-muted-foreground mr-1">Quick:</span>
+          {QUICK_FILTERS.map((qf) => {
+            const isActive = action === qf.value;
+            return (
+              <button
+                key={qf.value}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => handleQuickFilter(qf.value)}
+                className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+                  isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/80"
+                }`}
+              >
+                {qf.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Entries */}
@@ -371,43 +342,37 @@ function AuditRow({ entry: e, isFirst, isLast }: { entry: AuditEntry; isFirst: b
   const [expanded, setExpanded] = useState(false);
   const Icon = RESOURCE_ICONS[e.resource_type] || Shield;
   const actionColor = getActionColor(e.action);
-  const resourceColor = RESOURCE_COLORS[e.resource_type] || { bg: "bg-muted", text: "text-muted-foreground", ring: "ring-border" };
   const actorInitial = getActorInitial(e);
 
   return (
     <div className="relative flex gap-4 group">
-      {/* Timeline column */}
+      {/* Timeline column: neutral dot, full-height line */}
       <div className="flex flex-col items-center w-8 shrink-0">
-        {/* Line above dot */}
-        {!isFirst && (
-          <div className="w-px flex-1 bg-border group-hover:bg-muted-foreground/30 transition-colors" />
-        )}
+        {!isFirst && <div className="w-px flex-1 bg-border" aria-hidden="true" />}
         {isFirst && <div className="flex-1" />}
-
-        {/* Timeline dot */}
-        <div className={`w-3 h-3 rounded-full ${actionColor.dot} ring-4 ring-background shrink-0`} />
-
-        {/* Line below dot */}
-        {!isLast && (
-          <div className="w-px flex-1 bg-border group-hover:bg-muted-foreground/30 transition-colors" />
-        )}
+        <div className="w-2.5 h-2.5 rounded-full bg-muted-foreground/40 ring-4 ring-background shrink-0" aria-hidden="true" />
+        {!isLast && <div className="w-px flex-1 bg-border" aria-hidden="true" />}
         {isLast && <div className="flex-1" />}
       </div>
 
-      {/* Content */}
-      <div className={`flex-1 mb-3 ${isFirst ? "" : ""}`}>
+      <div className="flex-1 mb-3">
         <Card
           className="cursor-pointer transition-colors"
           onClick={() => setExpanded(!expanded)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); setExpanded(!expanded); } }}
+          aria-expanded={expanded}
+          aria-label={`Audit entry ${e.action} on ${RESOURCE_LABELS[e.resource_type] || e.resource_type}`}
         >
           <CardContent className="py-3 px-4">
             <div className="flex items-center gap-3">
-              {/* Resource icon in colored container */}
-              <div className={`h-9 w-9 rounded-lg ${resourceColor.bg} flex items-center justify-center shrink-0 ring-1 ${resourceColor.ring}`}>
-                <Icon className={`h-4 w-4 ${resourceColor.text}`} />
+              {/* Resource icon: neutral swatch (action color is the single signal) */}
+              <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center shrink-0" aria-hidden="true">
+                <Icon className="h-4 w-4 text-muted-foreground" />
               </div>
 
-              {/* Action badge */}
+              {/* Action badge: the one colored signal per row */}
               <Badge
                 variant="outline"
                 className={`shrink-0 text-xs ${actionColor.bg} ${actionColor.text} ${actionColor.border}`}
@@ -421,9 +386,9 @@ function AuditRow({ entry: e, isFirst, isLast }: { entry: AuditEntry; isFirst: b
                 <span className="font-mono text-xs">{e.resource_id.slice(0, 8)}</span>
               </span>
 
-              {/* Actor avatar */}
+              {/* Actor */}
               <div className="hidden sm:flex items-center gap-2 shrink-0">
-                <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center text-[10px] font-semibold text-muted-foreground">
+                <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center text-[10px] font-semibold text-muted-foreground" aria-hidden="true">
                   {actorInitial}
                 </div>
                 <span className="text-xs text-muted-foreground max-w-[140px] truncate">
@@ -431,32 +396,24 @@ function AuditRow({ entry: e, isFirst, isLast }: { entry: AuditEntry; isFirst: b
                 </span>
               </div>
 
-              {/* IP address */}
               {e.ip_address && (
-                <span className="text-xs font-mono text-muted-foreground shrink-0 hidden md:block">
+                <span className="text-xs font-mono text-muted-foreground shrink-0 hidden md:block tabular-nums">
                   {e.ip_address}
                 </span>
               )}
 
-              {/* Timestamp */}
               <div className="flex items-center gap-1 shrink-0" title={new Date(e.created_at).toLocaleString()}>
-                <Clock className="h-3 w-3 text-muted-foreground hidden sm:block" />
-                <span className="text-xs text-muted-foreground">
+                <Clock className="h-3 w-3 text-muted-foreground hidden sm:block" aria-hidden="true" />
+                <span className="text-xs text-muted-foreground tabular-nums">
                   {timeAgo(e.created_at)}
                 </span>
               </div>
 
-              {/* Expand/collapse chevron */}
-              <div className="shrink-0 text-muted-foreground">
-                {expanded ? (
-                  <ChevronDown className="h-4 w-4 transition-transform" />
-                ) : (
-                  <ChevronRight className="h-4 w-4 transition-transform" />
-                )}
+              <div className="shrink-0 text-muted-foreground" aria-hidden="true">
+                {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
               </div>
             </div>
 
-            {/* Expanded details */}
             {expanded && <ExpandedDetails entry={e} />}
           </CardContent>
         </Card>

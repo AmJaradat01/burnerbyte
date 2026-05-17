@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ErrorState } from "@/components/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Activity, AlertTriangle, Archive, CheckCircle2, Clock, Database, Globe, HardDrive, Inbox, Info, Key, Link as LinkIcon, Loader2, Lock, Mail, Monitor, Paperclip, Pencil, Plus, Save, Search, Settings, Shield, Trash2, Users, UsersRound, XCircle } from "lucide-react";
+import { Activity, AlertTriangle, CheckCircle2, Clock, Database, HardDrive, Info, Key, Loader2, Lock, Mail, Monitor, Paperclip, Pencil, Plus, Save, Search, Settings, Shield, Trash2, Users, XCircle } from "lucide-react";
 import Link from "next/link";
 import { UnifiedUsersTab } from "@/components/settings/unified-users-tab";
 import { RolesTab } from "@/components/settings/roles-tab";
@@ -38,7 +38,7 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+        <h1 className="text-headline">Settings</h1>
         <p className="text-sm text-muted-foreground mt-0.5">Manage your organization, members, and system configuration.</p>
       </div>
       <Tabs defaultValue="general">
@@ -205,8 +205,8 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
               </div>
               <div className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50">
                 <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-md bg-warning/10 flex items-center justify-center shrink-0">
-                    <Clock className="h-4 w-4 text-warning" />
+                  <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center shrink-0">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div>
                     <Label>Default Inbox TTL</Label>
@@ -217,8 +217,8 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
               </div>
               <div className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50">
                 <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-md bg-warning/10 flex items-center justify-center shrink-0">
-                    <Clock className="h-4 w-4 text-warning" />
+                  <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center shrink-0">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div>
                     <Label>Max Inbox TTL</Label>
@@ -236,7 +236,7 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
 
       {dirty && (
         <div className="sticky bottom-4 flex items-center justify-end gap-3">
-          {autoSaveStatus === "saving" && <span className="text-xs text-muted-foreground animate-pulse">Saving...</span>}
+          {autoSaveStatus === "saving" && <span className="text-xs text-muted-foreground">Saving...</span>}
           {autoSaveStatus === "saved" && <span className="text-xs text-success">✓ Saved</span>}
           <Button onClick={save} disabled={saving} size="lg" className="gap-2">
             <Save className="h-4 w-4" />
@@ -316,50 +316,46 @@ function OverviewTab() {
   if (isLoading) return <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">{Array.from({ length: 10 }).map((_, i) => <Card key={i}><CardContent className="pt-6"><Skeleton className="h-4 w-20 mb-2" /><Skeleton className="h-8 w-16" /></CardContent></Card>)}</div>;
   if (!data) return null;
 
-  const stats: { icon: typeof Mail; label: string; value: string; desc?: string; accent: string; href?: string }[] = [
-    { icon: Users, label: "Users", value: data.total_users.toLocaleString(), accent: "text-info bg-info/10" },
-    { icon: UsersRound, label: "Teams", value: (data.total_teams ?? 0).toLocaleString(), accent: "text-primary bg-primary/10", href: "/teams" },
-    { icon: Globe, label: "Domains", value: data.total_domains.toLocaleString(), accent: "text-success bg-success/10", href: "/domains" },
-    { icon: Inbox, label: "Active Inboxes", value: (data.active_inboxes ?? 0).toLocaleString(), desc: `${(data.total_inboxes ?? 0).toLocaleString()} total created`, accent: "text-warning bg-warning/10", href: "/" },
-    { icon: Archive, label: "Total Created", value: (data.total_inboxes_created ?? 0).toLocaleString(), accent: "text-primary bg-primary/10" },
-    { icon: Mail, label: "Total Emails", value: data.total_emails.toLocaleString(), accent: "text-destructive bg-destructive/10", href: "/analytics" },
-    { icon: HardDrive, label: "Storage", value: formatBytes(data.storage_used_bytes ?? 0), accent: "text-muted-foreground bg-muted" },
-    { icon: Monitor, label: "Active Sessions", value: (data.total_sessions ?? 0).toLocaleString(), accent: "text-info bg-info/10", href: "/profile/sessions" },
-    { icon: LinkIcon, label: "Webhooks", value: (data.total_webhooks ?? 0).toLocaleString(), accent: "text-warning bg-warning/10" },
-    { icon: Key, label: "API Keys", value: (data.total_api_keys ?? 0).toLocaleString(), accent: "text-primary bg-primary/10" },
+  const stats: { label: string; value: string; href?: string }[] = [
+    { label: "Users", value: data.total_users.toLocaleString() },
+    { label: "Teams", value: (data.total_teams ?? 0).toLocaleString(), href: "/teams" },
+    { label: "Domains", value: data.total_domains.toLocaleString(), href: "/domains" },
+    { label: "Active Inboxes", value: (data.active_inboxes ?? 0).toLocaleString(), href: "/" },
+    { label: "Total Created", value: (data.total_inboxes_created ?? 0).toLocaleString() },
+    { label: "Total Emails", value: data.total_emails.toLocaleString(), href: "/analytics" },
+    { label: "Storage", value: formatBytes(data.storage_used_bytes ?? 0) },
+    { label: "Active Sessions", value: (data.total_sessions ?? 0).toLocaleString(), href: "/profile/sessions" },
+    { label: "Webhooks", value: (data.total_webhooks ?? 0).toLocaleString() },
+    { label: "API Keys", value: (data.total_api_keys ?? 0).toLocaleString() },
   ];
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        {stats.map((s) => {
-          const inner = (
-            <CardContent className="pt-5 pb-4">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-medium text-muted-foreground">{s.label}</span>
-                <div className={`h-8 w-8 rounded-lg flex items-center justify-center shadow-sm ${s.accent}`}>
-                  <s.icon className="h-4 w-4" />
-                </div>
+      <p className="text-sm text-muted-foreground">
+        {data.total_users.toLocaleString()} users · {data.total_emails.toLocaleString()} emails · {(data.active_inboxes ?? 0).toLocaleString()} active inboxes
+      </p>
+      <Card>
+        <CardContent className="pt-5 pb-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-6 gap-y-3">
+            {stats.map((s) => (
+              <div key={s.label} className="flex items-baseline justify-between gap-2">
+                {s.href ? (
+                  <Link href={s.href} className="text-xs text-muted-foreground hover:underline">{s.label}</Link>
+                ) : (
+                  <span className="text-xs text-muted-foreground">{s.label}</span>
+                )}
+                <span className="text-sm font-medium tabular-nums">{s.value}</span>
               </div>
-              <p className="text-2xl font-bold tabular-nums">{s.value}</p>
-              {s.desc && <p className="text-xs text-muted-foreground mt-1">{s.desc}</p>}
-            </CardContent>
-          );
-          return s.href ? (
-            <Link key={s.label} href={s.href} className="block">
-              <Card className="hover:border-primary/40 transition-colors">{inner}</Card>
-            </Link>
-          ) : (
-            <Card key={s.label}>{inner}</Card>
-          );
-        })}
-      </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
       <PlatformSettingsCard />
       <Card>
         <CardContent className="pt-5 pb-4">
           <div className="flex items-center gap-2 mb-3">
-            <div className="h-6 w-6 rounded-md bg-info/10 flex items-center justify-center">
-              <Info className="h-3.5 w-3.5 text-info" />
+            <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
+              <Info className="h-3.5 w-3.5 text-muted-foreground" />
             </div>
             <span className="text-sm font-medium">About</span>
           </div>
@@ -448,8 +444,8 @@ function PlatformSettingsCard() {
         {/* Access */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <div className="h-6 w-6 rounded-md bg-success/10 flex items-center justify-center">
-              <Users className="h-3.5 w-3.5 text-success" />
+            <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
+              <Users className="h-3.5 w-3.5 text-muted-foreground" />
             </div>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Access</p>
           </div>
@@ -482,8 +478,8 @@ function PlatformSettingsCard() {
         {/* Password policy */}
         <div className="space-y-3 border-t pt-5">
           <div className="flex items-center gap-2">
-            <div className="h-6 w-6 rounded-md bg-warning/10 flex items-center justify-center">
-              <Key className="h-3.5 w-3.5 text-warning" />
+            <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
+              <Key className="h-3.5 w-3.5 text-muted-foreground" />
             </div>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Password Policy</p>
           </div>
@@ -506,8 +502,8 @@ function PlatformSettingsCard() {
         {/* Lockout */}
         <div className="space-y-3 border-t pt-5">
           <div className="flex items-center gap-2">
-            <div className="h-6 w-6 rounded-md bg-destructive/10 flex items-center justify-center">
-              <Lock className="h-3.5 w-3.5 text-destructive" />
+            <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
+              <Lock className="h-3.5 w-3.5 text-muted-foreground" />
             </div>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Account Lockout</p>
           </div>
@@ -528,8 +524,8 @@ function PlatformSettingsCard() {
         {/* Date & Time */}
         <div className="space-y-3 border-t pt-5">
           <div className="flex items-center gap-2">
-            <div className="h-6 w-6 rounded-md bg-info/10 flex items-center justify-center">
-              <Clock className="h-3.5 w-3.5 text-info" />
+            <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
+              <Clock className="h-3.5 w-3.5 text-muted-foreground" />
             </div>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Date & Time Defaults</p>
           </div>
@@ -574,8 +570,8 @@ function PlatformSettingsCard() {
         {/* Quotas & Limits */}
         <div className="space-y-3 border-t pt-5">
           <div className="flex items-center gap-2">
-            <div className="h-6 w-6 rounded-md bg-primary/10 flex items-center justify-center">
-              <Activity className="h-3.5 w-3.5 text-primary" />
+            <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
+              <Activity className="h-3.5 w-3.5 text-muted-foreground" />
             </div>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Quotas & Limits</p>
           </div>
@@ -612,8 +608,8 @@ function PlatformSettingsCard() {
         {/* Session Limits */}
         <div className="space-y-3 border-t pt-5">
           <div className="flex items-center gap-2">
-            <div className="h-6 w-6 rounded-md bg-info/10 flex items-center justify-center">
-              <Monitor className="h-3.5 w-3.5 text-info" />
+            <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
+              <Monitor className="h-3.5 w-3.5 text-muted-foreground" />
             </div>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Session Limits</p>
           </div>
@@ -678,8 +674,8 @@ function HealthSection() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 pt-2">
-        <div className="h-6 w-6 rounded-md bg-success/10 flex items-center justify-center">
-          <Monitor className="h-3.5 w-3.5 text-success" />
+        <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
+          <Monitor className="h-3.5 w-3.5 text-muted-foreground" />
         </div>
         <p className="text-sm font-semibold">Service Health</p>
         <p className="text-xs text-muted-foreground">· Auto-refreshing every 15s</p>
@@ -697,7 +693,7 @@ function HealthSection() {
                   {uptime && <p className="text-xs text-muted-foreground">Uptime: {uptime}</p>}
                 </div>
               </div>
-              <Badge variant={allHealthy ? "default" : "destructive"} className="gap-1">
+              <Badge variant={allHealthy ? "success" : "destructive"} className="gap-1">
                 {allHealthy ? <CheckCircle2 className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
                 {services.filter(([, s]) => s.status === "ok").length}/{services.length} healthy
               </Badge>
