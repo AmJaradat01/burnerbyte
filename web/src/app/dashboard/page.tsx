@@ -48,11 +48,11 @@ function humanizeAction(action: string): string {
 }
 
 function actionDotColor(action: string): string {
-  if (action.includes("created")) return "bg-emerald-500";
-  if (action.includes("deleted") || action.includes("removed") || action.includes("revoked")) return "bg-red-500";
-  if (action.includes("updated") || action.includes("changed")) return "bg-blue-500";
-  if (action.includes("login")) return "bg-purple-500";
-  if (action.includes("invited")) return "bg-indigo-500";
+  if (action.includes("created")) return "bg-success/50";
+  if (action.includes("deleted") || action.includes("removed") || action.includes("revoked")) return "bg-destructive/50";
+  if (action.includes("updated") || action.includes("changed")) return "bg-info/50";
+  if (action.includes("login")) return "bg-primary";
+  if (action.includes("invited")) return "bg-primary";
   return "bg-muted-foreground";
 }
 
@@ -124,7 +124,7 @@ function MemberDashboard({ org, user, greeting }: { org: { id: string; name: str
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-medium text-muted-foreground">Active Inboxes</span>
-              <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm text-emerald-600 bg-emerald-100">
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm text-success bg-success/10">
                 <InboxIcon className="h-4 w-4" />
               </div>
             </div>
@@ -140,7 +140,7 @@ function MemberDashboard({ org, user, greeting }: { org: { id: string; name: str
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-medium text-muted-foreground">Quick Actions</span>
-              <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm text-blue-600 bg-blue-100">
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm text-info bg-info/10">
                 <Zap className="h-4 w-4" />
               </div>
             </div>
@@ -166,8 +166,8 @@ function MemberDashboard({ org, user, greeting }: { org: { id: string; name: str
               {recentInboxes.map((inbox) => (
                 <Link key={inbox.id} href={`/inboxes/${inbox.id}`} className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="h-8 w-8 rounded-lg bg-orange-100 flex items-center justify-center shrink-0">
-                      <Mail className="h-4 w-4 text-orange-600" />
+                    <div className="h-8 w-8 rounded-lg bg-warning/10 flex items-center justify-center shrink-0">
+                      <Mail className="h-4 w-4 text-warning" />
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-mono font-medium truncate">{inbox.full_address || inbox.address}</p>
@@ -320,11 +320,8 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
                 Here&apos;s what&apos;s happening with {org.name}
                 {dataUpdatedAt ? <> · <LastUpdated dataUpdatedAt={dataUpdatedAt} /></> : null}
                 {autoRefresh && (
-                  <span className="inline-flex items-center gap-1.5 ml-2 text-emerald-600">
-                    <span className="relative inline-flex h-1.5 w-1.5">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                      <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                    </span>
+                  <span className="inline-flex items-center gap-1.5 ml-2 text-success">
+                    <span className="h-1.5 w-1.5 rounded-full bg-success" />
                     Live
                   </span>
                 )}
@@ -356,10 +353,10 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
 
       {/* Primary stats — 4 cards, uniform height */}
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={Mail} label="Total Emails" value={stats?.total_emails_received ?? stats?.total_emails} loading={isLoading} accent="text-blue-600 bg-blue-100" sub={`${formatBytes(stats?.total_storage_bytes ?? stats?.storage_used_bytes ?? 0)} storage`} delta={todayDelta} deltaLabel="vs yesterday" />
-        <StatCard icon={InboxIcon} label="Active Inboxes" value={stats?.active_inboxes} loading={isLoading} accent="text-emerald-600 bg-emerald-100" sub={`${(stats?.total_inboxes_created ?? stats?.total_inboxes ?? 0).toLocaleString()} total created`} />
-        <StatCard icon={Globe} label="Domains" value={stats?.total_domains} loading={isLoading} accent="text-violet-600 bg-violet-100" sub={`${stats?.total_members ?? 0} members · ${stats?.total_teams ?? 0} teams`} link="/domains" />
-        <StatCard icon={HardDrive} label="Storage" value={formatBytes(stats?.total_storage_bytes ?? stats?.storage_used_bytes ?? 0)} loading={isLoading} accent="text-slate-600 bg-slate-100" isString sub="All-time usage" />
+        <StatCard icon={Mail} label="Total Emails" value={stats?.total_emails_received ?? stats?.total_emails} loading={isLoading} accent="text-info bg-info/10" sub={`${formatBytes(stats?.total_storage_bytes ?? stats?.storage_used_bytes ?? 0)} storage`} delta={todayDelta} deltaLabel="vs yesterday" />
+        <StatCard icon={InboxIcon} label="Active Inboxes" value={stats?.active_inboxes} loading={isLoading} accent="text-success bg-success/10" sub={`${(stats?.total_inboxes_created ?? stats?.total_inboxes ?? 0).toLocaleString()} total created`} />
+        <StatCard icon={Globe} label="Domains" value={stats?.total_domains} loading={isLoading} accent="text-primary bg-primary/10" sub={`${stats?.total_members ?? 0} members · ${stats?.total_teams ?? 0} teams`} link="/domains" />
+        <StatCard icon={HardDrive} label="Storage" value={formatBytes(stats?.total_storage_bytes ?? stats?.storage_used_bytes ?? 0)} loading={isLoading} accent="text-muted-foreground bg-muted" isString sub="All-time usage" />
       </div>
 
       {/* Charts + sidebar */}
@@ -414,8 +411,8 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
               <CardHeader className="pb-2 bg-muted/20">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="h-6 w-6 rounded-md bg-amber-100 flex items-center justify-center">
-                      <Clock className="h-3.5 w-3.5 text-amber-600" />
+                    <div className="h-6 w-6 rounded-md bg-warning/10 flex items-center justify-center">
+                      <Clock className="h-3.5 w-3.5 text-warning" />
                     </div>
                     <CardTitle className="text-base">Activity by Hour</CardTitle>
                     {peakHour && (
@@ -446,8 +443,8 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
                 <CardHeader className="pb-2 bg-muted/20">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="h-6 w-6 rounded-md bg-rose-100 flex items-center justify-center">
-                        <TrendingUp className="h-3.5 w-3.5 text-rose-600" />
+                      <div className="h-6 w-6 rounded-md bg-destructive/10 flex items-center justify-center">
+                        <TrendingUp className="h-3.5 w-3.5 text-destructive" />
                       </div>
                       <CardTitle className="text-sm">Top Senders</CardTitle>
                     </div>
@@ -467,7 +464,7 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
                           <span className="text-[11px] text-muted-foreground tabular-nums shrink-0 ml-2">{sd.count} ({pct.toFixed(0)}%)</span>
                         </div>
                         <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                          <div className="h-full rounded-full bg-blue-500 transition-all" style={{ width: `${Math.max((sd.count / maxSenderCount) * 100, 4)}%` }} />
+                          <div className="h-full rounded-full bg-info/50 transition-all" style={{ width: `${Math.max((sd.count / maxSenderCount) * 100, 4)}%` }} />
                         </div>
                       </div>
                     );
@@ -480,8 +477,8 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
               <Card className="overflow-hidden">
                 <CardHeader className="pb-2 bg-muted/20">
                   <div className="flex items-center gap-2">
-                    <div className="h-6 w-6 rounded-md bg-violet-100 flex items-center justify-center">
-                      <Globe className="h-3.5 w-3.5 text-violet-600" />
+                    <div className="h-6 w-6 rounded-md bg-primary/10 flex items-center justify-center">
+                      <Globe className="h-3.5 w-3.5 text-primary" />
                     </div>
                     <CardTitle className="text-sm">Emails by Domain</CardTitle>
                   </div>
@@ -497,7 +494,7 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
                           <span className="text-[11px] text-muted-foreground tabular-nums shrink-0 ml-2">{d.count} ({pct.toFixed(0)}%)</span>
                         </div>
                         <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                          <div className="h-full rounded-full bg-violet-400 transition-all" style={{ width: `${Math.max(pct, 4)}%` }} />
+                          <div className="h-full rounded-full bg-primary/60 transition-all" style={{ width: `${Math.max(pct, 4)}%` }} />
                         </div>
                       </div>
                     );
@@ -515,8 +512,8 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
             <CardHeader className="pb-2 bg-muted/20">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="h-6 w-6 rounded-md bg-indigo-100 flex items-center justify-center">
-                    <Activity className="h-3.5 w-3.5 text-indigo-600" />
+                  <div className="h-6 w-6 rounded-md bg-primary/10 flex items-center justify-center">
+                    <Activity className="h-3.5 w-3.5 text-primary" />
                   </div>
                   <CardTitle className="text-base">This Week</CardTitle>
                 </div>
@@ -530,7 +527,7 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
                   <p className="text-xs text-muted-foreground">emails received</p>
                 </div>
                 {todayDelta !== 0 && (
-                  <div className={`flex items-center gap-1 text-xs font-medium ${todayDelta > 0 ? "text-emerald-600" : "text-red-600"}`}>
+                  <div className={`flex items-center gap-1 text-xs font-medium ${todayDelta > 0 ? "text-success" : "text-destructive"}`}>
                     {todayDelta > 0 ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
                     {Math.abs(todayDelta)} today
                   </div>
@@ -572,8 +569,8 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
             <CardHeader className="pb-2 bg-muted/20">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="h-6 w-6 rounded-md bg-cyan-100 flex items-center justify-center">
-                    <Shield className="h-3.5 w-3.5 text-cyan-600" />
+                  <div className="h-6 w-6 rounded-md bg-info/10 flex items-center justify-center">
+                    <Shield className="h-3.5 w-3.5 text-info" />
                   </div>
                   <CardTitle className="text-base">Recent Activity</CardTitle>
                 </div>
@@ -623,12 +620,12 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {[
-              { href: "/", icon: InboxIcon, label: "Inboxes", desc: "Create & manage", color: "text-orange-600 bg-orange-100", border: "hover:border-orange-200" },
-              { href: "/domains", icon: Globe, label: "Domains", desc: "DNS & verification", color: "text-emerald-600 bg-emerald-100", border: "hover:border-emerald-200" },
-              { href: "/teams", icon: Users, label: "Teams", desc: "Members & access", color: "text-indigo-600 bg-indigo-100", border: "hover:border-indigo-200" },
-              { href: "/webhooks", icon: Webhook, label: "Webhooks", desc: "Event callbacks", color: "text-amber-600 bg-amber-100", border: "hover:border-amber-200" },
-              { href: "/api-keys", icon: Key, label: "API Keys", desc: "Programmatic access", color: "text-violet-600 bg-violet-100", border: "hover:border-violet-200" },
-              { href: "/analytics", icon: BarChart3, label: "Analytics", desc: "Usage & trends", color: "text-rose-600 bg-rose-100", border: "hover:border-rose-200" },
+              { href: "/", icon: InboxIcon, label: "Inboxes", desc: "Create & manage", color: "text-warning bg-warning/10", border: "hover:border-warning/20" },
+              { href: "/domains", icon: Globe, label: "Domains", desc: "DNS & verification", color: "text-success bg-success/10", border: "hover:border-success/20" },
+              { href: "/teams", icon: Users, label: "Teams", desc: "Members & access", color: "text-primary bg-primary/10", border: "hover:border-primary/20" },
+              { href: "/webhooks", icon: Webhook, label: "Webhooks", desc: "Event callbacks", color: "text-warning bg-warning/10", border: "hover:border-warning/20" },
+              { href: "/api-keys", icon: Key, label: "API Keys", desc: "Programmatic access", color: "text-primary bg-primary/10", border: "hover:border-primary/20" },
+              { href: "/analytics", icon: BarChart3, label: "Analytics", desc: "Usage & trends", color: "text-destructive bg-destructive/10", border: "hover:border-destructive/20" },
             ].map((item) => (
               <Link
                 key={item.href}
@@ -683,7 +680,7 @@ function StatCard({ icon: Icon, label, value, loading, accent, sub, delta, delta
         )}
         <div className="mt-1 h-4 flex items-center">
           {!loading && delta !== undefined && delta !== 0 ? (
-            <span className={`flex items-center gap-1 text-[11px] font-medium ${delta > 0 ? "text-emerald-600" : "text-red-600"}`}>
+            <span className={`flex items-center gap-1 text-[11px] font-medium ${delta > 0 ? "text-success" : "text-destructive"}`}>
               {delta > 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
               {delta > 0 ? "+" : ""}{delta} {deltaLabel}
             </span>

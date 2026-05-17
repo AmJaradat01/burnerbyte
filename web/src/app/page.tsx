@@ -113,7 +113,7 @@ function HomePage() {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">{t("recentInboxes")}</h2>
           {data && data.total > 0 && (
-            <p className="text-sm font-medium text-muted-foreground">{data.total} active</p>
+            <p className="text-sm font-medium text-muted-foreground tabular-nums">{data.total} active</p>
           )}
         </div>
 
@@ -237,12 +237,9 @@ function QuickCreateCard() {
 
     return (
       <div className="text-center space-y-5">
-        <div className="inline-flex items-center gap-2 rounded-full border bg-green-500/10 border-green-500/20 px-3 py-1">
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
-          </span>
-          <span className="text-xs font-medium text-green-700">{t("addressReady")}</span>
+        <div className="inline-flex items-center gap-2 rounded-full border bg-success/10 border-success/20 px-3 py-1">
+          <span className="h-2 w-2 rounded-full bg-success" />
+          <span className="text-xs font-medium text-success">{t("addressReady")}</span>
         </div>
 
         <div>
@@ -257,7 +254,7 @@ function QuickCreateCard() {
               <span className="text-primary">{domainPart}</span>
             </span>
             <span className="shrink-0 flex items-center justify-center h-9 w-9 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
-              {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />}
+              {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />}
             </span>
           </button>
         </div>
@@ -384,15 +381,15 @@ function InboxCard({ inbox, onExtend, onDelete }: { inbox: Inbox; onExtend: () =
 
   return (
     <Card
-      className={`transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:border-primary/30 cursor-pointer group ${!inbox.is_active ? "opacity-60" : ""} ${expiringSoon ? "border-dashed border-amber-200" : ""}`}
+      className={`transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:border-primary/30 cursor-pointer group ${!inbox.is_active ? "opacity-60" : ""} ${expiringSoon ? "border-dashed border-warning/20" : ""}`}
       onClick={() => router.push(`/inboxes/${inbox.id}`)}
     >
       <CardContent className="pt-4 pb-3 space-y-2.5">
         {/* Address */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="h-10 w-10 rounded-lg bg-orange-100 flex items-center justify-center shrink-0">
-              <Mail className="h-5 w-5 text-orange-600" />
+            <div className="h-10 w-10 rounded-lg bg-warning/10 flex items-center justify-center shrink-0">
+              <Mail className="h-5 w-5 text-warning" />
             </div>
             <p className="font-mono text-sm font-medium truncate group-hover:text-primary transition-colors">
             <span>{localPart}</span>
@@ -406,7 +403,7 @@ function InboxCard({ inbox, onExtend, onDelete }: { inbox: Inbox; onExtend: () =
         </div>
 
         {/* Stats row */}
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+        <div className="flex items-center gap-3 text-xs text-muted-foreground tabular-nums">
           <span className="flex items-center gap-1">
             <Mail className="h-3 w-3" /> {inbox.email_count ?? 0}
           </span>
@@ -487,12 +484,12 @@ function InboxGridSkeleton() {
 
 const featureKeys = ["inboxes", "multiTeam", "realTime", "webhooks", "apiKeys", "selfHosted"] as const;
 const featureIcons = [
-  { icon: Mail, bg: "bg-orange-100", fg: "text-orange-600", accent: "group-hover:border-orange-300", glow: "group-hover:shadow-orange-100/50" },
-  { icon: Users, bg: "bg-blue-100", fg: "text-blue-600", accent: "group-hover:border-blue-300", glow: "group-hover:shadow-blue-100/50" },
-  { icon: Zap, bg: "bg-amber-100", fg: "text-amber-600", accent: "group-hover:border-amber-300", glow: "group-hover:shadow-amber-100/50" },
-  { icon: LinkIcon, bg: "bg-violet-100", fg: "text-violet-600", accent: "group-hover:border-violet-300", glow: "group-hover:shadow-violet-100/50" },
-  { icon: Key, bg: "bg-emerald-100", fg: "text-emerald-600", accent: "group-hover:border-emerald-300", glow: "group-hover:shadow-emerald-100/50" },
-  { icon: Server, bg: "bg-rose-100", fg: "text-rose-600", accent: "group-hover:border-rose-300", glow: "group-hover:shadow-rose-100/50" },
+  { icon: Mail, bg: "bg-warning/10", fg: "text-warning", accent: "group-hover:border-warning/30", glow: "group-hover:shadow-warning/10" },
+  { icon: Users, bg: "bg-info/10", fg: "text-info", accent: "group-hover:border-info/30", glow: "group-hover:shadow-info/10" },
+  { icon: Zap, bg: "bg-warning/10", fg: "text-warning", accent: "group-hover:border-warning/30", glow: "group-hover:shadow-warning/10" },
+  { icon: LinkIcon, bg: "bg-primary/10", fg: "text-primary", accent: "group-hover:border-primary/30", glow: "group-hover:shadow-primary/10" },
+  { icon: Key, bg: "bg-success/10", fg: "text-success", accent: "group-hover:border-success/30", glow: "group-hover:shadow-success/10" },
+  { icon: Server, bg: "bg-destructive/10", fg: "text-destructive", accent: "group-hover:border-destructive/30", glow: "group-hover:shadow-destructive/10" },
 ];
 
 interface SSOStatus {
@@ -535,10 +532,10 @@ function LandingPage() {
           <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent" />
           <div className="relative mx-auto max-w-3xl px-6 py-28 text-center">
             <div className="inline-flex items-center gap-2 rounded-full border bg-muted/50 px-4 py-1.5 text-sm text-muted-foreground mb-6">
-              <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" /><span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" /></span>
+              <span className="h-2 w-2 rounded-full bg-success" />
               {t("tagline")}
             </div>
-            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text">{t("headline")}</h1>
+            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl text-foreground">{t("headline")}</h1>
             <p className="mt-6 text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">{t("subtitle")}</p>
             <div className="mt-10 flex justify-center gap-4">
               {allowRegistration ? (
@@ -560,17 +557,37 @@ function LandingPage() {
             <p className="text-sm font-medium text-primary mb-2 uppercase tracking-wider">{t("builtFor")}</p>
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">{t("everythingYouNeed")}</h2>
           </div>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {featureKeys.map((key, i) => {
-              const { icon: Icon, bg, fg, accent, glow } = featureIcons[i];
-              return (
-              <div key={key} className={`group relative rounded-xl border bg-background/60 backdrop-blur-sm p-6 transition-all duration-300 hover:bg-background/80 hover:shadow-xl hover:-translate-y-1 ${accent} ${glow}`}>
-                <div className={`h-12 w-12 rounded-xl flex items-center justify-center mb-4 ${bg} transition-transform duration-300 group-hover:scale-110`}><Icon className={`h-6 w-6 ${fg}`} /></div>
-                <h3 className="font-semibold text-base">{t(`features.${key}.title`)}</h3>
-                <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{t(`features.${key}.desc`)}</p>
+          <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
+            {/* Featured: first two items as large cards */}
+            <div className="space-y-6">
+              {featureKeys.slice(0, 2).map((key, i) => {
+                const { icon: Icon, bg, fg } = featureIcons[i];
+                return (
+                  <div key={key} className="group rounded-xl border bg-card p-8 transition-colors hover:bg-accent/30">
+                    <div className={`h-10 w-10 rounded-lg flex items-center justify-center mb-5 ${bg}`}><Icon className={`h-5 w-5 ${fg}`} /></div>
+                    <h3 className="font-semibold text-lg">{t(`features.${key}.title`)}</h3>
+                    <p className="mt-2 text-sm text-muted-foreground leading-relaxed max-w-md">{t(`features.${key}.desc`)}</p>
+                  </div>
+                );
+              })}
+            </div>
+            {/* Compact: remaining items as a tight list */}
+            <div className="rounded-xl border bg-card p-8">
+              <div className="space-y-6">
+                {featureKeys.slice(2).map((key, i) => {
+                  const { icon: Icon, fg } = featureIcons[i + 2];
+                  return (
+                    <div key={key} className="flex items-start gap-4">
+                      <Icon className={`h-5 w-5 mt-0.5 shrink-0 ${fg}`} />
+                      <div>
+                        <h3 className="font-medium text-sm">{t(`features.${key}.title`)}</h3>
+                        <p className="mt-0.5 text-sm text-muted-foreground leading-relaxed">{t(`features.${key}.desc`)}</p>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-              );
-            })}
+            </div>
           </div>
         </section>
         <section className="border-t bg-gradient-to-b from-muted/50 to-background">

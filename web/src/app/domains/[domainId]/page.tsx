@@ -30,7 +30,7 @@ function CopyValue({ label, value }: { label: string; value: string }) {
       <span className="text-xs text-muted-foreground font-medium w-16 shrink-0">{label}</span>
       <button onClick={copy} className="flex items-center gap-2 rounded-lg bg-muted/50 border px-3 py-1.5 font-mono text-sm break-all text-left hover:bg-muted transition-colors group flex-1 min-w-0">
         <span className="flex-1 truncate">{value}</span>
-        {copied ? <Check className="h-3.5 w-3.5 text-emerald-500 shrink-0" /> : <Copy className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />}
+        {copied ? <Check className="h-3.5 w-3.5 text-success shrink-0" /> : <Copy className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />}
       </button>
     </div>
   );
@@ -44,16 +44,16 @@ function DnsRecordSection({ title, icon: Icon, description, verified, records }:
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
-        <div className={`h-7 w-7 rounded-md flex items-center justify-center shrink-0 ${verified ? "bg-emerald-100" : "bg-amber-100"}`}>
-          <Icon className={`h-3.5 w-3.5 ${verified ? "text-emerald-600" : "text-amber-600"}`} />
+        <div className={`h-7 w-7 rounded-md flex items-center justify-center shrink-0 ${verified ? "bg-success/10" : "bg-warning/10"}`}>
+          <Icon className={`h-3.5 w-3.5 ${verified ? "text-success" : "text-warning"}`} />
         </div>
         <span className="text-sm font-semibold">{title}</span>
         {verified ? (
-          <Badge className="gap-1 text-[10px] bg-emerald-100 text-emerald-700 border-emerald-200">
+          <Badge className="gap-1 text-[10px] bg-success/10 text-success border-success/20">
             <CheckCircle2 className="h-2.5 w-2.5" /> Verified
           </Badge>
         ) : (
-          <Badge className="gap-1 text-[10px] bg-amber-100 text-amber-700 border-amber-200">
+          <Badge className="gap-1 text-[10px] bg-warning/10 text-warning border-warning/20">
             <Circle className="h-2.5 w-2.5" /> Pending
           </Badge>
         )}
@@ -127,18 +127,18 @@ export default function DomainDetailPage() {
               <div className="flex items-center gap-3"><Skeleton className="h-7 w-48" /><Skeleton className="h-5 w-20 rounded-full" /></div>
             ) : (
               <div className="flex items-center gap-3 flex-1">
-                <div className="h-7 w-7 rounded-md bg-emerald-500/10 flex items-center justify-center shrink-0">
-                  <Globe className="h-4 w-4 text-emerald-600" />
+                <div className="h-7 w-7 rounded-md bg-success/50/10 flex items-center justify-center shrink-0">
+                  <Globe className="h-4 w-4 text-success" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
                     <h1 className="text-base font-semibold font-mono">{domain?.domain_name}</h1>
                     {allVerified ? (
-                      <Badge className="gap-1 bg-emerald-100 text-emerald-700 border-emerald-200">
+                      <Badge className="gap-1 bg-success/10 text-success border-success/20">
                         <CheckCircle2 className="h-3 w-3" /> Verified
                       </Badge>
                     ) : (
-                      <Badge className="gap-1 bg-amber-100 text-amber-700 border-amber-200">
+                      <Badge className="gap-1 bg-warning/10 text-warning border-warning/20">
                         <Clock className="h-3 w-3" /> Setup Required
                       </Badge>
                     )}
@@ -163,10 +163,10 @@ export default function DomainDetailPage() {
         <>
           {/* Quick stats */}
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <QuickStat icon={Inbox} label="Active Inboxes" value={domain.active_inboxes ?? 0} accent="text-emerald-600 bg-emerald-100" />
-            <QuickStat icon={Globe} label="Total Created" value={domain.inboxes_created_count ?? 0} accent="text-blue-600 bg-blue-100" />
-            <QuickStat icon={Users} label="Teams" value={domain.team_count ?? 0} accent="text-violet-600 bg-violet-100" />
-            <QuickStat icon={Shield} label="DNS Status" value={allVerified ? "✓ OK" : `${[domain.mx_verified, domain.txt_verified].filter(Boolean).length}/2`} accent={allVerified ? "text-emerald-600 bg-emerald-100" : "text-amber-600 bg-amber-100"} />
+            <QuickStat icon={Inbox} label="Active Inboxes" value={domain.active_inboxes ?? 0} accent="text-success bg-success/10" />
+            <QuickStat icon={Globe} label="Total Created" value={domain.inboxes_created_count ?? 0} accent="text-info bg-info/10" />
+            <QuickStat icon={Users} label="Teams" value={domain.team_count ?? 0} accent="text-primary bg-primary/10" />
+            <QuickStat icon={Shield} label="DNS Status" value={allVerified ? "✓ OK" : `${[domain.mx_verified, domain.txt_verified].filter(Boolean).length}/2`} accent={allVerified ? "text-success bg-success/10" : "text-warning bg-warning/10"} />
           </div>
 
           {/* Two-column layout */}
@@ -177,8 +177,8 @@ export default function DomainDetailPage() {
               <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-blue-100">
-                  <Globe className="h-4 w-4 text-blue-600" />
+                <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-info/10">
+                  <Globe className="h-4 w-4 text-info" />
                 </div>
                 <div>
                   <CardTitle className="text-base">DNS Configuration</CardTitle>
@@ -224,10 +224,7 @@ export default function DomainDetailPage() {
                 </Button>
                 {needsPoll && (
                   <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <span className="relative flex h-2 w-2">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
-                      <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
-                    </span>
+                    <span className="h-2 w-2 rounded-full bg-warning" />
                     Auto-checking every 30s
                   </span>
                 )}
@@ -244,8 +241,8 @@ export default function DomainDetailPage() {
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-violet-100">
-                  <Users className="h-4 w-4 text-violet-600" />
+                <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-primary/10">
+                  <Users className="h-4 w-4 text-primary" />
                 </div>
                 <div>
                   <CardTitle className="text-base">Assigned Teams</CardTitle>
@@ -283,8 +280,8 @@ export default function DomainDetailPage() {
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-slate-100">
-                  <Info className="h-4 w-4 text-slate-600" />
+                <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-muted">
+                  <Info className="h-4 w-4 text-muted-foreground" />
                 </div>
                 <CardTitle className="text-base">Details</CardTitle>
               </div>
@@ -362,8 +359,8 @@ function DomainSettingsCard({ domain: d, orgId }: { domain: Domain; orgId: strin
     <Card>
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-amber-100">
-            <Settings2 className="h-4 w-4 text-amber-600" />
+          <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-warning/10">
+            <Settings2 className="h-4 w-4 text-warning" />
           </div>
           <div>
             <CardTitle className="text-base">Domain Settings</CardTitle>

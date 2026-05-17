@@ -188,8 +188,8 @@ export default function ApiKeysPage() {
         <CardContent className="pt-5 pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-7 w-7 rounded-md bg-violet-500/10 flex items-center justify-center">
-                <Key className="h-4 w-4 text-violet-600" />
+              <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center">
+                <Key className="h-4 w-4 text-primary" />
               </div>
               <div>
                 <h1 className="text-base font-semibold">API Keys</h1>
@@ -217,7 +217,7 @@ export default function ApiKeysPage() {
               label: "Total",
               value: data.total,
               icon: Key,
-              bg: "bg-violet-100 text-violet-600",
+              bg: "bg-primary/10 text-primary",
             },
             {
               label: "Active",
@@ -225,7 +225,7 @@ export default function ApiKeysPage() {
                 (k) => k.is_active && (!k.expires_at || new Date(k.expires_at) >= new Date()),
               ).length,
               icon: CheckCircle2,
-              bg: "bg-emerald-100 text-emerald-600",
+              bg: "bg-success/10 text-success",
             },
             {
               label: "Expired / Inactive",
@@ -233,7 +233,7 @@ export default function ApiKeysPage() {
                 (k) => !k.is_active || (k.expires_at && new Date(k.expires_at) < new Date()),
               ).length,
               icon: Clock,
-              bg: "bg-red-100 text-red-600",
+              bg: "bg-destructive/10 text-destructive",
             },
           ].map((s) => (
             <Card key={s.label} className="transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:-translate-y-px">
@@ -339,8 +339,8 @@ function ApiKeyCard({
             <div
               className={`flex items-center justify-center h-10 w-10 rounded-lg shrink-0 ${
                 dimmed
-                  ? "bg-red-100 text-red-600"
-                  : "bg-violet-100 text-violet-600"
+                  ? "bg-destructive/10 text-destructive"
+                  : "bg-primary/10 text-primary"
               }`}
             >
               <Key className="h-5 w-5" />
@@ -362,7 +362,7 @@ function ApiKeyCard({
                   <Badge variant="secondary" className="gap-1 shrink-0">Inactive</Badge>
                 )}
                 {!isRevoked && !isExpired && k.is_active && (
-                  <Badge className="gap-1 shrink-0 bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+                  <Badge className="gap-1 shrink-0 bg-success/10 text-success hover:bg-success/10">
                     <CheckCircle2 className="h-3 w-3" /> Active
                   </Badge>
                 )}
@@ -609,7 +609,7 @@ function ScopePicker({
                       <div className="min-w-0 flex-1 pr-4">
                         <div className="flex items-center gap-2">
                           {checked && (
-                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                            <CheckCircle2 className="h-3.5 w-3.5 text-success shrink-0" />
                           )}
                           <span className="text-sm font-medium">{perm.label}</span>
                           <code className="text-[10px] text-muted-foreground font-mono ml-auto hidden sm:inline">
@@ -966,7 +966,7 @@ function KeyDetailDialog({
                   <AlertTriangle className="h-3 w-3" /> Expired
                 </Badge>
               ) : key.is_active ? (
-                <Badge className="gap-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+                <Badge className="gap-1 bg-success/10 text-success hover:bg-success/10">
                   <CheckCircle2 className="h-3 w-3" /> Active
                 </Badge>
               ) : (

@@ -58,8 +58,8 @@ export default function ProfilePage() {
       <Card className="card-header-accent">
         <CardContent className="pt-5 pb-4">
           <div className="flex items-center gap-3">
-            <div className="h-7 w-7 rounded-md bg-cyan-500/10 flex items-center justify-center">
-              <Shield className="h-4 w-4 text-cyan-600" />
+            <div className="h-7 w-7 rounded-md bg-info/10 flex items-center justify-center">
+              <Shield className="h-4 w-4 text-info" />
             </div>
             <div>
               <h1 className="text-base font-semibold">Profile</h1>
@@ -75,22 +75,22 @@ export default function ProfilePage() {
           <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
             <Avatar className="h-20 w-20 text-xl ring-4 ring-background shadow-lg">
               <AvatarImage src={user.avatar_url} alt={user.display_name} />
-              <AvatarFallback className="bg-gradient-to-br from-cyan-500 to-blue-600 text-white font-bold">{initials}</AvatarFallback>
+              <AvatarFallback className="bg-gradient-to-br from-info to-info text-white font-bold">{initials}</AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0 pt-2">
               <div className="flex items-center gap-2 flex-wrap">
                 <p className="text-xl font-bold truncate">{user.display_name || "Unnamed"}</p>
-                {user.is_system_admin && <Badge className="bg-amber-100 text-amber-700 border-amber-200">Admin</Badge>}
+                {user.is_system_admin && <Badge className="bg-warning/10 text-warning border-warning/20">Admin</Badge>}
               </div>
               <p className="text-sm text-muted-foreground font-mono truncate">{user.email}</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {user.email_verified ? (
-                  <Badge className="bg-green-100 text-green-700 border-green-200 gap-1"><Shield className="h-3 w-3" /> Verified</Badge>
+                  <Badge className="bg-success/10 text-success border-success/20 gap-1"><Shield className="h-3 w-3" /> Verified</Badge>
                 ) : (
-                  <Badge className="bg-amber-100 text-amber-700 border-amber-200 gap-1">Unverified</Badge>
+                  <Badge className="bg-warning/10 text-warning border-warning/20 gap-1">Unverified</Badge>
                 )}
                 {isSSO && <Badge variant="outline" className="gap-1"><KeyRound className="h-3 w-3" /> SSO via {user.sso_provider}</Badge>}
-                {user.auth_method_lock && <Badge variant="outline" className="gap-1 text-violet-600 border-violet-200"><Shield className="h-3 w-3" /> Locked to {user.auth_method_lock}</Badge>}
+                {user.auth_method_lock && <Badge variant="outline" className="gap-1 text-primary border-primary/20"><Shield className="h-3 w-3" /> Locked to {user.auth_method_lock}</Badge>}
               </div>
             </div>
             <div className="hidden sm:block text-right shrink-0">
@@ -114,8 +114,8 @@ export default function ProfilePage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <div className="h-6 w-6 rounded-md bg-slate-100 flex items-center justify-center">
-                  <Monitor className="h-3.5 w-3.5 text-slate-600" />
+                <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
+                  <Monitor className="h-3.5 w-3.5 text-muted-foreground" />
                 </div>
                 Account
               </CardTitle>
@@ -124,8 +124,8 @@ export default function ProfilePage() {
               <Link href="/profile/sessions" className="block">
                 <div className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50">
                   <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-md bg-blue-100 flex items-center justify-center shrink-0">
-                      <Monitor className="h-4 w-4 text-blue-600" />
+                    <div className="h-8 w-8 rounded-md bg-info/10 flex items-center justify-center shrink-0">
+                      <Monitor className="h-4 w-4 text-info" />
                     </div>
                     <div>
                       <p className="text-sm font-medium">Manage Sessions</p>
@@ -137,8 +137,8 @@ export default function ProfilePage() {
               <Link href="/profile/delete" className="block">
                 <div className="flex items-center justify-between rounded-lg border border-destructive/30 p-3 transition-colors hover:bg-destructive/5">
                   <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-md bg-red-100 flex items-center justify-center shrink-0">
-                      <Trash2 className="h-4 w-4 text-red-600" />
+                    <div className="h-8 w-8 rounded-md bg-destructive/10 flex items-center justify-center shrink-0">
+                      <Trash2 className="h-4 w-4 text-destructive" />
                     </div>
                     <div>
                       <p className="text-sm font-medium text-destructive">Delete Account</p>
@@ -159,8 +159,8 @@ export default function ProfilePage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <div className="h-6 w-6 rounded-md bg-violet-100 flex items-center justify-center">
-                    <KeyRound className="h-3.5 w-3.5 text-violet-600" />
+                  <div className="h-6 w-6 rounded-md bg-primary/10 flex items-center justify-center">
+                    <KeyRound className="h-3.5 w-3.5 text-primary" />
                   </div>
                   Password
                 </CardTitle>
@@ -199,8 +199,8 @@ function ProfileForm({ user, onSaved }: { user: NonNullable<ReturnType<typeof us
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <div className="h-6 w-6 rounded-md bg-blue-100 flex items-center justify-center">
-            <Shield className="h-3.5 w-3.5 text-blue-600" />
+          <div className="h-6 w-6 rounded-md bg-info/10 flex items-center justify-center">
+            <Shield className="h-3.5 w-3.5 text-info" />
           </div>
           Account Details
         </CardTitle>
@@ -209,8 +209,8 @@ function ProfileForm({ user, onSaved }: { user: NonNullable<ReturnType<typeof us
       <CardContent className="space-y-3">
         <div className="flex items-center justify-between rounded-lg border p-3 bg-muted/30">
           <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-md bg-slate-100 flex items-center justify-center shrink-0">
-              <Shield className="h-4 w-4 text-slate-500" />
+            <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center shrink-0">
+              <Shield className="h-4 w-4 text-muted-foreground" />
             </div>
             <div>
               <Label className="text-xs text-muted-foreground">Email</Label>
@@ -266,8 +266,8 @@ function ChangePasswordForm() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <div className="h-6 w-6 rounded-md bg-violet-100 flex items-center justify-center">
-            <LogOut className="h-3.5 w-3.5 text-violet-600" />
+          <div className="h-6 w-6 rounded-md bg-primary/10 flex items-center justify-center">
+            <LogOut className="h-3.5 w-3.5 text-primary" />
           </div>
           Change Password
         </CardTitle>
@@ -287,7 +287,7 @@ function ChangePasswordForm() {
           {newPassword.length >= 8 && (
             <div className="flex items-center gap-2">
               <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
-                <div className={`h-full rounded-full transition-all ${newPassword.length >= 12 ? "w-full bg-green-500" : newPassword.length >= 10 ? "w-2/3 bg-amber-500" : "w-1/3 bg-red-500"}`} />
+                <div className={`h-full rounded-full transition-all ${newPassword.length >= 12 ? "w-full bg-success" : newPassword.length >= 10 ? "w-2/3 bg-warning/50" : "w-1/3 bg-destructive/50"}`} />
               </div>
               <span className="text-[10px] text-muted-foreground">{newPassword.length >= 12 ? "Strong" : newPassword.length >= 10 ? "Medium" : "Weak"}</span>
             </div>
@@ -350,8 +350,8 @@ function DateTimePreferencesCard() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <div className="h-6 w-6 rounded-md bg-amber-100 flex items-center justify-center">
-            <Clock className="h-3.5 w-3.5 text-amber-600" />
+          <div className="h-6 w-6 rounded-md bg-warning/10 flex items-center justify-center">
+            <Clock className="h-3.5 w-3.5 text-warning" />
           </div>
           Date & Time Preferences
         </CardTitle>
@@ -472,8 +472,8 @@ function ConnectedAccountsCard() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <div className="h-6 w-6 rounded-md bg-emerald-100 flex items-center justify-center">
-            <Link2 className="h-3.5 w-3.5 text-emerald-600" />
+          <div className="h-6 w-6 rounded-md bg-success/10 flex items-center justify-center">
+            <Link2 className="h-3.5 w-3.5 text-success" />
           </div>
           Connected Accounts
         </CardTitle>

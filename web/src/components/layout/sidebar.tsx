@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { useTheme } from "next-themes";
 import { useAuthStore } from "@/stores/auth-store";
 import { useOrgStore } from "@/stores/org-store";
 import { cn } from "@/lib/utils";
@@ -16,6 +17,8 @@ import {
   ChevronsLeft,
   ChevronsRight,
   LogOut,
+  Moon,
+  Sun,
   Home,
   BookOpen,
   LayoutDashboard,
@@ -83,6 +86,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const { currentOrg } = useOrgStore();
   const t = useTranslations("nav");
   const tc = useTranslations("common");
+  const { theme, setTheme } = useTheme();
 
   // Fetch version for sidebar footer
   const { data: versionData } = useQuery({
@@ -133,6 +137,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             className="min-w-8 min-h-8 h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
             onClick={onToggle}
             title="Collapse sidebar"
+            aria-label="Collapse sidebar"
           >
             <ChevronsLeft className="h-4 w-4" />
           </Button>
@@ -148,6 +153,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             className="min-w-8 min-h-8 h-7 w-full p-0 text-muted-foreground hover:text-foreground"
             onClick={onToggle}
             title="Expand sidebar"
+            aria-label="Expand sidebar"
           >
             <ChevronsRight className="h-4 w-4" />
           </Button>
@@ -254,15 +260,28 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           {!collapsed && !displayVersion && <span />}
 
           {/* Logout button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive transition-colors"
-            onClick={logout}
-            title={tc("signOut")}
-          >
-            <LogOut className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-0.5">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground transition-colors"
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              aria-label="Toggle theme"
+            >
+              <Sun className="h-4 w-4 hidden dark:block" />
+              <Moon className="h-4 w-4 dark:hidden" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive transition-colors"
+              onClick={logout}
+              title={tc("signOut")}
+              aria-label={tc("signOut")}
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
     </aside>

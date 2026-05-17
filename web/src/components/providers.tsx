@@ -21,7 +21,7 @@ export function Providers({ children }: { children: ReactNode }) {
   if (!mounted) return null;
 
   return (
-    <ThemeProvider attribute="class" defaultTheme="light" forcedTheme="light" disableTransitionOnChange>
+    <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
       <QueryClientProvider client={queryClient}>
         {children}
         <Toaster richColors position="top-right" />

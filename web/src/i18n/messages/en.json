@@ -19,7 +19,8 @@
     "all": "All",
     "notifications": "Notifications",
     "markAllRead": "Mark all read",
-    "noNotifications": "No notifications"
+    "noNotifications": "No notifications",
+    "skipToContent": "Skip to content"
   },
   "nav": {
     "home": "Home",

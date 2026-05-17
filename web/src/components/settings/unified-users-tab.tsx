@@ -30,9 +30,9 @@ interface TeamAssignmentRow { team_id: string; team_role: string; }
 interface BulkInviteResult { created: number; skipped: { email: string; reason: string }[]; failed: { email: string; reason: string }[]; }
 
 const ROLE_COLORS: Record<string, string> = {
-  owner: "bg-amber-100 text-amber-700 border-amber-200",
-  admin: "bg-blue-100 text-blue-700 border-blue-200",
-  member: "bg-gray-100 text-gray-700 border-gray-200",
+  owner: "bg-warning/10 text-warning border-warning/20",
+  admin: "bg-info/10 text-info border-info/20",
+  member: "bg-muted text-foreground border-border",
 };
 
 function timeAgo(date: string) {
@@ -150,8 +150,8 @@ export function UnifiedUsersTab({ orgId }: { orgId: string }) {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-7 w-7 rounded-md bg-blue-500/10 flex items-center justify-center">
-                <Users className="h-4 w-4 text-blue-600" />
+              <div className="h-7 w-7 rounded-md bg-info/50/10 flex items-center justify-center">
+                <Users className="h-4 w-4 text-info" />
               </div>
               <div>
                 <CardTitle className="text-base">Users &amp; Members</CardTitle>
@@ -168,11 +168,11 @@ export function UnifiedUsersTab({ orgId }: { orgId: string }) {
 
       {/* Stats */}
       <div className={`grid gap-4 ${isAdmin ? "grid-cols-2 md:grid-cols-5" : "grid-cols-3"}`}>
-        <StatCard label="Total Users" value={isAdmin ? (usersData?.total ?? 0) : members.length} icon={<Users className="h-4 w-4" />} accent="text-slate-600 bg-slate-100" active={filter === "all"} onClick={() => setFilter("all")} />
-        <StatCard label="Members" value={memberCount} icon={<CheckCircle2 className="h-4 w-4" />} accent="text-emerald-600 bg-emerald-100" active={filter === "members"} onClick={() => setFilter(filter === "members" ? "all" : "members")} />
-        {isAdmin && <StatCard label="No Org" value={nonMemberCount} icon={<AlertTriangle className="h-4 w-4" />} accent="text-orange-600 bg-orange-100" active={filter === "non-members"} onClick={() => setFilter(filter === "non-members" ? "all" : "non-members")} />}
-        <StatCard label="Pending" value={pendingInvites.length} icon={<Clock className="h-4 w-4" />} accent="text-blue-600 bg-blue-100" active={false} onClick={() => {}} />
-        {isAdmin && <StatCard label="Unverified" value={unverifiedCount} icon={<XCircle className="h-4 w-4" />} accent="text-red-600 bg-red-100" active={filter === "unverified"} onClick={() => setFilter(filter === "unverified" ? "all" : "unverified")} />}
+        <StatCard label="Total Users" value={isAdmin ? (usersData?.total ?? 0) : members.length} icon={<Users className="h-4 w-4" />} accent="text-muted-foreground bg-muted" active={filter === "all"} onClick={() => setFilter("all")} />
+        <StatCard label="Members" value={memberCount} icon={<CheckCircle2 className="h-4 w-4" />} accent="text-success bg-success/10" active={filter === "members"} onClick={() => setFilter(filter === "members" ? "all" : "members")} />
+        {isAdmin && <StatCard label="No Org" value={nonMemberCount} icon={<AlertTriangle className="h-4 w-4" />} accent="text-warning bg-warning/10" active={filter === "non-members"} onClick={() => setFilter(filter === "non-members" ? "all" : "non-members")} />}
+        <StatCard label="Pending" value={pendingInvites.length} icon={<Clock className="h-4 w-4" />} accent="text-info bg-info/10" active={false} onClick={() => {}} />
+        {isAdmin && <StatCard label="Unverified" value={unverifiedCount} icon={<XCircle className="h-4 w-4" />} accent="text-destructive bg-destructive/10" active={filter === "unverified"} onClick={() => setFilter(filter === "unverified" ? "all" : "unverified")} />}
       </div>
 
       {/* Search + Invite */}
@@ -224,7 +224,7 @@ export function UnifiedUsersTab({ orgId }: { orgId: string }) {
                             <div className="min-w-0">
                               <div className="flex items-center gap-1.5">
                                 <p className="font-semibold truncate text-sm">{u.display_name || "—"}</p>
-                                {isYou && <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-blue-50 border-blue-200 text-blue-600">you</Badge>}
+                                {isYou && <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-info/5 border-info/20 text-info">you</Badge>}
                                 {u.is_system_admin && <Badge variant="default" className="text-[10px] px-1.5 py-0"><Shield className="h-2.5 w-2.5 mr-0.5" />Admin</Badge>}
                               </div>
                               <p className="text-xs text-muted-foreground font-mono truncate mt-0.5">{u.email}</p>
@@ -271,7 +271,7 @@ export function UnifiedUsersTab({ orgId }: { orgId: string }) {
                           <div className="flex items-center justify-end gap-1">
                             {!isYou && u.org_role && canInvite && (
                               <ConfirmDialog
-                                trigger={<Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-orange-500" title="Deactivate user"><XCircle className="h-3.5 w-3.5" /></Button>}
+                                trigger={<Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-warning" title="Deactivate user" aria-label="Deactivate user"><XCircle className="h-3.5 w-3.5" /></Button>}
                                 title="Deactivate user?"
                                 description={`${u.display_name || u.email} will be removed from the organization and all teams. Their sessions will be revoked. The account will be preserved for audit purposes.`}
                                 onConfirm={() => deactivateUser.mutate(u.id)}
@@ -279,7 +279,7 @@ export function UnifiedUsersTab({ orgId }: { orgId: string }) {
                             )}
                             {!isYou && isAdmin && (
                               <ConfirmDialog
-                                trigger={<Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-orange-500" title="Force logout"><LogOut className="h-3.5 w-3.5" /></Button>}
+                                trigger={<Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-warning" title="Force logout" aria-label="Force logout"><LogOut className="h-3.5 w-3.5" /></Button>}
                                 title="Force logout?"
                                 description={`Revoke all active sessions for ${u.display_name || u.email}? They will be signed out everywhere.`}
                                 onConfirm={() => forceLogout.mutate(u.id)}
@@ -287,7 +287,7 @@ export function UnifiedUsersTab({ orgId }: { orgId: string }) {
                             )}
                             {!isYou && isAdmin && (
                               <ConfirmDialog
-                                trigger={<Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" title="Delete user"><Trash2 className="h-3.5 w-3.5" /></Button>}
+                                trigger={<Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" title="Delete user" aria-label="Delete user"><Trash2 className="h-3.5 w-3.5" /></Button>}
                                 title="Delete user?"
                                 description={`Permanently delete ${u.email}? This removes all their data. This cannot be undone.`}
                                 onConfirm={() => deleteUser.mutate(u.id)}
@@ -508,7 +508,7 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {u.org_role && <Badge variant="outline" className={`capitalize text-[10px] ${ROLE_COLORS[u.org_role] ?? ""}`}>{u.org_role}</Badge>}
-                {!u.org_role && <Badge variant="outline" className="text-[10px] text-orange-600 border-orange-200">Not a member</Badge>}
+                {!u.org_role && <Badge variant="outline" className="text-[10px] text-warning border-warning/20">Not a member</Badge>}
                 {u.is_system_admin && <Badge variant="default" className="text-[10px]"><Shield className="h-3 w-3 mr-0.5" />System Admin</Badge>}
                 <Badge variant={u.email_verified ? "default" : "outline"} className="text-[10px]">
                   {u.email_verified ? <><CheckCircle2 className="h-3 w-3 mr-0.5" />Verified</> : <><XCircle className="h-3 w-3 mr-0.5" />Unverified</>}
@@ -517,11 +517,11 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
                   <KeyRound className="h-3 w-3 mr-0.5" />{u.sso_provider ?? "Password"}
                 </Badge>
                 {u.auth_method_lock && u.auth_method_lock !== "any" && (
-                  <Badge variant="outline" className="text-[10px] text-purple-600 border-purple-200">
+                  <Badge variant="outline" className="text-[10px] text-primary border-primary/20">
                     <Lock className="h-3 w-3 mr-0.5" />{u.auth_method_lock === "sso" ? "SSO Locked" : "Password Locked"}
                   </Badge>
                 )}
-                {isYou && <Badge variant="outline" className="text-[10px] bg-blue-50 border-blue-200 text-blue-700">You</Badge>}
+                {isYou && <Badge variant="outline" className="text-[10px] bg-info/5 border-info/20 text-info">You</Badge>}
               </div>
             </div>
           </div>
@@ -578,7 +578,7 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
                     {u.org_role && !isYou && (
                       <ConfirmDialog
                         trigger={
-                          <Button variant="outline" className="gap-2 text-orange-600 hover:text-orange-700 border-orange-200 hover:border-orange-300">
+                          <Button variant="outline" className="gap-2 text-warning hover:text-warning border-warning/20 hover:border-warning/30">
                             <XCircle className="h-4 w-4" /> Deactivate
                           </Button>
                         }
@@ -653,8 +653,8 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
               <div className="space-y-3 rounded-lg border p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-100">
-                      <Mail className="h-4 w-4 text-green-600" />
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-success/10">
+                      <Mail className="h-4 w-4 text-success" />
                     </div>
                     <div>
                       <Label className="text-sm">Email Verified</Label>
@@ -666,8 +666,8 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
                 <div className="border-t" />
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100">
-                      <Shield className="h-4 w-4 text-blue-600" />
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-info/10">
+                      <Shield className="h-4 w-4 text-info" />
                     </div>
                     <div>
                       <Label className="text-sm">System Admin</Label>
@@ -679,8 +679,8 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
                 <div className="border-t" />
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100">
-                      <Lock className="h-4 w-4 text-purple-600" />
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                      <Lock className="h-4 w-4 text-primary" />
                     </div>
                     <div>
                       <Label className="text-sm">Auth Method Lock</Label>
@@ -699,8 +699,8 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
                 <div className="border-t" />
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-100">
-                      <Users className="h-4 w-4 text-orange-600" />
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-warning/10">
+                      <Users className="h-4 w-4 text-warning" />
                     </div>
                     <div>
                       <Label className="text-sm">Session Limit</Label>
@@ -720,8 +720,8 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
                 <div className="border-t" />
                 <div className="space-y-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100">
-                      <RefreshCw className="h-4 w-4 text-amber-600" />
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-warning/10">
+                      <RefreshCw className="h-4 w-4 text-warning" />
                     </div>
                     <div>
                       <Label className="text-sm">Auth Migration</Label>
@@ -733,7 +733,7 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
                     <div className="rounded-lg border p-3 space-y-2">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <Shield className="h-4 w-4 text-blue-600" />
+                          <Shield className="h-4 w-4 text-info" />
                           <div>
                             <p className="text-sm font-medium">Migrate to SSO</p>
                             <p className="text-[11px] text-muted-foreground">Clear password, lock to SSO-only. Requires linked SSO identity.</p>
@@ -757,7 +757,7 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
                     <div className="rounded-lg border p-3 space-y-2">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <KeyRound className="h-4 w-4 text-amber-600" />
+                          <KeyRound className="h-4 w-4 text-warning" />
                           <div>
                             <p className="text-sm font-medium">Migrate to Password</p>
                             <p className="text-[11px] text-muted-foreground">Set a new password, lock to password-only.</p>
@@ -808,7 +808,7 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
                 <>
                   <ConfirmDialog
                     trigger={
-                      <Button variant="outline" size="sm" className="gap-1.5 text-orange-600 hover:text-orange-700 border-orange-200 hover:border-orange-300">
+                      <Button variant="outline" size="sm" className="gap-1.5 text-warning hover:text-warning border-warning/20 hover:border-warning/30">
                         <LogOut className="h-3.5 w-3.5" /> Force Logout
                       </Button>
                     }
@@ -973,8 +973,8 @@ function InviteDialog({ orgId }: { orgId: string }) {
           {/* Auth Method Selector */}
           <div className="border-t pt-5 space-y-3">
             <div className="flex items-center gap-2 mb-1">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-purple-100">
-                <Shield className="h-3.5 w-3.5 text-purple-600" />
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+                <Shield className="h-3.5 w-3.5 text-primary" />
               </div>
               <div>
                 <Label className="text-sm font-medium">Allowed Auth Methods</Label>
@@ -1016,8 +1016,8 @@ function InviteDialog({ orgId }: { orgId: string }) {
             <div className="border-t pt-5 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-100">
-                    <Users className="h-3.5 w-3.5 text-violet-600" />
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+                    <Users className="h-3.5 w-3.5 text-primary" />
                   </div>
                   <div>
                     <Label className="text-sm font-medium">Team Assignments <span className="text-muted-foreground font-normal">(optional)</span></Label>
@@ -1212,8 +1212,8 @@ function BulkInviteDialog({ orgId }: { orgId: string }) {
           {/* Auth Method Selector */}
           <div className="border-t pt-5 space-y-3">
             <div className="flex items-center gap-2 mb-1">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-purple-100">
-                <Shield className="h-3.5 w-3.5 text-purple-600" />
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+                <Shield className="h-3.5 w-3.5 text-primary" />
               </div>
               <div>
                 <Label className="text-sm font-medium">Allowed Auth Methods</Label>
@@ -1255,8 +1255,8 @@ function BulkInviteDialog({ orgId }: { orgId: string }) {
             <div className="border-t pt-5 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-100">
-                    <Users className="h-3.5 w-3.5 text-violet-600" />
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+                    <Users className="h-3.5 w-3.5 text-primary" />
                   </div>
                   <div>
                     <Label className="text-sm font-medium">Team Assignments <span className="text-muted-foreground font-normal">(optional)</span></Label>
@@ -1304,22 +1304,22 @@ function BulkInviteDialog({ orgId }: { orgId: string }) {
             <div className="border-t pt-5 space-y-4">
               <p className="text-sm font-semibold">Results</p>
               <div className="grid grid-cols-3 gap-3 text-center">
-                <div className="rounded-xl border p-3 bg-green-50">
-                  <p className="text-2xl font-bold text-green-600 tabular-nums">{result.created}</p>
-                  <p className="text-xs font-medium text-green-700">Created</p>
+                <div className="rounded-xl border p-3 bg-success/5">
+                  <p className="text-2xl font-bold text-success tabular-nums">{result.created}</p>
+                  <p className="text-xs font-medium text-success">Created</p>
                 </div>
-                <div className="rounded-xl border p-3 bg-amber-50">
-                  <p className="text-2xl font-bold text-amber-600 tabular-nums">{result.skipped?.length ?? 0}</p>
-                  <p className="text-xs font-medium text-amber-700">Skipped</p>
+                <div className="rounded-xl border p-3 bg-warning/5">
+                  <p className="text-2xl font-bold text-warning tabular-nums">{result.skipped?.length ?? 0}</p>
+                  <p className="text-xs font-medium text-warning">Skipped</p>
                 </div>
-                <div className="rounded-xl border p-3 bg-red-50">
-                  <p className="text-2xl font-bold text-red-600 tabular-nums">{result.failed?.length ?? 0}</p>
-                  <p className="text-xs font-medium text-red-700">Failed</p>
+                <div className="rounded-xl border p-3 bg-destructive/5">
+                  <p className="text-2xl font-bold text-destructive tabular-nums">{result.failed?.length ?? 0}</p>
+                  <p className="text-xs font-medium text-destructive">Failed</p>
                 </div>
               </div>
               {result.skipped && result.skipped.length > 0 && (
                 <div className="space-y-1">
-                  <p className="text-xs font-medium text-amber-600">Skipped</p>
+                  <p className="text-xs font-medium text-warning">Skipped</p>
                   {result.skipped.map((s, i) => (
                     <p key={i} className="text-xs text-muted-foreground">{s.email} — {s.reason}</p>
                   ))}
@@ -1327,7 +1327,7 @@ function BulkInviteDialog({ orgId }: { orgId: string }) {
               )}
               {result.failed && result.failed.length > 0 && (
                 <div className="space-y-1">
-                  <p className="text-xs font-medium text-red-600">Failed</p>
+                  <p className="text-xs font-medium text-destructive">Failed</p>
                   {result.failed.map((f, i) => (
                     <p key={i} className="text-xs text-muted-foreground">{f.email} — {f.reason}</p>
                   ))}
@@ -1383,12 +1383,12 @@ function PendingInviteRow({ invite: inv, orgId }: { invite: Invite; orgId: strin
         <Badge variant="outline" className={`capitalize text-xs ${ROLE_COLORS[inv.org_role] ?? ""}`}>{inv.org_role}</Badge>
         {inv.team_assignments && inv.team_assignments.length > 0 ? (
           inv.team_assignments.map((ta: { team_id: string; team_name: string; team_role: string }) => (
-            <Badge key={ta.team_id} variant="outline" className="text-xs text-violet-600 border-violet-200">
+            <Badge key={ta.team_id} variant="outline" className="text-xs text-primary border-primary/20">
               {ta.team_name} · {ta.team_role}
             </Badge>
           ))
         ) : inv.team_name ? (
-          <Badge variant="outline" className="text-xs text-violet-600 border-violet-200">
+          <Badge variant="outline" className="text-xs text-primary border-primary/20">
             {inv.team_name}{inv.team_role ? ` · ${inv.team_role}` : ""}
           </Badge>
         ) : null}
