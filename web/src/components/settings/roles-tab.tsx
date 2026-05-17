@@ -141,7 +141,7 @@ export function RolesTab() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card className="card-header-accent">
+      <Card className="">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -311,7 +311,7 @@ function RoleCard({
   const permPercent = totalPermissions > 0 ? Math.round((permCount / totalPermissions) * 100) : 0;
 
   return (
-    <Card className="flex flex-col transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:-translate-y-px">
+    <Card className="flex flex-col transition-colors hover:border-primary/30">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">

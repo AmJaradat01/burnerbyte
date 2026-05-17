@@ -87,7 +87,7 @@ export default function DomainsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card className="card-header-accent">
+      <Card>
         <CardContent className="pt-5 pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -95,7 +95,7 @@ export default function DomainsPage() {
                 <Globe className="h-4 w-4 text-success" />
               </div>
               <div>
-                <h1 className="text-base font-semibold">Domains</h1>
+                <h1 className="text-base font-semibold tracking-tight">Domains</h1>
                 <p className="text-sm text-muted-foreground">
                   {totalDomains > 0 ? `${totalDomains} domain${totalDomains !== 1 ? "s" : ""} · ${verifiedCount} verified · ${pendingCount} pending · Manage your email domains.` : "Manage your email domains and DNS verification."}
                 </p>
@@ -193,7 +193,7 @@ export default function DomainsPage() {
 
 function MiniStat({ icon: Icon, label, value, accent }: { icon: typeof Globe; label: string; value: number; accent: string }) {
   return (
-    <Card className="transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:-translate-y-px">
+    <Card>
       <CardContent className="pt-5 pb-4">
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-medium text-muted-foreground">{label}</span>
@@ -225,7 +225,7 @@ function DomainCard({ domain: d, onVerify, onDelete, verifying }: {
   };
 
   return (
-    <Card className={`group hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] transition-all duration-200 ${fullyVerified ? "hover:border-success/20" : "hover:border-warning/20 border-dashed"}`}>
+    <Card className={`group ${fullyVerified ? "" : "border-dashed"}`}>
 
       {/* Header with icon + domain name */}
       <CardContent className="pt-5 pb-0 pl-10">

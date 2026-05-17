@@ -70,7 +70,7 @@ export default function SessionsPage() {
 
   return (
     <div className="max-w-3xl space-y-6">
-      <Card className="card-header-accent">
+      <Card>
         <CardContent className="pt-5 pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -78,7 +78,7 @@ export default function SessionsPage() {
                 <Monitor className="h-4 w-4 text-info" />
               </div>
               <div>
-                <h1 className="text-base font-semibold">Active Sessions</h1>
+                <h1 className="text-base font-semibold tracking-tight">Active Sessions</h1>
                 <p className="text-sm text-muted-foreground">Manage your active sessions across devices.</p>
               </div>
             </div>
@@ -93,7 +93,7 @@ export default function SessionsPage() {
       </Card>
 
       <div className="grid grid-cols-2 gap-4">
-        <Card className="transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:-translate-y-px">
+        <Card>
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-muted-foreground">Active Sessions</span>
@@ -104,7 +104,7 @@ export default function SessionsPage() {
             <p className="text-2xl font-bold tabular-nums">{sessions?.length ?? 0}</p>
           </CardContent>
         </Card>
-        <Card className="transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:-translate-y-px">
+        <Card>
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-muted-foreground">Current Session</span>

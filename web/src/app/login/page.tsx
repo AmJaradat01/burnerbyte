@@ -150,15 +150,16 @@ export default function LoginPage() {
   const ssoProviders = (sso?.providers ?? []).filter((p) => p.enabled);
 
   return (
-    <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center bg-gradient-to-b from-muted/50 to-background p-6">
-      <div className="w-full max-w-md space-y-6">
-        <div className="text-center">
+    <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center p-6">
+      <div className="w-full max-w-sm space-y-8">
+        <div className="text-center space-y-2">
           <Logo size="lg" />
+          <p className="text-sm text-muted-foreground">Self-hosted temporary email</p>
         </div>
-        <Card className="w-full shadow-xl">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Sign in to BurnerByte</CardTitle>
-            <CardDescription>
+        <Card className="w-full">
+          <CardHeader className="text-center pb-2">
+            <CardTitle className="text-xl font-semibold">Sign in</CardTitle>
+            <CardDescription className="text-sm">
               {enforceSSO ? "Sign in with SSO to continue" : "Enter your credentials to continue"}
             </CardDescription>
           </CardHeader>
@@ -189,8 +190,8 @@ export default function LoginPage() {
                 </div>
               )}
               <form onSubmit={handleSubmit}>
-                <CardContent className="space-y-4 pb-6">
-                  <div className="space-y-2">
+                <CardContent className="space-y-4">
+                  <div className="space-y-1.5">
                     <Label htmlFor="email">Email</Label>
                     <Input
                       id="email"
@@ -205,7 +206,7 @@ export default function LoginPage() {
                     />
                     {emailError && <p className="text-xs text-destructive">{emailError}</p>}
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     <Label htmlFor="password">Password</Label>
                     <div className="relative">
                       <Input
@@ -228,14 +229,14 @@ export default function LoginPage() {
                       </button>
                     </div>
                   </div>
-                  <Button type="submit" className="w-full h-11" disabled={loading}>
+                  <Button type="submit" className="w-full" disabled={loading}>
                     {loading ? "Signing in…" : "Sign in"}
                   </Button>
                 </CardContent>
-                <CardFooter className="flex justify-between text-sm pt-0">
-                  <Link href="/forgot-password" className="text-muted-foreground hover:underline">Forgot password?</Link>
+                <CardFooter className="flex justify-between text-sm">
+                  <Link href="/forgot-password" className="text-muted-foreground hover:text-foreground transition-colors text-xs">Forgot password?</Link>
                   {(sso?.allow_registration ?? true) && (
-                    <Link href="/register" className="text-muted-foreground hover:underline">Create account</Link>
+                    <Link href="/register" className="text-muted-foreground hover:text-foreground transition-colors text-xs">Create account</Link>
                   )}
                 </CardFooter>
               </form>
