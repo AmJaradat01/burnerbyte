@@ -169,7 +169,7 @@ export default function LoginPage() {
               <div className="space-y-2">
                 {ssoProviders.map((p) => (
                   <a key={p.name} href={`${API_BASE}/auth/sso/${p.name}`} onClick={() => setSsoLoading(p.name)}>
-                    <Button variant="outline" className="w-full gap-2 h-11 mb-1" type="button" disabled={ssoLoading === p.name}>
+                    <Button variant="outline" className="w-full gap-2 mb-1" type="button" disabled={ssoLoading === p.name}>
                       {ssoLoading === p.name ? <Loader2 className="h-4 w-4 animate-spin" /> : <ProviderIcon providerType={p.provider_type} />}
                       {ssoLoading === p.name ? `Redirecting to ${p.label}…` : `Sign in with ${p.label}`}
                     </Button>
