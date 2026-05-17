@@ -145,8 +145,8 @@ export function RolesTab() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-7 w-7 rounded-md bg-indigo-500/10 flex items-center justify-center">
-                <Shield className="h-4 w-4 text-indigo-600" />
+              <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center">
+                <Shield className="h-4 w-4 text-primary" />
               </div>
               <div>
                 <CardTitle className="text-base">Roles &amp; Permissions</CardTitle>
@@ -323,7 +323,7 @@ function RoleCard({
             </div>
             <div className="flex items-center gap-1.5 mt-1.5">
               {role.is_system && (
-                <Badge className="text-[10px] bg-amber-100 text-amber-700 border-amber-200">
+                <Badge className="text-[10px] bg-warning/10 text-warning border-warning/20">
                   System
                 </Badge>
               )}
@@ -344,7 +344,7 @@ function RoleCard({
             <span>{permPercent}%</span>
           </div>
           <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-            <div className="h-full rounded-full bg-indigo-500/70 transition-all" style={{ width: `${permPercent}%` }} />
+            <div className="h-full rounded-full bg-primary/70 transition-all" style={{ width: `${permPercent}%` }} />
           </div>
         </div>
         <div className="flex items-center justify-between">
@@ -534,7 +534,7 @@ function PermissionEditor({
                       <div className="min-w-0 flex-1 pr-4">
                         <div className="flex items-center gap-2">
                           {checked && (
-                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                            <CheckCircle2 className="h-3.5 w-3.5 text-success shrink-0" />
                           )}
                           <span className="text-sm font-medium">
                             {perm.label}
@@ -964,7 +964,7 @@ function CompareDialog({
                         return (
                           <TableCell key={role.id} className="text-center">
                             {has ? (
-                              <CheckCircle2 className="h-4 w-4 text-emerald-500 mx-auto" />
+                              <CheckCircle2 className="h-4 w-4 text-success mx-auto" />
                             ) : (
                               <span className="text-muted-foreground/30">
                                 —

@@ -1,30 +1,97 @@
 ---
 title: Theming
-description: Dark mode, light mode, and customization.
+description: Dark mode, light mode, design tokens, and customization.
 ---
 
-## Theme Toggle
+## Theme Modes
 
-BurnerByte supports three theme modes: **Light**, **Dark**, and **System** (follows OS preference). Toggle via the sun/moon button in the sidebar footer. Powered by `next-themes`.
+BurnerByte supports three theme modes: **Light** (default), **Dark**, and **System** (follows OS preference). Toggle via the sun/moon button in the sidebar footer. Powered by `next-themes`.
 
-## CSS Variables
+The default is light. Dark mode serves function (reduced eye strain in low-light environments), not fashion.
 
-All colors are defined as CSS custom properties using the OKLCH color space. Override them in your `globals.css`:
+## Design System
+
+The visual system is documented in two root files:
+
+- **`PRODUCT.md`** — Strategic context: users, brand personality, anti-references, design principles
+- **`DESIGN.md`** — Visual spec: color palette, typography, elevation, components, do's and don'ts
+
+These files follow the [Google Stitch DESIGN.md format](https://stitch.withgoogle.com/docs/design-md/format/) and are consumed by AI design tools for on-brand output.
+
+## Color System
+
+All colors use the **OKLCH color space** for perceptual uniformity. The palette is restrained: tinted neutrals with a single indigo accent used on ≤10% of any screen.
+
+### Semantic Tokens
+
+| Token | Light | Dark | Usage |
+|---|---|---|---|
+| `--primary` | Deep Indigo | Lighter Indigo | Primary actions, focus rings |
+| `--destructive` | Red | Lighter Red | Errors, delete actions |
+| `--success` | Green | Lighter Green | Success states (always paired with icon) |
+| `--warning` | Amber | Amber | Warning states (always paired with icon) |
+| `--info` | Blue | Lighter Blue | Informational states |
+| `--muted` | Light gray | Dark gray | Secondary surfaces |
+| `--background` | Warm paper | Dark surface | Page background |
+
+### Overriding Colors
+
+Override CSS custom properties in `globals.css`:
 
 ```css
 :root {
-  --primary: oklch(0.205 0 0);
+  --primary: oklch(0.55 0.20 260);
   --primary-foreground: oklch(0.985 0 0);
 }
 
 .dark {
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
+  --primary: oklch(0.65 0.20 260);
+  --primary-foreground: oklch(0.14 0.02 260);
 }
 ```
 
+### Rules
+
+- **Never use hard-coded Tailwind colors** (`bg-emerald-500`, `text-red-600`). Use semantic tokens (`bg-success`, `text-destructive`).
+- **Never rely on color alone** for status. Pair with icons or text labels.
+- **Reduce chroma** as lightness approaches 0 or 100.
+
+## Typography
+
+Single font family: **Inter** (with system-ui fallback). Hierarchy through weight (400–700) and size (0.75rem–1.5rem).
+
+| Role | Size | Weight | Usage |
+|---|---|---|---|
+| Headline | 1.5rem | 700 | Page titles (one per view) |
+| Title | 1.125rem | 600 | Section headings, card titles |
+| Body | 0.875rem | 400 | Running text, form content |
+| Label | 0.75rem | 500 | Metadata, timestamps, badges |
+| Mono | 0.8125rem | 400 | Email addresses, IDs, code |
+
+All numeric displays use `font-variant-numeric: tabular-nums`.
+
+## Elevation
+
+Flat by default. Shadows appear only as state feedback:
+
+| Level | Value | Usage |
+|---|---|---|
+| Ambient | `0 1px 3px rgba(0,0,0,0.04)` | Cards at rest |
+| Hover | `0 4px 12px rgba(0,0,0,0.06)` | Interactive cards on hover |
+| Elevated | `0 8px 24px rgba(0,0,0,0.08)` | Popovers, dropdowns |
+| Inset | `inset 0 1px 2px rgba(0,0,0,0.04)` | Input fields |
+
+## Accessibility
+
+- WCAG AA compliance across all surfaces
+- `prefers-reduced-motion` respected (all animations disabled)
+- Color-blind safe status indicators (icon + text, never color alone)
+- Skip-to-content link (internationalized)
+- `aria-label` on all icon-only buttons
+- Focus-visible rings on keyboard navigation
+
 ## Component Library
 
-UI components are from [shadcn/ui](https://ui.shadcn.com/) built on Radix primitives. They're fully customizable — source code lives in `src/components/ui/`.
+UI components are from [shadcn/ui](https://ui.shadcn.com/) built on Radix primitives. Source code lives in `src/components/ui/`.
 
 Key components: Button, Input, Label, Card, Table, Dialog, Select, Tabs, Badge, Switch, Popover, AlertDialog, Sheet, Skeleton.

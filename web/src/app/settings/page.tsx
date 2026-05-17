@@ -171,8 +171,8 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
           <Card className="card-header-accent">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <div className="h-7 w-7 rounded-md bg-violet-100 flex items-center justify-center">
-                  <Shield className="h-4 w-4 text-violet-600" />
+                <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center">
+                  <Shield className="h-4 w-4 text-primary" />
                 </div>
                 Organization Policies
               </CardTitle>
@@ -181,8 +181,8 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
             <CardContent className="space-y-3">
               <div className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50">
                 <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-md bg-green-100 flex items-center justify-center shrink-0">
-                    <Paperclip className="h-4 w-4 text-green-600" />
+                  <div className="h-8 w-8 rounded-md bg-success/10 flex items-center justify-center shrink-0">
+                    <Paperclip className="h-4 w-4 text-success" />
                   </div>
                   <div>
                     <Label>Attachments enabled</Label>
@@ -193,8 +193,8 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
               </div>
               <div className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50">
                 <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-md bg-blue-100 flex items-center justify-center shrink-0">
-                    <Lock className="h-4 w-4 text-blue-600" />
+                  <div className="h-8 w-8 rounded-md bg-info/10 flex items-center justify-center shrink-0">
+                    <Lock className="h-4 w-4 text-info" />
                   </div>
                   <div>
                     <Label>Enforce SSO</Label>
@@ -205,8 +205,8 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
               </div>
               <div className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50">
                 <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-md bg-amber-100 flex items-center justify-center shrink-0">
-                    <Clock className="h-4 w-4 text-amber-600" />
+                  <div className="h-8 w-8 rounded-md bg-warning/10 flex items-center justify-center shrink-0">
+                    <Clock className="h-4 w-4 text-warning" />
                   </div>
                   <div>
                     <Label>Default Inbox TTL</Label>
@@ -217,8 +217,8 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
               </div>
               <div className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50">
                 <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-md bg-amber-100 flex items-center justify-center shrink-0">
-                    <Clock className="h-4 w-4 text-amber-600" />
+                  <div className="h-8 w-8 rounded-md bg-warning/10 flex items-center justify-center shrink-0">
+                    <Clock className="h-4 w-4 text-warning" />
                   </div>
                   <div>
                     <Label>Max Inbox TTL</Label>
@@ -237,7 +237,7 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
       {dirty && (
         <div className="sticky bottom-4 flex items-center justify-end gap-3">
           {autoSaveStatus === "saving" && <span className="text-xs text-muted-foreground animate-pulse">Saving...</span>}
-          {autoSaveStatus === "saved" && <span className="text-xs text-emerald-600">✓ Saved</span>}
+          {autoSaveStatus === "saved" && <span className="text-xs text-success">✓ Saved</span>}
           <Button onClick={save} disabled={saving} size="lg" className="shadow-lg gap-2">
             <Save className="h-4 w-4" />
             {saving ? "Saving…" : "Save Settings"}
@@ -270,7 +270,7 @@ function DangerZone({ org, onDeleted }: { org: Organization; onDeleted: () => vo
     <Card className="border-destructive/40">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base text-destructive">
-          <div className="h-7 w-7 rounded-md bg-red-100 flex items-center justify-center">
+          <div className="h-7 w-7 rounded-md bg-destructive/10 flex items-center justify-center">
             <AlertTriangle className="h-4 w-4 text-destructive" />
           </div>
           Danger Zone
@@ -317,16 +317,16 @@ function OverviewTab() {
   if (!data) return null;
 
   const stats: { icon: typeof Mail; label: string; value: string; desc?: string; accent: string; href?: string }[] = [
-    { icon: Users, label: "Users", value: data.total_users.toLocaleString(), accent: "text-blue-600 bg-blue-100" },
-    { icon: UsersRound, label: "Teams", value: (data.total_teams ?? 0).toLocaleString(), accent: "text-indigo-600 bg-indigo-100", href: "/teams" },
-    { icon: Globe, label: "Domains", value: data.total_domains.toLocaleString(), accent: "text-emerald-600 bg-emerald-100", href: "/domains" },
-    { icon: Inbox, label: "Active Inboxes", value: (data.active_inboxes ?? 0).toLocaleString(), desc: `${(data.total_inboxes ?? 0).toLocaleString()} total created`, accent: "text-amber-600 bg-amber-100", href: "/" },
-    { icon: Archive, label: "Total Created", value: (data.total_inboxes_created ?? 0).toLocaleString(), accent: "text-violet-600 bg-violet-100" },
-    { icon: Mail, label: "Total Emails", value: data.total_emails.toLocaleString(), accent: "text-rose-600 bg-rose-100", href: "/analytics" },
-    { icon: HardDrive, label: "Storage", value: formatBytes(data.storage_used_bytes ?? 0), accent: "text-slate-600 bg-slate-100" },
-    { icon: Monitor, label: "Active Sessions", value: (data.total_sessions ?? 0).toLocaleString(), accent: "text-cyan-600 bg-cyan-100", href: "/profile/sessions" },
-    { icon: LinkIcon, label: "Webhooks", value: (data.total_webhooks ?? 0).toLocaleString(), accent: "text-orange-600 bg-orange-100" },
-    { icon: Key, label: "API Keys", value: (data.total_api_keys ?? 0).toLocaleString(), accent: "text-purple-600 bg-purple-100" },
+    { icon: Users, label: "Users", value: data.total_users.toLocaleString(), accent: "text-info bg-info/10" },
+    { icon: UsersRound, label: "Teams", value: (data.total_teams ?? 0).toLocaleString(), accent: "text-primary bg-primary/10", href: "/teams" },
+    { icon: Globe, label: "Domains", value: data.total_domains.toLocaleString(), accent: "text-success bg-success/10", href: "/domains" },
+    { icon: Inbox, label: "Active Inboxes", value: (data.active_inboxes ?? 0).toLocaleString(), desc: `${(data.total_inboxes ?? 0).toLocaleString()} total created`, accent: "text-warning bg-warning/10", href: "/" },
+    { icon: Archive, label: "Total Created", value: (data.total_inboxes_created ?? 0).toLocaleString(), accent: "text-primary bg-primary/10" },
+    { icon: Mail, label: "Total Emails", value: data.total_emails.toLocaleString(), accent: "text-destructive bg-destructive/10", href: "/analytics" },
+    { icon: HardDrive, label: "Storage", value: formatBytes(data.storage_used_bytes ?? 0), accent: "text-muted-foreground bg-muted" },
+    { icon: Monitor, label: "Active Sessions", value: (data.total_sessions ?? 0).toLocaleString(), accent: "text-info bg-info/10", href: "/profile/sessions" },
+    { icon: LinkIcon, label: "Webhooks", value: (data.total_webhooks ?? 0).toLocaleString(), accent: "text-warning bg-warning/10" },
+    { icon: Key, label: "API Keys", value: (data.total_api_keys ?? 0).toLocaleString(), accent: "text-primary bg-primary/10" },
   ];
 
   return (
@@ -358,8 +358,8 @@ function OverviewTab() {
       <Card className="card-header-accent">
         <CardContent className="pt-5 pb-4">
           <div className="flex items-center gap-2 mb-3">
-            <div className="h-6 w-6 rounded-md bg-blue-100 flex items-center justify-center">
-              <Info className="h-3.5 w-3.5 text-blue-600" />
+            <div className="h-6 w-6 rounded-md bg-info/10 flex items-center justify-center">
+              <Info className="h-3.5 w-3.5 text-info" />
             </div>
             <span className="text-sm font-medium">About</span>
           </div>
@@ -437,8 +437,8 @@ function PlatformSettingsCard() {
     <Card className="card-header-accent">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <div className="h-7 w-7 rounded-md bg-slate-100 flex items-center justify-center">
-            <Settings className="h-4 w-4 text-slate-600" />
+          <div className="h-7 w-7 rounded-md bg-muted flex items-center justify-center">
+            <Settings className="h-4 w-4 text-muted-foreground" />
           </div>
           Platform Settings
         </CardTitle>
@@ -448,15 +448,15 @@ function PlatformSettingsCard() {
         {/* Access */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <div className="h-6 w-6 rounded-md bg-emerald-100 flex items-center justify-center">
-              <Users className="h-3.5 w-3.5 text-emerald-600" />
+            <div className="h-6 w-6 rounded-md bg-success/10 flex items-center justify-center">
+              <Users className="h-3.5 w-3.5 text-success" />
             </div>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Access</p>
           </div>
           <div className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50">
             <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-md bg-emerald-100 flex items-center justify-center shrink-0">
-                <Users className="h-4 w-4 text-emerald-600" />
+              <div className="h-8 w-8 rounded-md bg-success/10 flex items-center justify-center shrink-0">
+                <Users className="h-4 w-4 text-success" />
               </div>
               <div>
                 <Label>Allow public registration</Label>
@@ -467,8 +467,8 @@ function PlatformSettingsCard() {
           </div>
           <div className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50">
             <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-md bg-emerald-100 flex items-center justify-center shrink-0">
-                <Mail className="h-4 w-4 text-emerald-600" />
+              <div className="h-8 w-8 rounded-md bg-success/10 flex items-center justify-center shrink-0">
+                <Mail className="h-4 w-4 text-success" />
               </div>
               <div>
                 <Label>Require email verification</Label>
@@ -482,8 +482,8 @@ function PlatformSettingsCard() {
         {/* Password policy */}
         <div className="space-y-3 border-t pt-5">
           <div className="flex items-center gap-2">
-            <div className="h-6 w-6 rounded-md bg-amber-100 flex items-center justify-center">
-              <Key className="h-3.5 w-3.5 text-amber-600" />
+            <div className="h-6 w-6 rounded-md bg-warning/10 flex items-center justify-center">
+              <Key className="h-3.5 w-3.5 text-warning" />
             </div>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Password Policy</p>
           </div>
@@ -506,8 +506,8 @@ function PlatformSettingsCard() {
         {/* Lockout */}
         <div className="space-y-3 border-t pt-5">
           <div className="flex items-center gap-2">
-            <div className="h-6 w-6 rounded-md bg-red-100 flex items-center justify-center">
-              <Lock className="h-3.5 w-3.5 text-red-600" />
+            <div className="h-6 w-6 rounded-md bg-destructive/10 flex items-center justify-center">
+              <Lock className="h-3.5 w-3.5 text-destructive" />
             </div>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Account Lockout</p>
           </div>
@@ -528,8 +528,8 @@ function PlatformSettingsCard() {
         {/* Date & Time */}
         <div className="space-y-3 border-t pt-5">
           <div className="flex items-center gap-2">
-            <div className="h-6 w-6 rounded-md bg-blue-100 flex items-center justify-center">
-              <Clock className="h-3.5 w-3.5 text-blue-600" />
+            <div className="h-6 w-6 rounded-md bg-info/10 flex items-center justify-center">
+              <Clock className="h-3.5 w-3.5 text-info" />
             </div>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Date & Time Defaults</p>
           </div>
@@ -574,8 +574,8 @@ function PlatformSettingsCard() {
         {/* Quotas & Limits */}
         <div className="space-y-3 border-t pt-5">
           <div className="flex items-center gap-2">
-            <div className="h-6 w-6 rounded-md bg-purple-100 flex items-center justify-center">
-              <Activity className="h-3.5 w-3.5 text-purple-600" />
+            <div className="h-6 w-6 rounded-md bg-primary/10 flex items-center justify-center">
+              <Activity className="h-3.5 w-3.5 text-primary" />
             </div>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Quotas & Limits</p>
           </div>
@@ -612,8 +612,8 @@ function PlatformSettingsCard() {
         {/* Session Limits */}
         <div className="space-y-3 border-t pt-5">
           <div className="flex items-center gap-2">
-            <div className="h-6 w-6 rounded-md bg-cyan-100 flex items-center justify-center">
-              <Monitor className="h-3.5 w-3.5 text-cyan-600" />
+            <div className="h-6 w-6 rounded-md bg-info/10 flex items-center justify-center">
+              <Monitor className="h-3.5 w-3.5 text-info" />
             </div>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Session Limits</p>
           </div>
@@ -678,8 +678,8 @@ function HealthSection() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 pt-2">
-        <div className="h-6 w-6 rounded-md bg-green-100 flex items-center justify-center">
-          <Monitor className="h-3.5 w-3.5 text-green-600" />
+        <div className="h-6 w-6 rounded-md bg-success/10 flex items-center justify-center">
+          <Monitor className="h-3.5 w-3.5 text-success" />
         </div>
         <p className="text-sm font-semibold">Service Health</p>
         <p className="text-xs text-muted-foreground">· Auto-refreshing every 15s</p>
@@ -689,8 +689,8 @@ function HealthSection() {
           <CardContent className="pt-4 pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${allHealthy ? "bg-green-100" : "bg-red-100"}`}>
-                  {allHealthy ? <CheckCircle2 className="h-4 w-4 text-green-600" /> : <AlertTriangle className="h-4 w-4 text-red-600" />}
+                <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${allHealthy ? "bg-success/10" : "bg-destructive/10"}`}>
+                  {allHealthy ? <CheckCircle2 className="h-4 w-4 text-success" /> : <AlertTriangle className="h-4 w-4 text-destructive" />}
                 </div>
                 <div>
                   <p className="text-sm font-medium">{allHealthy ? "All systems operational" : "Service degradation detected"}</p>
@@ -720,8 +720,8 @@ function HealthSection() {
                 <CardContent className="pt-5">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                      <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${ok ? "bg-green-100" : "bg-red-100"}`}>
-                        <Icon className={`h-5 w-5 ${ok ? "text-green-600" : "text-red-600"}`} />
+                      <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${ok ? "bg-success/10" : "bg-destructive/10"}`}>
+                        <Icon className={`h-5 w-5 ${ok ? "text-success" : "text-destructive"}`} />
                       </div>
                       <div>
                         <p className="font-medium capitalize">{name}</p>
@@ -729,8 +729,8 @@ function HealthSection() {
                       </div>
                     </div>
                     {ok
-                      ? <CheckCircle2 className="h-5 w-5 text-green-600" />
-                      : <XCircle className="h-5 w-5 text-red-600" />
+                      ? <CheckCircle2 className="h-5 w-5 text-success" />
+                      : <XCircle className="h-5 w-5 text-destructive" />
                     }
                   </div>
                   <div className="mt-3 pt-3 border-t flex items-center justify-between text-xs text-muted-foreground">
@@ -930,8 +930,8 @@ function SSOProvidersTab() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-7 w-7 rounded-md bg-emerald-500/10 flex items-center justify-center">
-                <Shield className="h-4 w-4 text-emerald-600" />
+              <div className="h-7 w-7 rounded-md bg-success/50/10 flex items-center justify-center">
+                <Shield className="h-4 w-4 text-success" />
               </div>
               <div>
                 <CardTitle className="text-base">SSO Providers</CardTitle>
@@ -1217,13 +1217,13 @@ function ProviderCard({
   onDelete: (p: SSOProviderData) => void;
 }) {
   const providerColors: Record<string, string> = {
-    github: "bg-gray-900 text-white",
-    google: "bg-blue-100 text-blue-600",
-    azure: "bg-sky-100 text-sky-600",
-    okta: "bg-indigo-100 text-indigo-600",
-    oidc: "bg-violet-100 text-violet-600",
+    github: "bg-foreground text-white",
+    google: "bg-info/10 text-info",
+    azure: "bg-info/10 text-info",
+    okta: "bg-primary/10 text-primary",
+    oidc: "bg-primary/10 text-primary",
   };
-  const iconBg = p.enabled ? (providerColors[p.provider_type] ?? "bg-green-100 text-green-600") : "bg-gray-100 text-gray-400";
+  const iconBg = p.enabled ? (providerColors[p.provider_type] ?? "bg-success/10 text-success") : "bg-muted text-muted-foreground";
 
   // Fetch domain mappings count for this provider
   const { data: domainMappings } = useQuery({
@@ -1308,7 +1308,7 @@ function ProviderCard({
 
         {/* Test result */}
         {testResults[p.id] && (
-          <div className={`mt-3 p-3 rounded-lg border text-xs ${testResults[p.id].success ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-700 border-red-200"}`}>
+          <div className={`mt-3 p-3 rounded-lg border text-xs ${testResults[p.id].success ? "bg-success/5 text-success border-success/20" : "bg-destructive/5 text-destructive border-destructive/20"}`}>
             <div className="flex items-center gap-1.5">
               {testResults[p.id].success ? <CheckCircle2 className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
               <span className="font-medium">{testResults[p.id].success ? "Connection successful" : "Connection failed"}</span>
@@ -1399,11 +1399,11 @@ function TestEmailDialog({ provider }: { provider: SSOProviderData }) {
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground">Would bypass invite:</span>
                 {previewResult.would_bypass_invite ? (
-                  <Badge className="text-[10px] bg-green-100 text-green-700 border-green-200">
+                  <Badge className="text-[10px] bg-success/10 text-success border-success/20">
                     <CheckCircle2 className="h-3 w-3 mr-0.5" /> Yes
                   </Badge>
                 ) : (
-                  <Badge variant="outline" className="text-[10px] text-amber-600 border-amber-200">
+                  <Badge variant="outline" className="text-[10px] text-warning border-warning/20">
                     <XCircle className="h-3 w-3 mr-0.5" /> No
                   </Badge>
                 )}
@@ -1415,7 +1415,7 @@ function TestEmailDialog({ provider }: { provider: SSOProviderData }) {
                     <div key={i} className="flex items-center gap-1.5 ml-2">
                       <Badge variant="outline" className="font-mono text-[10px]">@{rule.domain}</Badge>
                       <span className="text-muted-foreground">→</span>
-                      <Badge variant="outline" className="text-[10px] text-violet-600 border-violet-200">
+                      <Badge variant="outline" className="text-[10px] text-primary border-primary/20">
                         {rule.team_name || rule.team_id.slice(0, 8)} · {rule.team_role}
                       </Badge>
                       <Badge variant="outline" className="text-[10px]">org: {rule.org_role}</Badge>
@@ -1430,7 +1430,7 @@ function TestEmailDialog({ provider }: { provider: SSOProviderData }) {
                   <span className="text-muted-foreground">Predicted team assignments:</span>
                   <div className="flex flex-wrap gap-1 ml-2">
                     {previewResult.team_assignments.map((ta, i) => (
-                      <Badge key={i} variant="outline" className="text-[10px] text-violet-600 border-violet-200">
+                      <Badge key={i} variant="outline" className="text-[10px] text-primary border-primary/20">
                         {ta.team_name} · {ta.team_role}
                       </Badge>
                     ))}
@@ -1606,7 +1606,7 @@ function DomainMappingsSection({ providerId, providerName }: { providerId: strin
               <div className="flex items-center gap-2 flex-wrap">
                 <Badge variant="outline" className="font-mono text-[10px]">@{m.domain}</Badge>
                 <span className="text-muted-foreground">→</span>
-                <Badge variant="outline" className="text-[10px] text-violet-600 border-violet-200">
+                <Badge variant="outline" className="text-[10px] text-primary border-primary/20">
                   {m.team_name || m.team_id.slice(0, 8)} · {m.team_role}
                 </Badge>
                 <Badge variant="outline" className="text-[10px]">org: {m.org_role}</Badge>
@@ -1720,11 +1720,11 @@ function DomainMappingsSection({ providerId, providerName }: { providerId: strin
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground">Would bypass invite:</span>
               {previewResult.would_bypass_invite ? (
-                <Badge className="text-[10px] bg-green-100 text-green-700 border-green-200">
+                <Badge className="text-[10px] bg-success/10 text-success border-success/20">
                   <CheckCircle2 className="h-3 w-3 mr-0.5" /> Yes
                 </Badge>
               ) : (
-                <Badge variant="outline" className="text-[10px] text-amber-600 border-amber-200">
+                <Badge variant="outline" className="text-[10px] text-warning border-warning/20">
                   <XCircle className="h-3 w-3 mr-0.5" /> No
                 </Badge>
               )}
@@ -1736,7 +1736,7 @@ function DomainMappingsSection({ providerId, providerName }: { providerId: strin
                   <div key={i} className="flex items-center gap-1.5 ml-2">
                     <Badge variant="outline" className="font-mono text-[10px]">@{rule.domain}</Badge>
                     <span className="text-muted-foreground">→</span>
-                    <Badge variant="outline" className="text-[10px] text-violet-600 border-violet-200">
+                    <Badge variant="outline" className="text-[10px] text-primary border-primary/20">
                       {rule.team_name || rule.team_id.slice(0, 8)} · {rule.team_role}
                     </Badge>
                     <Badge variant="outline" className="text-[10px]">org: {rule.org_role}</Badge>
@@ -1751,7 +1751,7 @@ function DomainMappingsSection({ providerId, providerName }: { providerId: strin
                 <span className="text-muted-foreground">Predicted team assignments:</span>
                 <div className="flex flex-wrap gap-1 ml-2">
                   {previewResult.team_assignments.map((ta, i) => (
-                    <Badge key={i} variant="outline" className="text-[10px] text-violet-600 border-violet-200">
+                    <Badge key={i} variant="outline" className="text-[10px] text-primary border-primary/20">
                       {ta.team_name} · {ta.team_role}
                     </Badge>
                   ))}

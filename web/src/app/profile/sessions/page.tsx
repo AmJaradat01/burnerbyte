@@ -74,8 +74,8 @@ export default function SessionsPage() {
         <CardContent className="pt-5 pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-7 w-7 rounded-md bg-blue-500/10 flex items-center justify-center">
-                <Monitor className="h-4 w-4 text-blue-600" />
+              <div className="h-7 w-7 rounded-md bg-info/50/10 flex items-center justify-center">
+                <Monitor className="h-4 w-4 text-info" />
               </div>
               <div>
                 <h1 className="text-base font-semibold">Active Sessions</h1>
@@ -97,8 +97,8 @@ export default function SessionsPage() {
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-muted-foreground">Active Sessions</span>
-              <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-blue-100">
-                <Monitor className="h-4 w-4 text-blue-600" />
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-info/10">
+                <Monitor className="h-4 w-4 text-info" />
               </div>
             </div>
             <p className="text-2xl font-bold tabular-nums">{sessions?.length ?? 0}</p>
@@ -108,8 +108,8 @@ export default function SessionsPage() {
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-muted-foreground">Current Session</span>
-              <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-emerald-100">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-success/10">
+                <CheckCircle2 className="h-4 w-4 text-success" />
               </div>
             </div>
             <p className="text-2xl font-bold tabular-nums">Active</p>
@@ -143,11 +143,11 @@ export default function SessionsPage() {
                   ).id;
                   const parsed = parseUserAgent(s.user_agent);
                   return (
-                  <TableRow key={s.id} className={isCurrent ? "bg-emerald-50 border-l-2 border-l-emerald-500" : ""}>
+                  <TableRow key={s.id} className={isCurrent ? "bg-success/5" : ""}>
                     <TableCell className="font-mono text-sm">
                       <div className="flex items-center gap-2">
                         {s.ip_address ?? "—"}
-                        {isCurrent && <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[10px] px-1">Current</Badge>}
+                        {isCurrent && <Badge className="bg-success/10 text-success border-success/20 text-[10px] px-1">Current</Badge>}
                       </div>
                     </TableCell>
                     <TableCell className="max-w-[200px] truncate text-sm hidden sm:table-cell">

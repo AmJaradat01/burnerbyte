@@ -302,7 +302,7 @@ export default function InvitePage() {
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {teamAssignments.map((ta) => (
-                  <Badge key={ta.team_id} variant="outline" className="text-xs text-violet-600 border-violet-200">
+                  <Badge key={ta.team_id} variant="outline" className="text-xs text-primary border-primary/20">
                     {ta.team_name} · {ta.team_role}
                   </Badge>
                 ))}
