@@ -15,54 +15,80 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/error-state";
 import { EmptyState } from "@/components/empty-state";
-import { DomainTeamIllustration, GlobeIllustration } from "@/components/illustrations";
 import { toast } from "sonner";
-import { ArrowLeft, Check, CheckCircle2, Circle, Clock, Copy, FileText, Globe, Inbox, Info, RefreshCw, Settings2, Shield, Users } from "lucide-react";
+import { ArrowLeft, Check, CheckCircle2, Circle, Clock, Copy, FileText, Globe, Inbox, RefreshCw } from "lucide-react";
 import type { Domain, DomainAssignment, Team } from "@/types";
 
 /* ── Copy helper ── */
 
-function CopyValue({ label, value }: { label: string; value: string }) {
+function CopyableValue({ value, ariaLabel }: { value: string; ariaLabel?: string }) {
   const [copied, setCopied] = useState(false);
-  const copy = () => { copyToClipboard(value); setCopied(true); toast.success("Copied"); setTimeout(() => setCopied(false), 2000); };
+  const copy = () => {
+    copyToClipboard(value);
+    setCopied(true);
+    toast.success("Copied");
+    setTimeout(() => setCopied(false), 2000);
+  };
   return (
-    <div className="flex items-center gap-3">
-      <span className="text-xs text-muted-foreground font-medium w-16 shrink-0">{label}</span>
-      <button onClick={copy} className="flex items-center gap-2 rounded-lg bg-muted/50 border px-3 py-1.5 font-mono text-sm break-all text-left hover:bg-muted transition-colors group flex-1 min-w-0">
-        <span className="flex-1 truncate">{value}</span>
-        {copied ? <Check className="h-3.5 w-3.5 text-success shrink-0" /> : <Copy className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />}
-      </button>
-    </div>
+    <button
+      onClick={copy}
+      className="flex items-center gap-2 rounded-md bg-muted/50 border px-3 py-1.5 font-mono text-sm break-all text-left hover:bg-muted transition-colors group flex-1 min-w-0 w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      aria-label={ariaLabel ?? `Copy ${value}`}
+    >
+      <span className="flex-1 truncate">{value}</span>
+      {copied ? (
+        <Check className="h-3.5 w-3.5 text-success shrink-0" aria-hidden="true" />
+      ) : (
+        <Copy className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" aria-hidden="true" />
+      )}
+    </button>
   );
 }
 
-/* ── DNS record section ── */
+/* ── DNS record card ── */
 
-function DnsRecordSection({ title, icon: Icon, description, verified, records }: {
-  title: string; icon: typeof Globe; description: string; verified: boolean; records: { label: string; value: string }[];
+function DnsRecordCard({ title, icon: Icon, description, verified, records }: {
+  title: string; icon: typeof Globe; description: string; verified: boolean;
+  records: { label: string; value: string }[];
 }) {
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <div className={`h-7 w-7 rounded-md flex items-center justify-center shrink-0 ${verified ? "bg-success/10" : "bg-warning/10"}`}>
-          <Icon className={`h-3.5 w-3.5 ${verified ? "text-success" : "text-warning"}`} />
+    <Card className={verified ? "" : "border-dashed"}>
+      <CardContent className="space-y-4">
+        <div className="flex items-start gap-3">
+          <div
+            className={`h-9 w-9 rounded-lg flex items-center justify-center shrink-0 ${verified ? "bg-success/10" : "bg-warning/10"}`}
+            aria-hidden="true"
+          >
+            <Icon className={`h-4 w-4 ${verified ? "text-success" : "text-warning"}`} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-title">{title}</h3>
+              {verified ? (
+                <Badge variant="success" className="gap-1 text-[10px]">
+                  <CheckCircle2 className="h-2.5 w-2.5" aria-hidden="true" /> Verified
+                </Badge>
+              ) : (
+                <Badge variant="warning" className="gap-1 text-[10px]">
+                  <Circle className="h-2.5 w-2.5" aria-hidden="true" /> Pending
+                </Badge>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
+          </div>
         </div>
-        <span className="text-sm font-semibold">{title}</span>
-        {verified ? (
-          <Badge className="gap-1 text-[10px] bg-success/10 text-success border-success/20">
-            <CheckCircle2 className="h-2.5 w-2.5" /> Verified
-          </Badge>
-        ) : (
-          <Badge className="gap-1 text-[10px] bg-warning/10 text-warning border-warning/20">
-            <Circle className="h-2.5 w-2.5" /> Pending
-          </Badge>
-        )}
-      </div>
-      <p className="text-xs text-muted-foreground pl-9">{description}</p>
-      <div className="space-y-1.5 pl-9">
-        {records.map((r) => <CopyValue key={r.label} label={r.label} value={r.value} />)}
-      </div>
-    </div>
+        <dl className="space-y-1.5">
+          {records.map((r) => (
+            <div key={r.label} className="flex items-center gap-3">
+              <dt className="text-xs text-muted-foreground font-medium w-16 shrink-0">{r.label}</dt>
+              <dd className="flex-1 min-w-0">
+                <CopyableValue value={r.value} ariaLabel={`Copy ${title} ${r.label}: ${r.value}`} />
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -114,83 +140,89 @@ export default function DomainDetailPage() {
 
   const allVerified = domain?.mx_verified && domain?.txt_verified;
 
+  const verifiedCount = domain ? [domain.mx_verified, domain.txt_verified].filter(Boolean).length : 0;
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
-      <Card>
-        <CardContent className="pt-5 pb-4">
+      <header className="flex flex-wrap items-center gap-3">
+        <Link
+          href="/domains"
+          className="flex h-9 w-9 items-center justify-center rounded-lg border bg-card hover:bg-accent transition-colors shrink-0"
+          aria-label="Back to domains"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+        </Link>
+        {isLoading ? (
           <div className="flex items-center gap-3">
-            <Link href="/domains" className="flex h-8 w-8 items-center justify-center rounded-lg border bg-card hover:bg-accent transition-colors shrink-0">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-            {isLoading ? (
-              <div className="flex items-center gap-3"><Skeleton className="h-7 w-48" /><Skeleton className="h-5 w-20 rounded-full" /></div>
-            ) : (
-              <div className="flex items-center gap-3 flex-1">
-                <div className="h-7 w-7 rounded-md bg-success/50/10 flex items-center justify-center shrink-0">
-                  <Globe className="h-4 w-4 text-success" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h1 className="text-base font-semibold font-mono">{domain?.domain_name}</h1>
-                    {allVerified ? (
-                      <Badge className="gap-1 bg-success/10 text-success border-success/20">
-                        <CheckCircle2 className="h-3 w-3" /> Verified
-                      </Badge>
-                    ) : (
-                      <Badge className="gap-1 bg-warning/10 text-warning border-warning/20">
-                        <Clock className="h-3 w-3" /> Setup Required
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Added {new Date(domain?.created_at ?? "").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
-                    {domain?.dns_last_checked_at && <> · Last checked {new Date(domain.dns_last_checked_at).toLocaleTimeString()}</>}
-                  </p>
-                </div>
+            <Skeleton className="h-9 w-9 rounded-lg" />
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-5 w-20 rounded-full" />
+          </div>
+        ) : domain ? (
+          <>
+            <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0" aria-hidden="true">
+              <Globe className="h-4 w-4 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-headline font-mono">{domain.domain_name}</h1>
+                {allVerified ? (
+                  <Badge variant="success" className="gap-1">
+                    <CheckCircle2 className="h-3 w-3" aria-hidden="true" /> Verified
+                  </Badge>
+                ) : (
+                  <Badge variant="warning" className="gap-1">
+                    <Clock className="h-3 w-3" aria-hidden="true" /> Setup required
+                  </Badge>
+                )}
               </div>
-            )}
-            {domain && !allVerified && (
-              <Button variant="outline" size="sm" className="gap-1.5 shrink-0" onClick={() => verify.mutate()} disabled={verify.isPending}>
-                <RefreshCw className={`h-3.5 w-3.5 ${verify.isPending ? "animate-spin" : ""}`} /> Verify DNS
+              <p className="text-sm text-muted-foreground tabular-nums">
+                {domain.active_inboxes ?? 0} active · {domain.inboxes_created_count ?? 0} created · {domain.team_count ?? 0} {(domain.team_count ?? 0) === 1 ? "team" : "teams"}
+                {" · Added "}
+                {new Date(domain.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                {domain.dns_last_checked_at && (
+                  <> · Last checked {new Date(domain.dns_last_checked_at).toLocaleTimeString()}</>
+                )}
+              </p>
+            </div>
+            {!allVerified && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 ml-auto"
+                onClick={() => verify.mutate()}
+                disabled={verify.isPending}
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${verify.isPending ? "animate-spin" : ""}`} aria-hidden="true" />
+                Verify DNS
               </Button>
             )}
-          </div>
-        </CardContent>
-      </Card>
+          </>
+        ) : null}
+      </header>
 
       {domain && (
         <>
-          {/* Quick stats */}
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <QuickStat icon={Inbox} label="Active Inboxes" value={domain.active_inboxes ?? 0} accent="text-success bg-success/10" />
-            <QuickStat icon={Globe} label="Total Created" value={domain.inboxes_created_count ?? 0} accent="text-info bg-info/10" />
-            <QuickStat icon={Users} label="Teams" value={domain.team_count ?? 0} accent="text-primary bg-primary/10" />
-            <QuickStat icon={Shield} label="DNS Status" value={allVerified ? "✓ OK" : `${[domain.mx_verified, domain.txt_verified].filter(Boolean).length}/2`} accent={allVerified ? "text-success bg-success/10" : "text-warning bg-warning/10"} />
-          </div>
-
-          {/* Two-column layout */}
-          <div className="grid gap-6 lg:grid-cols-2">
-            {/* Left column — DNS */}
-            <div className="space-y-6">
-              {/* DNS Records */}
-              <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-info/10">
-                  <Globe className="h-4 w-4 text-info" />
-                </div>
-                <div>
-                  <CardTitle className="text-base">DNS Configuration</CardTitle>
-                  <p className="text-xs text-muted-foreground mt-0.5">Add these records to your DNS provider</p>
-                </div>
+          {/* Hero: DNS configuration, full width */}
+          <section className="space-y-4" aria-labelledby="dns-config-heading">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <div>
+                <h2 id="dns-config-heading" className="text-title">DNS Configuration</h2>
+                <p className="text-sm text-muted-foreground">
+                  Add these records to your DNS provider for <span className="font-mono">{domain.domain_name}</span>.
+                </p>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <DnsRecordSection
+              <div className="text-sm tabular-nums text-muted-foreground">
+                {verifiedCount} of 2 verified
+              </div>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-2">
+              <DnsRecordCard
                 title="MX Record"
                 icon={Inbox}
-                description={`Routes incoming email for ${domain.domain_name} to your mail server`}
+                description={`Routes incoming email for ${domain.domain_name}`}
                 verified={domain.mx_verified}
                 records={[
                   { label: "Type", value: "MX" },
@@ -199,10 +231,7 @@ export default function DomainDetailPage() {
                   { label: "Value", value: domain.mx_target || "mail.burnerbyte.com" },
                 ]}
               />
-
-              <div className="border-t" />
-
-              <DnsRecordSection
+              <DnsRecordCard
                 title="TXT Record"
                 icon={FileText}
                 description="Verifies domain ownership"
@@ -213,91 +242,88 @@ export default function DomainDetailPage() {
                   { label: "Value", value: domain.verification_record || "" },
                 ]}
               />
-
-              <div className="border-t pt-1" />
-
-              {/* Verify action */}
-              <div className="flex items-center gap-3 flex-wrap">
-                <Button size="sm" onClick={() => verify.mutate()} disabled={verify.isPending} className="gap-1.5">
-                  <RefreshCw className={`h-3.5 w-3.5 ${verify.isPending ? "animate-spin" : ""}`} />
-                  {verify.isPending ? "Checking…" : "Verify DNS Records"}
-                </Button>
-                {needsPoll && (
-                  <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <span className="h-2 w-2 rounded-full bg-warning" />
-                    Auto-checking every 30s
-                  </span>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-              {/* Domain Settings — below DNS on left */}
             </div>
 
-            {/* Right column — sidebar cards */}
-            <div className="space-y-6">
-          {/* Assigned Teams */}
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-primary/10">
-                  <Users className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <CardTitle className="text-base">Assigned Teams</CardTitle>
-                  <p className="text-xs text-muted-foreground mt-0.5">{teamAssignments.data?.length ?? 0} team{(teamAssignments.data?.length ?? 0) !== 1 ? "s" : ""} using this domain</p>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {teamAssignments.isLoading ? (
-                <div className="space-y-2">{[1, 2].map(i => <Skeleton key={i} className="h-12 w-full rounded-lg" />)}</div>
-              ) : teamAssignments.data && teamAssignments.data.length > 0 ? (
-                <div className="space-y-2">
-                  {teamAssignments.data.map(({ team, assignment }) => (
-                    <Link key={team.id} href="/teams" className="flex items-center justify-between rounded-lg border px-3 py-2.5 hover:bg-accent/50 transition-colors group">
-                      <div className="flex items-center gap-2.5">
-                        <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
-                          {team.name.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium group-hover:text-primary transition-colors">{team.name}</p>
-                          <p className="text-[11px] text-muted-foreground">{team.member_count} member{team.member_count !== 1 ? "s" : ""}</p>
-                        </div>
-                      </div>
-                      <Badge variant="outline" className="text-[10px]">{assignment.access_level}</Badge>
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <EmptyState illustration={<DomainTeamIllustration />} title="No teams assigned" description="Assign this domain to a team to start creating inboxes." />
+            <div className="flex items-center gap-3 flex-wrap">
+              <Button size="sm" onClick={() => verify.mutate()} disabled={verify.isPending} className="gap-1.5">
+                <RefreshCw className={`h-3.5 w-3.5 ${verify.isPending ? "animate-spin" : ""}`} aria-hidden="true" />
+                {verify.isPending ? "Checking…" : "Verify DNS Records"}
+              </Button>
+              {needsPoll && (
+                <span className="flex items-center gap-1.5 text-xs text-muted-foreground" role="status">
+                  <span className="h-1.5 w-1.5 rounded-full bg-warning" aria-hidden="true" />
+                  Auto-checking every 30s
+                </span>
               )}
-            </CardContent>
-          </Card>
-
-          {/* Details */}
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-muted">
-                  <Info className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <CardTitle className="text-base">Details</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-3">
-                <DetailRow label="Domain ID" value={domain.id} mono />
-                <DetailRow label="Created" value={new Date(domain.created_at).toLocaleDateString(undefined, { weekday: "short", year: "numeric", month: "short", day: "numeric" })} />
-                <DetailRow label="MX Target" value={domain.mx_target || "—"} mono />
-              </div>
-            </CardContent>
-          </Card>
-
-              <DomainSettingsCard domain={domain} orgId={org!.id} />
             </div>
-          </div>
+          </section>
+
+          {/* Supporting context: teams, details, settings */}
+          <section className="grid gap-6 lg:grid-cols-3" aria-label="Domain context">
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between gap-2">
+                  <CardTitle className="text-title">Assigned Teams</CardTitle>
+                  <span className="text-xs text-muted-foreground tabular-nums">
+                    {teamAssignments.data?.length ?? 0}
+                  </span>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {teamAssignments.isLoading ? (
+                  <div className="space-y-2">
+                    {[1, 2].map((i) => <Skeleton key={i} className="h-12 w-full rounded-lg" />)}
+                  </div>
+                ) : teamAssignments.data && teamAssignments.data.length > 0 ? (
+                  <div className="space-y-2">
+                    {teamAssignments.data.map(({ team, assignment }) => (
+                      <Link
+                        key={team.id}
+                        href="/teams"
+                        className="flex items-center justify-between rounded-lg border px-3 py-2.5 hover:bg-accent/50 transition-colors group"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0" aria-hidden="true">
+                            {team.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">{team.name}</p>
+                            <p className="text-[11px] text-muted-foreground tabular-nums">
+                              {team.member_count} {team.member_count === 1 ? "member" : "members"}
+                            </p>
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="text-[10px] shrink-0">{assignment.access_level}</Badge>
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState
+                    title="No teams assigned"
+                    description="Assign this domain to a team to start creating inboxes."
+                  />
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-title">Details</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-3">
+                  <DetailRow label="Domain ID" value={domain.id} mono />
+                  <DetailRow
+                    label="Created"
+                    value={new Date(domain.created_at).toLocaleDateString(undefined, { weekday: "short", year: "numeric", month: "short", day: "numeric" })}
+                  />
+                  <DetailRow label="MX Target" value={domain.mx_target || "—"} mono />
+                </div>
+              </CardContent>
+            </Card>
+
+            <DomainSettingsCard domain={domain} orgId={org!.id} />
+          </section>
         </>
       )}
     </div>
@@ -312,24 +338,6 @@ function DetailRow({ label, value, mono }: { label: string; value: string; mono?
       <span className="text-sm font-medium text-muted-foreground">{label}</span>
       <span className={`text-sm ${mono ? "font-mono text-xs" : ""} truncate max-w-[60%] text-right`}>{value}</span>
     </div>
-  );
-}
-
-/* ── Quick stat card ── */
-
-function QuickStat({ icon: Icon, label, value, accent }: { icon: typeof Globe; label: string; value: number | string; accent: string }) {
-  return (
-    <Card>
-      <CardContent className="pt-5 pb-4">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-sm font-medium text-muted-foreground">{label}</span>
-          <div className={`h-8 w-8 rounded-lg flex items-center justify-center shadow-sm shrink-0 ${accent}`}>
-            <Icon className="h-4 w-4" />
-          </div>
-        </div>
-        <p className="text-2xl font-bold tabular-nums">{typeof value === "number" ? value.toLocaleString() : value}</p>
-      </CardContent>
-    </Card>
   );
 }
 
@@ -358,21 +366,15 @@ function DomainSettingsCard({ domain: d, orgId }: { domain: Domain; orgId: strin
   return (
     <Card>
       <CardHeader className="pb-3">
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-warning/10">
-            <Settings2 className="h-4 w-4 text-warning" />
-          </div>
-          <div>
-            <CardTitle className="text-base">Domain Settings</CardTitle>
-            <p className="text-xs text-muted-foreground mt-0.5">Configure behavior for this domain</p>
-          </div>
-        </div>
+        <CardTitle className="text-title">Settings</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label>Attachments</Label>
+          <Label htmlFor="domain-attachments">Attachments</Label>
           <Select value={attachments} onValueChange={setAttachments}>
-            <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+            <SelectTrigger id="domain-attachments" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="inherit">Inherit from org</SelectItem>
               <SelectItem value="enabled">Enabled</SelectItem>
@@ -382,7 +384,7 @@ function DomainSettingsCard({ domain: d, orgId }: { domain: Domain; orgId: strin
           <p className="text-xs text-muted-foreground">Controls whether email attachments are stored for inboxes on this domain.</p>
         </div>
         {dirty && (
-          <Button onClick={save} disabled={saving} size="sm">
+          <Button onClick={save} disabled={saving} size="sm" className="w-full">
             {saving ? "Saving…" : "Save Settings"}
           </Button>
         )}

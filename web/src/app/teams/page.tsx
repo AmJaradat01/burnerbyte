@@ -20,9 +20,8 @@ import { toast } from "sonner";
 import { EmptyState } from "@/components/empty-state";
 import { ErrorState } from "@/components/error-state";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { TeamIllustration, DomainTeamIllustration, GlobeIllustration } from "@/components/illustrations";
 import { useRoles } from "@/hooks/use-roles";
-import { ArrowLeft, AlertTriangle, CheckCircle2, Clock, Globe, Inbox, Loader2, Plus, Search, Settings, Trash2, UserPlus, Users, XCircle } from "lucide-react";
+import { ArrowLeft, ArrowRight, AlertTriangle, Globe, Inbox, Loader2, Plus, Search, Settings, Trash2, UserPlus, Users, XCircle } from "lucide-react";
 import type { Team, Membership, Domain } from "@/types";
 
 interface DomainAssignment {
@@ -55,28 +54,30 @@ export default function TeamsPage() {
   if (selectedTeam) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => setSelectedTeam(null)} className="gap-1.5">
-            <ArrowLeft className="h-4 w-4" /> Teams
+        <header className="flex flex-wrap items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={() => setSelectedTeam(null)} className="gap-1.5" aria-label="Back to teams">
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Teams
           </Button>
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-sm font-bold text-primary">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-sm font-bold text-primary" aria-hidden="true">
             {selectedTeam.name.charAt(0).toUpperCase()}
           </div>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">{selectedTeam.name}</h1>
+          <div className="min-w-0">
+            <h1 className="text-headline truncate">{selectedTeam.name}</h1>
             <p className="text-xs text-muted-foreground font-mono">{selectedTeam.slug}</p>
           </div>
-          <div className="flex items-center gap-2 ml-auto">
-            <Badge variant="secondary" className="gap-1 text-xs"><Users className="h-3 w-3" /> {selectedTeam.member_count}</Badge>
-            <Badge variant="secondary" className="gap-1 text-xs"><Globe className="h-3 w-3" /> {selectedTeam.domain_count}</Badge>
-            <Badge variant="secondary" className="gap-1 text-xs"><Inbox className="h-3 w-3" /> {selectedTeam.active_inboxes}</Badge>
+          <div className="flex items-center gap-2 ml-auto text-xs text-muted-foreground tabular-nums">
+            <span className="flex items-center gap-1"><Users className="h-3 w-3" aria-hidden="true" /> {selectedTeam.member_count}</span>
+            <span aria-hidden="true">·</span>
+            <span className="flex items-center gap-1"><Globe className="h-3 w-3" aria-hidden="true" /> {selectedTeam.domain_count}</span>
+            <span aria-hidden="true">·</span>
+            <span className="flex items-center gap-1"><Inbox className="h-3 w-3" aria-hidden="true" /> {selectedTeam.active_inboxes}</span>
           </div>
-        </div>
+        </header>
         <Tabs defaultValue="members">
           <TabsList>
-            <TabsTrigger value="members" className="gap-1.5"><Users className="h-3.5 w-3.5" /> Members</TabsTrigger>
-            <TabsTrigger value="domains" className="gap-1.5"><Globe className="h-3.5 w-3.5" /> Domains</TabsTrigger>
-            {isAdmin && <TabsTrigger value="settings" className="gap-1.5"><Settings className="h-3.5 w-3.5" /> Settings</TabsTrigger>}
+            <TabsTrigger value="members" className="gap-1.5"><Users className="h-3.5 w-3.5" aria-hidden="true" /> Members</TabsTrigger>
+            <TabsTrigger value="domains" className="gap-1.5"><Globe className="h-3.5 w-3.5" aria-hidden="true" /> Domains</TabsTrigger>
+            {isAdmin && <TabsTrigger value="settings" className="gap-1.5"><Settings className="h-3.5 w-3.5" aria-hidden="true" /> Settings</TabsTrigger>}
           </TabsList>
           <TabsContent value="members"><TeamMembersTab orgId={currentOrg.id} teamId={selectedTeam.id} isAdmin={!!isAdmin} /></TabsContent>
           <TabsContent value="domains"><DomainAssignmentsTab orgId={currentOrg.id} teamId={selectedTeam.id} isAdmin={!!isAdmin} /></TabsContent>
@@ -87,91 +88,80 @@ export default function TeamsPage() {
   }
 
   // Team list view
+  const teamList = teamsData?.data ?? [];
+  const totalMembers = teamList.reduce((s, t) => s + (t.member_count ?? 0), 0);
+  const totalInboxes = teamList.reduce((s, t) => s + (t.active_inboxes ?? 0), 0);
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card>
-        <CardContent className="pt-5 pb-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center">
-                <Users className="h-4 w-4 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-base font-semibold tracking-tight">Teams</h1>
-                <p className="text-sm text-muted-foreground">
-                  {teamsData?.data && teamsData.data.length > 0
-                    ? `${teamsData.data.length} team${teamsData.data.length !== 1 ? "s" : ""} · ${teamsData.data.reduce((s, t) => s + (t.member_count ?? 0), 0)} members · Organize domains and inboxes by team.`
-                    : "Organize your domains and inboxes by team."}
-                </p>
-              </div>
-            </div>
-            {isAdmin && <CreateTeamDialog orgId={currentOrg.id} existingTeams={(teamsData?.data ?? []).map((t) => t.name)} />}
+      <header className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0" aria-hidden="true">
+            <Users className="h-4 w-4 text-primary" />
           </div>
-        </CardContent>
-      </Card>
-
-      {isAdmin && teamsData?.data && teamsData.data.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <MiniStat icon={Users} label="Total Teams" value={teamsData.data.length} accent="text-info bg-info/10" />
-          <MiniStat icon={Users} label="Total Members" value={teamsData.data.reduce((s, t) => s + (t.member_count ?? 0), 0)} accent="text-success bg-success/10" />
-          <MiniStat icon={Inbox} label="Total Inboxes" value={teamsData.data.reduce((s, t) => s + (t.active_inboxes ?? 0), 0)} accent="text-primary bg-primary/10" />
+          <div className="min-w-0">
+            <h1 className="text-headline">Teams</h1>
+            <p className="text-sm text-muted-foreground tabular-nums">
+              {teamList.length > 0
+                ? `${teamList.length} ${teamList.length === 1 ? "team" : "teams"} · ${totalMembers} ${totalMembers === 1 ? "member" : "members"} · ${totalInboxes} active ${totalInboxes === 1 ? "inbox" : "inboxes"}`
+                : "Organize your domains and inboxes by team."}
+            </p>
+          </div>
         </div>
-      )}
+        {isAdmin && <CreateTeamDialog orgId={currentOrg.id} existingTeams={teamList.map((t) => t.name)} />}
+      </header>
 
       {isLoading ? <TeamGridSkeleton /> : isError ? (
         <ErrorState message="Failed to load teams" onRetry={() => refetch()} />
+      ) : teamList.length === 0 ? (
+        <EmptyState title="No teams yet" description="Create a team to organize your domains and inboxes.">
+          {isAdmin && (
+            <div className="mt-5">
+              <CreateTeamDialog orgId={currentOrg.id} existingTeams={[]} />
+            </div>
+          )}
+        </EmptyState>
       ) : (
-        (!teamsData?.data || teamsData.data.length === 0) ? (
-          <EmptyState illustration={<TeamIllustration />} title="No teams yet" description="Create a team to organize your domains and inboxes." />
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {teamsData.data.map((t) => (
-              <TeamCard key={t.id} team={t} onSelect={() => setSelectedTeam(t)} />
-            ))}
-          </div>
-        )
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {teamList.map((t) => (
+            <TeamCard key={t.id} team={t} onSelect={() => setSelectedTeam(t)} />
+          ))}
+        </div>
       )}
     </div>
   );
 }
 
 function TeamCard({ team, onSelect }: { team: Team; onSelect: () => void }) {
-  const totalActivity = (team.member_count ?? 0) + (team.domain_count ?? 0) + (team.active_inboxes ?? 0);
+  const members = team.member_count ?? 0;
+  const domains = team.domain_count ?? 0;
+  const inboxes = team.active_inboxes ?? 0;
   return (
-    <Card className="cursor-pointer group" onClick={onSelect}>
-      <CardContent className="pt-4 pb-3 space-y-3">
-        {/* Team name + avatar */}
+    <Card
+      className="cursor-pointer group hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] transition-shadow"
+      onClick={onSelect}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(); } }}
+      aria-label={`Open team ${team.name}`}
+    >
+      <CardContent className="space-y-3">
         <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-sm font-bold text-primary">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-sm font-bold text-primary" aria-hidden="true">
             {team.name.charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold truncate">{team.name}</p>
-            <p className="text-[11px] text-muted-foreground font-mono">{team.slug}</p>
+            <p className="text-sm font-semibold truncate group-hover:text-primary transition-colors">{team.name}</p>
+            <p className="text-[11px] text-muted-foreground font-mono truncate">{team.slug}</p>
           </div>
+          <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-1" aria-hidden="true" />
         </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-2">
-          <div className="rounded-lg bg-muted/50 px-2.5 py-1.5 text-center">
-            <p className="text-sm font-semibold tabular-nums">{team.member_count ?? 0}</p>
-            <p className="text-[10px] text-muted-foreground">Members</p>
-          </div>
-          <div className="rounded-lg bg-muted/50 px-2.5 py-1.5 text-center">
-            <p className="text-sm font-semibold tabular-nums">{team.domain_count ?? 0}</p>
-            <p className="text-[10px] text-muted-foreground">Domains</p>
-          </div>
-          <div className="rounded-lg bg-muted/50 px-2.5 py-1.5 text-center">
-            <p className="text-sm font-semibold tabular-nums">{team.active_inboxes ?? 0}</p>
-            <p className="text-[10px] text-muted-foreground">Inboxes</p>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-between pt-1 border-t text-xs text-muted-foreground">
-          <span>Created {new Date(team.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</span>
-          <span className="text-primary font-medium">View team →</span>
+        <div className="flex items-center justify-between text-xs text-muted-foreground border-t pt-2">
+          <span className="tabular-nums">
+            {members} {members === 1 ? "member" : "members"} · {domains} {domains === 1 ? "domain" : "domains"} · {inboxes} active
+          </span>
+          <span>{new Date(team.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
         </div>
       </CardContent>
     </Card>
@@ -188,22 +178,6 @@ function TeamGridSkeleton() {
         </Card>
       ))}
     </div>
-  );
-}
-
-function MiniStat({ icon: Icon, label, value, accent }: { icon: typeof Users; label: string; value: number; accent: string }) {
-  return (
-    <Card>
-      <CardContent className="pt-5 pb-4">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-sm font-medium text-muted-foreground">{label}</span>
-          <div className={`h-8 w-8 rounded-lg flex items-center justify-center shadow-sm shrink-0 ${accent}`}>
-            <Icon className="h-4 w-4" />
-          </div>
-        </div>
-        <p className="text-2xl font-bold tabular-nums">{value}</p>
-      </CardContent>
-    </Card>
   );
 }
 
@@ -326,15 +300,8 @@ function CreateTeamDialog({ orgId, existingTeams }: { orgId: string; existingTea
       </DialogTrigger>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-              <Globe className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <DialogTitle>Create a team</DialogTitle>
-              <DialogDescription>Teams let you group members and assign domains so the right people have access to the right inboxes.</DialogDescription>
-            </div>
-          </div>
+          <DialogTitle>Create a team</DialogTitle>
+          <DialogDescription>Teams let you group members and assign domains so the right people have access to the right inboxes.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
@@ -602,16 +569,22 @@ function TeamMembersTab({ orgId, teamId, isAdmin }: { orgId: string; teamId: str
 
   return (
     <div className="space-y-4">
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
-        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Total</span><div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-info/10"><Users className="h-4 w-4 text-info" /></div></div><p className="text-2xl font-bold tabular-nums">{members.length}</p></CardContent></Card>
-        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Leads</span><div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-success/10"><CheckCircle2 className="h-4 w-4 text-success" /></div></div><p className="text-2xl font-bold tabular-nums">{leadCount}</p></CardContent></Card>
-        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Members</span><div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-warning/10"><Clock className="h-4 w-4 text-warning" /></div></div><p className="text-2xl font-bold tabular-nums">{members.length - leadCount}</p></CardContent></Card>
-      </div>
-
-      {/* Search + Add */}
+      {/* Toolbar: counts + search + add */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        {members.length > 3 && <Input placeholder="Search members…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />}
+        <p className="text-sm text-muted-foreground tabular-nums">
+          {members.length} {members.length === 1 ? "member" : "members"}
+          {leadCount > 0 && ` · ${leadCount} ${leadCount === 1 ? "lead" : "leads"}`}
+        </p>
+        <div className="flex items-center gap-2 flex-wrap">
+          {members.length > 3 && (
+            <Input
+              placeholder="Search members…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="max-w-sm"
+              aria-label="Search team members"
+            />
+          )}
         {isAdmin && <Dialog open={addOpen} onOpenChange={(v) => { setAddOpen(v); if (!v) { setMemberEmail(""); setRole("member"); setSuggestions([]); setShowSuggestions(false); } }}>
           <DialogTrigger asChild>
             <Button size="sm" className="gap-1.5"><UserPlus className="h-3.5 w-3.5" /> Add Member</Button>
@@ -685,6 +658,7 @@ function TeamMembersTab({ orgId, teamId, isAdmin }: { orgId: string; teamId: str
             </div>
           </DialogContent>
         </Dialog>}
+        </div>
       </div>
 
       {/* Table */}
@@ -694,7 +668,7 @@ function TeamMembersTab({ orgId, teamId, isAdmin }: { orgId: string; teamId: str
         ) : (
           <>
               {filtered.length === 0 && !search && (
-                <EmptyState illustration={<DomainTeamIllustration />} title="No members yet" description="Invite team members to collaborate." />
+                <EmptyState title="No members yet" description="Add members so the team can start receiving and managing inboxes." />
               )}
               {filtered.length === 0 && search && (
                 <Table className="table-striped">
@@ -814,22 +788,24 @@ function DomainAssignmentsTab({ orgId, teamId, isAdmin }: { orgId: string; teamI
 
   return (
     <div className="space-y-4">
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
-        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm font-medium text-muted-foreground">Assigned</span><div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-primary/10"><Globe className="h-4 w-4 text-primary" /></div></div><p className="text-2xl font-bold tabular-nums">{assignmentList.length}</p></CardContent></Card>
-        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm font-medium text-muted-foreground">Available</span><div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-success/10"><CheckCircle2 className="h-4 w-4 text-success" /></div></div><p className="text-2xl font-bold tabular-nums">{available.length}</p></CardContent></Card>
-        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm font-medium text-muted-foreground">Total Domains</span><div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-info/10"><Globe className="h-4 w-4 text-info" /></div></div><p className="text-2xl font-bold tabular-nums">{domains?.data?.length ?? 0}</p></CardContent></Card>
-      </div>
-
-      {/* Search + Assign */}
-      <div className="flex items-center justify-between gap-3">
-        {assignmentList.length > 0 && (
-          <div className="relative max-w-sm flex-1">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Filter domains…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-9" />
-          </div>
-        )}
-        <div className="ml-auto">
+      {/* Toolbar: count + search + assign */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-muted-foreground tabular-nums">
+          {assignmentList.length} {assignmentList.length === 1 ? "domain" : "domains"} assigned · {available.length} {available.length === 1 ? "domain" : "domains"} available
+        </p>
+        <div className="flex items-center gap-2 flex-wrap">
+          {assignmentList.length > 0 && (
+            <div className="relative max-w-sm flex-1">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+              <Input
+                placeholder="Filter domains…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9 h-9"
+                aria-label="Filter assigned domains"
+              />
+            </div>
+          )}
           {isAdmin && available.length > 0 && (
             <Dialog open={assignOpen} onOpenChange={(v) => { setAssignOpen(v); if (!v) setSelectedDomain(""); }}>
               <DialogTrigger asChild>
@@ -837,10 +813,7 @@ function DomainAssignmentsTab({ orgId, teamId, isAdmin }: { orgId: string; teamI
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
-                    <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-primary/10"><Globe className="h-4 w-4 text-primary" /></div>
-                    Assign domain to team
-                  </DialogTitle>
+                  <DialogTitle>Assign domain to team</DialogTitle>
                   <DialogDescription>Only verified domains are shown. Select one to make it available for this team&apos;s inboxes.</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
@@ -870,7 +843,7 @@ function DomainAssignmentsTab({ orgId, teamId, isAdmin }: { orgId: string; teamI
         ) : (
           filtered.length === 0 ? (
             assignmentList.length === 0 ? (
-              <EmptyState illustration={<GlobeIllustration />} title="No domains assigned" description="Assign verified domains to this team to start creating inboxes." />
+              <EmptyState title="No domains assigned" description="Assign verified domains so this team can create inboxes." />
             ) : (
               <div className="py-8 text-center text-sm text-muted-foreground">No domains match &quot;{search}&quot;</div>
             )
@@ -901,7 +874,6 @@ function DomainAssignmentsTab({ orgId, teamId, isAdmin }: { orgId: string; teamI
                   <TableCell className="text-right">
                     <UnassignDomainDialog
                       orgId={orgId}
-                      teamId={teamId}
                       assignment={a}
                       onConfirm={() => unassign.mutate(a.domain_id)}
                     />
@@ -1053,8 +1025,8 @@ function TeamSettingsTab({ orgId, team, onDeleted }: { orgId: string; team: Team
   );
 }
 
-function UnassignDomainDialog({ orgId, teamId, assignment, onConfirm }: {
-  orgId: string; teamId: string; assignment: DomainAssignment; onConfirm: () => void;
+function UnassignDomainDialog({ orgId, assignment, onConfirm }: {
+  orgId: string; assignment: DomainAssignment; onConfirm: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [confirmText, setConfirmText] = useState("");

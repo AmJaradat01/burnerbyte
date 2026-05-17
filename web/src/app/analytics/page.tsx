@@ -4,13 +4,12 @@ import { useState } from "react";
 import { api } from "@/lib/api";
 import { useOrgStore } from "@/stores/org-store";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from "recharts";
 import { ErrorState } from "@/components/error-state";
-import { Globe, HardDrive, Inbox, Mail, Users, Building2 } from "lucide-react";
-import Link from "next/link";
+import { Mail } from "lucide-react";
 
 interface OrgStats {
   total_members: number; total_teams: number; total_domains: number;
@@ -53,21 +52,15 @@ export default function AnalyticsPage() {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-7 w-7 rounded-md bg-destructive/50/10 flex items-center justify-center">
-                <Mail className="h-4 w-4 text-destructive" />
-              </div>
-              <div>
-                <CardTitle className="text-base tracking-tight">Analytics</CardTitle>
-                <CardDescription>Usage metrics and trends for your organization.</CardDescription>
-              </div>
-            </div>
-          </div>
-        </CardHeader>
-      </Card>
+      <header className="flex items-center gap-3">
+        <div className="h-7 w-7 rounded-md bg-muted flex items-center justify-center">
+          <Mail className="h-4 w-4 text-muted-foreground" />
+        </div>
+        <div>
+          <h1 className="text-headline">Analytics</h1>
+          <p className="text-sm text-muted-foreground">Usage metrics and trends for your organization.</p>
+        </div>
+      </header>
 
       {/* View selector: Organization overview or specific team */}
       <div className="flex items-center gap-3">
@@ -93,13 +86,6 @@ export default function AnalyticsPage() {
     </div>
   );
 }
-
-const STAT_CARD_LINKS: Record<string, string | null> = {
-  "Active Inboxes": "/",
-  "Domains": "/domains",
-  "Teams": "/teams",
-  "Members": "/settings",
-};
 
 function OrgAnalytics({ orgId }: { orgId: string }) {
   const [days, setDays] = useState("30");
@@ -129,23 +115,13 @@ function OrgAnalytics({ orgId }: { orgId: string }) {
   return (
     <div className="space-y-6">
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatCard icon={Mail} label="Total Emails" value={stats.total_emails} color="blue" />
-          <StatCard icon={Inbox} label="Active Inboxes" value={stats.active_inboxes} subtitle={`${stats.total_inboxes ?? 0} total`} color="emerald" link="/" />
-          <StatCard icon={Globe} label="Domains" value={stats.total_domains} color="violet" link="/domains" />
-          <StatCard icon={Building2} label="Teams" value={stats.total_teams} color="amber" link="/teams" />
-          <StatCard icon={Users} label="Members" value={stats.total_members} color="orange" link="/settings" />
-          <StatCard icon={HardDrive} label="Storage" value={formatBytes(stats.storage_used_bytes ?? 0)} color="slate" />
-        </div>
+        <p className="text-sm text-muted-foreground">
+          {stats.total_emails.toLocaleString()} emails · {stats.active_inboxes.toLocaleString()} inboxes · {stats.total_domains.toLocaleString()} domains this period
+        </p>
       )}
 
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="h-6 w-6 rounded-md bg-primary/10 flex items-center justify-center">
-            <Mail className="h-3.5 w-3.5 text-primary" />
-          </div>
-          <h2 className="text-base font-semibold tracking-tight">Overview</h2>
-        </div>
+        <h2 className="text-base font-semibold tracking-tight">Overview</h2>
         <DateRangeSelector value={days} onChange={setDays} />
       </div>
 
@@ -180,7 +156,7 @@ function OrgAnalytics({ orgId }: { orgId: string }) {
                           labelFormatter={(v) => `Date: ${v}`}
                           formatter={(v) => [`${Number(v).toLocaleString()}`, "Inboxes"]}
                         />
-                        <Bar dataKey="count" fill="#10b981" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="count" fill="var(--chart-2)" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   )}
@@ -212,7 +188,7 @@ function OrgAnalytics({ orgId }: { orgId: string }) {
                           labelFormatter={(v) => formatHour(Number(v))}
                           formatter={(v) => [`${Number(v).toLocaleString()}`, "Emails"]}
                         />
-                        <Bar dataKey="count" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="count" fill="var(--chart-3)" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   )}
@@ -305,11 +281,9 @@ function TeamAnalytics({ orgId, teamId, teamName }: { orgId: string; teamId: str
   return (
     <div className="space-y-6">
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatCard icon={Mail} label="Total Emails" value={stats.total_emails} color="blue" />
-          <StatCard icon={Inbox} label="Active Inboxes" value={stats.active_inboxes} subtitle={`${stats.total_inboxes ?? 0} total`} color="emerald" />
-          <StatCard icon={Users} label="Members" value={stats.total_members} color="orange" />
-        </div>
+        <p className="text-sm text-muted-foreground">
+          {stats.total_emails.toLocaleString()} emails · {stats.active_inboxes.toLocaleString()} inboxes · {stats.total_members.toLocaleString()} members this period
+        </p>
       )}
       <div className="flex items-center justify-between">
         <h2 className="text-base font-semibold tracking-tight">Emails per Day</h2>
@@ -320,41 +294,6 @@ function TeamAnalytics({ orgId, teamId, teamName }: { orgId: string; teamId: str
       {timeSeries?.data && <EmailChart data={timeSeries.data} />}
     </div>
   );
-}
-
-const STAT_COLORS: Record<string, { bg: string; text: string }> = {
-  blue: { bg: "bg-info/10", text: "text-info" },
-  emerald: { bg: "bg-success/10", text: "text-success" },
-  violet: { bg: "bg-primary/10", text: "text-primary" },
-  amber: { bg: "bg-warning/10", text: "text-warning" },
-  orange: { bg: "bg-warning/10", text: "text-warning" },
-  slate: { bg: "bg-muted", text: "text-muted-foreground" },
-};
-
-function StatCard({ icon: Icon, label, value, subtitle, color = "blue", link }: { icon: typeof Mail; label: string; value: number | string; subtitle?: string; color?: keyof typeof STAT_COLORS; link?: string }) {
-  const display = typeof value === "number" ? (value ?? 0).toLocaleString() : value;
-  const c = STAT_COLORS[color];
-  const inner = (
-    <Card>
-      <CardContent className="pt-5 pb-4">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-sm font-medium text-muted-foreground">{label}</span>
-          <div className={`h-8 w-8 rounded-lg flex items-center justify-center shadow-sm ${c.bg}`}>
-            <Icon className={`h-4 w-4 ${c.text}`} />
-          </div>
-        </div>
-        <p className="text-2xl font-bold tabular-nums">{display}</p>
-        {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
-        {link && (
-          <span className={`text-xs mt-1.5 inline-block hover:underline ${c.text}`}>
-            View →
-          </span>
-        )}
-      </CardContent>
-    </Card>
-  );
-  if (link) return <Link href={link} className="block">{inner}</Link>;
-  return inner;
 }
 
 function DateRangeSelector({ value, onChange }: { value: string; onChange: (v: string) => void }) {
