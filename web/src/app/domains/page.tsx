@@ -20,9 +20,7 @@ import { toast } from "sonner";
 import { Pagination } from "@/components/pagination";
 import { ErrorState } from "@/components/error-state";
 import { EmptyState } from "@/components/empty-state";
-import { DomainIllustration } from "@/components/illustrations";
-import { ConfirmDialog } from "@/components/confirm-dialog";
-import { AlertTriangle, Check, CheckCircle2, ChevronDown, ChevronUp, Circle, Copy, Globe, Inbox, Loader2, Plus, RefreshCw, Search, Shield, Trash2, Users, X } from "lucide-react";
+import { AlertTriangle, Check, CheckCircle2, ChevronDown, ChevronUp, Circle, Copy, Globe, Loader2, Plus, RefreshCw, Search, Trash2, X } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Domain, PaginatedResponse } from "@/types";
 
@@ -30,7 +28,7 @@ type StatusFilter = "all" | "verified" | "pending";
 type SortOption = "name-asc" | "name-desc" | "newest" | "oldest" | "most-inboxes";
 
 export default function DomainsPage() {
-  const { currentOrg, currentRole, hasPermission } = useOrgStore();
+  const { currentOrg, hasPermission } = useOrgStore();
   const { user } = useAuthStore();
   const qc = useQueryClient();
   const [page, setPage] = useState(1);
@@ -87,53 +85,50 @@ export default function DomainsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card>
-        <CardContent className="pt-5 pb-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-7 w-7 rounded-md bg-success/50/10 flex items-center justify-center">
-                <Globe className="h-4 w-4 text-success" />
-              </div>
-              <div>
-                <h1 className="text-base font-semibold tracking-tight">Domains</h1>
-                <p className="text-sm text-muted-foreground">
-                  {totalDomains > 0 ? `${totalDomains} domain${totalDomains !== 1 ? "s" : ""} · ${verifiedCount} verified · ${pendingCount} pending · Manage your email domains.` : "Manage your email domains and DNS verification."}
-                </p>
-              </div>
-            </div>
-            <AddDomainDialog orgId={currentOrg.id} />
+      <header className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0" aria-hidden="true">
+            <Globe className="h-4 w-4 text-primary" />
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Summary cards — 4 cards */}
-      {totalDomains > 0 && (
-        <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
-          <MiniStat icon={Globe} label="Total" value={totalDomains} accent="text-info bg-info/10" />
-          <MiniStat icon={CheckCircle2} label="Verified" value={verifiedCount} accent="text-success bg-success/10" />
-          <MiniStat icon={Shield} label="Pending" value={pendingCount} accent="text-warning bg-warning/10" />
-          <MiniStat icon={Inbox} label="Total Inboxes" value={totalInboxes} accent="text-primary bg-primary/10" />
+          <div className="min-w-0">
+            <h1 className="text-headline">Domains</h1>
+            <p className="text-sm text-muted-foreground tabular-nums">
+              {totalDomains > 0
+                ? `${totalDomains} ${totalDomains === 1 ? "domain" : "domains"} · ${verifiedCount} verified, ${pendingCount} pending · ${totalInboxes} active ${totalInboxes === 1 ? "inbox" : "inboxes"}`
+                : "Add a domain to start receiving email."}
+            </p>
+          </div>
         </div>
-      )}
+        <AddDomainDialog orgId={currentOrg.id} />
+      </header>
 
       {/* Search + Sort + Status filter */}
       {totalDomains > 0 && (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="relative max-w-sm flex-1">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Filter domains…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+            <Input
+              placeholder="Filter domains…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+              aria-label="Filter domains by name"
+            />
           </div>
           <div className="flex items-center gap-2">
-            {/* Status filter badges */}
-            <div className="flex items-center gap-1">
+            {/* Status filter tabs */}
+            <div className="flex items-center gap-1" role="tablist" aria-label="Status filter">
               {(["all", "verified", "pending"] as const).map((s) => (
                 <button
                   key={s}
+                  type="button"
+                  role="tab"
+                  aria-selected={statusFilter === s}
                   onClick={() => setStatusFilter(s)}
-                  className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                  className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
                     statusFilter === s
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-muted/80"
                   }`}
                 >
                   {s === "all" ? "All" : s === "verified" ? "Verified" : "Pending"}
@@ -142,7 +137,7 @@ export default function DomainsPage() {
             </div>
             {/* Sort dropdown */}
             <Select value={sort} onValueChange={(v) => setSort(v as SortOption)}>
-              <SelectTrigger className="w-[150px] h-8 text-xs">
+              <SelectTrigger className="w-[150px] h-8 text-xs" aria-label="Sort domains">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -163,10 +158,15 @@ export default function DomainsPage() {
       <>
         {filtered.length === 0 ? (
           <EmptyState
-            illustration={<DomainIllustration />}
             title={search ? "No matching domains" : "No domains yet"}
-            description={search ? "Try a different search term." : "Add your first domain to start receiving emails."}
-          />
+            description={search ? "Try a different search term." : "Add a domain to start receiving email."}
+          >
+            {!search && (
+              <div className="mt-5">
+                <AddDomainDialog orgId={currentOrg.id} />
+              </div>
+            )}
+          </EmptyState>
         ) : (
           <>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -189,24 +189,6 @@ export default function DomainsPage() {
   );
 }
 
-/* ── Mini stat ── */
-
-function MiniStat({ icon: Icon, label, value, accent }: { icon: typeof Globe; label: string; value: number; accent: string }) {
-  return (
-    <Card>
-      <CardContent className="pt-5 pb-4">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-sm font-medium text-muted-foreground">{label}</span>
-          <div className={`h-8 w-8 rounded-lg flex items-center justify-center shadow-sm shrink-0 ${accent}`}>
-            <Icon className="h-4 w-4" />
-          </div>
-        </div>
-        <p className="text-2xl font-bold tabular-nums">{value}</p>
-      </CardContent>
-    </Card>
-  );
-}
-
 /* ── Domain card ── */
 
 function DomainCard({ domain: d, onVerify, onDelete, verifying }: {
@@ -226,89 +208,75 @@ function DomainCard({ domain: d, onVerify, onDelete, verifying }: {
 
   return (
     <Card className={`group ${fullyVerified ? "" : "border-dashed"}`}>
-
-      {/* Header with icon + domain name */}
-      <CardContent className="pt-5 pb-0 pl-10">
+      <CardContent className="space-y-3">
+        {/* Header: icon + name + status */}
         <div className="flex items-start gap-3">
-          <div className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${fullyVerified ? "bg-success/10" : "bg-warning/10"}`}>
+          <div
+            className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${fullyVerified ? "bg-success/10" : "bg-warning/10"}`}
+            aria-hidden="true"
+          >
             <Globe className={`h-5 w-5 ${fullyVerified ? "text-success" : "text-warning"}`} />
           </div>
           <div className="min-w-0 flex-1">
             <Link href={`/domains/${d.id}`} className="group/link">
-              <span className="font-semibold text-sm truncate block group-hover/link:text-primary transition-colors">{d.domain_name}</span>
+              <span className="font-mono text-sm font-semibold truncate block group-hover/link:text-primary transition-colors">{d.domain_name}</span>
             </Link>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
-              Added {new Date(d.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+            <p className="text-xs text-muted-foreground mt-0.5 tabular-nums">
+              {d.active_inboxes ?? 0} active · {d.inboxes_created_count ?? 0} created · {d.team_count ?? 0} {(d.team_count ?? 0) === 1 ? "team" : "teams"}
             </p>
           </div>
-          <div className="flex flex-col items-end gap-1 shrink-0">
-            {fullyVerified ? (
-              <Badge className="gap-1 text-[10px] bg-success/10 text-success border-success/20">
-                <CheckCircle2 className="h-2.5 w-2.5" /> Verified
-              </Badge>
-            ) : (
-              <Badge className="gap-1 text-[10px] bg-warning/10 text-warning border-warning/20">
-                <Circle className="h-2.5 w-2.5" /> Pending
-              </Badge>
-            )}
-          </div>
+          {fullyVerified ? (
+            <Badge variant="success" className="gap-1 text-[10px] shrink-0">
+              <CheckCircle2 className="h-2.5 w-2.5" aria-hidden="true" /> Verified
+            </Badge>
+          ) : (
+            <Badge variant="warning" className="gap-1 text-[10px] shrink-0">
+              <Circle className="h-2.5 w-2.5" aria-hidden="true" /> Pending
+            </Badge>
+          )}
         </div>
-      </CardContent>
 
-      {/* DNS chips + stats */}
-      <CardContent className="pt-3 pb-0">
-        <div className="flex items-center gap-2 mb-3">
+        {/* DNS chips */}
+        <div className="flex items-center gap-2 flex-wrap">
           <DnsChipWithCopy verified={d.mx_verified} label="MX" value={d.mx_target ?? "mail.burnerbyte.com"} />
           <DnsChipWithCopy verified={d.txt_verified} label="TXT" value={d.verification_record} />
           {d.dns_last_checked_at && (
-            <span className="ml-auto text-[10px] text-muted-foreground" title={new Date(d.dns_last_checked_at).toLocaleString()}>
-              {timeAgo(d.dns_last_checked_at)}
+            <span
+              className="ml-auto text-xs text-muted-foreground"
+              title={new Date(d.dns_last_checked_at).toLocaleString()}
+            >
+              checked {timeAgo(d.dns_last_checked_at)}
             </span>
           )}
         </div>
 
-        {/* Stats row */}
-        <div className="grid grid-cols-3 gap-2 rounded-lg bg-muted/40 p-2.5">
-          <div className="text-center">
-            <p className="text-lg font-bold tabular-nums">{d.active_inboxes ?? 0}</p>
-            <p className="text-[10px] text-muted-foreground">Active</p>
-          </div>
-          <div className="text-center border-x border-border/50">
-            <p className="text-lg font-bold tabular-nums">{d.inboxes_created_count ?? 0}</p>
-            <p className="text-[10px] text-muted-foreground">Created</p>
-          </div>
-          <div className="text-center">
-            <p className="text-lg font-bold tabular-nums">{d.team_count ?? 0}</p>
-            <p className="text-[10px] text-muted-foreground">Teams</p>
-          </div>
-        </div>
-      </CardContent>
-
-      {/* TXT record hint for pending */}
-      {!d.txt_verified && d.verification_record && (
-        <CardContent className="pt-3 pb-0">
-          <button onClick={copyRecord} className="w-full rounded-lg border border-dashed bg-muted/30 px-3 py-2 text-left text-[11px] font-mono break-all hover:bg-muted/60 transition-colors group/copy">
+        {/* TXT record hint for pending */}
+        {!d.txt_verified && d.verification_record && (
+          <button
+            onClick={copyRecord}
+            className="w-full rounded-md border border-dashed bg-muted/40 px-3 py-2 text-left text-[11px] font-mono break-all hover:bg-muted/60 transition-colors group/copy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            aria-label={`Copy TXT verification record: ${d.verification_record}`}
+          >
             <span className="text-muted-foreground">TXT → </span>
             <span className="text-foreground/80">{d.verification_record}</span>
             {copied
-              ? <Check className="inline-block ml-1.5 h-3 w-3 text-success" />
-              : <Copy className="inline-block ml-1.5 h-3 w-3 text-muted-foreground opacity-0 group-hover/copy:opacity-100 transition-opacity" />
+              ? <Check className="inline-block ml-1.5 h-3 w-3 text-success" aria-hidden="true" />
+              : <Copy className="inline-block ml-1.5 h-3 w-3 text-muted-foreground opacity-0 group-hover/copy:opacity-100 transition-opacity" aria-hidden="true" />
             }
           </button>
-        </CardContent>
-      )}
+        )}
 
-      {/* Actions */}
-      <CardContent className="pt-3 pb-4">
-        <div className="flex items-center gap-1.5">
+        {/* Actions */}
+        <div className="flex items-center gap-1.5 pt-1 border-t">
           {!fullyVerified && (
             <Button variant="outline" size="sm" className="gap-1.5 flex-1 h-8 text-xs" onClick={onVerify} disabled={verifying}>
-              <RefreshCw className={`h-3 w-3 ${verifying ? "animate-spin" : ""}`} /> Verify DNS
+              <RefreshCw className={`h-3 w-3 ${verifying ? "animate-spin" : ""}`} aria-hidden="true" />
+              {verifying ? "Verifying…" : "Verify DNS"}
             </Button>
           )}
           <Link href={`/domains/${d.id}`} className="flex-1">
             <Button variant="outline" size="sm" className="w-full gap-1.5 h-8 text-xs">
-              <Globe className="h-3 w-3" /> Manage
+              <Globe className="h-3 w-3" aria-hidden="true" /> Manage
             </Button>
           </Link>
           <DeleteDomainDialog domain={d} onConfirm={onDelete} />
@@ -550,15 +518,8 @@ function AddDomainDialog({ orgId }: { orgId: string }) {
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-              <Globe className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <DialogTitle>Add a domain</DialogTitle>
-              <DialogDescription>Enter the domain you want to receive emails on. You&apos;ll need to add DNS records to verify ownership.</DialogDescription>
-            </div>
-          </div>
+          <DialogTitle>Add a domain</DialogTitle>
+          <DialogDescription>Enter the domain you want to receive emails on. You&apos;ll need to add DNS records to verify ownership.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
