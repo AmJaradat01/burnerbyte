@@ -180,75 +180,37 @@ export default function ApiKeysPage() {
       </div>
     );
 
+  const total = data?.total ?? data?.data?.length ?? 0;
+  const activeCount = (data?.data ?? []).filter(
+    (k) => k.is_active && (!k.expires_at || new Date(k.expires_at) >= new Date()),
+  ).length;
+  const inactiveCount = (data?.data ?? []).filter(
+    (k) => !k.is_active || (k.expires_at && new Date(k.expires_at) < new Date()),
+  ).length;
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card>
-        <CardContent className="pt-5 pb-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center">
-                <Key className="h-4 w-4 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-base font-semibold tracking-tight">API Keys</h1>
-                <p className="text-sm text-muted-foreground">
-                  {data?.data?.length
-                    ? `${data.total ?? data.data.length} key${(data.total ?? data.data.length) !== 1 ? "s" : ""} · Manage programmatic access to your team\u2019s resources.`
-                    : "Manage programmatic access to your team\u2019s resources."}
-                </p>
-              </div>
-            </div>
-            <CreateApiKeyDialog
-              orgId={currentOrg!.id}
-              teamId={currentTeam.id}
-              teamPermissions={teamPermissions}
-            />
+      <header className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0" aria-hidden="true">
+            <Key className="h-4 w-4 text-primary" />
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Summary cards */}
-      {data?.data && data.data.length > 0 && (
-        <div className="grid gap-4 sm:grid-cols-3">
-          {[
-            {
-              label: "Total",
-              value: data.total,
-              icon: Key,
-              bg: "bg-primary/10 text-primary",
-            },
-            {
-              label: "Active",
-              value: data.data.filter(
-                (k) => k.is_active && (!k.expires_at || new Date(k.expires_at) >= new Date()),
-              ).length,
-              icon: CheckCircle2,
-              bg: "bg-success/10 text-success",
-            },
-            {
-              label: "Expired / Inactive",
-              value: data.data.filter(
-                (k) => !k.is_active || (k.expires_at && new Date(k.expires_at) < new Date()),
-              ).length,
-              icon: Clock,
-              bg: "bg-destructive/10 text-destructive",
-            },
-          ].map((s) => (
-            <Card key={s.label}>
-              <CardContent className="pt-5 pb-4">
-                <div className="flex justify-between mb-3">
-                  <span className="text-sm font-medium text-muted-foreground">{s.label}</span>
-                  <div className={`flex items-center justify-center h-8 w-8 rounded-lg ${s.bg}`}>
-                    <s.icon className="h-4 w-4" />
-                  </div>
-                </div>
-                <p className="text-2xl font-bold tabular-nums">{s.value}</p>
-              </CardContent>
-            </Card>
-          ))}
+          <div className="min-w-0">
+            <h1 className="text-headline">API Keys</h1>
+            <p className="text-sm text-muted-foreground tabular-nums">
+              {total > 0
+                ? `${total} ${total === 1 ? "key" : "keys"} · ${activeCount} active${inactiveCount > 0 ? `, ${inactiveCount} inactive` : ""} · Programmatic access for ${currentTeam.name}.`
+                : `Manage programmatic access for ${currentTeam.name}.`}
+            </p>
+          </div>
         </div>
-      )}
+        <CreateApiKeyDialog
+          orgId={currentOrg!.id}
+          teamId={currentTeam.id}
+          teamPermissions={teamPermissions}
+        />
+      </header>
 
       {/* Key list */}
       {isError ? (
@@ -360,8 +322,8 @@ function ApiKeyCard({
                   <Badge variant="secondary" className="gap-1 shrink-0">Inactive</Badge>
                 )}
                 {!isRevoked && !isExpired && k.is_active && (
-                  <Badge className="gap-1 shrink-0 bg-success/10 text-success hover:bg-success/10">
-                    <CheckCircle2 className="h-3 w-3" /> Active
+                  <Badge variant="success" className="gap-1 shrink-0">
+                    <CheckCircle2 className="h-3 w-3" aria-hidden="true" /> Active
                   </Badge>
                 )}
               </div>
@@ -935,10 +897,7 @@ function KeyDetailDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Key className="h-5 w-5" />
-            {key.name}
-          </DialogTitle>
+          <DialogTitle>{key.name}</DialogTitle>
           <DialogDescription>
             <span className="font-mono text-xs">{key.key_prefix}•••</span>
           </DialogDescription>
@@ -964,8 +923,8 @@ function KeyDetailDialog({
                   <AlertTriangle className="h-3 w-3" /> Expired
                 </Badge>
               ) : key.is_active ? (
-                <Badge className="gap-1 bg-success/10 text-success hover:bg-success/10">
-                  <CheckCircle2 className="h-3 w-3" /> Active
+                <Badge variant="success" className="gap-1">
+                  <CheckCircle2 className="h-3 w-3" aria-hidden="true" /> Active
                 </Badge>
               ) : (
                 <Badge variant="secondary">Inactive</Badge>

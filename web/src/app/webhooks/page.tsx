@@ -21,7 +21,8 @@ import { Pagination } from "@/components/pagination";
 import { ErrorState } from "@/components/error-state";
 import { EmptyState } from "@/components/empty-state";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { AlertCircle, AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Clock, Code2, Copy, ExternalLink, Globe, Info, Link2, Pencil, Plus, Trash2, XCircle } from "lucide-react";
+import { AlertCircle, AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Clock, Code2, Copy, ExternalLink, Globe, Inbox, Link2, Mail, Pencil, Plus, Trash2, XCircle } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import type { Webhook, PaginatedResponse } from "@/types";
 
 interface DeliveryLog {
@@ -34,28 +35,26 @@ interface DeliveryLog {
   created_at: string;
 }
 
-const ALL_EVENTS = ["email.received", "inbox.created", "inbox.expired"];
-
-const EVENT_INFO = [
+const EVENT_INFO: { key: string; label: string; description: string; icon: LucideIcon; example: string }[] = [
   {
     key: "email.received",
     label: "Email Received",
     description: "Fires when a new email arrives at any inbox in this team.",
-    icon: "📬",
+    icon: Mail,
     example: '{ "email_id": "...", "inbox_id": "...", "from": "sender@example.com", "subject": "..." }',
   },
   {
     key: "inbox.created",
     label: "Inbox Created",
     description: "Fires when a new temporary inbox is created by a team member.",
-    icon: "📥",
+    icon: Inbox,
     example: '{ "inbox_id": "...", "address": "abc@domain.com", "domain_assignment_id": "..." }',
   },
   {
     key: "inbox.expired",
     label: "Inbox Expired",
     description: "Fires when an inbox reaches its TTL and expires.",
-    icon: "⏰",
+    icon: Clock,
     example: '{ "inbox_id": "...", "address": "abc@domain.com", "expired_at": "..." }',
   },
 ];
@@ -109,47 +108,29 @@ export default function WebhooksPage() {
   const isAdmin = hasPermission("org.settings.manage") || user?.is_system_admin;
   if (!isAdmin) return <div className="flex items-center justify-center min-h-[50vh]"><p className="text-muted-foreground">You don&apos;t have permission to access this page.</p></div>;
 
+  const total = data?.total ?? data?.data?.length ?? 0;
+  const activeCount = (data?.data ?? []).filter((w) => w.active).length;
+  const failingCount = (data?.data ?? []).filter((w) => w.failure_count > 0).length;
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card>
-        <CardContent className="pt-5 pb-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-7 w-7 rounded-md bg-warning/50/10 flex items-center justify-center">
-                <Globe className="h-4 w-4 text-warning" />
-              </div>
-              <div>
-                <h1 className="text-base font-semibold tracking-tight">Webhooks</h1>
-                <p className="text-sm text-muted-foreground">
-                  {data?.data?.length ? `${data.total ?? data.data.length} webhook${(data.total ?? data.data.length) !== 1 ? "s" : ""} · ${data.data.filter(w => w.active).length} active · Receive HTTP callbacks when events occur.` : "Receive HTTP callbacks when events occur in your team."}
-                </p>
-              </div>
-            </div>
-            <CreateWebhookDialog orgId={currentOrg!.id} teamId={currentTeam.id} />
+      <header className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0" aria-hidden="true">
+            <Link2 className="h-4 w-4 text-primary" />
           </div>
-        </CardContent>
-      </Card>
-
-      {data?.data && data.data.length > 0 && (
-        <div className="grid gap-4 sm:grid-cols-3">
-          {[
-            { label: "Total", value: data.total, icon: Globe, bg: "bg-info/10 text-info" },
-            { label: "Active", value: data.data.filter(w => w.active).length, icon: CheckCircle2, bg: "bg-success/10 text-success" },
-            { label: "Failing", value: data.data.filter(w => w.failure_count > 0).length, icon: AlertCircle, bg: "bg-destructive/10 text-destructive" },
-          ].map((s) => (
-            <Card key={s.label}>
-              <CardContent className="pt-5 pb-4">
-                <div className="flex justify-between mb-3">
-                  <span className="text-sm font-medium text-muted-foreground">{s.label}</span>
-                  <div className={`flex items-center justify-center h-8 w-8 rounded-lg ${s.bg}`}><s.icon className="h-4 w-4" /></div>
-                </div>
-                <p className="text-2xl font-bold tabular-nums">{s.value}</p>
-              </CardContent>
-            </Card>
-          ))}
+          <div className="min-w-0">
+            <h1 className="text-headline">Webhooks</h1>
+            <p className="text-sm text-muted-foreground tabular-nums">
+              {total > 0
+                ? `${total} ${total === 1 ? "webhook" : "webhooks"} · ${activeCount} active${failingCount > 0 ? `, ${failingCount} failing` : ""} · HTTP callbacks for ${currentTeam.name}.`
+                : `HTTP callbacks for events in ${currentTeam.name}.`}
+            </p>
+          </div>
         </div>
-      )}
+        <CreateWebhookDialog orgId={currentOrg!.id} teamId={currentTeam.id} />
+      </header>
 
       {isError ? <ErrorState message="Failed to load webhooks" onRetry={() => refetch()} /> :
       isLoading ? <WebhookListSkeleton /> : (
@@ -181,43 +162,42 @@ export default function WebhooksPage() {
 
 function WebhookStatusIndicator({ webhook: w }: { webhook: Webhook }) {
   if (!w.active) return <Badge variant="secondary">Disabled</Badge>;
-  if (w.failure_count > 0) return <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3" /> {w.failure_count} failures</Badge>;
-  if (w.last_status && w.last_status >= 200 && w.last_status < 300) return <Badge className="gap-1 bg-success/10 text-success border-success/20"><CheckCircle2 className="h-3 w-3" /> Healthy</Badge>;
+  if (w.failure_count > 0) {
+    return (
+      <Badge variant="destructive" className="gap-1">
+        <AlertTriangle className="h-3 w-3" aria-hidden="true" /> {w.failure_count} {w.failure_count === 1 ? "failure" : "failures"}
+      </Badge>
+    );
+  }
+  if (w.last_status && w.last_status >= 200 && w.last_status < 300) {
+    return (
+      <Badge variant="success" className="gap-1">
+        <CheckCircle2 className="h-3 w-3" aria-hidden="true" /> Healthy
+      </Badge>
+    );
+  }
   return <Badge variant="outline">No deliveries</Badge>;
 }
 
 function WebhookCard({ webhook: w, expanded, onToggleExpand, onToggleActive, onDelete, orgId, teamId }: {
   webhook: Webhook; expanded: boolean; onToggleExpand: () => void; onToggleActive: (v: boolean) => void; onDelete: () => void; orgId: string; teamId: string;
 }) {
-  const isHealthy = w.active && w.last_status && w.last_status >= 200 && w.last_status < 300;
-  const isFailing = w.failure_count > 0;
-  const pillColor = !w.active
-    ? "bg-muted text-muted-foreground"
-    : isFailing
-      ? "bg-destructive/10 text-destructive"
-      : isHealthy
-        ? "bg-success/10 text-success"
-        : "bg-muted text-muted-foreground";
-
   return (
-    <Card className={`${!w.active ? "border-dashed opacity-70" : ""}`}>
-      <CardHeader className="pb-3">
+    <Card className={!w.active ? "border-dashed opacity-70" : ""}>
+      <CardContent className="space-y-3">
         <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-3 min-w-0 flex-1 space-y-1">
-            <div className={`flex items-center justify-center h-10 w-10 rounded-lg shrink-0 ${pillColor}`}><Link2 className="h-5 w-5" /></div>
-            <div className="min-w-0 flex-1 space-y-1">
-            <div className="flex items-center gap-2">
+          <div className="min-w-0 flex-1 space-y-2">
+            <div className="flex items-center gap-2 min-w-0">
               <CardTitle className="text-sm font-mono truncate">{w.url}</CardTitle>
-              <ExternalLink className="h-3 w-3 shrink-0 text-muted-foreground" />
+              <ExternalLink className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden="true" />
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <WebhookStatusIndicator webhook={w} />
               {w.events?.map((e) => <Badge key={e} variant="outline" className="text-xs">{e}</Badge>)}
             </div>
-            </div>
           </div>
           <div className="flex items-center gap-3 shrink-0">
-            <Switch checked={w.active} onCheckedChange={onToggleActive} aria-label="Toggle webhook" />
+            <Switch checked={w.active} onCheckedChange={onToggleActive} aria-label={w.active ? "Disable webhook" : "Enable webhook"} />
             <EditWebhookDialog orgId={orgId} teamId={teamId} webhook={w} />
             <ConfirmDialog
               trigger={<Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" aria-label="Delete webhook"><Trash2 className="h-4 w-4" /></Button>}
@@ -227,24 +207,27 @@ function WebhookCard({ webhook: w, expanded, onToggleExpand, onToggleActive, onD
             />
           </div>
         </div>
-      </CardHeader>
-      <CardContent className="pt-0">
-        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+        <div className="flex items-center gap-4 text-xs text-muted-foreground border-t pt-2">
           {w.last_attempt_at && (
-            <span className="flex items-center gap-1">
-              <Clock className="h-3 w-3" /> Last delivery: {new Date(w.last_attempt_at).toLocaleString()}
+            <span className="flex items-center gap-1.5">
+              <Clock className="h-3 w-3" aria-hidden="true" />
+              Last delivery {new Date(w.last_attempt_at).toLocaleString()}
             </span>
           )}
           {w.last_status && (
-            <span className="font-mono">HTTP {w.last_status}</span>
+            <span className="font-mono tabular-nums">HTTP {w.last_status}</span>
           )}
-          <button onClick={onToggleExpand} className="ml-auto flex items-center gap-1 hover:text-foreground transition-colors">
-            {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+          <button
+            onClick={onToggleExpand}
+            className="ml-auto flex items-center gap-1 hover:text-foreground transition-colors rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            aria-expanded={expanded}
+          >
+            {expanded ? <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" /> : <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />}
             Delivery logs
           </button>
         </div>
         {expanded && (
-          <div className="mt-3 border-t pt-3">
+          <div className="border-t pt-3">
             <DeliveryLogPanel orgId={orgId} teamId={teamId} webhookId={w.id} />
           </div>
         )}
@@ -320,59 +303,43 @@ function WebhookListSkeleton() {
 
 function EventCard({ info, selected, onToggle }: { info: typeof EVENT_INFO[number]; selected: boolean; onToggle: () => void }) {
   const [showExample, setShowExample] = useState(false);
+  const Icon = info.icon;
 
   return (
-    <button
-      type="button"
-      onClick={onToggle}
-      className={`w-full text-left rounded-lg border p-3 transition-colors ${
-        selected
-          ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-          : "border-border hover:border-muted-foreground/30 hover:bg-muted/50"
+    <div
+      className={`rounded-lg border p-3 transition-colors ${
+        selected ? "border-primary/40 bg-primary/5" : "border-border hover:bg-muted/40"
       }`}
     >
-      <div className="flex items-start gap-3">
-        <div className="flex items-center justify-center h-8 w-8 rounded-md bg-muted text-lg shrink-0 mt-0.5">
-          {info.icon}
+      <label className="flex items-start gap-3 cursor-pointer">
+        <div className="flex items-center justify-center h-8 w-8 rounded-md bg-muted shrink-0 mt-0.5" aria-hidden="true">
+          <Icon className="h-4 w-4 text-muted-foreground" />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <div
-              className={`h-4 w-4 rounded border shrink-0 flex items-center justify-center transition-colors ${
-                selected
-                  ? "bg-primary border-primary text-primary-foreground"
-                  : "border-muted-foreground/30"
-              }`}
-            >
-              {selected && (
-                <svg className="h-3 w-3" viewBox="0 0 12 12" fill="none">
-                  <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              )}
-            </div>
             <span className="text-sm font-medium">{info.label}</span>
             <Badge variant="outline" className="text-[10px] font-mono ml-auto shrink-0">{info.key}</Badge>
           </div>
-          <p className="text-xs text-muted-foreground mt-1 ml-6">{info.description}</p>
-          <div className="ml-6 mt-2">
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); setShowExample(!showExample); }}
-              className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <Code2 className="h-3 w-3" />
-              {showExample ? "Hide" : "Show"} example payload
-              {showExample ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-            </button>
-            {showExample && (
-              <pre className="mt-1.5 rounded-md bg-muted p-2 text-[11px] font-mono text-muted-foreground overflow-x-auto whitespace-pre-wrap break-all">
-                {info.example}
-              </pre>
-            )}
-          </div>
+          <p className="text-xs text-muted-foreground mt-1">{info.description}</p>
         </div>
-      </div>
-    </button>
+        <Switch checked={selected} onCheckedChange={onToggle} className="mt-1 shrink-0" aria-label={`Subscribe to ${info.label}`} />
+      </label>
+      <button
+        type="button"
+        onClick={() => setShowExample(!showExample)}
+        className="ml-11 mt-2 inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        aria-expanded={showExample}
+      >
+        <Code2 className="h-3 w-3" aria-hidden="true" />
+        {showExample ? "Hide" : "Show"} example payload
+        {showExample ? <ChevronDown className="h-3 w-3" aria-hidden="true" /> : <ChevronRight className="h-3 w-3" aria-hidden="true" />}
+      </button>
+      {showExample && (
+        <pre className="ml-11 mt-1.5 rounded-md bg-muted p-2 text-[11px] font-mono text-muted-foreground overflow-x-auto whitespace-pre-wrap break-all">
+          {info.example}
+        </pre>
+      )}
+    </div>
   );
 }
 
@@ -488,21 +455,6 @@ function CreateWebhookDialog({ orgId, teamId }: { orgId: string; teamId: string 
             <Button onClick={create} className="w-full" disabled={!canSubmit}>
               {creating ? "Creating…" : "Create Webhook"}
             </Button>
-
-            <div className="rounded-lg border border-info/20 bg-info/5 p-3">
-              <div className="flex items-start gap-2">
-                <Info className="h-4 w-4 text-info mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-xs font-medium text-info">Use Cases</p>
-                  <ul className="text-xs text-info mt-1 space-y-0.5 list-disc list-inside">
-                    <li>Forward incoming emails to Slack or Discord</li>
-                    <li>Trigger CI/CD pipelines on new test emails</li>
-                    <li>Log inbox activity to an external dashboard</li>
-                    <li>Auto-archive expired inboxes in your system</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
           </div>
         )}
       </DialogContent>
