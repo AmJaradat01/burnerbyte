@@ -202,27 +202,42 @@ export function EmailPreview({ email, onBack, onToggleRead, onDelete }: EmailPre
 /* ── Attachment chip ── */
 
 function AttachmentChip({ attachment, emailId }: { attachment: Attachment; emailId: string }) {
+  const [downloading, setDownloading] = useState(false);
+
   const download = async () => {
+    setDownloading(true);
     try {
       const res = await api.get<{ url: string }>(`/emails/${emailId}/attachments/${attachment.id}`);
-      window.open(res.url, "_blank");
+      // Use a temporary anchor to avoid popup blockers
+      const a = document.createElement("a");
+      a.href = res.url;
+      a.download = attachment.filename;
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     } catch {
       toast.error("Failed to download");
+    } finally {
+      setDownloading(false);
     }
   };
 
   const sizeKB = Math.round(attachment.size_bytes / 1024);
   const isImage = attachment.content_type?.startsWith("image/");
+  const Icon = isImage ? Globe : FileText;
 
   return (
     <button
       onClick={download}
-      className="flex items-center gap-1.5 rounded-md border bg-background px-2.5 py-1.5 text-xs hover:bg-muted transition-colors group"
+      disabled={downloading}
+      className="flex items-center gap-1.5 rounded-md border bg-background px-2.5 py-1.5 text-xs hover:bg-muted transition-colors group disabled:opacity-50"
+      aria-label={`Download ${attachment.filename}`}
     >
-      <span className="text-muted-foreground">{isImage ? "🖼️" : "📄"}</span>
+      <Icon className="h-3 w-3 text-muted-foreground shrink-0" />
       <span className="truncate max-w-[140px] font-medium">{attachment.filename}</span>
       <span className="text-muted-foreground">({sizeKB > 0 ? `${sizeKB}KB` : `${attachment.size_bytes}B`})</span>
-      <Download className="h-3 w-3 text-muted-foreground group-hover:text-foreground transition-colors" />
+      <Download className="h-3 w-3 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
     </button>
   );
 }

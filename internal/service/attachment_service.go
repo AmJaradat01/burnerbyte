@@ -101,7 +101,11 @@ func (s *AttachmentService) GetDownloadURL(ctx context.Context, attachmentID, us
 		return "", fmt.Errorf("forbidden: not your attachment")
 	}
 
-	presignedURL, err := s.s3.PresignedGetObject(ctx, s.bucket, a.StorageKey, s.presignedTTL, url.Values{})
+	// Set response headers on the presigned URL to force download and prevent XSS
+	reqParams := url.Values{}
+	reqParams.Set("response-content-disposition", fmt.Sprintf("attachment; filename=\"%s\"", a.Filename))
+
+	presignedURL, err := s.s3.PresignedGetObject(ctx, s.bucket, a.StorageKey, s.presignedTTL, reqParams)
 	if err != nil {
 		return "", fmt.Errorf("generate presigned url: %w", err)
 	}
