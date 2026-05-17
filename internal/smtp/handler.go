@@ -47,6 +47,12 @@ type Handler struct {
 	publisher         *realtime.Publisher
 	attachmentStorer  AttachmentStorer
 	settingsChecker   SettingsChecker
+	auditRecorder     AuditRecorder
+}
+
+// AuditRecorder records audit events for email delivery.
+type AuditRecorder interface {
+	RecordWithName(ctx context.Context, orgID uuid.UUID, actorID *uuid.UUID, action, resourceType string, resourceID uuid.UUID, resourceName string, metadata any)
 }
 
 // WebhookDispatcher dispatches webhook events.
@@ -86,6 +92,7 @@ func NewHandler(
 	attachmentStorer AttachmentStorer,
 	settingsChecker SettingsChecker,
 	publisher *realtime.Publisher,
+	auditRecorder AuditRecorder,
 ) *Handler {
 	return &Handler{
 		inboxRepoPG:       inboxRepoPG,
@@ -98,6 +105,7 @@ func NewHandler(
 		publisher:         publisher,
 		attachmentStorer:  attachmentStorer,
 		settingsChecker:   settingsChecker,
+		auditRecorder:     auditRecorder,
 	}
 }
 
@@ -204,6 +212,13 @@ func (h *Handler) Process(ctx context.Context, email *InboundEmail) error {
 	if h.webhookDispatcher != nil && teamID != uuid.Nil {
 		h.webhookDispatcher.Dispatch(ctx, teamID, "email.received", map[string]any{
 			"email_id": e.ID, "inbox_id": inbox.ID, "from": email.From, "subject": email.Subject,
+		})
+	}
+
+	// Record audit event with inbox address as resource_name for searchability
+	if h.auditRecorder != nil {
+		h.auditRecorder.RecordWithName(ctx, inbox.OrgID, &inbox.CreatedBy, "email.received", "email", e.ID, inbox.FullAddress, map[string]any{
+			"from": email.From, "subject": email.Subject, "inbox_id": inbox.ID.String(), "inbox_address": inbox.FullAddress,
 		})
 	}
 
