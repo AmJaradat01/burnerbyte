@@ -100,7 +100,7 @@ function HomePage() {
       <PullToRefreshIndicator pulling={pulling} refreshing={refreshing} pullDistance={pullDistance} />
       {/* Greeting */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">{greeting}, {user?.display_name?.split(" ")[0] || "there"} 👋</h1>
+        <h1 className="text-headline">{greeting}, {user?.display_name?.split(" ")[0] || "there"}</h1>
         <p className="text-sm text-muted-foreground mt-1">{t("quickCreateDesc")}</p>
       </div>
 
@@ -245,7 +245,7 @@ function QuickCreateCard() {
           <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wider">{t("yourAddress")}</p>
           <button
             onClick={copyAddress}
-            className="group inline-flex items-center gap-3 rounded-2xl border-2 border-dashed border-primary/20 bg-muted/30 px-6 py-4 sm:px-8 sm:py-5 transition-colors hover:border-primary/50 hover:bg-muted/50 cursor-pointer max-w-full"
+            className="group inline-flex items-center gap-3 rounded-xl border border-dashed border-primary/20 bg-muted/30 px-5 py-3 sm:px-6 sm:py-4 transition-colors hover:border-primary/40 hover:bg-muted/50 cursor-pointer max-w-full"
           >
             <span className="font-mono text-xl sm:text-2xl lg:text-3xl font-bold truncate">
               <span>{localPart}</span>
@@ -287,7 +287,7 @@ function QuickCreateCard() {
       <p className="text-xs text-muted-foreground uppercase tracking-wider">{t("quickCreate")}</p>
 
       {/* Domain selector as the hero element */}
-      <div className="inline-flex items-center gap-2 rounded-2xl border-2 border-dashed border-muted-foreground/20 bg-muted/20 px-6 py-4 sm:px-8 sm:py-5 max-w-full">
+      <div className="inline-flex items-center gap-2 rounded-xl border border-dashed border-muted-foreground/20 bg-muted/20 px-5 py-3 sm:px-6 sm:py-4 max-w-full">
         <Mail className="h-5 w-5 text-muted-foreground shrink-0" />
         {showAdvanced && alias ? (
           <span className="font-mono text-xl sm:text-2xl font-bold text-muted-foreground/60">{alias}</span>
@@ -313,16 +313,16 @@ function QuickCreateCard() {
 
       {/* Generate button */}
       <div>
-        <Button onClick={create} disabled={!assignmentId || creating} size="lg" className="gap-2 h-12 px-8 text-sm font-semibold">
+        <Button onClick={create} disabled={!assignmentId || creating} className="gap-2 px-6">
           {creating ? (
             <><RefreshCw className="h-4 w-4 animate-spin" /> {t("generating")}</>
           ) : (
             <><Zap className="h-4 w-4" /> {t("generate")}</>
           )}
         </Button>
-        <p className="text-[11px] text-muted-foreground mt-2">
-          {ttlPreset && presetLabels[ttlPreset] ? `⏱ ${presetLabels[ttlPreset]}` : ""}
-        </p>
+        {ttlPreset && presetLabels[ttlPreset] && (
+          <p className="text-[11px] text-muted-foreground mt-2">{presetLabels[ttlPreset]}</p>
+        )}
       </div>
 
       {/* Advanced toggle */}
