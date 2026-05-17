@@ -47,10 +47,14 @@ Two separate binaries scale independently:
 - SSO via OIDC
 - Private inboxes — only the creator can access
 - Built-in documentation site at `/docs`
-- Command palette with keyboard shortcuts
+- Command palette with keyboard shortcuts and recent actions
 - Persistent notifications with real-time delivery via Redis pub/sub
 - Timezone and date-format user preferences
 - Single-org enforcement (4-layer protection)
+- Dark mode with system detection (light default)
+- OKLCH semantic color tokens with WCAG AA accessibility
+- Reduced-motion support and screen reader accessibility
+- Pull-to-refresh on mobile
 
 ## Quick Start
 
@@ -151,7 +155,8 @@ On first launch, navigate to `http://localhost:3000` — the setup wizard will g
 ## Tech Stack
 
 - **Backend**: Go 1.25, Chi, pgxpool, go-redis, MinIO
-- **Frontend**: Next.js 16, shadcn/ui, Tailwind CSS, Zustand, TanStack Query, Recharts
+- **Frontend**: Next.js 16, shadcn/ui, Tailwind CSS 4, Zustand, TanStack Query, Recharts
+- **Design System**: OKLCH color tokens, semantic theming (light/dark), PRODUCT.md + DESIGN.md (Stitch format)
 - **Docs**: Fumadocs (MDX, full-text search)
 - **Infrastructure**: PostgreSQL 16 (28 migrations, 28 tables), Redis 7, MinIO, Docker
 - **CI/CD**: GitLab CI (lint, build, test, Docker registry)
@@ -169,7 +174,15 @@ Full documentation is available at `/docs` when running the frontend. Built with
 - **Concepts** — RBAC, domains, inboxes, emails, webhooks, API keys, SSO, settings cascade
 - **Self-Hosting** — Production hardening, reverse proxy (Nginx/Caddy), DNS setup, monitoring
 - **API Reference** — Authentication, pagination, errors, all 50+ endpoints
-- **Frontend** — Tech stack, keyboard shortcuts, UX patterns, theming
+- **Frontend** — Tech stack, keyboard shortcuts, UX patterns, theming, design system
+
+### Design System Files
+
+| File | Purpose |
+|---|---|
+| `PRODUCT.md` | Strategic context: users, brand personality, anti-references, design principles |
+| `DESIGN.md` | Visual spec: OKLCH palette, typography, elevation, components, do's/don'ts |
+| `.impeccable/design.json` | Machine-readable sidecar: tonal ramps, motion tokens, component snippets |
 
 ## License
 

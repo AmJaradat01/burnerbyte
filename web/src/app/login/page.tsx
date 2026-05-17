@@ -201,9 +201,9 @@ export default function LoginPage() {
                       onBlur={validateEmail}
                       autoComplete="email"
                       placeholder="you@example.com"
-                      className={emailError ? "border-red-500 focus-visible:ring-red-500" : ""}
+                      className={emailError ? "border-destructive focus-visible:ring-destructive" : ""}
                     />
-                    {emailError && <p className="text-xs text-red-500">{emailError}</p>}
+                    {emailError && <p className="text-xs text-destructive">{emailError}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="password">Password</Label>

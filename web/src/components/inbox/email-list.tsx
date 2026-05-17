@@ -12,14 +12,14 @@ import type { EmailSummary } from "@/types";
 /* ── Deterministic avatar color from email address ── */
 
 const AVATAR_COLORS = [
-  "bg-blue-100 text-blue-700",
-  "bg-emerald-100 text-emerald-700",
-  "bg-violet-100 text-violet-700",
-  "bg-amber-100 text-amber-700",
-  "bg-rose-100 text-rose-700",
-  "bg-cyan-100 text-cyan-700",
-  "bg-orange-100 text-orange-700",
-  "bg-pink-100 text-pink-700",
+  "bg-info/10 text-info",
+  "bg-success/10 text-success",
+  "bg-primary/10 text-primary",
+  "bg-warning/10 text-warning",
+  "bg-destructive/10 text-destructive",
+  "bg-info/10 text-info",
+  "bg-warning/10 text-warning",
+  "bg-primary/10 text-primary",
 ];
 
 function avatarColor(email: string) {
@@ -166,10 +166,10 @@ function EmailRow({ email, selected, onClick }: { email: EmailSummary; selected:
       onClick={onClick}
       className={`w-full text-left px-3 py-2.5 border-b transition-all group
         ${selected
-          ? "bg-primary/[0.08] border-l-2 border-l-primary"
+          ? "bg-primary/[0.08]"
           : unread
-            ? "bg-background border-l-2 border-l-transparent hover:bg-muted/60"
-            : "border-l-2 border-l-transparent hover:bg-muted/40"
+            ? "bg-background hover:bg-muted/60"
+            : "hover:bg-muted/40"
         }`}
     >
       <div className="flex items-start gap-2.5">

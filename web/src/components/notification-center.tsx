@@ -30,9 +30,9 @@ interface GroupedNotification {
 }
 
 const TYPE_CONFIG: Record<string, { icon: typeof Mail; color: string }> = {
-  "email.received": { icon: Mail, color: "text-blue-500" },
-  "inbox.created": { icon: Inbox, color: "text-emerald-500" },
-  "inbox.expired": { icon: Inbox, color: "text-orange-500" },
+  "email.received": { icon: Mail, color: "text-info" },
+  "inbox.created": { icon: Inbox, color: "text-success" },
+  "inbox.expired": { icon: Inbox, color: "text-warning" },
 };
 
 function formatTime(ts: string): string {

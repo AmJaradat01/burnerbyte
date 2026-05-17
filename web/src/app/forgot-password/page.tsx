@@ -74,9 +74,9 @@ export default function ForgotPasswordPage() {
                     onChange={(e) => { setEmail(e.target.value); if (emailError) setEmailError(""); }}
                     onBlur={validateEmail}
                     placeholder="you@example.com"
-                    className={emailError ? "border-red-500 focus-visible:ring-red-500" : ""}
+                    className={emailError ? "border-destructive focus-visible:ring-destructive" : ""}
                   />
-                  {emailError && <p className="text-xs text-red-500">{emailError}</p>}
+                  {emailError && <p className="text-xs text-destructive">{emailError}</p>}
                 </div>
                 <Button type="submit" className="w-full h-11" disabled={loading}>
                   {loading ? "Sending…" : "Send reset link"}

@@ -62,10 +62,19 @@ export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [recents, setRecents] = useState<string[]>([]);
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const listRef = useRef<HTMLDivElement>(null);
+
+  // Load recents from localStorage
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("cmd-recents");
+      if (stored) setRecents(JSON.parse(stored));
+    } catch {}
+  }, []);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -98,6 +107,11 @@ export function CommandPalette() {
 
   const executeItem = useCallback(
     (item: CommandItem) => {
+      // Track recent
+      const updated = [item.label, ...recents.filter((r) => r !== item.label)].slice(0, 5);
+      setRecents(updated);
+      try { localStorage.setItem("cmd-recents", JSON.stringify(updated)); } catch {}
+
       if (item.action === "logout") {
         logout();
       } else if (item.path) {
@@ -107,7 +121,7 @@ export function CommandPalette() {
       setQuery("");
       setSelectedIndex(0);
     },
-    [router, logout]
+    [router, logout, recents]
   );
 
   // Clear query when dialog closes
@@ -149,6 +163,34 @@ export function CommandPalette() {
           onKeyDown={handleKeyDown}
         />
         <div className="max-h-64 overflow-auto" ref={listRef}>
+          {/* Recent actions when no query */}
+          {!query && recents.length > 0 && (
+            <>
+              <div className="px-4 py-1.5 text-[10px] font-semibold text-muted-foreground/50 uppercase tracking-widest">
+                Recent
+              </div>
+              {recents.map((label) => {
+                const item = allItems.find((i) => i.label === label);
+                if (!item) return null;
+                const idx = itemIndex++;
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={`recent-${item.label}`}
+                    data-selected={idx === selectedIndex}
+                    onClick={() => executeItem(item)}
+                    onMouseEnter={() => setSelectedIndex(idx)}
+                    className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center gap-2.5 ${
+                      idx === selectedIndex ? "bg-primary/10 text-primary" : "hover:bg-muted"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    {item.label}
+                  </button>
+                );
+              })}
+            </>
+          )}
           {navFiltered.length > 0 && (
             <>
               <div className="px-4 py-1.5 text-[10px] font-semibold text-muted-foreground/50 uppercase tracking-widest">

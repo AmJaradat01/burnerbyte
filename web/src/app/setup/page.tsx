@@ -60,9 +60,9 @@ function passwordStrength(pw: string): { pct: number; label: string; color: stri
   if (/\d/.test(pw)) score++;
   if (/[^A-Za-z0-9]/.test(pw)) score++;
   const pct = (score / 5) * 100;
-  if (pct <= 40) return { pct, label: "Weak", color: "bg-red-500" };
-  if (pct <= 60) return { pct, label: "Fair", color: "bg-amber-500" };
-  return { pct, label: "Strong", color: "bg-emerald-500" };
+  if (pct <= 40) return { pct, label: "Weak", color: "bg-destructive/50" };
+  if (pct <= 60) return { pct, label: "Fair", color: "bg-warning/50" };
+  return { pct, label: "Strong", color: "bg-success/50" };
 }
 
 export default function SetupPage() {
@@ -247,19 +247,19 @@ export default function SetupPage() {
               <>
                 {/* Infrastructure health check */}
                 {healthStatus && (
-                  <div className={`rounded-lg border p-3 flex items-center gap-3 ${healthStatus.postgres && healthStatus.redis ? "bg-emerald-50 border-emerald-200" : "bg-red-50 border-red-200"}`}>
-                    <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${healthStatus.postgres && healthStatus.redis ? "bg-emerald-100" : "bg-red-100"}`}>
-                      {healthStatus.postgres && healthStatus.redis ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <Shield className="h-4 w-4 text-red-600" />}
+                  <div className={`rounded-lg border p-3 flex items-center gap-3 ${healthStatus.postgres && healthStatus.redis ? "bg-success/5 border-success/20" : "bg-destructive/5 border-destructive/20"}`}>
+                    <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${healthStatus.postgres && healthStatus.redis ? "bg-success/10" : "bg-destructive/10"}`}>
+                      {healthStatus.postgres && healthStatus.redis ? <CheckCircle2 className="h-4 w-4 text-success" /> : <Shield className="h-4 w-4 text-destructive" />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-medium ${healthStatus.postgres && healthStatus.redis ? "text-emerald-800" : "text-red-800"}`}>
+                      <p className={`text-sm font-medium ${healthStatus.postgres && healthStatus.redis ? "text-success" : "text-destructive"}`}>
                         {healthStatus.postgres && healthStatus.redis ? "Infrastructure ready" : "Infrastructure issue detected"}
                       </p>
                       <div className="flex items-center gap-3 mt-0.5">
-                        <span className={`text-xs flex items-center gap-1 ${healthStatus.postgres ? "text-emerald-600" : "text-red-600"}`}>
+                        <span className={`text-xs flex items-center gap-1 ${healthStatus.postgres ? "text-success" : "text-destructive"}`}>
                           {healthStatus.postgres ? <Check className="h-3 w-3" /> : <Trash2 className="h-3 w-3" />} PostgreSQL
                         </span>
-                        <span className={`text-xs flex items-center gap-1 ${healthStatus.redis ? "text-emerald-600" : "text-red-600"}`}>
+                        <span className={`text-xs flex items-center gap-1 ${healthStatus.redis ? "text-success" : "text-destructive"}`}>
                           {healthStatus.redis ? <Check className="h-3 w-3" /> : <Trash2 className="h-3 w-3" />} Redis
                         </span>
                       </div>
@@ -296,7 +296,7 @@ export default function SetupPage() {
                           { met: /\d/.test(data.admin.password), label: "Number" },
                           { met: /[^A-Za-z0-9]/.test(data.admin.password), label: "Special" },
                         ].map((r) => (
-                          <span key={r.label} className={`text-[10px] flex items-center gap-0.5 ${r.met ? "text-emerald-600" : "text-muted-foreground"}`}>
+                          <span key={r.label} className={`text-[10px] flex items-center gap-0.5 ${r.met ? "text-success" : "text-muted-foreground"}`}>
                             {r.met ? <Check className="h-2.5 w-2.5" /> : <span className="h-2.5 w-2.5 rounded-full border border-current inline-block" />} {r.label}
                           </span>
                         ))}
@@ -367,7 +367,7 @@ export default function SetupPage() {
                       {smtpTest.testing ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Testing…</> : <><RefreshCw className="h-3.5 w-3.5" /> Test Connection</>}
                     </Button>
                     {smtpTest.result && (
-                      <div className={`rounded-lg border p-3 text-sm flex items-start gap-2 ${smtpTest.result.success ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-red-50 border-red-200 text-red-800"}`}>
+                      <div className={`rounded-lg border p-3 text-sm flex items-start gap-2 ${smtpTest.result.success ? "bg-success/5 border-success/20 text-success" : "bg-destructive/5 border-destructive/20 text-destructive"}`}>
                         {smtpTest.result.success ? <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" /> : <Shield className="h-4 w-4 mt-0.5 shrink-0" />}
                         <div>
                           <p className="font-medium">{smtpTest.result.success ? "Connection successful" : "Connection failed"}</p>
@@ -434,7 +434,7 @@ export default function SetupPage() {
                         {storageTest.testing ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Testing…</> : <><RefreshCw className="h-3.5 w-3.5" /> Test Connection</>}
                       </Button>
                       {storageTest.result && (
-                        <div className={`rounded-lg border p-3 text-sm flex items-start gap-2 ${storageTest.result.success ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-red-50 border-red-200 text-red-800"}`}>
+                        <div className={`rounded-lg border p-3 text-sm flex items-start gap-2 ${storageTest.result.success ? "bg-success/5 border-success/20 text-success" : "bg-destructive/5 border-destructive/20 text-destructive"}`}>
                           {storageTest.result.success ? <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" /> : <Shield className="h-4 w-4 mt-0.5 shrink-0" />}
                           <div>
                             <p className="font-medium">{storageTest.result.success ? "Connection successful" : "Connection failed"}</p>
@@ -457,7 +457,7 @@ export default function SetupPage() {
                   <p className="text-xs text-destructive">Domain must contain at least one dot (e.g., mail.example.com)</p>
                 )}
                 {data.domain.domain_name && data.domain.domain_name.includes(".") && (
-                  <p className="text-xs text-emerald-600 flex items-center gap-1"><Check className="h-3 w-3" /> Valid domain format</p>
+                  <p className="text-xs text-success flex items-center gap-1"><Check className="h-3 w-3" /> Valid domain format</p>
                 )}
                 <p className="text-xs text-muted-foreground">This domain will receive inbound emails. You&apos;ll configure MX and TXT records after setup.</p>
               </div>
@@ -527,14 +527,14 @@ export default function SetupPage() {
             {currentStep.key === "review" && (
               <div className="space-y-2">
                 {[
-                  { icon: Shield, label: "Admin", value: `${data.admin.display_name} (${data.admin.email})`, color: "bg-blue-100 text-blue-600" },
-                  { icon: Building2, label: "Organization", value: data.org.name, color: "bg-indigo-100 text-indigo-600" },
-                  { icon: Mail, label: "SMTP", value: `${data.smtp.host}:${data.smtp.port} → ${data.smtp.from_address}`, color: "bg-amber-100 text-amber-600" },
-                  { icon: Globe, label: "Domain", value: data.domain.domain_name, color: "bg-emerald-100 text-emerald-600" },
-                  ...(data.storage?.endpoint ? [{ icon: HardDrive, label: "Storage", value: `${data.storage.provider.toUpperCase()} — ${data.storage.endpoint}`, color: "bg-slate-100 text-slate-600" }] : []),
-                  ...(data.team?.name ? [{ icon: Users, label: "Team", value: data.team.name, color: "bg-violet-100 text-violet-600" }] : []),
-                  ...(data.branding?.primary_color ? [{ icon: Paintbrush, label: "Branding", value: data.branding.primary_color, color: "bg-pink-100 text-pink-600" }] : []),
-                  ...(data.invites.filter(i => i.email).length > 0 ? [{ icon: UserPlus, label: "Invites", value: data.invites.filter(i => i.email).map(i => i.email).join(", "), color: "bg-cyan-100 text-cyan-600" }] : []),
+                  { icon: Shield, label: "Admin", value: `${data.admin.display_name} (${data.admin.email})`, color: "bg-info/10 text-info" },
+                  { icon: Building2, label: "Organization", value: data.org.name, color: "bg-primary/10 text-primary" },
+                  { icon: Mail, label: "SMTP", value: `${data.smtp.host}:${data.smtp.port} → ${data.smtp.from_address}`, color: "bg-warning/10 text-warning" },
+                  { icon: Globe, label: "Domain", value: data.domain.domain_name, color: "bg-success/10 text-success" },
+                  ...(data.storage?.endpoint ? [{ icon: HardDrive, label: "Storage", value: `${data.storage.provider.toUpperCase()} — ${data.storage.endpoint}`, color: "bg-muted text-muted-foreground" }] : []),
+                  ...(data.team?.name ? [{ icon: Users, label: "Team", value: data.team.name, color: "bg-primary/10 text-primary" }] : []),
+                  ...(data.branding?.primary_color ? [{ icon: Paintbrush, label: "Branding", value: data.branding.primary_color, color: "bg-primary/10 text-primary" }] : []),
+                  ...(data.invites.filter(i => i.email).length > 0 ? [{ icon: UserPlus, label: "Invites", value: data.invites.filter(i => i.email).map(i => i.email).join(", "), color: "bg-info/10 text-info" }] : []),
                 ].map((item) => {
                   const Icon = item.icon;
                   return (

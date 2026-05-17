@@ -54,34 +54,34 @@ const RESOURCE_ICONS: Record<string, typeof User> = {
 };
 
 const RESOURCE_COLORS: Record<string, { bg: string; text: string; ring: string }> = {
-  user:              { bg: "bg-blue-100",    text: "text-blue-600",    ring: "ring-blue-200" },
-  org:               { bg: "bg-amber-100",   text: "text-amber-600",   ring: "ring-amber-200" },
-  team:              { bg: "bg-violet-100",  text: "text-violet-600",  ring: "ring-violet-200" },
-  domain:            { bg: "bg-emerald-100", text: "text-emerald-600", ring: "ring-emerald-200" },
-  domain_assignment: { bg: "bg-teal-100",    text: "text-teal-600",    ring: "ring-teal-200" },
-  inbox:             { bg: "bg-sky-100",     text: "text-sky-600",     ring: "ring-sky-200" },
-  email:             { bg: "bg-pink-100",    text: "text-pink-600",    ring: "ring-pink-200" },
-  webhook:           { bg: "bg-orange-100",  text: "text-orange-600",  ring: "ring-orange-200" },
-  api_key:           { bg: "bg-rose-100",    text: "text-rose-600",    ring: "ring-rose-200" },
+  user:              { bg: "bg-info/10",    text: "text-info",    ring: "ring-info/20" },
+  org:               { bg: "bg-warning/10",   text: "text-warning",   ring: "ring-warning/20" },
+  team:              { bg: "bg-primary/10",  text: "text-primary",  ring: "ring-primary/20" },
+  domain:            { bg: "bg-success/10", text: "text-success", ring: "ring-success/20" },
+  domain_assignment: { bg: "bg-info/10",    text: "text-info",    ring: "ring-info/20" },
+  inbox:             { bg: "bg-info/10",     text: "text-info",     ring: "ring-info/20" },
+  email:             { bg: "bg-primary/10",    text: "text-primary",    ring: "ring-primary/20" },
+  webhook:           { bg: "bg-warning/10",  text: "text-warning",  ring: "ring-warning/20" },
+  api_key:           { bg: "bg-destructive/10",    text: "text-destructive",    ring: "ring-destructive/20" },
 };
 
 const ACTION_COLORS: Record<string, { bg: string; text: string; border: string; dot: string }> = {
-  created:     { bg: "bg-emerald-50",  text: "text-emerald-700", border: "border-emerald-200", dot: "bg-emerald-500" },
-  updated:     { bg: "bg-blue-50",     text: "text-blue-700",    border: "border-blue-200",    dot: "bg-blue-500" },
-  deleted:     { bg: "bg-red-50",      text: "text-red-700",     border: "border-red-200",     dot: "bg-red-500" },
-  revoked:     { bg: "bg-red-50",      text: "text-red-700",     border: "border-red-200",     dot: "bg-red-500" },
-  verified:    { bg: "bg-emerald-50",  text: "text-emerald-700", border: "border-emerald-200", dot: "bg-emerald-500" },
-  login:       { bg: "bg-purple-50",   text: "text-purple-700",  border: "border-purple-200",  dot: "bg-purple-500" },
-  logout:      { bg: "bg-purple-50",   text: "text-purple-700",  border: "border-purple-200",  dot: "bg-purple-500" },
-  invited:     { bg: "bg-indigo-50",   text: "text-indigo-700",  border: "border-indigo-200",  dot: "bg-indigo-500" },
-  accepted:    { bg: "bg-emerald-50",  text: "text-emerald-700", border: "border-emerald-200", dot: "bg-emerald-500" },
-  migrated:    { bg: "bg-cyan-50",     text: "text-cyan-700",    border: "border-cyan-200",    dot: "bg-cyan-500" },
-  archived:    { bg: "bg-gray-50",     text: "text-gray-700",    border: "border-gray-200",    dot: "bg-gray-400" },
-  restored:    { bg: "bg-emerald-50",  text: "text-emerald-700", border: "border-emerald-200", dot: "bg-emerald-500" },
-  transferred: { bg: "bg-blue-50",     text: "text-blue-700",    border: "border-blue-200",    dot: "bg-blue-500" },
+  created:     { bg: "bg-success/5",  text: "text-success", border: "border-success/20", dot: "bg-success/50" },
+  updated:     { bg: "bg-info/5",     text: "text-info",    border: "border-info/20",    dot: "bg-info/50" },
+  deleted:     { bg: "bg-destructive/5",      text: "text-destructive",     border: "border-destructive/20",     dot: "bg-destructive/50" },
+  revoked:     { bg: "bg-destructive/5",      text: "text-destructive",     border: "border-destructive/20",     dot: "bg-destructive/50" },
+  verified:    { bg: "bg-success/5",  text: "text-success", border: "border-success/20", dot: "bg-success/50" },
+  login:       { bg: "bg-primary/5",   text: "text-primary",  border: "border-primary/20",  dot: "bg-primary" },
+  logout:      { bg: "bg-primary/5",   text: "text-primary",  border: "border-primary/20",  dot: "bg-primary" },
+  invited:     { bg: "bg-primary/5",   text: "text-primary",  border: "border-primary/20",  dot: "bg-primary" },
+  accepted:    { bg: "bg-success/5",  text: "text-success", border: "border-success/20", dot: "bg-success/50" },
+  migrated:    { bg: "bg-info/5",     text: "text-info",    border: "border-info/20",    dot: "bg-info" },
+  archived:    { bg: "bg-muted/50",     text: "text-foreground",    border: "border-border",    dot: "bg-muted-foreground" },
+  restored:    { bg: "bg-success/5",  text: "text-success", border: "border-success/20", dot: "bg-success/50" },
+  transferred: { bg: "bg-info/5",     text: "text-info",    border: "border-info/20",    dot: "bg-info/50" },
 };
 
-const DEFAULT_ACTION_COLOR = { bg: "bg-gray-50", text: "text-gray-700", border: "border-gray-200", dot: "bg-gray-400" };
+const DEFAULT_ACTION_COLOR = { bg: "bg-muted/50", text: "text-foreground", border: "border-border", dot: "bg-muted-foreground" };
 
 function getActionColor(action: string) {
   for (const [key, color] of Object.entries(ACTION_COLORS)) {
@@ -91,12 +91,12 @@ function getActionColor(action: string) {
 }
 
 const QUICK_FILTERS: { label: string; value: string; color: string; activeColor: string; icon: typeof Activity }[] = [
-  { label: "Created",  value: "created",  color: "text-emerald-600 border-emerald-200 hover:bg-emerald-50", activeColor: "bg-emerald-100 text-emerald-700 border-emerald-300", icon: Activity },
-  { label: "Updated",  value: "updated",  color: "text-blue-600 border-blue-200 hover:bg-blue-50",         activeColor: "bg-blue-100 text-blue-700 border-blue-300",         icon: Activity },
-  { label: "Deleted",  value: "deleted",  color: "text-red-600 border-red-200 hover:bg-red-50",             activeColor: "bg-red-100 text-red-700 border-red-300",             icon: Activity },
-  { label: "Login",    value: "login",    color: "text-purple-600 border-purple-200 hover:bg-purple-50",   activeColor: "bg-purple-100 text-purple-700 border-purple-300",   icon: LogIn },
-  { label: "Invited",  value: "invited",  color: "text-indigo-600 border-indigo-200 hover:bg-indigo-50",   activeColor: "bg-indigo-100 text-indigo-700 border-indigo-300",   icon: Activity },
-  { label: "Settings", value: "settings", color: "text-slate-600 border-slate-200 hover:bg-slate-50",       activeColor: "bg-slate-100 text-slate-700 border-slate-300",       icon: Activity },
+  { label: "Created",  value: "created",  color: "text-success border-success/20 hover:bg-success/5", activeColor: "bg-success/10 text-success border-success/30", icon: Activity },
+  { label: "Updated",  value: "updated",  color: "text-info border-info/20 hover:bg-info/5",         activeColor: "bg-info/10 text-info border-info/30",         icon: Activity },
+  { label: "Deleted",  value: "deleted",  color: "text-destructive border-destructive/20 hover:bg-destructive/5",             activeColor: "bg-destructive/10 text-destructive border-destructive/30",             icon: Activity },
+  { label: "Login",    value: "login",    color: "text-primary border-primary/20 hover:bg-primary/5",   activeColor: "bg-primary/10 text-primary border-primary/30",   icon: LogIn },
+  { label: "Invited",  value: "invited",  color: "text-primary border-primary/20 hover:bg-primary/5",   activeColor: "bg-primary/10 text-primary border-primary/30",   icon: Activity },
+  { label: "Settings", value: "settings", color: "text-muted-foreground border-border hover:bg-muted/50",       activeColor: "bg-muted text-foreground border-border",       icon: Activity },
 ];
 
 /* ─── Helpers ─── */
@@ -214,8 +214,8 @@ export default function AuditPage() {
         <CardContent className="pt-5 pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-7 w-7 rounded-md bg-amber-500/10 flex items-center justify-center">
-                <Shield className="h-4 w-4 text-amber-600" />
+              <div className="h-7 w-7 rounded-md bg-warning/50/10 flex items-center justify-center">
+                <Shield className="h-4 w-4 text-warning" />
               </div>
               <div>
                 <h1 className="text-base font-semibold">Audit Log</h1>
@@ -235,8 +235,8 @@ export default function AuditPage() {
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-muted-foreground">Total Entries</span>
-              <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-blue-100">
-                <Shield className="h-4 w-4 text-blue-600" />
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-info/10">
+                <Shield className="h-4 w-4 text-info" />
               </div>
             </div>
             <p className="text-2xl font-bold tabular-nums">{data?.total ?? 0}</p>
@@ -246,8 +246,8 @@ export default function AuditPage() {
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-muted-foreground">Actions (page)</span>
-              <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-emerald-100">
-                <Activity className="h-4 w-4 text-emerald-600" />
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-success/10">
+                <Activity className="h-4 w-4 text-success" />
               </div>
             </div>
             <p className="text-2xl font-bold tabular-nums">{new Set(data?.data?.map(e => e.action)).size ?? 0}</p>
@@ -257,8 +257,8 @@ export default function AuditPage() {
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-muted-foreground">Actors (page)</span>
-              <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-amber-100">
-                <Users className="h-4 w-4 text-amber-600" />
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-warning/10">
+                <Users className="h-4 w-4 text-warning" />
               </div>
             </div>
             <p className="text-2xl font-bold tabular-nums">{new Set(data?.data?.map(e => e.actor_email)).size ?? 0}</p>
@@ -372,7 +372,7 @@ function AuditRow({ entry: e, isFirst, isLast }: { entry: AuditEntry; isFirst: b
   const [expanded, setExpanded] = useState(false);
   const Icon = RESOURCE_ICONS[e.resource_type] || Shield;
   const actionColor = getActionColor(e.action);
-  const resourceColor = RESOURCE_COLORS[e.resource_type] || { bg: "bg-gray-100", text: "text-gray-600", ring: "ring-gray-200" };
+  const resourceColor = RESOURCE_COLORS[e.resource_type] || { bg: "bg-muted", text: "text-muted-foreground", ring: "ring-border" };
   const actorInitial = getActorInitial(e);
 
   return (
@@ -424,7 +424,7 @@ function AuditRow({ entry: e, isFirst, isLast }: { entry: AuditEntry; isFirst: b
 
               {/* Actor avatar */}
               <div className="hidden sm:flex items-center gap-2 shrink-0">
-                <div className="h-6 w-6 rounded-full bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center text-[10px] font-semibold text-slate-600">
+                <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center text-[10px] font-semibold text-muted-foreground">
                   {actorInitial}
                 </div>
                 <span className="text-xs text-muted-foreground max-w-[140px] truncate">
@@ -572,10 +572,10 @@ function BeforeAfterDiff({ before, after }: { before: Record<string, unknown>; a
         {changedKeys.map((key) => (
           <div key={key} className="grid grid-cols-[1fr_1fr_1fr] px-3 py-2 gap-2 text-xs">
             <span className="text-muted-foreground capitalize">{key.replace(/_/g, " ")}</span>
-            <span className="font-mono text-[11px] text-red-600 bg-red-50 rounded px-1.5 py-0.5 break-all">
+            <span className="font-mono text-[11px] text-destructive bg-destructive/5 rounded px-1.5 py-0.5 break-all">
               {formatMetadataValue(before[key])}
             </span>
-            <span className="font-mono text-[11px] text-emerald-600 bg-emerald-50 rounded px-1.5 py-0.5 break-all">
+            <span className="font-mono text-[11px] text-success bg-success/5 rounded px-1.5 py-0.5 break-all">
               {formatMetadataValue(after[key])}
             </span>
           </div>

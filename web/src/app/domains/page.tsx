@@ -91,8 +91,8 @@ export default function DomainsPage() {
         <CardContent className="pt-5 pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-7 w-7 rounded-md bg-emerald-500/10 flex items-center justify-center">
-                <Globe className="h-4 w-4 text-emerald-600" />
+              <div className="h-7 w-7 rounded-md bg-success/50/10 flex items-center justify-center">
+                <Globe className="h-4 w-4 text-success" />
               </div>
               <div>
                 <h1 className="text-base font-semibold">Domains</h1>
@@ -109,10 +109,10 @@ export default function DomainsPage() {
       {/* Summary cards — 4 cards */}
       {totalDomains > 0 && (
         <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
-          <MiniStat icon={Globe} label="Total" value={totalDomains} accent="text-blue-600 bg-blue-100" />
-          <MiniStat icon={CheckCircle2} label="Verified" value={verifiedCount} accent="text-emerald-600 bg-emerald-100" />
-          <MiniStat icon={Shield} label="Pending" value={pendingCount} accent="text-amber-600 bg-amber-100" />
-          <MiniStat icon={Inbox} label="Total Inboxes" value={totalInboxes} accent="text-violet-600 bg-violet-100" />
+          <MiniStat icon={Globe} label="Total" value={totalDomains} accent="text-info bg-info/10" />
+          <MiniStat icon={CheckCircle2} label="Verified" value={verifiedCount} accent="text-success bg-success/10" />
+          <MiniStat icon={Shield} label="Pending" value={pendingCount} accent="text-warning bg-warning/10" />
+          <MiniStat icon={Inbox} label="Total Inboxes" value={totalInboxes} accent="text-primary bg-primary/10" />
         </div>
       )}
 
@@ -225,13 +225,13 @@ function DomainCard({ domain: d, onVerify, onDelete, verifying }: {
   };
 
   return (
-    <Card className={`group hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] transition-all duration-200 ${fullyVerified ? "hover:border-emerald-200" : "hover:border-amber-200 border-dashed"}`}>
+    <Card className={`group hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] transition-all duration-200 ${fullyVerified ? "hover:border-success/20" : "hover:border-warning/20 border-dashed"}`}>
 
       {/* Header with icon + domain name */}
       <CardContent className="pt-5 pb-0 pl-10">
         <div className="flex items-start gap-3">
-          <div className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${fullyVerified ? "bg-emerald-100" : "bg-amber-100"}`}>
-            <Globe className={`h-5 w-5 ${fullyVerified ? "text-emerald-600" : "text-amber-600"}`} />
+          <div className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${fullyVerified ? "bg-success/10" : "bg-warning/10"}`}>
+            <Globe className={`h-5 w-5 ${fullyVerified ? "text-success" : "text-warning"}`} />
           </div>
           <div className="min-w-0 flex-1">
             <Link href={`/domains/${d.id}`} className="group/link">
@@ -243,11 +243,11 @@ function DomainCard({ domain: d, onVerify, onDelete, verifying }: {
           </div>
           <div className="flex flex-col items-end gap-1 shrink-0">
             {fullyVerified ? (
-              <Badge className="gap-1 text-[10px] bg-emerald-100 text-emerald-700 border-emerald-200">
+              <Badge className="gap-1 text-[10px] bg-success/10 text-success border-success/20">
                 <CheckCircle2 className="h-2.5 w-2.5" /> Verified
               </Badge>
             ) : (
-              <Badge className="gap-1 text-[10px] bg-amber-100 text-amber-700 border-amber-200">
+              <Badge className="gap-1 text-[10px] bg-warning/10 text-warning border-warning/20">
                 <Circle className="h-2.5 w-2.5" /> Pending
               </Badge>
             )}
@@ -291,7 +291,7 @@ function DomainCard({ domain: d, onVerify, onDelete, verifying }: {
             <span className="text-muted-foreground">TXT → </span>
             <span className="text-foreground/80">{d.verification_record}</span>
             {copied
-              ? <Check className="inline-block ml-1.5 h-3 w-3 text-emerald-500" />
+              ? <Check className="inline-block ml-1.5 h-3 w-3 text-success" />
               : <Copy className="inline-block ml-1.5 h-3 w-3 text-muted-foreground opacity-0 group-hover/copy:opacity-100 transition-opacity" />
             }
           </button>
@@ -335,14 +335,14 @@ function DnsChipWithCopy({ verified, label, value }: { verified: boolean; label:
   return (
     <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
       verified
-        ? "bg-emerald-100 text-emerald-700"
+        ? "bg-success/10 text-success"
         : "bg-muted text-muted-foreground"
     }`}>
       {verified ? <CheckCircle2 className="h-3 w-3" /> : <Circle className="h-3 w-3" />}
       {label}
       {value && (
         <button onClick={handleCopy} className="ml-0.5 hover:opacity-70 transition-opacity" title={`Copy ${label} record`}>
-          {justCopied ? <Check className="h-2.5 w-2.5 text-emerald-500" /> : <Copy className="h-2.5 w-2.5" />}
+          {justCopied ? <Check className="h-2.5 w-2.5 text-success" /> : <Copy className="h-2.5 w-2.5" />}
         </button>
       )}
     </span>
@@ -426,7 +426,7 @@ function DeleteDomainDialog({ domain: d, onConfirm }: { domain: Domain; onConfir
             </div>
           ) : impact && impact.active_inboxes > 0 ? (
             <>
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 flex items-start gap-2">
+              <div className="rounded-lg border border-warning/20 bg-warning/5 p-3 text-sm text-warning flex items-start gap-2">
                 <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
                 <span>This domain has <strong>{impact.active_inboxes}</strong> active inbox{impact.active_inboxes !== 1 ? "es" : ""} receiving email ({impact.total_emails} total email{impact.total_emails !== 1 ? "s" : ""})</span>
               </div>
@@ -465,7 +465,7 @@ function DeleteDomainDialog({ domain: d, onConfirm }: { domain: Domain; onConfir
               </div>
             </>
           ) : impact ? (
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 flex items-center gap-2">
+            <div className="rounded-lg border border-success/20 bg-success/5 p-3 text-sm text-success flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 shrink-0" />
               No active inboxes on this domain
             </div>
@@ -569,12 +569,12 @@ function AddDomainDialog({ orgId }: { orgId: string }) {
                 onChange={(e) => setRawInput(e.target.value)}
                 placeholder="example.com"
                 onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-                className={domain ? (isValid ? "pr-9 border-emerald-400 focus-visible:ring-emerald-400" : "pr-9 border-destructive focus-visible:ring-destructive") : ""}
+                className={domain ? (isValid ? "pr-9 border-success/40 focus-visible:ring-success/40" : "pr-9 border-destructive focus-visible:ring-destructive") : ""}
               />
               {domain && (
                 <span className="absolute right-2.5 top-1/2 -translate-y-1/2">
                   {isValid
-                    ? <Check className="h-4 w-4 text-emerald-500" />
+                    ? <Check className="h-4 w-4 text-success" />
                     : <X className="h-4 w-4 text-destructive" />}
                 </span>
               )}
