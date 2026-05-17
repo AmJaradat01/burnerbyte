@@ -17,7 +17,6 @@ import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EmptyState } from "@/components/empty-state";
 import { ErrorState } from "@/components/error-state";
-import { InboxIllustration } from "@/components/illustrations";
 import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
 import { PullToRefreshIndicator } from "@/components/pull-to-refresh-indicator";
 import { Pagination } from "@/components/pagination";
@@ -120,7 +119,7 @@ function HomePage() {
         {isError ? <ErrorState message="Failed to load inboxes" onRetry={() => refetch()} /> :
          isLoading ? <InboxGridSkeleton /> :
          (!data?.data || data.data.length === 0) ? (
-          <EmptyState illustration={<InboxIllustration />} title={t("noActiveInboxes")} description={t("createToStart")} />
+          <EmptyState title={t("noActiveInboxes")} description={t("createToStart")} />
         ) : (
           <>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
