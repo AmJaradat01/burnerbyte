@@ -208,6 +208,10 @@ func (h *EmailHandler) DeleteEmail(w http.ResponseWriter, r *http.Request) {
 
 func (h *EmailHandler) DownloadAttachment(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
+	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "team.emails.view") {
+		writeError(w, http.StatusForbidden, "insufficient scope")
+		return
+	}
 	if h.attachmentSvc == nil {
 		writeError(w, http.StatusNotImplemented, "attachments not configured")
 		return

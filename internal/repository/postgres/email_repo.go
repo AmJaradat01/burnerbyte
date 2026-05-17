@@ -34,6 +34,11 @@ func (r *EmailRepo) Create(ctx context.Context, e *domain.Email) error {
 	return nil
 }
 
+func (r *EmailRepo) SetHasAttachments(ctx context.Context, id uuid.UUID, has bool) error {
+	_, err := r.db.Exec(ctx, `UPDATE emails SET has_attachments = $1 WHERE id = $2`, has, id)
+	return err
+}
+
 func (r *EmailRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Email, error) {
 	var e domain.Email
 	err := r.db.QueryRow(ctx,

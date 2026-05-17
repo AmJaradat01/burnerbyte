@@ -162,7 +162,7 @@ func (h *Handler) Process(ctx context.Context, email *InboundEmail) error {
 		Subject:        &email.Subject,
 		BodyText:       &email.BodyText,
 		BodyHTML:        &email.BodyHTML,
-		HasAttachments: len(email.Attachments) > 0,
+		HasAttachments: false,
 		RawHeaders:     email.Headers,
 		SizeBytes:      email.SizeBytes,
 		SpamScore:      spamScore,
@@ -175,6 +175,7 @@ func (h *Handler) Process(ctx context.Context, email *InboundEmail) error {
 	}
 
 	// Store attachments if enabled by settings cascade
+	var storedCount int
 	if len(email.Attachments) > 0 && h.attachmentStorer != nil && h.settingsChecker != nil {
 		enabled, _ := h.settingsChecker.ResolveAttachmentsEnabled(ctx, inbox.DomainAssignmentID)
 		if enabled {
@@ -186,8 +187,17 @@ func (h *Handler) Process(ctx context.Context, email *InboundEmail) error {
 				}
 				if _, err := h.attachmentStorer.StoreAttachment(ctx, e.ID, att.Filename, att.ContentType, att.Data); err != nil {
 					slog.Error("failed to store attachment", "filename", att.Filename, "error", err)
+				} else {
+					storedCount++
 				}
 			}
+		}
+	}
+
+	// Update HasAttachments only if attachments were actually stored
+	if storedCount > 0 {
+		if err := h.emailRepo.SetHasAttachments(ctx, e.ID, true); err != nil {
+			slog.Error("failed to update has_attachments flag", "error", err)
 		}
 	}
 
