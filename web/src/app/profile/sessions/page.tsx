@@ -12,7 +12,6 @@ import { toast } from "sonner";
 import { ErrorState } from "@/components/error-state";
 import { EmptyState } from "@/components/empty-state";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { SessionIllustration } from "@/components/illustrations";
 import { UAParser } from "ua-parser-js";
 import type { Session } from "@/types";
 
@@ -123,7 +122,7 @@ export default function SessionsPage() {
           {isLoading ? (
             <div className="space-y-2">{[1,2,3].map(i => <Skeleton key={i} className="h-10 w-full" />)}</div>
           ) : (!sessions || sessions.length === 0) ? (
-            <EmptyState illustration={<SessionIllustration />} title="No active sessions" description="No active sessions found." />
+            <EmptyState title="No active sessions" description="You don't have any active sessions on other devices." />
           ) : (
             <Table className="table-striped">
               <TableHeader>

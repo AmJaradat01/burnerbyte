@@ -38,7 +38,6 @@ import { Pagination } from "@/components/pagination";
 import { ErrorState } from "@/components/error-state";
 import { EmptyState } from "@/components/empty-state";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { KeyIllustration } from "@/components/illustrations";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -260,7 +259,6 @@ export default function ApiKeysPage() {
         <>
           {!data?.data || data.data.length === 0 ? (
             <EmptyState
-              illustration={<KeyIllustration />}
               title="No API keys"
               description="Create an API key for programmatic access to inboxes and emails."
             />

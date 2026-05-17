@@ -15,34 +15,15 @@ import { EmailList } from "@/components/inbox/email-list";
 import { EmailPreview } from "@/components/inbox/email-preview";
 import { InboxEmptyPreview } from "@/components/inbox/inbox-empty-preview";
 import {
-  ArrowLeft, Check, CheckCircle2, Clock, Copy, Mail, MailOpen, CheckCheck, Timer, Trash2, Wifi, WifiOff, XCircle,
+  ArrowLeft, Check, CheckCircle2, Copy, Mail, MailOpen, CheckCheck, Timer, Trash2, Wifi, WifiOff, XCircle,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { EmailSummary, Email, Inbox, PaginatedResponse } from "@/types";
 
-/* ── Countdown Pill ── */
-
-function CountdownPill({ expiresAt }: { expiresAt: string }) {
-  const [colors, setColors] = useState("bg-success/10 text-success");
-  useEffect(() => {
-    const update = () => {
-      const diff = new Date(expiresAt).getTime() - Date.now();
-      if (diff < 600000) setColors("bg-destructive/10 text-destructive");
-      else if (diff < 1800000) setColors("bg-warning/10 text-warning");
-      else setColors("bg-success/10 text-success");
-    };
-    update();
-    const iv = setInterval(update, 10000);
-    return () => clearInterval(iv);
-  }, [expiresAt]);
-  return (
-    <span className={`h-6 w-6 rounded-md flex items-center justify-center ${colors}`}>
-      <Clock className="h-3 w-3" />
-    </span>
-  );
-}
-
-/* ── Countdown ── */
+/* ── Countdown ──
+   Renders the time remaining as monospace text. Color promotes to destructive
+   when the inbox is within 10 minutes of expiry; otherwise stays muted. No
+   surrounding pill: visual intensity is rationed (Quiet Accent Rule). */
 
 function Countdown({ expiresAt }: { expiresAt: string }) {
   const [remaining, setRemaining] = useState("");
@@ -62,7 +43,10 @@ function Countdown({ expiresAt }: { expiresAt: string }) {
     return () => clearInterval(iv);
   }, [expiresAt]);
   return (
-    <span className={`font-mono text-xs ${urgent ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
+    <span
+      className={`font-mono text-xs tabular-nums ${urgent ? "text-destructive font-semibold" : "text-muted-foreground"}`}
+      aria-label={urgent ? `Inbox expires in ${remaining}` : `Time remaining: ${remaining}`}
+    >
       {remaining}
     </span>
   );
@@ -73,24 +57,39 @@ function Countdown({ expiresAt }: { expiresAt: string }) {
 function SocketIndicator({ status }: { status: SocketStatus }) {
   if (status === "connected") {
     return (
-      <span className="flex items-center gap-1 text-xs text-success" title="Live — listening for new emails">
-        <span className="h-1.5 w-1.5 rounded-full bg-success" />
-        <Wifi className="h-3 w-3" />
+      <span
+        className="flex items-center gap-1 text-xs text-success"
+        title="Live, listening for new emails"
+        role="status"
+        aria-label="Connected, listening for new emails"
+      >
+        <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden="true" />
+        <Wifi className="h-3 w-3" aria-hidden="true" />
       </span>
     );
   }
   if (status === "connecting") {
     return (
-      <span className="flex items-center gap-1 text-xs text-warning" title="Connecting…">
-        <span className="h-1.5 w-1.5 rounded-full bg-warning/50 animate-pulse" />
-        <Wifi className="h-3 w-3 opacity-50" />
+      <span
+        className="flex items-center gap-1 text-xs text-muted-foreground"
+        title="Connecting"
+        role="status"
+        aria-label="Connecting to live updates"
+      >
+        <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50" aria-hidden="true" />
+        <Wifi className="h-3 w-3 opacity-60" aria-hidden="true" />
       </span>
     );
   }
   return (
-    <span className="flex items-center gap-1 text-xs text-muted-foreground" title="Disconnected — reconnecting…">
-      <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50" />
-      <WifiOff className="h-3 w-3 opacity-50" />
+    <span
+      className="flex items-center gap-1 text-xs text-muted-foreground"
+      title="Disconnected, reconnecting"
+      role="status"
+      aria-label="Disconnected from live updates, reconnecting"
+    >
+      <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50" aria-hidden="true" />
+      <WifiOff className="h-3 w-3 opacity-60" aria-hidden="true" />
     </span>
   );
 }
@@ -186,7 +185,7 @@ export default function InboxDetailPage() {
   const onNewEmail = useCallback(() => {
     qc.invalidateQueries({ queryKey: ["emails", id] });
     qc.invalidateQueries({ queryKey: ["inbox", id] });
-    toast.info("📬 New email received!");
+    toast.success("New email received");
   }, [qc, id]);
 
   const socketStatus = useInboxSocket(id, onNewEmail);
@@ -231,46 +230,46 @@ export default function InboxDetailPage() {
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
       {/* ── Top bar ── */}
-      <div className="shrink-0 bg-background px-4 py-3 border-b-2 border-b-orange-500/20">
+      <div className="shrink-0 bg-background px-4 py-3 border-b">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <Button variant="outline" size="sm" className="shrink-0 h-8 w-8 p-0" onClick={() => router.push("/")}>
+            <Button variant="outline" size="sm" className="shrink-0 h-8 w-8 p-0" onClick={() => router.push("/")} aria-label="Back to inboxes">
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div className="min-w-0">
               {address ? (
-                <>
-                  <div className="flex items-center gap-2">
-                    <div className="h-8 w-8 rounded-lg bg-warning/10 flex items-center justify-center shrink-0">
-                      <Mail className="h-4 w-4 text-warning" />
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0" aria-hidden="true">
+                    <Mail className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h1 className="font-mono text-sm font-semibold truncate">{address}</h1>
+                      <button
+                        onClick={copyAddress}
+                        className="shrink-0 text-muted-foreground hover:text-foreground transition-colors rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                        aria-label={copied ? "Address copied" : "Copy address"}
+                        title={copied ? "Copied" : "Copy address"}
+                      >
+                        {copied ? <Check className="h-3.5 w-3.5 text-success" aria-hidden="true" /> : <Copy className="h-3.5 w-3.5" aria-hidden="true" />}
+                      </button>
                     </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h1 className="font-mono text-sm font-semibold truncate">{address}</h1>
-                        <button onClick={copyAddress} className="shrink-0 text-muted-foreground hover:text-foreground transition-colors">
-                          {copied ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
-                        </button>
-                      </div>
-                      <div className="flex items-center gap-3 mt-0.5">
-                        <span className="flex items-center gap-1 text-xs text-muted-foreground tabular-nums">
-                          <span className="h-5 w-5 rounded-md bg-info/10 flex items-center justify-center"><MailOpen className="h-2.5 w-2.5 text-info" /></span>
-                          {totalEmails} emails
-                        </span>
-                        {inbox?.is_active && inbox?.expires_at && (
-                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <CountdownPill expiresAt={inbox.expires_at} />
-                            <Countdown expiresAt={inbox.expires_at} />
-                          </span>
-                        )}
-                        <Badge variant={inbox?.is_active ? "default" : "secondary"} className="gap-1 text-[10px] px-1.5 py-0">
-                          {inbox?.is_active ? <CheckCircle2 className="h-2.5 w-2.5" /> : <XCircle className="h-2.5 w-2.5" />}
-                          {inbox?.is_active ? "Active" : "Expired"}
-                        </Badge>
-                        <SocketIndicator status={socketStatus} />
-                      </div>
+                    <div className="flex items-center gap-3 mt-0.5">
+                      <span className="flex items-center gap-1.5 text-xs text-muted-foreground tabular-nums">
+                        <MailOpen className="h-3 w-3" aria-hidden="true" />
+                        {totalEmails} {totalEmails === 1 ? "email" : "emails"}
+                      </span>
+                      {inbox?.is_active && inbox?.expires_at && (
+                        <Countdown expiresAt={inbox.expires_at} />
+                      )}
+                      <Badge variant={inbox?.is_active ? "secondary" : "outline"} className="gap-1 text-[10px] px-1.5 py-0">
+                        {inbox?.is_active ? <CheckCircle2 className="h-2.5 w-2.5" aria-hidden="true" /> : <XCircle className="h-2.5 w-2.5" aria-hidden="true" />}
+                        {inbox?.is_active ? "Active" : "Expired"}
+                      </Badge>
+                      <SocketIndicator status={socketStatus} />
                     </div>
                   </div>
-                </>
+                </div>
               ) : (
                 <div className="flex items-center gap-2">
                   <Skeleton className="h-8 w-8 rounded-lg" />
