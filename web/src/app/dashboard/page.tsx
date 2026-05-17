@@ -105,7 +105,7 @@ function MemberDashboard({ org, user, greeting }: { org: { id: string; name: str
 
   return (
     <div className="space-y-6">
-      <Card className="card-header-accent">
+      <Card>
         <CardContent className="pt-5 pb-4">
           <div className="flex items-center justify-between">
             <div>
@@ -120,7 +120,7 @@ function MemberDashboard({ org, user, greeting }: { org: { id: string; name: str
       </Card>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Card className="transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:-translate-y-px">
+        <Card>
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-medium text-muted-foreground">Active Inboxes</span>
@@ -136,7 +136,7 @@ function MemberDashboard({ org, user, greeting }: { org: { id: string; name: str
           </CardContent>
         </Card>
 
-        <Card className="transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:-translate-y-px">
+        <Card>
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-medium text-muted-foreground">Quick Actions</span>
@@ -309,7 +309,7 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card className="card-header-accent">
+      <Card>
         <CardContent className="pt-5 pb-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
@@ -630,9 +630,9 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex flex-col items-center gap-2 rounded-xl border p-4 hover:bg-muted/50 hover:shadow-sm transition-all duration-200 group text-center ${item.border}`}
+                className={`flex flex-col items-center gap-2 rounded-xl border p-4 hover:bg-muted/50 transition-colors group text-center ${item.border}`}
               >
-                <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${item.color} transition-transform duration-200 group-hover:scale-110`}>
+                <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${item.color}`}>
                   <item.icon className="h-5 w-5" />
                 </div>
                 <div>
@@ -663,7 +663,7 @@ function StatCard({ icon: Icon, label, value, loading, accent, sub, delta, delta
   isString?: boolean;
 }) {
   const inner = (
-    <Card className={`transition-all duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:-translate-y-px ${link ? "cursor-pointer" : ""}`}>
+    <Card className={link ? "cursor-pointer" : ""}>
       <CardContent className="pt-4 pb-3">
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-medium text-muted-foreground">{label}</span>

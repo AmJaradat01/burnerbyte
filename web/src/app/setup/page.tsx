@@ -178,7 +178,7 @@ export default function SetupPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4 bg-gradient-to-b from-muted/50 to-background">
+    <div className="flex min-h-screen items-center justify-center p-4 bg-background">
       <div className="w-full max-w-2xl space-y-6">
         {/* Header */}
         <div className="text-center space-y-1">
@@ -198,14 +198,14 @@ export default function SetupPage() {
                   onClick={() => i < step && setStep(i)}
                   disabled={i > step}
                   title={s.label}
-                  className={`flex items-center justify-center h-7 w-7 rounded-full text-xs transition-all ${
+                  className={`flex items-center justify-center h-7 w-7 rounded-full text-xs ${
                     done ? "bg-primary text-primary-foreground cursor-pointer" : active ? "bg-primary/20 text-primary ring-2 ring-primary/30" : "bg-muted text-muted-foreground"
                   }`}
                 >
                   {done ? <Check className="h-3.5 w-3.5" /> : <Icon className="h-3 w-3" />}
                 </button>
                 {i < STEPS.length - 1 && (
-                  <div className={`w-3 sm:w-5 lg:w-7 h-0.5 mx-0.5 rounded-full transition-colors ${i < step ? "bg-primary" : "bg-muted"}`} />
+                  <div className={`w-3 sm:w-5 lg:w-7 h-0.5 mx-0.5 rounded-full ${i < step ? "bg-primary" : "bg-muted"}`} />
                 )}
               </div>
             );
@@ -213,7 +213,7 @@ export default function SetupPage() {
         </div>
 
         {/* Card */}
-        <Card className="shadow-lg">
+        <Card>
           <CardHeader>
             <div className="flex items-center gap-3">
               <div className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 ${currentStep.required ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
@@ -221,7 +221,7 @@ export default function SetupPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <CardTitle className="text-lg">{currentStep.label}</CardTitle>
+                  <CardTitle className="text-lg tracking-tight">{currentStep.label}</CardTitle>
                   <Badge variant={currentStep.required ? "default" : "secondary"} className="text-[10px]">
                     {currentStep.required ? "Required" : "Optional"}
                   </Badge>
@@ -266,18 +266,18 @@ export default function SetupPage() {
                     </div>
                   </div>
                 )}
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <Label htmlFor="admin-name">Display name</Label>
                   <Input id="admin-name" value={data.admin.display_name} onChange={(e) => setData({ ...data, admin: { ...data.admin, display_name: e.target.value } })} placeholder="Your full name" autoFocus />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <Label htmlFor="admin-email">Email</Label>
                   <Input id="admin-email" type="email" value={data.admin.email} onChange={(e) => setData({ ...data, admin: { ...data.admin, email: e.target.value } })} placeholder="admin@example.com" />
                   {data.admin.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.admin.email) && (
                     <p className="text-xs text-destructive">Please enter a valid email address</p>
                   )}
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <Label htmlFor="admin-pass">Password</Label>
                   <Input id="admin-pass" type="password" value={data.admin.password} onChange={(e) => setData({ ...data, admin: { ...data.admin, password: e.target.value } })} placeholder="••••••••" />
                   {data.admin.password && (
@@ -310,16 +310,16 @@ export default function SetupPage() {
             {/* Org */}
             {currentStep.key === "org" && (
               <>
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <Label htmlFor="org-name">Organization name</Label>
                   <Input id="org-name" value={data.org.name} onChange={(e) => setData({ ...data, org: { ...data.org, name: e.target.value } })} placeholder="My Company" autoFocus />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     <Label htmlFor="org-slug">Slug <span className="text-muted-foreground font-normal">(optional)</span></Label>
                     <Input id="org-slug" value={data.org.slug} onChange={(e) => setData({ ...data, org: { ...data.org, slug: e.target.value } })} placeholder="my-company" className="font-mono text-sm" />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     <Label htmlFor="org-logo">Logo URL <span className="text-muted-foreground font-normal">(optional)</span></Label>
                     <Input id="org-logo" value={data.org.logo_url} onChange={(e) => setData({ ...data, org: { ...data.org, logo_url: e.target.value } })} placeholder="https://..." />
                   </div>
@@ -331,31 +331,31 @@ export default function SetupPage() {
             {currentStep.key === "smtp" && (
               <>
                 <div className="grid grid-cols-3 gap-4">
-                  <div className="col-span-2 space-y-2">
+                  <div className="col-span-2 space-y-1.5">
                     <Label htmlFor="smtp-host">SMTP Host</Label>
                     <Input id="smtp-host" value={data.smtp.host} onChange={(e) => setData({ ...data, smtp: { ...data.smtp, host: e.target.value } })} placeholder="smtp.example.com" autoFocus />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     <Label htmlFor="smtp-port">Port</Label>
                     <Input id="smtp-port" type="number" value={data.smtp.port} onChange={(e) => setData({ ...data, smtp: { ...data.smtp, port: Number(e.target.value) } })} />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     <Label htmlFor="smtp-user">Username</Label>
                     <Input id="smtp-user" value={data.smtp.username} onChange={(e) => setData({ ...data, smtp: { ...data.smtp, username: e.target.value } })} />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     <Label htmlFor="smtp-pass">Password</Label>
                     <Input id="smtp-pass" type="password" value={data.smtp.password} onChange={(e) => setData({ ...data, smtp: { ...data.smtp, password: e.target.value } })} />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     <Label htmlFor="smtp-from">From address <span className="text-destructive">*</span></Label>
                     <Input id="smtp-from" type="email" value={data.smtp.from_address} onChange={(e) => setData({ ...data, smtp: { ...data.smtp, from_address: e.target.value } })} placeholder="noreply@example.com" />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     <Label htmlFor="smtp-name">From name <span className="text-muted-foreground font-normal">(optional)</span></Label>
                     <Input id="smtp-name" value={data.smtp.from_name} onChange={(e) => setData({ ...data, smtp: { ...data.smtp, from_name: e.target.value } })} placeholder="BurnerByte" />
                   </div>
@@ -386,7 +386,7 @@ export default function SetupPage() {
               const update = (patch: Partial<typeof s>) => setData({ ...data, storage: { ...s, ...patch } });
               return (
                 <>
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     <Label>Provider</Label>
                     <Select value={s.provider} onValueChange={(v) => update({ provider: v })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
@@ -397,27 +397,27 @@ export default function SetupPage() {
                     </Select>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       <Label>Endpoint</Label>
                       <Input value={s.endpoint} onChange={(e) => update({ endpoint: e.target.value })} placeholder={s.provider === "s3" ? "s3.amazonaws.com" : "localhost:9000"} />
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       <Label>Bucket</Label>
                       <Input value={s.bucket} onChange={(e) => update({ bucket: e.target.value })} placeholder="burnerbyte" className="font-mono text-sm" />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       <Label>Access key</Label>
                       <Input value={s.access_key} onChange={(e) => update({ access_key: e.target.value })} className="font-mono text-sm" />
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       <Label>Secret key</Label>
                       <Input type="password" value={s.secret_key} onChange={(e) => update({ secret_key: e.target.value })} />
                     </div>
                   </div>
                   {s.provider === "s3" && (
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       <Label>Region</Label>
                       <Input value={s.region} onChange={(e) => update({ region: e.target.value })} placeholder="us-east-1" />
                     </div>
@@ -450,7 +450,7 @@ export default function SetupPage() {
 
             {/* Domain */}
             {currentStep.key === "domain" && (
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="domain-name">Domain name</Label>
                 <Input id="domain-name" value={data.domain.domain_name} onChange={(e) => setData({ ...data, domain: { ...data.domain, domain_name: e.target.value.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, "") } })} placeholder="mail.example.com" autoFocus className="font-mono" />
                 {data.domain.domain_name && !data.domain.domain_name.includes(".") && (
@@ -465,7 +465,7 @@ export default function SetupPage() {
 
             {/* Team */}
             {currentStep.key === "team" && (
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="team-name">Team name</Label>
                 <Input id="team-name" value={data.team?.name ?? ""} onChange={(e) => setData({ ...data, team: e.target.value ? { name: e.target.value } : null })} placeholder="Engineering" autoFocus />
                 <p className="text-xs text-muted-foreground">The domain will be automatically assigned to this team. Leave empty to skip.</p>
@@ -475,7 +475,7 @@ export default function SetupPage() {
             {/* Branding */}
             {currentStep.key === "branding" && (
               <>
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <Label htmlFor="brand-color">Primary color</Label>
                   <div className="flex gap-2">
                     <Input id="brand-color" value={data.branding?.primary_color ?? ""} onChange={(e) => setData({ ...data, branding: { ...data.branding ?? { primary_color: "", footer_text: "", logo_url: "" }, primary_color: e.target.value } })} placeholder="#4f46e5" className="font-mono text-sm" />
@@ -484,11 +484,11 @@ export default function SetupPage() {
                     )}
                   </div>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <Label htmlFor="brand-footer">Footer text</Label>
                   <Input id="brand-footer" value={data.branding?.footer_text ?? ""} onChange={(e) => setData({ ...data, branding: { ...data.branding ?? { primary_color: "", footer_text: "", logo_url: "" }, footer_text: e.target.value } })} placeholder="Powered by BurnerByte" />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <Label htmlFor="brand-logo">Logo URL</Label>
                   <Input id="brand-logo" value={data.branding?.logo_url ?? ""} onChange={(e) => setData({ ...data, branding: { ...data.branding ?? { primary_color: "", footer_text: "", logo_url: "" }, logo_url: e.target.value } })} placeholder="https://..." />
                 </div>
@@ -510,7 +510,7 @@ export default function SetupPage() {
                           <SelectItem value="member">Member</SelectItem>
                         </SelectContent>
                       </Select>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive shrink-0" onClick={() => setData({ ...data, invites: data.invites.filter((_, j) => j !== i) })}>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive shrink-0" aria-label="Remove invite" onClick={() => setData({ ...data, invites: data.invites.filter((_, j) => j !== i) })}>
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>

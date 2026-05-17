@@ -246,7 +246,7 @@ function QuickCreateCard() {
           <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wider">{t("yourAddress")}</p>
           <button
             onClick={copyAddress}
-            className="group inline-flex items-center gap-3 rounded-2xl border-2 border-dashed border-primary/20 bg-muted/30 px-6 py-4 sm:px-8 sm:py-5 transition-all hover:border-primary/50 hover:bg-muted/50 hover:shadow-lg cursor-pointer max-w-full"
+            className="group inline-flex items-center gap-3 rounded-2xl border-2 border-dashed border-primary/20 bg-muted/30 px-6 py-4 sm:px-8 sm:py-5 transition-colors hover:border-primary/50 hover:bg-muted/50 cursor-pointer max-w-full"
           >
             <span className="font-mono text-xl sm:text-2xl lg:text-3xl font-bold truncate">
               <span>{localPart}</span>
@@ -254,7 +254,7 @@ function QuickCreateCard() {
               <span className="text-primary">{domainPart}</span>
             </span>
             <span className="shrink-0 flex items-center justify-center h-9 w-9 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
-              {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />}
+              {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4 text-primary " />}
             </span>
           </button>
         </div>
@@ -381,7 +381,7 @@ function InboxCard({ inbox, onExtend, onDelete }: { inbox: Inbox; onExtend: () =
 
   return (
     <Card
-      className={`transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:border-primary/30 cursor-pointer group ${!inbox.is_active ? "opacity-60" : ""} ${expiringSoon ? "border-dashed border-warning/20" : ""}`}
+      className={`transition-colors hover:border-primary/30 cursor-pointer group ${!inbox.is_active ? "opacity-60" : ""} ${expiringSoon ? "border-dashed border-warning/20" : ""}`}
       onClick={() => router.push(`/inboxes/${inbox.id}`)}
     >
       <CardContent className="pt-4 pb-3 space-y-2.5">
@@ -528,25 +528,24 @@ function LandingPage() {
         </div>
       </header>
       <main>
-        <section className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent" />
-          <div className="relative mx-auto max-w-3xl px-6 py-28 text-center">
+        <section className="relative">
+          <div className="mx-auto max-w-3xl px-6 py-28 text-center">
             <div className="inline-flex items-center gap-2 rounded-full border bg-muted/50 px-4 py-1.5 text-sm text-muted-foreground mb-6">
               <span className="h-2 w-2 rounded-full bg-success" />
               {t("tagline")}
             </div>
             <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl text-foreground">{t("headline")}</h1>
             <p className="mt-6 text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">{t("subtitle")}</p>
-            <div className="mt-10 flex justify-center gap-4">
+            <div className="mt-10 flex justify-center gap-3">
               {allowRegistration ? (
                 <>
-                  <Link href="/register" className="rounded-lg bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity shadow-lg shadow-primary/25">{t("getStartedFree")}</Link>
-                  <Link href="/login" className="rounded-lg border px-8 py-3 text-sm font-semibold hover:bg-muted transition-colors">{tc("signIn")}</Link>
+                  <Link href="/register" className="rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90 transition-opacity">{t("getStartedFree")}</Link>
+                  <Link href="/login" className="rounded-lg border px-6 py-2.5 text-sm font-medium hover:bg-muted transition-colors">{tc("signIn")}</Link>
                 </>
               ) : (
                 <>
-                  <Link href="/login" className="rounded-lg bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity shadow-lg shadow-primary/25">{tc("signIn")}</Link>
-                  <a href="#features" className="rounded-lg border px-8 py-3 text-sm font-semibold hover:bg-muted transition-colors">{t("learnMore")}</a>
+                  <Link href="/login" className="rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90 transition-opacity">{tc("signIn")}</Link>
+                  <a href="#features" className="rounded-lg border px-6 py-2.5 text-sm font-medium hover:bg-muted transition-colors">{t("learnMore")}</a>
                 </>
               )}
             </div>
@@ -590,14 +589,14 @@ function LandingPage() {
             </div>
           </div>
         </section>
-        <section className="border-t bg-gradient-to-b from-muted/50 to-background">
+        <section className="border-t">
           <div className="mx-auto max-w-3xl px-6 py-24 text-center">
             <h2 className="text-3xl font-bold tracking-tight">{t("readyToStart")}</h2>
             <p className="mt-3 text-muted-foreground">{t("deployInMinutes")}</p>
             {allowRegistration ? (
-              <Link href="/register" className="mt-6 inline-block rounded-lg bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity">{t("createAccount")}</Link>
+              <Link href="/register" className="mt-6 inline-block rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90 transition-opacity">{t("createAccount")}</Link>
             ) : (
-              <Link href="/login" className="mt-6 inline-block rounded-lg bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity">{tc("signIn")}</Link>
+              <Link href="/login" className="mt-6 inline-block rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90 transition-opacity">{tc("signIn")}</Link>
             )}
           </div>
         </section>

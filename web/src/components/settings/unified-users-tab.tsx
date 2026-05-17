@@ -146,7 +146,7 @@ export function UnifiedUsersTab({ orgId }: { orgId: string }) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card className="card-header-accent">
+      <Card className="">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -218,7 +218,7 @@ export function UnifiedUsersTab({ orgId }: { orgId: string }) {
                       <tr className="border-b last:border-0 hover:bg-primary/[0.03] cursor-pointer transition-all duration-150 group">
                         <td className="px-4 py-3.5">
                           <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/15 to-primary/5 text-sm font-bold text-primary shadow-sm transition-transform group-hover:scale-105">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/15 to-primary/5 text-sm font-bold text-primary shadow-sm ">
                               {(u.display_name || u.email).charAt(0).toUpperCase()}
                             </div>
                             <div className="min-w-0">
@@ -331,7 +331,7 @@ export function UnifiedUsersTab({ orgId }: { orgId: string }) {
 
 function StatCard({ label, value, icon, accent, active, onClick }: { label: string; value: number; icon: React.ReactNode; accent: string; active: boolean; onClick: () => void }) {
   return (
-    <Card className={`cursor-pointer transition-all duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:-translate-y-px ${active ? "ring-2 ring-primary shadow-md" : ""}`} onClick={onClick}>
+    <Card className={`cursor-pointer transition-colors ${active ? "ring-2 ring-primary shadow-md" : ""}`} onClick={onClick}>
       <CardContent className="pt-5 pb-4">
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-medium text-muted-foreground">{label}</span>

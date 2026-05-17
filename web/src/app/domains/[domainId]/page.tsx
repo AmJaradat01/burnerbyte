@@ -117,7 +117,7 @@ export default function DomainDetailPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card className="card-header-accent">
+      <Card>
         <CardContent className="pt-5 pb-4">
           <div className="flex items-center gap-3">
             <Link href="/domains" className="flex h-8 w-8 items-center justify-center rounded-lg border bg-card hover:bg-accent transition-colors shrink-0">
@@ -319,7 +319,7 @@ function DetailRow({ label, value, mono }: { label: string; value: string; mono?
 
 function QuickStat({ icon: Icon, label, value, accent }: { icon: typeof Globe; label: string; value: number | string; accent: string }) {
   return (
-    <Card className="transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:-translate-y-px">
+    <Card>
       <CardContent className="pt-5 pb-4">
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-medium text-muted-foreground">{label}</span>

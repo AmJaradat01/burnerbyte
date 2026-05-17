@@ -90,7 +90,7 @@ export default function TeamsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card className="card-header-accent">
+      <Card>
         <CardContent className="pt-5 pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -98,7 +98,7 @@ export default function TeamsPage() {
                 <Users className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <h1 className="text-base font-semibold">Teams</h1>
+                <h1 className="text-base font-semibold tracking-tight">Teams</h1>
                 <p className="text-sm text-muted-foreground">
                   {teamsData?.data && teamsData.data.length > 0
                     ? `${teamsData.data.length} team${teamsData.data.length !== 1 ? "s" : ""} · ${teamsData.data.reduce((s, t) => s + (t.member_count ?? 0), 0)} members · Organize domains and inboxes by team.`
@@ -139,15 +139,15 @@ export default function TeamsPage() {
 function TeamCard({ team, onSelect }: { team: Team; onSelect: () => void }) {
   const totalActivity = (team.member_count ?? 0) + (team.domain_count ?? 0) + (team.active_inboxes ?? 0);
   return (
-    <Card className="cursor-pointer transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:border-primary/20 group" onClick={onSelect}>
+    <Card className="cursor-pointer group" onClick={onSelect}>
       <CardContent className="pt-4 pb-3 space-y-3">
         {/* Team name + avatar */}
         <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-sm font-bold text-primary group-hover:bg-primary/20 transition-colors">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-sm font-bold text-primary">
             {team.name.charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold truncate group-hover:text-primary transition-colors">{team.name}</p>
+            <p className="text-sm font-semibold truncate">{team.name}</p>
             <p className="text-[11px] text-muted-foreground font-mono">{team.slug}</p>
           </div>
         </div>
@@ -171,7 +171,7 @@ function TeamCard({ team, onSelect }: { team: Team; onSelect: () => void }) {
         {/* Footer */}
         <div className="flex items-center justify-between pt-1 border-t text-xs text-muted-foreground">
           <span>Created {new Date(team.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</span>
-          <span className="text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity">View team →</span>
+          <span className="text-primary font-medium">View team →</span>
         </div>
       </CardContent>
     </Card>
@@ -193,7 +193,7 @@ function TeamGridSkeleton() {
 
 function MiniStat({ icon: Icon, label, value, accent }: { icon: typeof Users; label: string; value: number; accent: string }) {
   return (
-    <Card className="transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:-translate-y-px">
+    <Card>
       <CardContent className="pt-5 pb-4">
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-medium text-muted-foreground">{label}</span>
