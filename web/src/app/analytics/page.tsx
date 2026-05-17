@@ -57,8 +57,8 @@ export default function AnalyticsPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-7 w-7 rounded-md bg-rose-500/10 flex items-center justify-center">
-                <Mail className="h-4 w-4 text-rose-600" />
+              <div className="h-7 w-7 rounded-md bg-destructive/50/10 flex items-center justify-center">
+                <Mail className="h-4 w-4 text-destructive" />
               </div>
               <div>
                 <CardTitle className="text-base">Analytics</CardTitle>
@@ -238,7 +238,7 @@ function OrgAnalytics({ orgId }: { orgId: string }) {
                             <span className="text-muted-foreground ml-2">{d.count.toLocaleString()} ({pct.toFixed(1)}%)</span>
                           </div>
                           <div className="h-2 rounded-full bg-muted overflow-hidden">
-                            <div className="h-full rounded-full bg-violet-500 transition-all" style={{ width: `${pct}%` }} />
+                            <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
                           </div>
                         </div>
                       );
@@ -323,12 +323,12 @@ function TeamAnalytics({ orgId, teamId, teamName }: { orgId: string; teamId: str
 }
 
 const STAT_COLORS: Record<string, { bg: string; text: string }> = {
-  blue: { bg: "bg-blue-100", text: "text-blue-600" },
-  emerald: { bg: "bg-emerald-100", text: "text-emerald-600" },
-  violet: { bg: "bg-violet-100", text: "text-violet-600" },
-  amber: { bg: "bg-amber-100", text: "text-amber-600" },
-  orange: { bg: "bg-orange-100", text: "text-orange-600" },
-  slate: { bg: "bg-slate-100", text: "text-slate-600" },
+  blue: { bg: "bg-info/10", text: "text-info" },
+  emerald: { bg: "bg-success/10", text: "text-success" },
+  violet: { bg: "bg-primary/10", text: "text-primary" },
+  amber: { bg: "bg-warning/10", text: "text-warning" },
+  orange: { bg: "bg-warning/10", text: "text-warning" },
+  slate: { bg: "bg-muted", text: "text-muted-foreground" },
 };
 
 function StatCard({ icon: Icon, label, value, subtitle, color = "blue", link }: { icon: typeof Mail; label: string; value: number | string; subtitle?: string; color?: keyof typeof STAT_COLORS; link?: string }) {

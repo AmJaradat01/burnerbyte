@@ -94,8 +94,8 @@ export default function TeamsPage() {
         <CardContent className="pt-5 pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-7 w-7 rounded-md bg-indigo-500/10 flex items-center justify-center">
-                <Users className="h-4 w-4 text-indigo-600" />
+              <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center">
+                <Users className="h-4 w-4 text-primary" />
               </div>
               <div>
                 <h1 className="text-base font-semibold">Teams</h1>
@@ -113,9 +113,9 @@ export default function TeamsPage() {
 
       {isAdmin && teamsData?.data && teamsData.data.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <MiniStat icon={Users} label="Total Teams" value={teamsData.data.length} accent="text-blue-600 bg-blue-100" />
-          <MiniStat icon={Users} label="Total Members" value={teamsData.data.reduce((s, t) => s + (t.member_count ?? 0), 0)} accent="text-emerald-600 bg-emerald-100" />
-          <MiniStat icon={Inbox} label="Total Inboxes" value={teamsData.data.reduce((s, t) => s + (t.active_inboxes ?? 0), 0)} accent="text-violet-600 bg-violet-100" />
+          <MiniStat icon={Users} label="Total Teams" value={teamsData.data.length} accent="text-info bg-info/10" />
+          <MiniStat icon={Users} label="Total Members" value={teamsData.data.reduce((s, t) => s + (t.member_count ?? 0), 0)} accent="text-success bg-success/10" />
+          <MiniStat icon={Inbox} label="Total Inboxes" value={teamsData.data.reduce((s, t) => s + (t.active_inboxes ?? 0), 0)} accent="text-primary bg-primary/10" />
         </div>
       )}
 
@@ -381,7 +381,7 @@ function CreateTeamDialog({ orgId, existingTeams }: { orgId: string; existingTea
                         {teamRoles.map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
                       </SelectContent>
                     </Select>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive" onClick={() => removeMember(m.email)}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive" aria-label="Remove member" onClick={() => removeMember(m.email)}>
                       <XCircle className="h-3.5 w-3.5" />
                     </Button>
                   </div>
@@ -436,8 +436,8 @@ function CreateTeamDialog({ orgId, existingTeams }: { orgId: string; existingTea
               <div className="space-y-1.5">
                 {selectedDomains.map((d) => (
                   <div key={d.id} className="flex items-center gap-2 rounded-lg border px-3 py-2">
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-100">
-                      <Globe className="h-3.5 w-3.5 text-emerald-600" />
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-success/10">
+                      <Globe className="h-3.5 w-3.5 text-success" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium font-mono truncate">{d.name}</p>
@@ -450,7 +450,7 @@ function CreateTeamDialog({ orgId, existingTeams }: { orgId: string; existingTea
                         <SelectItem value="read_only">Read Only</SelectItem>
                       </SelectContent>
                     </Select>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive" onClick={() => setSelectedDomains((prev) => prev.filter((s) => s.id !== d.id))}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive" aria-label="Remove domain" onClick={() => setSelectedDomains((prev) => prev.filter((s) => s.id !== d.id))}>
                       <XCircle className="h-3.5 w-3.5" />
                     </Button>
                   </div>
@@ -476,7 +476,7 @@ function CreateTeamDialog({ orgId, existingTeams }: { orgId: string; existingTea
                         className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-mono hover:bg-accent transition-colors cursor-pointer"
                         onClick={() => { setSelectedDomains((prev) => [...prev, { id: d.id, name: d.domain_name, accessLevel: "full" }]); setDomainSearch(""); }}
                       >
-                        <Globe className="h-3 w-3 text-emerald-500" />
+                        <Globe className="h-3 w-3 text-success" />
                         {d.domain_name}
                       </button>
                     ))}
@@ -604,9 +604,9 @@ function TeamMembersTab({ orgId, teamId, isAdmin }: { orgId: string; teamId: str
     <div className="space-y-4">
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
-        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Total</span><div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-blue-100"><Users className="h-4 w-4 text-blue-600" /></div></div><p className="text-2xl font-bold tabular-nums">{members.length}</p></CardContent></Card>
-        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Leads</span><div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-emerald-100"><CheckCircle2 className="h-4 w-4 text-emerald-600" /></div></div><p className="text-2xl font-bold tabular-nums">{leadCount}</p></CardContent></Card>
-        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Members</span><div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-amber-100"><Clock className="h-4 w-4 text-amber-600" /></div></div><p className="text-2xl font-bold tabular-nums">{members.length - leadCount}</p></CardContent></Card>
+        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Total</span><div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-info/10"><Users className="h-4 w-4 text-info" /></div></div><p className="text-2xl font-bold tabular-nums">{members.length}</p></CardContent></Card>
+        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Leads</span><div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-success/10"><CheckCircle2 className="h-4 w-4 text-success" /></div></div><p className="text-2xl font-bold tabular-nums">{leadCount}</p></CardContent></Card>
+        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Members</span><div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-warning/10"><Clock className="h-4 w-4 text-warning" /></div></div><p className="text-2xl font-bold tabular-nums">{members.length - leadCount}</p></CardContent></Card>
       </div>
 
       {/* Search + Add */}
@@ -816,9 +816,9 @@ function DomainAssignmentsTab({ orgId, teamId, isAdmin }: { orgId: string; teamI
     <div className="space-y-4">
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
-        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm font-medium text-muted-foreground">Assigned</span><div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-violet-100"><Globe className="h-4 w-4 text-violet-600" /></div></div><p className="text-2xl font-bold tabular-nums">{assignmentList.length}</p></CardContent></Card>
-        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm font-medium text-muted-foreground">Available</span><div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-emerald-100"><CheckCircle2 className="h-4 w-4 text-emerald-600" /></div></div><p className="text-2xl font-bold tabular-nums">{available.length}</p></CardContent></Card>
-        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm font-medium text-muted-foreground">Total Domains</span><div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-blue-100"><Globe className="h-4 w-4 text-blue-600" /></div></div><p className="text-2xl font-bold tabular-nums">{domains?.data?.length ?? 0}</p></CardContent></Card>
+        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm font-medium text-muted-foreground">Assigned</span><div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-primary/10"><Globe className="h-4 w-4 text-primary" /></div></div><p className="text-2xl font-bold tabular-nums">{assignmentList.length}</p></CardContent></Card>
+        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm font-medium text-muted-foreground">Available</span><div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-success/10"><CheckCircle2 className="h-4 w-4 text-success" /></div></div><p className="text-2xl font-bold tabular-nums">{available.length}</p></CardContent></Card>
+        <Card><CardContent className="pt-5 pb-4"><div className="flex items-center justify-between mb-3"><span className="text-sm font-medium text-muted-foreground">Total Domains</span><div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-info/10"><Globe className="h-4 w-4 text-info" /></div></div><p className="text-2xl font-bold tabular-nums">{domains?.data?.length ?? 0}</p></CardContent></Card>
       </div>
 
       {/* Search + Assign */}
@@ -838,7 +838,7 @@ function DomainAssignmentsTab({ orgId, teamId, isAdmin }: { orgId: string; teamI
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
-                    <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-violet-100"><Globe className="h-4 w-4 text-violet-600" /></div>
+                    <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-primary/10"><Globe className="h-4 w-4 text-primary" /></div>
                     Assign domain to team
                   </DialogTitle>
                   <DialogDescription>Only verified domains are shown. Select one to make it available for this team&apos;s inboxes.</DialogDescription>
@@ -888,8 +888,8 @@ function DomainAssignmentsTab({ orgId, teamId, isAdmin }: { orgId: string; teamI
                 <TableRow key={a.id} className="hover:bg-muted/30">
                   <TableCell>
                     <Link href={`/domains/${a.domain_id}`} className="flex items-center gap-3 group">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100">
-                        <Globe className="h-4 w-4 text-emerald-600" />
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-success/10">
+                        <Globe className="h-4 w-4 text-success" />
                       </div>
                       <span className="font-medium font-mono text-sm group-hover:text-primary transition-colors">{a.domain_name || a.domain_id}</span>
                     </Link>
@@ -1097,7 +1097,7 @@ function UnassignDomainDialog({ orgId, teamId, assignment, onConfirm }: {
               <div className="flex items-center justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
             ) : activeInboxes > 0 ? (
               <>
-                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 flex items-start gap-2">
+                <div className="rounded-lg border border-warning/20 bg-warning/5 p-3 text-sm text-warning flex items-start gap-2">
                   <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
                   <span><strong>{activeInboxes}</strong> active inbox{activeInboxes !== 1 ? "es" : ""} will be permanently deleted.</span>
                 </div>
@@ -1117,7 +1117,7 @@ function UnassignDomainDialog({ orgId, teamId, assignment, onConfirm }: {
                 )}
               </>
             ) : activeInboxes === 0 ? (
-              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+              <div className="rounded-lg border border-success/20 bg-success/5 p-3 text-sm text-success">
                 No active inboxes on this assignment. Safe to unassign.
               </div>
             ) : null}

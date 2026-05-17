@@ -113,7 +113,7 @@ export default function RegisterPage() {
   const metCount = requirements.filter((r) => r.met).length;
   const total = requirements.length;
   const strengthPct = total > 0 ? (metCount / total) * 100 : 0;
-  const strengthColor = strengthPct <= 33 ? "bg-red-500" : strengthPct <= 66 ? "bg-amber-500" : "bg-emerald-500";
+  const strengthColor = strengthPct <= 33 ? "bg-destructive/50" : strengthPct <= 66 ? "bg-warning/50" : "bg-success/50";
   const strengthLabel = strengthPct <= 33 ? "Weak" : strengthPct <= 66 ? "Fair" : "Strong";
 
   const passwordsMismatch = confirmTouched && confirmPassword !== password;
@@ -207,10 +207,10 @@ export default function RegisterPage() {
                       onBlur={validateEmail}
                       autoComplete="email"
                       placeholder="you@example.com"
-                      className={`pl-9 ${emailError ? "border-red-500 focus-visible:ring-red-500" : ""}`}
+                      className={`pl-9 ${emailError ? "border-destructive focus-visible:ring-destructive" : ""}`}
                     />
                   </div>
-                  {emailError && <p className="text-xs text-red-500">{emailError}</p>}
+                  {emailError && <p className="text-xs text-destructive">{emailError}</p>}
                 </div>
 
                 {/* Password */}
@@ -229,8 +229,8 @@ export default function RegisterPage() {
                           <ul className="space-y-1">
                             {requirements.map((req) => (
                               <li key={req.label} className="flex items-center gap-2 text-xs">
-                                {req.met ? <Check className="h-3 w-3 text-emerald-500" /> : <X className="h-3 w-3 text-muted-foreground" />}
-                                <span className={req.met ? "text-emerald-600" : "text-muted-foreground"}>{req.label}</span>
+                                {req.met ? <Check className="h-3 w-3 text-success" /> : <X className="h-3 w-3 text-muted-foreground" />}
+                                <span className={req.met ? "text-success" : "text-muted-foreground"}>{req.label}</span>
                               </li>
                             ))}
                           </ul>
@@ -285,7 +285,7 @@ export default function RegisterPage() {
                       onBlur={() => setConfirmTouched(true)}
                       autoComplete="new-password"
                       placeholder="Confirm your password"
-                      className={`pl-9 pr-10 ${passwordsMismatch ? "border-red-500 focus-visible:ring-red-500" : ""}`}
+                      className={`pl-9 pr-10 ${passwordsMismatch ? "border-destructive focus-visible:ring-destructive" : ""}`}
                     />
                     <button
                       type="button"
@@ -296,8 +296,8 @@ export default function RegisterPage() {
                       {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
-                  {passwordsMismatch && <p className="text-xs text-red-500">Passwords don&apos;t match</p>}
-                  {passwordsMatch && <p className="text-xs text-emerald-600">Passwords match</p>}
+                  {passwordsMismatch && <p className="text-xs text-destructive">Passwords don&apos;t match</p>}
+                  {passwordsMatch && <p className="text-xs text-success">Passwords match</p>}
                 </div>
 
                 {/* Terms checkbox */}
