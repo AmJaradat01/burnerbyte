@@ -16,6 +16,7 @@ import (
 	"gitlab.com/burnerbyte/burnerbyte/internal/smtp"
 	"gitlab.com/burnerbyte/burnerbyte/internal/storage"
 	"gitlab.com/burnerbyte/burnerbyte/internal/webhook"
+	"gitlab.com/burnerbyte/burnerbyte/internal/audit"
 )
 
 func main() {
@@ -81,7 +82,10 @@ func main() {
 	publisher := realtime.NewPublisher(rdb)
 	router := smtp.NewRouter(domainRepo, inboxRepoRedis, inboxRepoPG)
 	dispatcher := webhook.NewDispatcher(webhookRepo, cfg.Defaults.WebhookTimeout, cfg.Defaults.WebhookMaxRetries)
-	handler := smtp.NewHandler(inboxRepoPG, inboxRepoRedis, emailRepo, assignmentRepo, dispatcher, nil, nil, attachmentSvc, settingsResolver, publisher)
+	auditRepo := postgres.NewAuditRepo(pool)
+	auditSvc := service.NewAuditService(auditRepo)
+	auditRec := audit.NewRecorder(auditSvc)
+	handler := smtp.NewHandler(inboxRepoPG, inboxRepoRedis, emailRepo, assignmentRepo, dispatcher, nil, nil, attachmentSvc, settingsResolver, publisher, auditRec)
 	server := smtp.NewServer(cfg.SMTP, handler)
 	listener := smtp.NewListener(server, router)
 

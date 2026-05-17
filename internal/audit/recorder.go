@@ -121,7 +121,9 @@ var CategoryMap = map[string]string{
 	"inbox.created":  "inbox",
 	"inbox.deleted":  "inbox",
 	"inbox.extended": "inbox",
+	"inbox.expired":  "inbox",
 	// email
+	"email.received": "email",
 	"email.deleted":  "email",
 	"email.all_read": "email",
 	// webhook
@@ -199,6 +201,25 @@ func (rec *Recorder) Record(ctx context.Context, orgID uuid.UUID, actorID *uuid.
 		OrgID: orgID, ActorID: actorID, Action: action,
 		ResourceType: resourceType, ResourceID: resourceID,
 		Metadata: metadata, IPAddress: ipPtr,
+	}
+	if err := rec.svc.Record(ctx, entry); err != nil {
+		slog.Error("audit record failed", "error", err, "action", action)
+	}
+}
+
+// RecordWithName records an audit entry with resource_name, severity, and category set.
+// Use for system-initiated events (SMTP, workers) that don't have an HTTP request.
+func (rec *Recorder) RecordWithName(ctx context.Context, orgID uuid.UUID, actorID *uuid.UUID, action, resourceType string, resourceID uuid.UUID, resourceName string, metadata any) {
+	entry := &domain.AuditEntry{
+		OrgID:        orgID,
+		ActorID:      actorID,
+		Action:       action,
+		ResourceType: resourceType,
+		ResourceID:   resourceID,
+		ResourceName: resourceName,
+		Metadata:     metadata,
+		Severity:     GetSeverity(action),
+		Category:     GetCategory(action),
 	}
 	if err := rec.svc.Record(ctx, entry); err != nil {
 		slog.Error("audit record failed", "error", err, "action", action)
