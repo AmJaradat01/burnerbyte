@@ -43,29 +43,29 @@ interface SSOStatus {
 
 function FormSkeleton() {
   return (
-    <Card className="w-full max-w-md shadow-xl">
+    <Card className="w-full max-w-sm shadow">
       <CardHeader className="text-center space-y-2">
         <Skeleton className="h-7 w-48 mx-auto" />
         <Skeleton className="h-4 w-36 mx-auto" />
       </CardHeader>
       <CardContent className="space-y-4 pb-6">
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-11 w-full" />
+          <Skeleton className="h-9 w-full" />
         </div>
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <Skeleton className="h-4 w-16" />
-          <Skeleton className="h-11 w-full" />
+          <Skeleton className="h-9 w-full" />
         </div>
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <Skeleton className="h-4 w-20" />
-          <Skeleton className="h-11 w-full" />
+          <Skeleton className="h-9 w-full" />
         </div>
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <Skeleton className="h-4 w-32" />
-          <Skeleton className="h-11 w-full" />
+          <Skeleton className="h-9 w-full" />
         </div>
-        <Skeleton className="h-11 w-full" />
+        <Skeleton className="h-9 w-full" />
       </CardContent>
     </Card>
   );
@@ -147,17 +147,18 @@ export default function RegisterPage() {
   if (sso && !sso.allow_registration) return null;
 
   return (
-    <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center bg-gradient-to-b from-muted/50 to-background p-6">
-      <div className="w-full max-w-md space-y-6">
+    <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center p-6">
+      <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
           <Logo size="lg" />
+          <p className="text-sm text-muted-foreground">Self-hosted temporary email</p>
         </div>
         {ssoLoading ? (
           <FormSkeleton />
         ) : (
-          <Card className="w-full shadow-xl">
+          <Card className="w-full shadow">
             <CardHeader className="text-center">
-              <CardTitle className="text-2xl">Create your account</CardTitle>
+              <CardTitle className="text-xl">Create your account</CardTitle>
               <CardDescription>Get started with BurnerByte</CardDescription>
             </CardHeader>
             <form onSubmit={handleSubmit}>
@@ -167,7 +168,7 @@ export default function RegisterPage() {
                   <>
                     <div className="space-y-2">
                       {sso.providers.filter(p => p.enabled).map((p) => (
-                        <Button key={p.name} variant="outline" className="w-full h-11 gap-2" asChild>
+                        <Button key={p.name} variant="outline" className="w-full gap-2" asChild>
                           <a href={`/api/v1/auth/sso/${p.name}`}>
                             <ProviderIcon providerType={p.provider_type} />
                             Continue with {p.label}
@@ -185,7 +186,7 @@ export default function RegisterPage() {
                 )}
 
                 {/* Display name */}
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <Label htmlFor="name">Display name</Label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -194,7 +195,7 @@ export default function RegisterPage() {
                 </div>
 
                 {/* Email */}
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <Label htmlFor="email">Email</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -214,7 +215,7 @@ export default function RegisterPage() {
                 </div>
 
                 {/* Password */}
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <div className="flex items-center gap-1">
                     <Label htmlFor="password">Password</Label>
                     {policy && (
@@ -272,7 +273,7 @@ export default function RegisterPage() {
                 </div>
 
                 {/* Confirm Password */}
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <Label htmlFor="confirmPassword">Confirm password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -316,12 +317,12 @@ export default function RegisterPage() {
                   </span>
                 </label>
 
-                <Button type="submit" className="w-full h-11" disabled={loading || !agreed || passwordsMismatch}>
+                <Button type="submit" className="w-full" disabled={loading || !agreed || passwordsMismatch}>
                   {loading ? "Creating account…" : "Create account"}
                 </Button>
               </CardContent>
               <CardFooter className="justify-center pt-0">
-                <Link href="/login" className="text-sm text-muted-foreground hover:underline">Already have an account? Sign in</Link>
+                <Link href="/login" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Already have an account? Sign in</Link>
               </CardFooter>
             </form>
           </Card>

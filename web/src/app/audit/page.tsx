@@ -210,7 +210,7 @@ export default function AuditPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card className="card-header-accent">
+      <Card>
         <CardContent className="pt-5 pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -218,7 +218,7 @@ export default function AuditPage() {
                 <Shield className="h-4 w-4 text-warning" />
               </div>
               <div>
-                <h1 className="text-base font-semibold">Audit Log</h1>
+                <h1 className="text-base font-semibold tracking-tight">Audit Log</h1>
                 <p className="text-sm text-muted-foreground">{data?.total ?? 0} entries{hasFilters ? " (filtered)" : ""} · Track all actions across your organization.</p>
               </div>
             </div>
@@ -231,7 +231,7 @@ export default function AuditPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:-translate-y-px">
+        <Card>
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-muted-foreground">Total Entries</span>
@@ -242,7 +242,7 @@ export default function AuditPage() {
             <p className="text-2xl font-bold tabular-nums">{data?.total ?? 0}</p>
           </CardContent>
         </Card>
-        <Card className="transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:-translate-y-px">
+        <Card>
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-muted-foreground">Actions (page)</span>
@@ -253,7 +253,7 @@ export default function AuditPage() {
             <p className="text-2xl font-bold tabular-nums">{new Set(data?.data?.map(e => e.action)).size ?? 0}</p>
           </CardContent>
         </Card>
-        <Card className="transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:-translate-y-px">
+        <Card>
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-muted-foreground">Actors (page)</span>
@@ -386,7 +386,7 @@ function AuditRow({ entry: e, isFirst, isLast }: { entry: AuditEntry; isFirst: b
         {isFirst && <div className="flex-1" />}
 
         {/* Timeline dot */}
-        <div className={`w-3 h-3 rounded-full ${actionColor.dot} ring-4 ring-background shrink-0 transition-transform group-hover:scale-110`} />
+        <div className={`w-3 h-3 rounded-full ${actionColor.dot} ring-4 ring-background shrink-0`} />
 
         {/* Line below dot */}
         {!isLast && (
@@ -398,7 +398,7 @@ function AuditRow({ entry: e, isFirst, isLast }: { entry: AuditEntry; isFirst: b
       {/* Content */}
       <div className={`flex-1 mb-3 ${isFirst ? "" : ""}`}>
         <Card
-          className="cursor-pointer hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] transition-all duration-200"
+          className="cursor-pointer transition-colors"
           onClick={() => setExpanded(!expanded)}
         >
           <CardContent className="py-3 px-4">

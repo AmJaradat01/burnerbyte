@@ -113,7 +113,7 @@ export default function WebhooksPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card className="card-header-accent">
+      <Card>
         <CardContent className="pt-5 pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -121,7 +121,7 @@ export default function WebhooksPage() {
                 <Globe className="h-4 w-4 text-warning" />
               </div>
               <div>
-                <h1 className="text-base font-semibold">Webhooks</h1>
+                <h1 className="text-base font-semibold tracking-tight">Webhooks</h1>
                 <p className="text-sm text-muted-foreground">
                   {data?.data?.length ? `${data.total ?? data.data.length} webhook${(data.total ?? data.data.length) !== 1 ? "s" : ""} · ${data.data.filter(w => w.active).length} active · Receive HTTP callbacks when events occur.` : "Receive HTTP callbacks when events occur in your team."}
                 </p>
@@ -139,7 +139,7 @@ export default function WebhooksPage() {
             { label: "Active", value: data.data.filter(w => w.active).length, icon: CheckCircle2, bg: "bg-success/10 text-success" },
             { label: "Failing", value: data.data.filter(w => w.failure_count > 0).length, icon: AlertCircle, bg: "bg-destructive/10 text-destructive" },
           ].map((s) => (
-            <Card key={s.label} className="transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:-translate-y-px">
+            <Card key={s.label}>
               <CardContent className="pt-5 pb-4">
                 <div className="flex justify-between mb-3">
                   <span className="text-sm font-medium text-muted-foreground">{s.label}</span>
@@ -201,7 +201,7 @@ function WebhookCard({ webhook: w, expanded, onToggleExpand, onToggleActive, onD
         : "bg-muted text-muted-foreground";
 
   return (
-    <Card className={`hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] transition-all ${!w.active ? "border-dashed opacity-70" : ""}`}>
+    <Card className={`${!w.active ? "border-dashed opacity-70" : ""}`}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3 min-w-0 flex-1 space-y-1">
@@ -326,7 +326,7 @@ function EventCard({ info, selected, onToggle }: { info: typeof EVENT_INFO[numbe
     <button
       type="button"
       onClick={onToggle}
-      className={`w-full text-left rounded-lg border p-3 transition-all ${
+      className={`w-full text-left rounded-lg border p-3 transition-colors ${
         selected
           ? "border-primary bg-primary/5 ring-1 ring-primary/20"
           : "border-border hover:border-muted-foreground/30 hover:bg-muted/50"

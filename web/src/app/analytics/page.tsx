@@ -53,7 +53,7 @@ export default function AnalyticsPage() {
 
   return (
     <div className="space-y-6">
-      <Card className="card-header-accent">
+      <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -61,7 +61,7 @@ export default function AnalyticsPage() {
                 <Mail className="h-4 w-4 text-destructive" />
               </div>
               <div>
-                <CardTitle className="text-base">Analytics</CardTitle>
+                <CardTitle className="text-base tracking-tight">Analytics</CardTitle>
                 <CardDescription>Usage metrics and trends for your organization.</CardDescription>
               </div>
             </div>
@@ -144,7 +144,7 @@ function OrgAnalytics({ orgId }: { orgId: string }) {
           <div className="h-6 w-6 rounded-md bg-primary/10 flex items-center justify-center">
             <Mail className="h-3.5 w-3.5 text-primary" />
           </div>
-          <h2 className="text-base font-semibold">Overview</h2>
+          <h2 className="text-base font-semibold tracking-tight">Overview</h2>
         </div>
         <DateRangeSelector value={days} onChange={setDays} />
       </div>
@@ -312,7 +312,7 @@ function TeamAnalytics({ orgId, teamId, teamName }: { orgId: string; teamId: str
         </div>
       )}
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold">Emails per Day</h2>
+        <h2 className="text-base font-semibold tracking-tight">Emails per Day</h2>
         <DateRangeSelector value={days} onChange={setDays} />
       </div>
       {tsError && <ErrorState message="Failed to load email trends" />}
@@ -335,7 +335,7 @@ function StatCard({ icon: Icon, label, value, subtitle, color = "blue", link }: 
   const display = typeof value === "number" ? (value ?? 0).toLocaleString() : value;
   const c = STAT_COLORS[color];
   const inner = (
-    <Card className="transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:-translate-y-px">
+    <Card>
       <CardContent className="pt-5 pb-4">
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-medium text-muted-foreground">{label}</span>

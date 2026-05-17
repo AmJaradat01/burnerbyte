@@ -40,31 +40,32 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center bg-gradient-to-b from-muted/50 to-background p-6">
-      <div className="w-full max-w-md space-y-6">
+    <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center p-6">
+      <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
           <Logo size="lg" />
+          <p className="text-sm text-muted-foreground">Self-hosted temporary email</p>
         </div>
         {sent ? (
-          <Card className="w-full shadow-xl">
+          <Card className="w-full shadow">
             <CardHeader className="text-center">
               <CardTitle>Check your email</CardTitle>
               <CardDescription>If an account exists for {email}, we sent a password reset link.</CardDescription>
             </CardHeader>
             <CardFooter className="flex gap-4">
               <Button variant="outline" onClick={() => setSent(false)}>Try again</Button>
-              <Link href="/login" className="text-sm text-muted-foreground hover:underline">Back to sign in</Link>
+              <Link href="/login" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Back to sign in</Link>
             </CardFooter>
           </Card>
         ) : (
-          <Card className="w-full shadow-xl">
+          <Card className="w-full shadow">
             <CardHeader className="text-center">
-              <CardTitle className="text-2xl">Reset password</CardTitle>
+              <CardTitle className="text-xl">Reset password</CardTitle>
               <CardDescription>Enter your email to receive a reset link</CardDescription>
             </CardHeader>
             <form onSubmit={handleSubmit}>
               <CardContent className="space-y-4 pb-6">
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <Label htmlFor="email">Email</Label>
                   <Input
                     id="email"
@@ -78,12 +79,12 @@ export default function ForgotPasswordPage() {
                   />
                   {emailError && <p className="text-xs text-destructive">{emailError}</p>}
                 </div>
-                <Button type="submit" className="w-full h-11" disabled={loading}>
+                <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? "Sending…" : "Send reset link"}
                 </Button>
               </CardContent>
               <CardFooter className="justify-center pt-0">
-                <Link href="/login" className="text-sm text-muted-foreground hover:underline">Back to sign in</Link>
+                <Link href="/login" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Back to sign in</Link>
               </CardFooter>
             </form>
           </Card>
