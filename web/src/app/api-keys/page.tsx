@@ -184,7 +184,7 @@ export default function ApiKeysPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card className="card-header-accent">
+      <Card>
         <CardContent className="pt-5 pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -192,7 +192,7 @@ export default function ApiKeysPage() {
                 <Key className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <h1 className="text-base font-semibold">API Keys</h1>
+                <h1 className="text-base font-semibold tracking-tight">API Keys</h1>
                 <p className="text-sm text-muted-foreground">
                   {data?.data?.length
                     ? `${data.total ?? data.data.length} key${(data.total ?? data.data.length) !== 1 ? "s" : ""} · Manage programmatic access to your team\u2019s resources.`
@@ -236,7 +236,7 @@ export default function ApiKeysPage() {
               bg: "bg-destructive/10 text-destructive",
             },
           ].map((s) => (
-            <Card key={s.label} className="transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:-translate-y-px">
+            <Card key={s.label}>
               <CardContent className="pt-5 pb-4">
                 <div className="flex justify-between mb-3">
                   <span className="text-sm font-medium text-muted-foreground">{s.label}</span>
@@ -330,7 +330,7 @@ function ApiKeyCard({
 
   return (
     <Card
-      className={`hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] transition-all cursor-pointer ${dimmed ? "border-dashed opacity-60" : ""}`}
+      className={`cursor-pointer ${dimmed ? "border-dashed opacity-60" : ""}`}
       onClick={onClick}
     >
       <CardHeader className="pb-3">

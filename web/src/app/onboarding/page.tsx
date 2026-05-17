@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { Logo } from "@/components/logo";
 import {
   ArrowLeft, ArrowRight, Building2, Check, CheckCircle2, Copy, Globe,
-  Inbox, Mail, PartyPopper, RefreshCw, SkipForward, Users,
+  Inbox, Mail, RefreshCw, SkipForward, Users,
 } from "lucide-react";
 import type { Organization, Team } from "@/types";
 
@@ -127,7 +127,7 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4 bg-gradient-to-b from-muted/50 to-background">
+    <div className="flex min-h-screen items-center justify-center p-4 bg-background">
       <div className="w-full max-w-lg space-y-6">
         {/* Logo */}
         <div className="text-center">
@@ -142,13 +142,13 @@ export default function OnboardingPage() {
             const active = i === step;
             return (
               <div key={s.label} className="flex items-center">
-                <div className={`flex items-center justify-center h-8 w-8 rounded-full text-xs font-semibold transition-all ${
+                <div className={`flex items-center justify-center h-8 w-8 rounded-full text-xs font-semibold ${
                   done ? "bg-primary text-primary-foreground" : active ? "bg-primary/20 text-primary ring-2 ring-primary/30" : "bg-muted text-muted-foreground"
                 }`}>
                   {done ? <Check className="h-4 w-4" /> : <StepIcon className="h-3.5 w-3.5" />}
                 </div>
                 {i < STEPS.length - 1 && (
-                  <div className={`w-8 h-0.5 mx-1 rounded-full transition-colors ${i < step ? "bg-primary" : "bg-muted"}`} />
+                  <div className={`w-8 h-0.5 mx-1 rounded-full ${i < step ? "bg-primary" : "bg-muted"}`} />
                 )}
               </div>
             );
@@ -156,9 +156,9 @@ export default function OnboardingPage() {
         </div>
 
         {/* Card */}
-        <Card className="shadow-lg">
+        <Card>
           <CardHeader className="text-center pb-4">
-            <CardTitle className="text-xl">{STEPS[step].label}</CardTitle>
+            <CardTitle className="text-xl tracking-tight">{STEPS[step].label}</CardTitle>
             <CardDescription>
               {step === 0 && "Create your organization to get started"}
               {step === 1 && "Add a domain to receive temporary emails"}
@@ -173,7 +173,7 @@ export default function OnboardingPage() {
             {step === 0 && (
               user?.is_system_admin ? (
                 <>
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     <Label>Organization name</Label>
                     <Input value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="My Company" autoFocus onKeyDown={(e) => e.key === "Enter" && orgName && createOrg()} />
                   </div>
@@ -192,7 +192,7 @@ export default function OnboardingPage() {
                     <Mail className="h-8 w-8 text-info" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold">Waiting for an invitation</h3>
+                    <h3 className="text-lg font-semibold tracking-tight">Waiting for an invitation</h3>
                     <p className="text-sm text-muted-foreground mt-1 max-w-sm mx-auto">
                       Ask your organization admin to send you an invite. Once accepted, you'll be redirected automatically.
                     </p>
@@ -207,7 +207,7 @@ export default function OnboardingPage() {
             {/* Step 1: Domain */}
             {step === 1 && (
               <>
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <Label>Domain name</Label>
                   <Input value={domainInput} onChange={(e) => setDomainInput(e.target.value)} placeholder="mail.example.com" autoFocus onKeyDown={(e) => e.key === "Enter" && domainInput && addDomain()} />
                   <p className="text-xs text-muted-foreground">This domain will receive inbound emails. You'll configure DNS records after setup.</p>
@@ -231,13 +231,13 @@ export default function OnboardingPage() {
                   <div className="rounded-lg border bg-warning/5 p-3 space-y-2">
                     <p className="text-sm font-medium text-warning">DNS Records for {domainName}</p>
                     <p className="text-xs text-warning">Add this TXT record to verify ownership:</p>
-                    <button onClick={copyRecord} className="w-full rounded-md bg-white border px-3 py-2 text-left font-mono text-xs break-all hover:bg-muted/50 transition-colors group flex items-center gap-2">
+                    <button onClick={copyRecord} className="w-full rounded-md bg-white border px-3 py-2 text-left font-mono text-xs break-all hover:bg-muted/50 group flex items-center gap-2">
                       <span className="flex-1">{verificationRecord}</span>
                       {copied ? <Check className="h-3.5 w-3.5 text-success shrink-0" /> : <Copy className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
                     </button>
                   </div>
                 )}
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <Label>Team name</Label>
                   <Input value={teamName} onChange={(e) => setTeamName(e.target.value)} placeholder="Engineering" autoFocus onKeyDown={(e) => e.key === "Enter" && teamName && createTeam()} />
                 </div>
@@ -286,10 +286,10 @@ export default function OnboardingPage() {
             {step === 4 && (
               <div className="text-center py-6 space-y-4">
                 <div className="h-16 w-16 rounded-2xl bg-success/10 flex items-center justify-center mx-auto">
-                  <PartyPopper className="h-8 w-8 text-success" />
+                  <CheckCircle2 className="h-8 w-8 text-success" />
                 </div>
                 <div>
-                  <p className="text-lg font-semibold">You're all set!</p>
+                  <p className="text-lg font-semibold tracking-tight">You're all set!</p>
                   <p className="text-sm text-muted-foreground mt-1">Your workspace is ready to go.</p>
                 </div>
                 {inboxAddress && (

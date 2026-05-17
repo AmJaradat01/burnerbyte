@@ -122,7 +122,7 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
       <div className="grid gap-6 md:grid-cols-2">
         <div className="space-y-6">
           {/* Org identity */}
-          <Card className="card-header-accent">
+          <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center">
@@ -168,7 +168,7 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
 
         <div className="space-y-6">
           {/* Policies */}
-          <Card className="card-header-accent">
+          <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center">
@@ -238,7 +238,7 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
         <div className="sticky bottom-4 flex items-center justify-end gap-3">
           {autoSaveStatus === "saving" && <span className="text-xs text-muted-foreground animate-pulse">Saving...</span>}
           {autoSaveStatus === "saved" && <span className="text-xs text-success">✓ Saved</span>}
-          <Button onClick={save} disabled={saving} size="lg" className="shadow-lg gap-2">
+          <Button onClick={save} disabled={saving} size="lg" className="gap-2">
             <Save className="h-4 w-4" />
             {saving ? "Saving…" : "Save Settings"}
           </Button>
@@ -347,15 +347,15 @@ function OverviewTab() {
           );
           return s.href ? (
             <Link key={s.label} href={s.href} className="block">
-              <Card className="transition-all hover:border-primary/40 hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:-translate-y-px">{inner}</Card>
+              <Card className="hover:border-primary/40 transition-colors">{inner}</Card>
             </Link>
           ) : (
-            <Card key={s.label} className="transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:-translate-y-px">{inner}</Card>
+            <Card key={s.label}>{inner}</Card>
           );
         })}
       </div>
       <PlatformSettingsCard />
-      <Card className="card-header-accent">
+      <Card>
         <CardContent className="pt-5 pb-4">
           <div className="flex items-center gap-2 mb-3">
             <div className="h-6 w-6 rounded-md bg-info/10 flex items-center justify-center">
@@ -434,7 +434,7 @@ function PlatformSettingsCard() {
   if (isLoading) return <Card><CardContent className="pt-6"><Skeleton className="h-40 w-full" /></CardContent></Card>;
 
   return (
-    <Card className="card-header-accent">
+    <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <div className="h-7 w-7 rounded-md bg-muted flex items-center justify-center">
@@ -716,7 +716,7 @@ function HealthSection() {
             const ok = svc.status === "ok";
             const Icon = SERVICE_ICONS[name] ?? Database;
             return (
-              <Card key={name} className={`transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:-translate-y-px ${ok ? "" : "border-destructive/50"}`}>
+              <Card key={name} className={`${ok ? "" : "border-destructive/50"}`}>
                 <CardContent className="pt-5">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
@@ -926,7 +926,7 @@ function SSOProvidersTab() {
   return (
     <div className="space-y-4">
       {/* Styled header card */}
-      <Card className="card-header-accent">
+      <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -991,7 +991,7 @@ function SSOProvidersTab() {
 
       {/* Edit/Create dialog - inline card */}
       {editing && (
-        <Card className="card-header-accent border-primary/50">
+        <Card className="border-primary/50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center">
@@ -1244,7 +1244,7 @@ function ProviderCard({
     : [];
 
   return (
-    <Card className="transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
+    <Card>
       <CardContent className="pt-5 pb-4">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">

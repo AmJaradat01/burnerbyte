@@ -55,14 +55,14 @@ export default function ProfilePage() {
   return (
     <div className="mx-auto max-w-5xl space-y-8">
       {/* Header */}
-      <Card className="card-header-accent">
+      <Card>
         <CardContent className="pt-5 pb-4">
           <div className="flex items-center gap-3">
             <div className="h-7 w-7 rounded-md bg-info/10 flex items-center justify-center">
               <Shield className="h-4 w-4 text-info" />
             </div>
             <div>
-              <h1 className="text-base font-semibold">Profile</h1>
+              <h1 className="text-base font-semibold tracking-tight">Profile</h1>
               <p className="text-sm text-muted-foreground">Manage your account settings and preferences.</p>
             </div>
           </div>
@@ -73,7 +73,7 @@ export default function ProfilePage() {
       <Card>
         <CardContent className="pt-6 pb-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
-            <Avatar className="h-20 w-20 text-xl ring-4 ring-background shadow-lg">
+            <Avatar className="h-20 w-20 text-xl ring-4 ring-background">
               <AvatarImage src={user.avatar_url} alt={user.display_name} />
               <AvatarFallback className="bg-gradient-to-br from-info to-info text-white font-bold">{initials}</AvatarFallback>
             </Avatar>

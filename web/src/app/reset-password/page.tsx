@@ -46,8 +46,8 @@ function ResetPasswordForm() {
 
   if (!token) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Card className="w-full max-w-md">
+      <div className="flex min-h-screen items-center justify-center p-6">
+        <Card className="w-full max-w-sm shadow">
           <CardContent className="pt-6">
             <p className="text-center text-muted-foreground">Invalid or missing reset token.</p>
           </CardContent>
@@ -57,15 +57,15 @@ function ResetPasswordForm() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <Card className="w-full max-w-md">
+    <div className="flex min-h-screen items-center justify-center p-6">
+      <Card className="w-full max-w-sm shadow">
         <CardHeader className="text-center">
-          <CardTitle>Reset Password</CardTitle>
+          <CardTitle className="text-xl">Reset Password</CardTitle>
           <CardDescription>Enter your new password</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={submit} className="space-y-4">
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label>New Password</Label>
               <div className="relative">
                 <Input
@@ -87,7 +87,7 @@ function ResetPasswordForm() {
                 </button>
               </div>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label>Confirm Password</Label>
               <div className="relative">
                 <Input
