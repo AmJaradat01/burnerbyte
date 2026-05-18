@@ -152,7 +152,7 @@ function OrgAnalytics({ orgId }: { orgId: string }) {
                         <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(v) => v.slice(5)} />
                         <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
                         <Tooltip
-                          contentStyle={{ backgroundColor: 'hsl(var(--popover))', border: '1px solid hsl(var(--border))', color: 'hsl(var(--popover-foreground))' }}
+                          contentStyle={{ backgroundColor: 'var(--popover)', border: '1px solid var(--border)', color: 'var(--popover-foreground)' }}
                           labelFormatter={(v) => `Date: ${v}`}
                           formatter={(v) => [`${Number(v).toLocaleString()}`, "Inboxes"]}
                         />
@@ -184,7 +184,7 @@ function OrgAnalytics({ orgId }: { orgId: string }) {
                         <XAxis dataKey="hour" tick={{ fontSize: 11 }} tickFormatter={formatHour} />
                         <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
                         <Tooltip
-                          contentStyle={{ backgroundColor: 'hsl(var(--popover))', border: '1px solid hsl(var(--border))', color: 'hsl(var(--popover-foreground))' }}
+                          contentStyle={{ backgroundColor: 'var(--popover)', border: '1px solid var(--border)', color: 'var(--popover-foreground)' }}
                           labelFormatter={(v) => formatHour(Number(v))}
                           formatter={(v) => [`${Number(v).toLocaleString()}`, "Emails"]}
                         />
@@ -214,7 +214,7 @@ function OrgAnalytics({ orgId }: { orgId: string }) {
                             <span className="text-muted-foreground ml-2">{d.count.toLocaleString()} ({pct.toFixed(1)}%)</span>
                           </div>
                           <div className="h-2 rounded-full bg-muted overflow-hidden">
-                            <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+                            <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: "var(--chart-4)" }} />
                           </div>
                         </div>
                       );
@@ -247,7 +247,7 @@ function OrgAnalytics({ orgId }: { orgId: string }) {
                               </span>
                             </div>
                             <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                              <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${barPct}%` }} />
+                              <div className="h-full rounded-full transition-all" style={{ width: `${barPct}%`, backgroundColor: "var(--chart-5)" }} />
                             </div>
                           </div>
                         </div>
@@ -331,12 +331,12 @@ function EmailChart({ data, average }: { data: TimeSeriesPoint[]; average?: numb
             <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(v) => v.slice(5)} />
             <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
             <Tooltip
-              contentStyle={{ backgroundColor: 'hsl(var(--popover))', border: '1px solid hsl(var(--border))', color: 'hsl(var(--popover-foreground))' }}
+              contentStyle={{ backgroundColor: 'var(--popover)', border: '1px solid var(--border)', color: 'var(--popover-foreground)' }}
               labelFormatter={(v) => `Date: ${v}`}
               formatter={(v) => [`${Number(v).toLocaleString()} (Avg: ${avg})`, "Emails"]}
             />
-            <ReferenceLine y={avg} stroke="hsl(var(--muted-foreground))" strokeDasharray="6 4" label={{ value: `Avg: ${avg}`, position: "insideTopRight", fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-            <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+            <ReferenceLine y={avg} stroke="var(--muted-foreground)" strokeDasharray="6 4" label={{ value: `Avg: ${avg}`, position: "insideTopRight", fontSize: 11, fill: "var(--muted-foreground)" }} />
+            <Bar dataKey="count" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

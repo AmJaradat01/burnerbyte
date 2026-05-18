@@ -236,10 +236,15 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
 
       {dirty && (
         <div className="sticky bottom-4 flex items-center justify-end gap-3">
-          {autoSaveStatus === "saving" && <span className="text-xs text-muted-foreground">Saving...</span>}
-          {autoSaveStatus === "saved" && <span className="text-xs text-success">✓ Saved</span>}
+          {autoSaveStatus === "saving" && <span className="text-xs text-muted-foreground" role="status">Saving…</span>}
+          {autoSaveStatus === "saved" && (
+            <span className="flex items-center gap-1 text-xs text-success" role="status">
+              <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
+              Saved
+            </span>
+          )}
           <Button onClick={save} disabled={saving} size="lg" className="gap-2">
-            <Save className="h-4 w-4" />
+            <Save className="h-4 w-4" aria-hidden="true" />
             {saving ? "Saving…" : "Save Settings"}
           </Button>
         </div>
@@ -926,7 +931,7 @@ function SSOProvidersTab() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-7 w-7 rounded-md bg-success/50/10 flex items-center justify-center">
+              <div className="h-7 w-7 rounded-md bg-success/10 flex items-center justify-center" aria-hidden="true">
                 <Shield className="h-4 w-4 text-success" />
               </div>
               <div>

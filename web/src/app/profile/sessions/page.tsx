@@ -73,7 +73,7 @@ export default function SessionsPage() {
         <CardContent className="pt-5 pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-7 w-7 rounded-md bg-info/50/10 flex items-center justify-center">
+              <div className="h-7 w-7 rounded-md bg-info/10 flex items-center justify-center" aria-hidden="true">
                 <Monitor className="h-4 w-4 text-info" />
               </div>
               <div>
