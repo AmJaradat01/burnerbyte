@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -119,11 +120,20 @@ func main() {
 	// Services
 	s3Client, err := storage.NewS3(ctx, cfg.MinIO)
 	if err != nil {
-		slog.Warn("minio unavailable, attachments disabled", "error", err)
+		slog.Warn("minio unavailable, using local filesystem for attachments", "error", err)
 	}
 	var attachmentSvc *service.AttachmentService
 	if s3Client != nil {
 		attachmentSvc = service.NewAttachmentService(attachmentRepo, emailRepo, inboxRepo, s3Client, cfg.MinIO, cfg.Defaults.MaxAttachmentSizeMB, cfg.Defaults.PresignedURLTTL)
+	} else {
+		// Fallback to local filesystem storage for development/testing
+		localFS, fsErr := storage.NewLocalFS("./data/attachments", cfg.Server.FrontendURL+"/api/v1/files")
+		if fsErr != nil {
+			slog.Error("failed to create local storage", "error", fsErr)
+		} else {
+			attachmentSvc = service.NewAttachmentService(attachmentRepo, emailRepo, inboxRepo, localFS, cfg.MinIO, cfg.Defaults.MaxAttachmentSizeMB, cfg.Defaults.PresignedURLTTL)
+			slog.Info("attachments enabled via local filesystem", "path", "./data/attachments")
+		}
 	}
 	sessionRevCache := auth.NewSessionRevocationCache(rdb, cfg.JWT.AccessTTL)
 	authSvc := service.NewAuthService(pool, userRepo, sessionRepo, resetRepo, postgres.NewEmailVerificationRepo(pool), orgRepo, ssoIdentityRepo, ssoProviderRepo, teamRepo, ssoDomainMappingRepo, tokenMgr, lockout, ml, cfg, sessionRevCache, auth.NewPendingLoginStore(rdb, 5*time.Minute))
@@ -233,6 +243,23 @@ func main() {
 
 	// API v1
 	r.Route("/api/v1", func(r chi.Router) {
+		// File serving for local attachment storage (development/testing)
+		r.Get("/files", func(w http.ResponseWriter, r *http.Request) {
+			key := r.URL.Query().Get("key")
+			if key == "" {
+				http.Error(w, "missing key", http.StatusBadRequest)
+				return
+			}
+			data, err := os.ReadFile(filepath.Join("./data/attachments", filepath.Clean(key)))
+			if err != nil {
+				http.Error(w, "not found", http.StatusNotFound)
+				return
+			}
+			w.Header().Set("Content-Disposition", "attachment")
+			w.Header().Set("Content-Type", "application/octet-stream")
+			w.Write(data)
+		})
+
 		// Public routes (no auth)
 		setupHandler.Routes(r)
 		authHandler.PublicRoutes(r, rateLimiter)

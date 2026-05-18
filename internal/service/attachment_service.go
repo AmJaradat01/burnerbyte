@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"net/url"
 	"path/filepath"
 	"strings"
@@ -17,11 +18,19 @@ import (
 	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
 )
 
+// ObjectStorage is the interface for storing and retrieving attachment files.
+// Implemented by *minio.Client and *storage.LocalFS.
+type ObjectStorage interface {
+	PutObject(ctx context.Context, bucket, key string, reader io.Reader, size int64, opts minio.PutObjectOptions) (minio.UploadInfo, error)
+	RemoveObject(ctx context.Context, bucket, key string, opts minio.RemoveObjectOptions) error
+	PresignedGetObject(ctx context.Context, bucket, key string, expiry time.Duration, reqParams url.Values) (*url.URL, error)
+}
+
 type AttachmentService struct {
 	attachmentRepo *postgres.AttachmentRepo
 	emailRepo      *postgres.EmailRepo
 	inboxRepo      *postgres.InboxRepo
-	s3             *minio.Client
+	s3             ObjectStorage
 	bucket         string
 	maxSizeMB      int
 	presignedTTL   time.Duration
@@ -31,7 +40,7 @@ func NewAttachmentService(
 	attachmentRepo *postgres.AttachmentRepo,
 	emailRepo *postgres.EmailRepo,
 	inboxRepo *postgres.InboxRepo,
-	s3 *minio.Client,
+	s3 ObjectStorage,
 	cfg config.MinIOConfig,
 	maxSizeMB int,
 	presignedTTL time.Duration,
