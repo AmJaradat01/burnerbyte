@@ -57,8 +57,8 @@ func (r *NotificationRepo) ListByUser(ctx context.Context, userID uuid.UUID, lim
 	return out, nil
 }
 
-func (r *NotificationRepo) MarkRead(ctx context.Context, id uuid.UUID) error {
-	_, err := r.db.Exec(ctx, `UPDATE notifications SET is_read=TRUE WHERE id=$1`, id)
+func (r *NotificationRepo) MarkRead(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {
+	_, err := r.db.Exec(ctx, `UPDATE notifications SET is_read=TRUE WHERE id=$1 AND user_id=$2`, id, userID)
 	return err
 }
 
@@ -72,8 +72,8 @@ func (r *NotificationRepo) DeleteAll(ctx context.Context, userID uuid.UUID) erro
 	return err
 }
 
-func (r *NotificationRepo) Delete(ctx context.Context, id uuid.UUID) error {
-	_, err := r.db.Exec(ctx, `DELETE FROM notifications WHERE id=$1`, id)
+func (r *NotificationRepo) Delete(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {
+	_, err := r.db.Exec(ctx, `DELETE FROM notifications WHERE id=$1 AND user_id=$2`, id, userID)
 	return err
 }
 

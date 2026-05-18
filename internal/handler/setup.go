@@ -503,6 +503,23 @@ func (h *SetupHandler) TestSMTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Prevent SSRF - validate target is not a private IP
+	resolveHost := input.Host
+	if h2, _, err := net.SplitHostPort(resolveHost); err == nil {
+		resolveHost = h2
+	}
+	ips, err := net.LookupIP(resolveHost)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "cannot resolve host")
+		return
+	}
+	for _, ip := range ips {
+		if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() {
+			writeError(w, http.StatusBadRequest, "target host resolves to a private IP address")
+			return
+		}
+	}
+
 	start := time.Now()
 	addr := fmt.Sprintf("%s:%d", input.Host, input.Port)
 
@@ -580,6 +597,23 @@ func (h *SetupHandler) TestStorage(w http.ResponseWriter, r *http.Request) {
 	if input.Endpoint == "" {
 		writeError(w, http.StatusBadRequest, "endpoint is required")
 		return
+	}
+
+	// Prevent SSRF - validate target is not a private IP
+	resolveHost := input.Endpoint
+	if h2, _, err := net.SplitHostPort(resolveHost); err == nil {
+		resolveHost = h2
+	}
+	ips, err := net.LookupIP(resolveHost)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "cannot resolve host")
+		return
+	}
+	for _, ip := range ips {
+		if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() {
+			writeError(w, http.StatusBadRequest, "target host resolves to a private IP address")
+			return
+		}
 	}
 
 	start := time.Now()

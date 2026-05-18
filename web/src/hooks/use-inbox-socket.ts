@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useAuthStore } from "@/stores/auth-store";
-import { WS_BASE } from "@/lib/api";
+import { WS_BASE, getWsTicket } from "@/lib/api";
 
 const RECONNECT_DELAYS = [1000, 2000, 5000, 10000];
 
@@ -24,27 +24,36 @@ export function useInboxSocket(inboxId: string | undefined, onEmail: (email: unk
 
     let disposed = false;
 
-    function connect() {
+    async function connect() {
       if (disposed) return;
       setStatus("connecting");
-      const token = localStorage.getItem("access_token");
-      const ws = new WebSocket(`${WS_BASE}/inboxes/${inboxId}?token=${token}`);
-      wsRef.current = ws;
+      try {
+        const ticket = await getWsTicket();
+        if (disposed) return;
+        const ws = new WebSocket(`${WS_BASE}/inboxes/${inboxId}?ticket=${ticket}`);
+        wsRef.current = ws;
 
-      ws.onopen = () => {
-        retryRef.current = 0;
-        if (!disposed) setStatus("connected");
-      };
-      ws.onmessage = (e) => { try { onEmailRef.current(JSON.parse(e.data)); } catch {} };
-      ws.onclose = () => {
-        wsRef.current = null;
+        ws.onopen = () => {
+          retryRef.current = 0;
+          if (!disposed) setStatus("connected");
+        };
+        ws.onmessage = (e) => { try { onEmailRef.current(JSON.parse(e.data)); } catch {} };
+        ws.onclose = () => {
+          wsRef.current = null;
+          if (disposed) return;
+          setStatus("disconnected");
+          const delay = RECONNECT_DELAYS[Math.min(retryRef.current, RECONNECT_DELAYS.length - 1)];
+          retryRef.current++;
+          timerRef.current = setTimeout(connect, delay);
+        };
+        ws.onerror = () => { ws.close(); };
+      } catch {
         if (disposed) return;
         setStatus("disconnected");
         const delay = RECONNECT_DELAYS[Math.min(retryRef.current, RECONNECT_DELAYS.length - 1)];
         retryRef.current++;
         timerRef.current = setTimeout(connect, delay);
-      };
-      ws.onerror = () => { ws.close(); };
+      }
     }
 
     connect();

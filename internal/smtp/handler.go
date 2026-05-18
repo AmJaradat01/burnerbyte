@@ -4,10 +4,13 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/microcosm-cc/bluemonday"
 
 	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
 	"gitlab.com/burnerbyte/burnerbyte/internal/realtime"
@@ -15,18 +18,29 @@ import (
 	redisrepo "gitlab.com/burnerbyte/burnerbyte/internal/repository/redis"
 )
 
+var htmlSanitizer = bluemonday.UGCPolicy()
+
+// Blocked file extensions for security
+var blockedExtensions = map[string]bool{
+	".exe": true, ".bat": true, ".cmd": true, ".com": true,
+	".msi": true, ".scr": true, ".pif": true, ".vbs": true,
+	".js": true, ".wsh": true, ".wsf": true, ".ps1": true,
+	".hta": true, ".cpl": true, ".reg": true, ".inf": true,
+}
+
 // InboundEmail represents a parsed inbound email.
 type InboundEmail struct {
-	MessageID   string
-	From        string
-	To          string
-	Subject     string
-	BodyText    string
-	BodyHTML    string
-	Headers     map[string]string
-	SizeBytes   int64
-	Attachments []InboundAttachment
-	ReceivedAt  time.Time
+	MessageID    string
+	From         string
+	To           string
+	Subject      string
+	BodyText     string
+	BodyHTML     string
+	Headers      map[string]string
+	SizeBytes    int64
+	Attachments  []InboundAttachment
+	ReceivedAt   time.Time
+	ConnectingIP string
 }
 
 type InboundAttachment struct {
@@ -152,7 +166,21 @@ func (h *Handler) Process(ctx context.Context, email *InboundEmail) error {
 	// Basic spam scoring
 	spamScore := calcSpamScore(email)
 
-	// Store email
+	// Sanitize HTML body to prevent stored XSS
+	sanitizedHTML := email.BodyHTML
+	if sanitizedHTML != "" {
+		sanitizedHTML = htmlSanitizer.Sanitize(sanitizedHTML)
+	}
+
+	// Determine if attachments are expected (optimistic flag)
+	expectAttachments := len(email.Attachments) > 0 && h.attachmentStorer != nil && h.settingsChecker != nil
+	var attachmentsEnabled bool
+	if expectAttachments {
+		attachmentsEnabled, _ = h.settingsChecker.ResolveAttachmentsEnabled(ctx, inbox.DomainAssignmentID)
+		expectAttachments = attachmentsEnabled
+	}
+
+	// Store email with optimistic HasAttachments flag
 	e := &domain.Email{
 		ID:             uuid.New(),
 		InboxID:        inbox.ID,
@@ -161,8 +189,8 @@ func (h *Handler) Process(ctx context.Context, email *InboundEmail) error {
 		ToAddress:      email.To,
 		Subject:        &email.Subject,
 		BodyText:       &email.BodyText,
-		BodyHTML:        &email.BodyHTML,
-		HasAttachments: false,
+		BodyHTML:        &sanitizedHTML,
+		HasAttachments: expectAttachments,
 		RawHeaders:     email.Headers,
 		SizeBytes:      email.SizeBytes,
 		SpamScore:      spamScore,
@@ -174,30 +202,32 @@ func (h *Handler) Process(ctx context.Context, email *InboundEmail) error {
 		return fmt.Errorf("store email: %w", err)
 	}
 
-	// Store attachments if enabled by settings cascade
+	// Store attachments
 	var storedCount int
-	if len(email.Attachments) > 0 && h.attachmentStorer != nil && h.settingsChecker != nil {
-		enabled, _ := h.settingsChecker.ResolveAttachmentsEnabled(ctx, inbox.DomainAssignmentID)
-		if enabled {
-			maxSize := h.settingsChecker.ResolveMaxAttachmentSize(ctx, inbox.DomainAssignmentID)
-			for _, att := range email.Attachments {
-				if len(att.Data) > maxSize {
-					slog.Warn("attachment exceeds max size, skipping", "filename", att.Filename, "size", len(att.Data), "max", maxSize)
-					continue
-				}
-				if _, err := h.attachmentStorer.StoreAttachment(ctx, e.ID, att.Filename, att.ContentType, att.Data); err != nil {
-					slog.Error("failed to store attachment", "filename", att.Filename, "error", err)
-				} else {
-					storedCount++
-				}
+	if expectAttachments {
+		maxSize := h.settingsChecker.ResolveMaxAttachmentSize(ctx, inbox.DomainAssignmentID)
+		for _, att := range email.Attachments {
+			ext := strings.ToLower(filepath.Ext(att.Filename))
+			if blockedExtensions[ext] {
+				slog.Warn("blocked attachment type", "filename", att.Filename, "ext", ext)
+				continue
+			}
+			if len(att.Data) > maxSize {
+				slog.Warn("attachment exceeds max size, skipping", "filename", att.Filename, "size", len(att.Data), "max", maxSize)
+				continue
+			}
+			if _, err := h.attachmentStorer.StoreAttachment(ctx, e.ID, att.Filename, att.ContentType, att.Data); err != nil {
+				slog.Error("failed to store attachment", "filename", att.Filename, "error", err)
+			} else {
+				storedCount++
 			}
 		}
 	}
 
-	// Update HasAttachments only if attachments were actually stored
-	if storedCount > 0 {
-		if err := h.emailRepo.SetHasAttachments(ctx, e.ID, true); err != nil {
-			slog.Error("failed to update has_attachments flag", "error", err)
+	// Correct the flag if we expected attachments but none were stored
+	if expectAttachments && storedCount == 0 {
+		if err := h.emailRepo.SetHasAttachments(ctx, e.ID, false); err != nil {
+			slog.Error("failed to correct has_attachments flag", "error", err)
 		}
 	}
 
@@ -289,6 +319,23 @@ func calcSpamScore(email *InboundEmail) float32 {
 	// Missing From header (different from envelope)
 	if email.Headers["From"] == "" {
 		score += 1.0
+	}
+
+	// Basic SPF check via TXT record lookup
+	if email.ConnectingIP != "" {
+		if parts := strings.SplitN(email.From, "@", 2); len(parts) == 2 {
+			domain := parts[1]
+			if txts, err := net.LookupTXT(domain); err == nil {
+				for _, txt := range txts {
+					if strings.HasPrefix(txt, "v=spf1") {
+						if strings.Contains(txt, "-all") && !strings.Contains(txt, email.ConnectingIP) {
+							score += 2.0
+						}
+						break
+					}
+				}
+			}
+		}
 	}
 
 	if score > 10.0 {

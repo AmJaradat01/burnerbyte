@@ -84,6 +84,12 @@ func (s *InboxService) CreateInbox(ctx context.Context, teamID, domainID, userID
 		return nil, fmt.Errorf("inbox limit reached for this domain (%d)", maxInboxes)
 	}
 
+	// Per-user limit (max 50 active inboxes)
+	userInboxCount, err := s.inboxRepo.CountActiveByUser(ctx, userID)
+	if err == nil && userInboxCount >= 50 {
+		return nil, fmt.Errorf("maximum active inboxes per user reached (50)")
+	}
+
 	// Generate or validate address
 	var address string
 	if input.CustomAlias != nil && *input.CustomAlias != "" {
@@ -125,6 +131,9 @@ func (s *InboxService) CreateInbox(ctx context.Context, teamID, domainID, userID
 		parsed, err := time.ParseDuration(*input.TTL)
 		if err != nil {
 			return nil, fmt.Errorf("invalid TTL format")
+		}
+		if parsed <= 0 || parsed < time.Minute {
+			return nil, fmt.Errorf("TTL must be at least 1 minute")
 		}
 		if parsed > maxTTL {
 			return nil, fmt.Errorf("TTL exceeds maximum (%s)", maxTTL)

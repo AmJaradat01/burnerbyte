@@ -38,7 +38,9 @@ func (s *WebhookService) Create(ctx context.Context, teamID, userID uuid.UUID, i
 	}
 
 	b := make([]byte, 32)
-	rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		return nil, fmt.Errorf("generate webhook secret: %w", err)
+	}
 	secret := hex.EncodeToString(b)
 
 	w := &domain.Webhook{

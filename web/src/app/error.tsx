@@ -7,7 +7,7 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
     <div className="flex flex-col items-center justify-center gap-4 py-20">
       <span className="text-4xl">⚠️</span>
       <h2 className="text-xl font-bold">Something went wrong</h2>
-      <p className="text-muted-foreground text-sm">{error.message}</p>
+      <p className="text-muted-foreground text-sm">Something went wrong. Please try again or contact support.</p>
       <Button variant="outline" onClick={reset}>Try again</Button>
     </div>
   );

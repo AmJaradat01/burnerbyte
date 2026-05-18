@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, setAccessToken } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -97,7 +97,7 @@ export function SessionConflictDialog({
         pending_token: pendingToken,
         revoke_session_id: sessionId,
       });
-      localStorage.setItem("access_token", res.tokens.access_token);
+      setAccessToken(res.tokens.access_token);
       localStorage.setItem("refresh_token", res.tokens.refresh_token);
       onResolved(res.user, res.tokens);
     } catch (err) {

@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -44,6 +46,11 @@ func main() {
 	cfg, err := config.Load()
 	if err != nil {
 		slog.Error("failed to load config", "error", err)
+		os.Exit(1)
+	}
+
+	if len(cfg.JWT.Secret) < 32 {
+		slog.Error("JWT secret must be at least 32 characters", "current_length", len(cfg.JWT.Secret))
 		os.Exit(1)
 	}
 
@@ -136,7 +143,7 @@ func main() {
 		}
 	}
 	sessionRevCache := auth.NewSessionRevocationCache(rdb, cfg.JWT.AccessTTL)
-	authSvc := service.NewAuthService(pool, userRepo, sessionRepo, resetRepo, postgres.NewEmailVerificationRepo(pool), orgRepo, ssoIdentityRepo, ssoProviderRepo, teamRepo, ssoDomainMappingRepo, tokenMgr, lockout, ml, cfg, sessionRevCache, auth.NewPendingLoginStore(rdb, 5*time.Minute))
+	authSvc := service.NewAuthService(pool, userRepo, sessionRepo, resetRepo, postgres.NewEmailVerificationRepo(pool), orgRepo, ssoIdentityRepo, ssoProviderRepo, teamRepo, ssoDomainMappingRepo, tokenMgr, lockout, ml, cfg, sessionRevCache, auth.NewPendingLoginStore(rdb, 5*time.Minute), auth.NewSSOCodeStore(rdb, 60*time.Second))
 	orgSvc := service.NewOrgService(pool, orgRepo, teamRepo, userRepo, ssoProviderRepo, ml, cfg.Server.FrontendURL, cfg.Defaults.InviteExpiryTTL)
 	redisInboxRepo := redisrepo.NewInboxRepo(rdb)
 	domainSvc := service.NewDomainService(domainRepo, orgRepo, inboxRepo, redisInboxRepo, verHistoryRepo, cfg)
@@ -205,10 +212,12 @@ func main() {
 	adminWSHandler := handler.NewAdminWSHandler(adminHub, cfg.CORS.AllowedOrigins)
 
 	// Auth middleware
-	authMw := auth.Middleware(tokenMgr, userRepo, apikeyRepo, sessionRevCache)
+	ticketResolver := auth.NewTicketResolver(rdb)
+	authMw := auth.Middleware(tokenMgr, userRepo, apikeyRepo, sessionRevCache, ticketResolver)
 
 	// Rate limiter
 	rateLimiter := mw.NewRateLimiter(cfg.RateLimit)
+	rateLimiter.WithRedis(rdb)
 
 	// Router
 	r := chi.NewRouter()
@@ -238,28 +247,22 @@ func main() {
 	r.Get("/healthz", healthz)
 	r.Get("/readyz", readyz(pool, rdb))
 	if cfg.Metrics.Enabled {
-		r.Handle(cfg.Metrics.Path, promhttp.Handler())
+		r.Handle(cfg.Metrics.Path, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ip := r.RemoteAddr
+			if h, _, err := net.SplitHostPort(ip); err == nil {
+				ip = h
+			}
+			parsed := net.ParseIP(ip)
+			if parsed == nil || (!parsed.IsLoopback() && !parsed.IsPrivate()) {
+				http.Error(w, "forbidden", http.StatusForbidden)
+				return
+			}
+			promhttp.Handler().ServeHTTP(w, r)
+		}))
 	}
 
 	// API v1
 	r.Route("/api/v1", func(r chi.Router) {
-		// File serving for local attachment storage (development/testing)
-		r.Get("/files", func(w http.ResponseWriter, r *http.Request) {
-			key := r.URL.Query().Get("key")
-			if key == "" {
-				http.Error(w, "missing key", http.StatusBadRequest)
-				return
-			}
-			data, err := os.ReadFile(filepath.Join("./data/attachments", filepath.Clean(key)))
-			if err != nil {
-				http.Error(w, "not found", http.StatusNotFound)
-				return
-			}
-			w.Header().Set("Content-Disposition", "attachment")
-			w.Header().Set("Content-Type", "application/octet-stream")
-			w.Write(data)
-		})
-
 		// Public routes (no auth)
 		setupHandler.Routes(r)
 		authHandler.PublicRoutes(r, rateLimiter)
@@ -607,13 +610,14 @@ func main() {
 				json.NewEncoder(w).Encode(map[string]string{"message": "ok"})
 			})
 			r.Patch("/notifications/{notifId}/read", func(w http.ResponseWriter, r *http.Request) {
+				uc := r.Context().Value(auth.UserContextKey).(*auth.UserContext)
 				id, err := uuid.Parse(chi.URLParam(r, "notifId"))
 				if err != nil {
 					w.WriteHeader(http.StatusBadRequest)
 					json.NewEncoder(w).Encode(map[string]string{"error": "invalid notification ID"})
 					return
 				}
-				if err := notifRepo.MarkRead(r.Context(), id); err != nil {
+				if err := notifRepo.MarkRead(r.Context(), id, uc.UserID); err != nil {
 					w.WriteHeader(http.StatusInternalServerError)
 					json.NewEncoder(w).Encode(map[string]string{"error": "failed to mark read"})
 					return
@@ -635,13 +639,14 @@ func main() {
 			})
 
 			r.Delete("/notifications/{notifId}", func(w http.ResponseWriter, r *http.Request) {
+				uc := r.Context().Value(auth.UserContextKey).(*auth.UserContext)
 				id, err := uuid.Parse(chi.URLParam(r, "notifId"))
 				if err != nil {
 					w.WriteHeader(http.StatusBadRequest)
 					json.NewEncoder(w).Encode(map[string]string{"error": "invalid id"})
 					return
 				}
-				if err := notifRepo.Delete(r.Context(), id); err != nil {
+				if err := notifRepo.Delete(r.Context(), id, uc.UserID); err != nil {
 					w.WriteHeader(http.StatusInternalServerError)
 					json.NewEncoder(w).Encode(map[string]string{"error": "failed"})
 					return
@@ -649,6 +654,38 @@ func main() {
 				handler.Audit.RecordEnhanced(r, uuid.Nil, "notification.deleted", "notification", id, "", map[string]any{"notification_id": id.String()})
 				w.Header().Set("Content-Type", "application/json")
 				json.NewEncoder(w).Encode(map[string]string{"message": "ok"})
+			})
+
+			// File serving for local attachment storage
+			r.Get("/files", func(w http.ResponseWriter, r *http.Request) {
+				key := r.URL.Query().Get("key")
+				if key == "" {
+					http.Error(w, "missing key", http.StatusBadRequest)
+					return
+				}
+				base, _ := filepath.Abs("./data/attachments")
+				resolved, _ := filepath.Abs(filepath.Join(base, filepath.Clean(key)))
+				if !strings.HasPrefix(resolved, base+string(filepath.Separator)) {
+					http.Error(w, "invalid path", http.StatusBadRequest)
+					return
+				}
+				data, err := os.ReadFile(resolved)
+				if err != nil {
+					http.Error(w, "not found", http.StatusNotFound)
+					return
+				}
+				w.Header().Set("Content-Disposition", "attachment")
+				w.Header().Set("Content-Type", "application/octet-stream")
+				w.Write(data)
+			})
+
+			// WebSocket ticket endpoint - generates a short-lived ticket for WS auth
+			r.Post("/ws/ticket", func(w http.ResponseWriter, r *http.Request) {
+				uc := auth.GetUser(r.Context())
+				ticket := uuid.New().String()
+				rdb.Set(r.Context(), "ws_ticket:"+ticket, uc.UserID.String(), 30*time.Second)
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(map[string]string{"ticket": ticket})
 			})
 
 			// WebSocket

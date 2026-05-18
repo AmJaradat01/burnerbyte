@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/redis/go-redis/v9"
 	"gitlab.com/burnerbyte/burnerbyte/internal/auth"
 	"gitlab.com/burnerbyte/burnerbyte/internal/config"
 )
@@ -23,20 +24,35 @@ type visitor struct {
 // It supports separate limits for authenticated, unauthenticated, login,
 // and forgot-password requests. Expired entries are cleaned up periodically.
 type RateLimiter struct {
-	mu       sync.Mutex
-	visitors map[string]*visitor
-	cfg      config.RateLimitConfig
-	cancel   context.CancelFunc
+	mu          sync.Mutex
+	visitors    map[string]*visitor
+	cfg         config.RateLimitConfig
+	cancel      context.CancelFunc
+	trustedNets []*net.IPNet
+	rdb         *redis.Client
 }
 
 // NewRateLimiter creates a rate limiter and starts a background cleanup goroutine.
 // Call Stop() to release the goroutine.
 func NewRateLimiter(cfg config.RateLimitConfig) *RateLimiter {
 	ctx, cancel := context.WithCancel(context.Background())
+
+	var trustedNets []*net.IPNet
+	for _, cidr := range cfg.TrustedProxies {
+		if !strings.Contains(cidr, "/") {
+			cidr += "/32"
+		}
+		_, ipNet, err := net.ParseCIDR(cidr)
+		if err == nil {
+			trustedNets = append(trustedNets, ipNet)
+		}
+	}
+
 	rl := &RateLimiter{
-		visitors: make(map[string]*visitor),
-		cfg:      cfg,
-		cancel:   cancel,
+		visitors:    make(map[string]*visitor),
+		cfg:         cfg,
+		cancel:      cancel,
+		trustedNets: trustedNets,
 	}
 	go rl.cleanup(ctx)
 	return rl
@@ -87,6 +103,29 @@ func (rl *RateLimiter) allow(key string, limit int, window time.Duration) (bool,
 	return v.count <= limit, remaining, v.resetAt.Unix()
 }
 
+// WithRedis enables Redis-based distributed rate limiting.
+func (rl *RateLimiter) WithRedis(rdb *redis.Client) {
+	rl.rdb = rdb
+}
+
+func (rl *RateLimiter) allowRedis(ctx context.Context, key string, limit int, window time.Duration) (bool, int, int64) {
+	redisKey := "rl:" + key
+	count, err := rl.rdb.Incr(ctx, redisKey).Result()
+	if err != nil {
+		return rl.allow(key, limit, window)
+	}
+	if count == 1 {
+		rl.rdb.Expire(ctx, redisKey, window)
+	}
+	ttl, _ := rl.rdb.TTL(ctx, redisKey).Result()
+	resetUnix := time.Now().Add(ttl).Unix()
+	remaining := limit - int(count)
+	if remaining < 0 {
+		remaining = 0
+	}
+	return int(count) <= limit, remaining, resetUnix
+}
+
 func writeRateLimitHeaders(w http.ResponseWriter, limit, remaining int, resetUnix int64) {
 	w.Header().Set("X-RateLimit-Limit", strconv.Itoa(limit))
 	w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(remaining))
@@ -122,13 +161,20 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 				limit = 100
 			}
 		} else {
-			key = "ip:" + RealIP(r)
+			key = "ip:" + rl.RealIP(r)
 			limit = rl.cfg.Unauthenticated
 			if limit <= 0 {
 				limit = 20
 			}
 		}
-		allowed, remaining, resetUnix := rl.allow(key, limit, time.Minute)
+		var allowed bool
+		var remaining int
+		var resetUnix int64
+		if rl.rdb != nil {
+			allowed, remaining, resetUnix = rl.allowRedis(r.Context(), key, limit, time.Minute)
+		} else {
+			allowed, remaining, resetUnix = rl.allow(key, limit, time.Minute)
+		}
 		writeRateLimitHeaders(w, limit, remaining, resetUnix)
 		if !allowed {
 			rejectRateLimit(w, limit, resetUnix)
@@ -144,12 +190,19 @@ func (rl *RateLimiter) LoginLimiter(next http.Handler) http.Handler {
 		return next
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		key := "login:" + RealIP(r)
+		key := "login:" + rl.RealIP(r)
 		limit := rl.cfg.Login
 		if limit <= 0 {
 			limit = 5
 		}
-		allowed, remaining, resetUnix := rl.allow(key, limit, time.Minute)
+		var allowed bool
+		var remaining int
+		var resetUnix int64
+		if rl.rdb != nil {
+			allowed, remaining, resetUnix = rl.allowRedis(r.Context(), key, limit, time.Minute)
+		} else {
+			allowed, remaining, resetUnix = rl.allow(key, limit, time.Minute)
+		}
 		writeRateLimitHeaders(w, limit, remaining, resetUnix)
 		if !allowed {
 			rejectRateLimit(w, limit, resetUnix)
@@ -165,12 +218,19 @@ func (rl *RateLimiter) ForgotPasswordLimiter(next http.Handler) http.Handler {
 		return next
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		key := "forgot:" + RealIP(r)
+		key := "forgot:" + rl.RealIP(r)
 		limit := rl.cfg.ForgotPassword
 		if limit <= 0 {
 			limit = 3
 		}
-		allowed, remaining, resetUnix := rl.allow(key, limit, time.Hour)
+		var allowed bool
+		var remaining int
+		var resetUnix int64
+		if rl.rdb != nil {
+			allowed, remaining, resetUnix = rl.allowRedis(r.Context(), key, limit, time.Hour)
+		} else {
+			allowed, remaining, resetUnix = rl.allow(key, limit, time.Hour)
+		}
 		writeRateLimitHeaders(w, limit, remaining, resetUnix)
 		if !allowed {
 			rejectRateLimit(w, limit, resetUnix)
@@ -180,25 +240,46 @@ func (rl *RateLimiter) ForgotPasswordLimiter(next http.Handler) http.Handler {
 	})
 }
 
-// RealIP extracts the client IP from the request, respecting X-Forwarded-For
-// and X-Real-IP headers. Handles IPv6 bracket notation.
+// RealIP extracts the client IP from RemoteAddr (no header trust).
 func RealIP(r *http.Request) string {
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		// Take the LAST (rightmost) IP — the one added by the trusted reverse proxy.
-		// The leftmost IP is client-controlled and can be spoofed.
-		parts := strings.Split(xff, ",")
-		ip := strings.TrimSpace(parts[len(parts)-1])
-		if ip != "" {
-			return ip
+	return extractIP(r.RemoteAddr)
+}
+
+// realIP extracts the client IP, trusting forwarded headers only from trusted proxies.
+func (rl *RateLimiter) RealIP(r *http.Request) string {
+	remoteIP := extractIP(r.RemoteAddr)
+	if len(rl.trustedNets) > 0 && rl.isTrusted(remoteIP) {
+		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+			parts := strings.Split(xff, ",")
+			ip := strings.TrimSpace(parts[len(parts)-1])
+			if ip != "" {
+				return ip
+			}
+		}
+		if xri := r.Header.Get("X-Real-IP"); xri != "" {
+			return strings.TrimSpace(xri)
 		}
 	}
-	if xri := r.Header.Get("X-Real-IP"); xri != "" {
-		return strings.TrimSpace(xri)
-	}
-	// net.SplitHostPort handles both IPv4 "1.2.3.4:port" and IPv6 "[::1]:port"
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	return remoteIP
+}
+
+func extractIP(addr string) string {
+	host, _, err := net.SplitHostPort(addr)
 	if err != nil {
-		return r.RemoteAddr
+		return addr
 	}
 	return host
+}
+
+func (rl *RateLimiter) isTrusted(ip string) bool {
+	parsed := net.ParseIP(ip)
+	if parsed == nil {
+		return false
+	}
+	for _, n := range rl.trustedNets {
+		if n.Contains(parsed) {
+			return true
+		}
+	}
+	return false
 }
