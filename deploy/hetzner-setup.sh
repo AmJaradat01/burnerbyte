@@ -106,7 +106,7 @@ After=network.target postgresql.service redis-server.service
 
 [Service]
 Type=simple
-User=root
+User=burnerbyte
 WorkingDirectory=/opt/burnerbyte
 EnvironmentFile=/etc/burnerbyte/.env
 ExecStart=/opt/burnerbyte/api
@@ -125,7 +125,7 @@ After=network.target postgresql.service redis-server.service
 
 [Service]
 Type=simple
-User=root
+User=burnerbyte
 WorkingDirectory=/opt/burnerbyte
 EnvironmentFile=/etc/burnerbyte/.env
 ExecStart=/opt/burnerbyte/smtpd
@@ -189,9 +189,6 @@ burnerbyte.com {
         reverse_proxy localhost:8080
     }
     handle /readyz {
-        reverse_proxy localhost:8080
-    }
-    handle /metrics {
         reverse_proxy localhost:8080
     }
     handle {

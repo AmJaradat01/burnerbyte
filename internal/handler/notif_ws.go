@@ -49,7 +49,10 @@ func (h *NotifWSHandler) NotificationsWS(w http.ResponseWriter, r *http.Request)
 	}
 
 	client := &realtime.NotifClient{UserID: uc.UserID, Send: make(chan []byte, 64)}
-	h.hub.Register(client)
+	if !h.hub.Register(client) {
+		conn.Close()
+		return
+	}
 	slog.Info("notif ws connected", "user_id", uc.UserID)
 
 	done := make(chan struct{})

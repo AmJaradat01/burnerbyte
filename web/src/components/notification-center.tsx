@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useAuthStore } from "@/stores/auth-store";
-import { api, WS_BASE } from "@/lib/api";
+import { api, WS_BASE, getWsTicket } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
@@ -137,14 +137,15 @@ export function NotificationCenter() {
     if (!user) return;
     let disposed = false;
 
-    function doConnect() {
+    async function doConnect() {
       if (disposed) return;
-      const token = localStorage.getItem("access_token");
-      if (!token) return;
-      const ws = new WebSocket(`${WS_BASE}/notifications?token=${token}`);
-      wsRef.current = ws;
+      try {
+        const ticket = await getWsTicket();
+        if (disposed) return;
+        const ws = new WebSocket(`${WS_BASE}/notifications?ticket=${ticket}`);
+        wsRef.current = ws;
 
-      ws.onmessage = (e) => {
+        ws.onmessage = (e) => {
         try {
           const data = JSON.parse(e.data);
           const type = data.type || "info";
@@ -195,6 +196,9 @@ export function NotificationCenter() {
         reconnectRef.current = setTimeout(doConnect, 5000);
       };
       ws.onerror = () => ws.close();
+      } catch {
+        if (!disposed) reconnectRef.current = setTimeout(doConnect, 5000);
+      }
     }
 
     doConnect();

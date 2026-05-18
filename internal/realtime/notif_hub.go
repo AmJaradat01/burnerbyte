@@ -27,14 +27,19 @@ func NewNotifHub() *NotifHub {
 	return &NotifHub{clients: make(map[uuid.UUID]map[*NotifClient]bool)}
 }
 
-func (h *NotifHub) Register(c *NotifClient) {
+func (h *NotifHub) Register(c *NotifClient) bool {
 	h.mu.Lock()
 	defer h.mu.Unlock()
+	if clients := h.clients[c.UserID]; len(clients) >= 5 {
+		c.Close()
+		return false
+	}
 	if h.clients[c.UserID] == nil {
 		h.clients[c.UserID] = make(map[*NotifClient]bool)
 	}
 	h.clients[c.UserID][c] = true
 	slog.Debug("notif client registered", "user_id", c.UserID)
+	return true
 }
 
 func (h *NotifHub) Unregister(c *NotifClient) {

@@ -1,6 +1,19 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
 export const WS_BASE = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8080/api/v1/ws";
 
+// Access token is kept in memory only — never persisted to localStorage.
+// This mitigates XSS token theft. On page reload the app will use the
+// refresh_token (localStorage) to obtain a new access_token.
+let _accessToken: string | null = null;
+
+export function getAccessToken(): string | null {
+  return _accessToken;
+}
+
+export function setAccessToken(token: string | null) {
+  _accessToken = token;
+}
+
 interface RequestOptions extends RequestInit {
   params?: Record<string, string>;
 }
@@ -15,7 +28,7 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
     url += `?${qs}`;
   }
 
-  const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+  const token = _accessToken;
   const headers: Record<string, string> = {
     ...(init.headers as Record<string, string>),
   };
@@ -31,7 +44,7 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
     const refreshed = await tryRefresh();
     if (refreshed) return request<T>(path, opts);
     if (typeof window !== "undefined") {
-      localStorage.removeItem("access_token");
+      _accessToken = null;
       localStorage.removeItem("refresh_token");
       const publicPrefixes = ["/login", "/register", "/invite", "/setup", "/onboarding", "/verify-email", "/forgot-password", "/reset-password"];
       const isPublic = publicPrefixes.some((p) => window.location.pathname.startsWith(p));
@@ -59,59 +72,23 @@ async function tryRefresh(): Promise<boolean> {
   if (refreshPromise) return refreshPromise;
 
   refreshPromise = (async () => {
-    const refreshToken = localStorage.getItem("refresh_token");
+    // refresh_token remains in localStorage for now.
+    // TODO: Move to httpOnly cookie once backend supports Set-Cookie on /auth/refresh.
+    const refreshToken = typeof window !== "undefined" ? localStorage.getItem("refresh_token") : null;
     if (!refreshToken) return false;
 
-    // Prevent refresh token reuse across rapid page refreshes.
-    // The backend uses token rotation with reuse detection — if a revoked
-    // refresh token is sent again, the entire token family is killed.
-    // Use a localStorage lock so only one tab/page-load performs the refresh.
-    const lockKey = "bb_refresh_lock";
-    const lockValue = localStorage.getItem(lockKey);
-    if (lockValue) {
-      const lockTime = parseInt(lockValue, 10);
-      if (Date.now() - lockTime < 10000) {
-        // Another refresh is in progress or just completed.
-        // Wait for it to finish, then re-read tokens from localStorage.
-        await new Promise((r) => setTimeout(r, 1500));
-        // Check if the other refresh wrote new tokens
-        const currentToken = localStorage.getItem("refresh_token");
-        // If the refresh token changed, the other tab succeeded
-        if (currentToken && currentToken !== refreshToken) return true;
-        // If unchanged, the other refresh may have failed — don't retry
-        // to avoid reuse detection. Let the caller handle the 401.
-        return false;
-      }
-    }
-
-    // Acquire lock
-    localStorage.setItem(lockKey, String(Date.now()));
-
     try {
-      // Re-read the refresh token in case another tab updated it
-      // between our initial read and acquiring the lock
-      const currentRefreshToken = localStorage.getItem("refresh_token");
-      if (!currentRefreshToken) {
-        localStorage.removeItem(lockKey);
-        return false;
-      }
-
       const res = await fetch(`${API_BASE}/auth/refresh`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refresh_token: currentRefreshToken }),
+        body: JSON.stringify({ refresh_token: refreshToken }),
       });
-      if (!res.ok) {
-        localStorage.removeItem(lockKey);
-        return false;
-      }
+      if (!res.ok) return false;
       const data = await res.json();
-      localStorage.setItem("access_token", data.access_token);
+      _accessToken = data.access_token;
       localStorage.setItem("refresh_token", data.refresh_token);
-      localStorage.removeItem(lockKey);
       return true;
     } catch {
-      localStorage.removeItem(lockKey);
       return false;
     }
   })();
@@ -141,3 +118,9 @@ export const api = {
   del: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "DELETE", body: body !== undefined ? JSON.stringify(body) : undefined }),
 };
+
+/** Fetch a short-lived one-time ticket for WebSocket authentication. */
+export async function getWsTicket(): Promise<string> {
+  const { ticket } = await api.post<{ ticket: string }>("/ws/ticket");
+  return ticket;
+}

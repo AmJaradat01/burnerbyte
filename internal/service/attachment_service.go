@@ -111,8 +111,9 @@ func (s *AttachmentService) GetDownloadURL(ctx context.Context, attachmentID, us
 	}
 
 	// Set response headers on the presigned URL to force download and prevent XSS
+	safeFilename := strings.NewReplacer(`"`, `'`, "\n", "", "\r", "").Replace(a.Filename)
 	reqParams := url.Values{}
-	reqParams.Set("response-content-disposition", fmt.Sprintf("attachment; filename=\"%s\"", a.Filename))
+	reqParams.Set("response-content-disposition", fmt.Sprintf("attachment; filename=\"%s\"", safeFilename))
 
 	presignedURL, err := s.s3.PresignedGetObject(ctx, s.bucket, a.StorageKey, s.presignedTTL, reqParams)
 	if err != nil {

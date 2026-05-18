@@ -204,6 +204,13 @@ func (r *InboxRepo) CountActiveByDomain(ctx context.Context, domainID uuid.UUID)
 	return count, err
 }
 
+func (r *InboxRepo) CountActiveByUser(ctx context.Context, userID uuid.UUID) (int, error) {
+	var count int
+	err := r.db.QueryRow(ctx,
+		`SELECT COUNT(*) FROM inboxes WHERE created_by = $1 AND is_active = TRUE AND expires_at > NOW()`, userID).Scan(&count)
+	return count, err
+}
+
 func (r *InboxRepo) ListActiveAddressesByDomain(ctx context.Context, domainID uuid.UUID) ([]string, error) {
 	rows, err := r.db.Query(ctx,
 		`SELECT i.address || '@' || d.domain_name FROM inboxes i

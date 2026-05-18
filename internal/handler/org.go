@@ -428,6 +428,12 @@ func (h *OrgHandler) DeactivateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	uc := auth.GetUser(r.Context())
+	if userID == uc.UserID {
+		writeError(w, http.StatusBadRequest, "cannot deactivate yourself")
+		return
+	}
+
 	// Fetch user info for audit before deactivation
 	targetEmail := ""
 	targetDisplayName := ""

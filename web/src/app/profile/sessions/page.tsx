@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { api, setAccessToken } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -57,7 +57,7 @@ export default function SessionsPage() {
       toast.success("All sessions revoked — signing out…");
       // Current session is now invalid, force logout
       setTimeout(() => {
-        localStorage.removeItem("access_token");
+        setAccessToken(null);
         localStorage.removeItem("refresh_token");
         window.location.href = "/login";
       }, 1000);
@@ -73,7 +73,7 @@ export default function SessionsPage() {
         <CardContent className="pt-5 pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-7 w-7 rounded-md bg-info/50/10 flex items-center justify-center">
+              <div className="h-7 w-7 rounded-md bg-info/10 flex items-center justify-center" aria-hidden="true">
                 <Monitor className="h-4 w-4 text-info" />
               </div>
               <div>
