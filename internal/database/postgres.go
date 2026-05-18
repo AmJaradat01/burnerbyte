@@ -3,6 +3,8 @@ package database
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -20,6 +22,15 @@ type DBTX interface {
 }
 
 func NewPostgres(ctx context.Context, cfg config.DatabaseConfig) (*pgxpool.Pool, error) {
+	// Ensure a connect timeout is present in the DSN
+	if !strings.Contains(cfg.URL, "connect_timeout") {
+		sep := "?"
+		if strings.Contains(cfg.URL, "?") {
+			sep = "&"
+		}
+		cfg.URL += sep + "connect_timeout=5"
+	}
+
 	poolCfg, err := pgxpool.ParseConfig(cfg.URL)
 	if err != nil {
 		return nil, fmt.Errorf("parse database url: %w", err)
@@ -28,6 +39,8 @@ func NewPostgres(ctx context.Context, cfg config.DatabaseConfig) (*pgxpool.Pool,
 	poolCfg.MaxConns = int32(cfg.MaxOpenConns)
 	poolCfg.MinConns = int32(cfg.MaxIdleConns)
 	poolCfg.MaxConnLifetime = cfg.ConnMaxLifetime
+	poolCfg.MaxConnIdleTime = 10 * time.Minute
+	poolCfg.HealthCheckPeriod = 30 * time.Second
 
 	pool, err := pgxpool.NewWithConfig(ctx, poolCfg)
 	if err != nil {

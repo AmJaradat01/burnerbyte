@@ -239,6 +239,13 @@ func (s *TeamService) assignInitialDomains(ctx context.Context, tx pgx.Tx, teamI
 			failed = append(failed, domain.BulkDomainFailed{DomainID: d.DomainID, Reason: "invalid access_level"})
 			continue
 		}
+		// Verify domain belongs to this org
+		var exists bool
+		err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM domains WHERE id = $1 AND org_id = $2)`, domainID, orgID).Scan(&exists)
+		if err != nil || !exists {
+			failed = append(failed, domain.BulkDomainFailed{DomainID: d.DomainID, Reason: "domain not found in this organization"})
+			continue
+		}
 		assignmentID := uuid.New()
 		_, err = tx.Exec(ctx,
 			`INSERT INTO domain_assignments (id, team_id, domain_id, access_level) VALUES ($1, $2, $3, $4)`,
@@ -482,6 +489,10 @@ func (s *TeamService) LeaveTeam(ctx context.Context, orgID, teamID, userID uuid.
 }
 
 func (s *TeamService) BulkAddMembers(ctx context.Context, teamID uuid.UUID, members []domain.AddTeamMemberInput) (*domain.BulkMemberResult, error) {
+	if len(members) > 100 {
+		return nil, fmt.Errorf("maximum 100 members per bulk operation")
+	}
+
 	// Check if team is archived
 	team, err := s.teamRepo.GetByID(ctx, teamID)
 	if err != nil {
@@ -523,6 +534,10 @@ func (s *TeamService) BulkAddMembers(ctx context.Context, teamID uuid.UUID, memb
 }
 
 func (s *TeamService) BulkRemoveMembers(ctx context.Context, teamID uuid.UUID, userIDs []uuid.UUID) (*domain.BulkMemberResult, error) {
+	if len(userIDs) > 100 {
+		return nil, fmt.Errorf("maximum 100 members per bulk operation")
+	}
+
 	// Check if team is archived
 	team, err := s.teamRepo.GetByID(ctx, teamID)
 	if err != nil {
@@ -636,6 +651,20 @@ func (s *TeamService) RemoveMember(ctx context.Context, teamID, userID uuid.UUID
 	}
 	if team.IsArchived {
 		return fmt.Errorf("cannot modify an archived team")
+	}
+	// Last-lead protection
+	membership, err := s.teamRepo.GetMembership(ctx, userID, teamID)
+	if err != nil {
+		return fmt.Errorf("not a member of this team")
+	}
+	if membership.Role == rbac.TeamLead {
+		leadCount, err := s.teamRepo.CountLeads(ctx, teamID)
+		if err != nil {
+			return err
+		}
+		if leadCount <= 1 {
+			return fmt.Errorf("cannot remove the last team lead")
+		}
 	}
 	return s.teamRepo.DeleteMembership(ctx, userID, teamID)
 }

@@ -31,6 +31,7 @@ type CreateUserInput struct {
 	Email       string `json:"email"`
 	DisplayName string `json:"display_name"`
 	Password    string `json:"password"`
+	InviteToken string `json:"invite_token,omitempty"`
 }
 
 type LoginInput struct {

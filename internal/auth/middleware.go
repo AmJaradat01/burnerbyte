@@ -44,9 +44,42 @@ type SessionRevocationChecker interface {
 	RevokedAt(ctx context.Context, userID uuid.UUID) int64
 }
 
-func Middleware(tm *TokenManager, userRepo UserRepo, apikeyRepo APIKeyRepo, revocationCache SessionRevocationChecker) func(http.Handler) http.Handler {
+// TicketResolver resolves a one-time WebSocket ticket to a user ID.
+// Returns the user ID and true if valid, or uuid.Nil and false if not found/expired.
+type TicketResolver interface {
+	Resolve(ctx context.Context, ticket string) (uuid.UUID, bool)
+}
+
+func Middleware(tm *TokenManager, userRepo UserRepo, apikeyRepo APIKeyRepo, revocationCache SessionRevocationChecker, ticketResolver ...TicketResolver) func(http.Handler) http.Handler {
+	var resolver TicketResolver
+	if len(ticketResolver) > 0 {
+		resolver = ticketResolver[0]
+	}
+
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// WebSocket ticket auth — short-lived, one-time use
+			if ticket := r.URL.Query().Get("ticket"); ticket != "" && resolver != nil {
+				userID, ok := resolver.Resolve(r.Context(), ticket)
+				if !ok {
+					writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid or expired ticket"})
+					return
+				}
+				user, err := userRepo.GetByID(r.Context(), userID)
+				if err != nil {
+					writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "user not found"})
+					return
+				}
+				ctx := context.WithValue(r.Context(), UserContextKey, &UserContext{
+					UserID:        user.ID,
+					Email:         user.Email,
+					DisplayName:   user.DisplayName,
+					IsSystemAdmin: user.IsSystemAdmin,
+				})
+				next.ServeHTTP(w, r.WithContext(ctx))
+				return
+			}
+
 			header := r.Header.Get("Authorization")
 			// WebSocket connections can't set headers — allow token via query param
 			if header == "" {
@@ -205,7 +238,14 @@ func ipAllowed(ip string, allowedIPs []string) bool {
 }
 
 // OptionalAuth extracts user context if a token is present but doesn't require it.
-func OptionalAuth(tm *TokenManager) func(http.Handler) http.Handler {
+// Note: This does not check password_changed_at (would require a DB lookup per request).
+// Sensitive operations must use the full auth middleware which performs that check.
+func OptionalAuth(tm *TokenManager, revocationCache ...SessionRevocationChecker) func(http.Handler) http.Handler {
+	var revCache SessionRevocationChecker
+	if len(revocationCache) > 0 {
+		revCache = revocationCache[0]
+	}
+
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			header := r.Header.Get("Authorization")
@@ -231,6 +271,16 @@ func OptionalAuth(tm *TokenManager) func(http.Handler) http.Handler {
 				next.ServeHTTP(w, r) // Invalid subject — treat as unauthenticated
 				return
 			}
+
+			// Check if sessions were revoked after this token was issued
+			if revCache != nil && claims.IssuedAt != nil {
+				revokedAt := revCache.RevokedAt(r.Context(), userID)
+				if revokedAt > 0 && claims.IssuedAt.Unix() < revokedAt {
+					next.ServeHTTP(w, r) // treat as unauthenticated
+					return
+				}
+			}
+
 			ctx := context.WithValue(r.Context(), UserContextKey, &UserContext{
 				UserID:        userID,
 				Email:         claims.Email,

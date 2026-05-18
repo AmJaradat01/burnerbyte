@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS idx_webhook_delivery_logs_idempotency_key_unique;

@@ -119,9 +119,13 @@ func (h *WSHandler) InboxWS(w http.ResponseWriter, r *http.Request) {
 
 	client := &realtime.Client{
 		InboxID: inboxID,
+		UserID:  uc.UserID,
 		Send:    make(chan []byte, 256),
 	}
-	h.hub.Register(client)
+	if !h.hub.Register(client) {
+		conn.Close()
+		return
+	}
 
 	slog.Info("ws client connected", "inbox_id", inboxID, "user_id", uc.UserID)
 

@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"log/slog"
 	"net/smtp"
+	"strings"
 	"sync"
 	"time"
 
@@ -42,6 +43,12 @@ func (m *Mailer) isConfigured() bool {
 }
 
 func (m *Mailer) Send(to, subject, templateName string, data any) error {
+	// Sanitize CRLF to prevent header injection
+	subject = strings.ReplaceAll(subject, "\r", "")
+	subject = strings.ReplaceAll(subject, "\n", "")
+	to = strings.ReplaceAll(to, "\r", "")
+	to = strings.ReplaceAll(to, "\n", "")
+
 	var body bytes.Buffer
 	if err := m.templates.ExecuteTemplate(&body, templateName, data); err != nil {
 		return fmt.Errorf("execute template %s: %w", templateName, err)

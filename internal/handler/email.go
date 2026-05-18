@@ -54,7 +54,7 @@ func (h *EmailHandler) ListEmails(w http.ResponseWriter, r *http.Request) {
 			if strings.Contains(err.Error(), "forbidden") {
 				writeError(w, http.StatusForbidden, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, err.Error())
+				writeError(w, http.StatusInternalServerError, "internal server error")
 			}
 			return
 		}
@@ -67,7 +67,7 @@ func (h *EmailHandler) ListEmails(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(err.Error(), "forbidden") {
 			writeError(w, http.StatusForbidden, err.Error())
 		} else {
-			writeError(w, http.StatusInternalServerError, err.Error())
+			writeError(w, http.StatusInternalServerError, "internal server error")
 		}
 		return
 	}
@@ -99,7 +99,7 @@ func (h *EmailHandler) GetEmail(w http.ResponseWriter, r *http.Request) {
 
 func (h *EmailHandler) MarkAllRead(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
-	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "team.emails.view") {
+	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "team.emails.manage") {
 		writeError(w, http.StatusForbidden, "insufficient scope")
 		return
 	}
@@ -113,7 +113,7 @@ func (h *EmailHandler) MarkAllRead(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(err.Error(), "forbidden") {
 			writeError(w, http.StatusForbidden, err.Error())
 		} else {
-			writeError(w, http.StatusInternalServerError, err.Error())
+			writeError(w, http.StatusInternalServerError, "internal server error")
 		}
 		return
 	}
@@ -135,7 +135,7 @@ func (h *EmailHandler) MarkAllRead(w http.ResponseWriter, r *http.Request) {
 
 func (h *EmailHandler) MarkReadUnread(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
-	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "team.emails.view") {
+	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "team.emails.manage") {
 		writeError(w, http.StatusForbidden, "insufficient scope")
 		return
 	}
@@ -155,7 +155,7 @@ func (h *EmailHandler) MarkReadUnread(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(err.Error(), "forbidden") {
 			writeError(w, http.StatusForbidden, err.Error())
 		} else {
-			writeError(w, http.StatusInternalServerError, err.Error())
+			writeError(w, http.StatusInternalServerError, "internal server error")
 		}
 		return
 	}
@@ -164,7 +164,7 @@ func (h *EmailHandler) MarkReadUnread(w http.ResponseWriter, r *http.Request) {
 
 func (h *EmailHandler) DeleteEmail(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
-	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "team.emails.view") {
+	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "team.emails.manage") {
 		writeError(w, http.StatusForbidden, "insufficient scope")
 		return
 	}
