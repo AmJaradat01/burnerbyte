@@ -70,11 +70,17 @@ func main() {
 	// MinIO (optional — attachments disabled when unavailable)
 	s3Client, err := storage.NewS3(ctx, cfg.MinIO)
 	if err != nil {
-		slog.Warn("minio unavailable, attachments disabled", "error", err)
+		slog.Warn("minio unavailable, using local filesystem for attachments", "error", err)
 	}
 	var attachmentSvc *service.AttachmentService
 	if s3Client != nil {
 		attachmentSvc = service.NewAttachmentService(attachmentRepo, emailRepo, inboxRepoPG, s3Client, cfg.MinIO, cfg.Defaults.MaxAttachmentSizeMB, cfg.Defaults.PresignedURLTTL)
+	} else {
+		localFS, fsErr := storage.NewLocalFS("./data/attachments", "http://localhost:8080/api/v1/files")
+		if fsErr == nil {
+			attachmentSvc = service.NewAttachmentService(attachmentRepo, emailRepo, inboxRepoPG, localFS, cfg.MinIO, cfg.Defaults.MaxAttachmentSizeMB, cfg.Defaults.PresignedURLTTL)
+			slog.Info("attachments enabled via local filesystem")
+		}
 	}
 	settingsResolver := service.NewSettingsResolver(assignmentRepo, domainRepo, orgRepo, cfg.Defaults)
 
