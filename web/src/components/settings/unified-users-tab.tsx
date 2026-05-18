@@ -150,7 +150,7 @@ export function UnifiedUsersTab({ orgId }: { orgId: string }) {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-7 w-7 rounded-md bg-info/50/10 flex items-center justify-center">
+              <div className="h-7 w-7 rounded-md bg-info/10 flex items-center justify-center" aria-hidden="true">
                 <Users className="h-4 w-4 text-info" />
               </div>
               <div>
