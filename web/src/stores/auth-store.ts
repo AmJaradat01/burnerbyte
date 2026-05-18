@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, setAccessToken, getAccessToken } from "@/lib/api";
 import type { User, TokenPair, Session } from "@/types";
 
 export interface SessionConflictState {
@@ -33,7 +33,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   login: async (email, password) => {
     try {
       const res = await api.post<{ user: User; tokens: TokenPair }>("/auth/login", { email, password });
-      localStorage.setItem("access_token", res.tokens.access_token);
+      setAccessToken(res.tokens.access_token);
+      // refresh_token stays in localStorage — TODO: move to httpOnly cookie
       localStorage.setItem("refresh_token", res.tokens.refresh_token);
       set({ user: res.user, loading: false });
     } catch (err) {
@@ -54,14 +55,14 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   register: async (email, password, display_name) => {
     const res = await api.post<{ user: User; tokens: TokenPair }>("/auth/register", { email, password, display_name });
-    localStorage.setItem("access_token", res.tokens.access_token);
+    setAccessToken(res.tokens.access_token);
+    // refresh_token stays in localStorage — TODO: move to httpOnly cookie
     localStorage.setItem("refresh_token", res.tokens.refresh_token);
     set({ user: res.user, loading: false });
   },
 
   logout: async () => {
-    // Revoke all server sessions before clearing local state
-    const token = localStorage.getItem("access_token");
+    const token = getAccessToken();
     if (token) {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 3000);
@@ -77,7 +78,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         clearTimeout(timeout);
       }
     }
-    localStorage.removeItem("access_token");
+    setAccessToken(null);
     localStorage.removeItem("refresh_token");
     set({ user: null });
     window.location.href = "/login";
@@ -85,14 +86,14 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   fetchMe: async () => {
     try {
-      const token = localStorage.getItem("access_token");
+      // If no access token in memory, check if we have a refresh token to bootstrap
+      const token = getAccessToken() || (typeof window !== "undefined" ? localStorage.getItem("refresh_token") : null);
       if (!token) { set({ loading: false }); return; }
       const user = await api.get<User>("/auth/me");
       set({ user, loading: false });
     } catch (err) {
-      // Only clear tokens on auth errors (401/403), not on network errors
       if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
-        localStorage.removeItem("access_token");
+        setAccessToken(null);
         localStorage.removeItem("refresh_token");
       }
       set({ user: null, loading: false });

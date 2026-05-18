@@ -171,7 +171,7 @@ export function EmailPreview({ email, onBack, onToggleRead, onDelete }: EmailPre
                 srcDoc={buildSandboxedHtml(email.body_html!)}
                 title="Email content"
                 className="w-full h-full min-h-[500px] border rounded-lg bg-white"
-                sandbox="allow-popups allow-popups-to-escape-sandbox"
+                sandbox="allow-popups"
               />
             </div>
           )}
@@ -208,6 +208,10 @@ function AttachmentChip({ attachment, emailId }: { attachment: Attachment; email
     setDownloading(true);
     try {
       const res = await api.get<{ url: string }>(`/emails/${emailId}/attachments/${attachment.id}`);
+      if (!res.url.startsWith('http://') && !res.url.startsWith('https://')) {
+        toast.error('Invalid download URL');
+        return;
+      }
       // Use a temporary anchor to avoid popup blockers
       const a = document.createElement("a");
       a.href = res.url;

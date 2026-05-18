@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { api, setAccessToken } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -57,7 +57,7 @@ export default function SessionsPage() {
       toast.success("All sessions revoked — signing out…");
       // Current session is now invalid, force logout
       setTimeout(() => {
-        localStorage.removeItem("access_token");
+        setAccessToken(null);
         localStorage.removeItem("refresh_token");
         window.location.href = "/login";
       }, 1000);

@@ -7,8 +7,9 @@ COPY . .
 RUN CGO_ENABLED=0 go build -o /bin/smtpd ./cmd/smtpd
 
 FROM alpine:3.20
-RUN apk add --no-cache ca-certificates tzdata
+RUN apk add --no-cache ca-certificates tzdata && adduser -D -H appuser
 COPY --from=builder /bin/smtpd /usr/local/bin/smtpd
 COPY config.yaml /etc/burnerbyte/config.yaml
+USER appuser
 EXPOSE 2525
 ENTRYPOINT ["smtpd"]

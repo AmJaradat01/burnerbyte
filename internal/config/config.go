@@ -72,11 +72,13 @@ type JWTConfig struct {
 }
 
 type SMTPConfig struct {
-	Listen   string `mapstructure:"listen"`
-	Hostname string `mapstructure:"hostname"`
-	MaxSize  int64  `mapstructure:"max_size"`
-	QueueSize int   `mapstructure:"queue_size"`
-	Workers  int    `mapstructure:"workers"`
+	Listen    string `mapstructure:"listen"`
+	Hostname  string `mapstructure:"hostname"`
+	MaxSize   int64  `mapstructure:"max_size"`
+	QueueSize int    `mapstructure:"queue_size"`
+	Workers   int    `mapstructure:"workers"`
+	TLSCert   string `mapstructure:"tls_cert"`
+	TLSKey    string `mapstructure:"tls_key"`
 }
 
 type MailerConfig struct {
@@ -110,11 +112,12 @@ type CORSConfig struct {
 }
 
 type RateLimitConfig struct {
-	Enabled         bool `mapstructure:"enabled"`
-	Authenticated   int  `mapstructure:"authenticated"`
-	Unauthenticated int  `mapstructure:"unauthenticated"`
-	Login           int  `mapstructure:"login"`
-	ForgotPassword  int  `mapstructure:"forgot_password"`
+	Enabled         bool     `mapstructure:"enabled"`
+	Authenticated   int      `mapstructure:"authenticated"`
+	Unauthenticated int      `mapstructure:"unauthenticated"`
+	Login           int      `mapstructure:"login"`
+	ForgotPassword  int      `mapstructure:"forgot_password"`
+	TrustedProxies  []string `mapstructure:"trusted_proxies"`
 }
 
 type LockoutConfig struct {

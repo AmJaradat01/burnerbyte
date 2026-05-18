@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"log/slog"
@@ -18,12 +19,15 @@ import (
 // Listener accepts inbound SMTP connections, parses emails using enmime,
 // and enqueues them into the Server's processing pipeline.
 type Listener struct {
-	server   *Server
-	router   *Router
-	ln       net.Listener
-	hostname string
-	maxSize  int64
-	wg       sync.WaitGroup
+	server    *Server
+	router    *Router
+	ln        net.Listener
+	hostname  string
+	maxSize   int64
+	maxConns  int
+	connSem   chan struct{}
+	wg        sync.WaitGroup
+	tlsConfig *tls.Config
 }
 
 func NewListener(server *Server, router *Router) *Listener {
@@ -31,11 +35,26 @@ func NewListener(server *Server, router *Router) *Listener {
 	if maxSize <= 0 {
 		maxSize = 25 * 1024 * 1024 // 25 MB default
 	}
+	maxConns := 100
+
+	var tlsCfg *tls.Config
+	if server.cfg.TLSCert != "" && server.cfg.TLSKey != "" {
+		cert, err := tls.LoadX509KeyPair(server.cfg.TLSCert, server.cfg.TLSKey)
+		if err != nil {
+			slog.Error("smtp: failed to load TLS cert", "error", err)
+		} else {
+			tlsCfg = &tls.Config{Certificates: []tls.Certificate{cert}}
+		}
+	}
+
 	return &Listener{
-		server:   server,
-		router:   router,
-		hostname: server.cfg.Hostname,
-		maxSize:  maxSize,
+		server:    server,
+		router:    router,
+		hostname:  server.cfg.Hostname,
+		maxSize:   maxSize,
+		maxConns:  maxConns,
+		connSem:   make(chan struct{}, maxConns),
+		tlsConfig: tlsCfg,
 	}
 }
 
@@ -68,9 +87,18 @@ func (l *Listener) ListenAndServe(ctx context.Context, addr string) error {
 				continue
 			}
 		}
+		// Try to acquire connection slot
+		select {
+		case l.connSem <- struct{}{}:
+		default:
+			conn.Close()
+			slog.Warn("smtp max connections reached, rejecting", "remote", conn.RemoteAddr())
+			continue
+		}
 		l.wg.Add(1)
 		go func() {
 			defer l.wg.Done()
+			defer func() { <-l.connSem }()
 			l.handleConn(ctx, conn)
 		}()
 	}
@@ -103,7 +131,7 @@ func (l *Listener) handleConn(ctx context.Context, conn net.Conn) {
 
 	for {
 		// Per-command timeout.
-		conn.SetReadDeadline(time.Now().Add(5 * time.Minute)) //nolint:errcheck
+		sess.conn.SetReadDeadline(time.Now().Add(5 * time.Minute)) //nolint:errcheck
 
 		line, err := sess.reader.ReadString('\n')
 		if err != nil {
@@ -130,7 +158,26 @@ func (l *Listener) handleConn(ctx context.Context, conn net.Conn) {
 			sess.writef("250-SIZE %d", l.maxSize)
 			sess.writef("250-8BITMIME")
 			sess.writef("250-PIPELINING")
+			if l.tlsConfig != nil {
+				sess.writef("250-STARTTLS")
+			}
 			sess.writef("250 ENHANCEDSTATUSCODES")
+
+		case "STARTTLS":
+			if l.tlsConfig == nil {
+				sess.writef("502 5.5.1 STARTTLS not available")
+				continue
+			}
+			sess.writef("220 2.0.0 Ready to start TLS")
+			tlsConn := tls.Server(sess.conn, l.tlsConfig)
+			if err := tlsConn.Handshake(); err != nil {
+				slog.Error("smtp STARTTLS handshake failed", "error", err, "remote", remoteAddr)
+				return
+			}
+			sess.conn = tlsConn
+			sess.reader = bufio.NewReader(tlsConn)
+			sess.from = ""
+			sess.rcptTo = nil
 
 		case "MAIL":
 			from := extractMailParam(arg, "FROM")
@@ -178,12 +225,12 @@ func (l *Listener) handleConn(ctx context.Context, conn net.Conn) {
 			sess.writef("354 Start mail input; end with <CRLF>.<CRLF>")
 
 			// Total deadline for the entire DATA phase to prevent slow-loris.
-			conn.SetDeadline(time.Now().Add(5 * time.Minute)) //nolint:errcheck
+			sess.conn.SetDeadline(time.Now().Add(5 * time.Minute)) //nolint:errcheck
 
 			data, err := sess.readData()
 
 			// Reset deadline after DATA completes.
-			conn.SetDeadline(time.Time{}) //nolint:errcheck
+			sess.conn.SetDeadline(time.Time{}) //nolint:errcheck
 			if err != nil {
 				slog.Error("smtp data read error", "error", err, "remote", remoteAddr)
 				sess.writef("451 4.3.0 Error reading message data")
@@ -194,8 +241,12 @@ func (l *Listener) handleConn(ctx context.Context, conn net.Conn) {
 				continue
 			}
 
-			l.processData(ctx, sess.from, sess.rcptTo, data)
-			sess.writef("250 2.0.0 OK: message queued")
+			remoteIP, _, _ := net.SplitHostPort(remoteAddr)
+			if !l.processData(ctx, sess.from, sess.rcptTo, data, remoteIP) {
+				sess.writef("451 4.3.0 Service unavailable, try again later")
+			} else {
+				sess.writef("250 2.0.0 OK: message queued")
+			}
 
 			// Reset for next message in same session.
 			sess.from = ""
@@ -252,29 +303,34 @@ func (s *smtpSession) readData() ([]byte, error) {
 }
 
 func (s *smtpSession) writef(format string, args ...any) {
+	s.conn.SetWriteDeadline(time.Now().Add(30 * time.Second))
 	msg := fmt.Sprintf(format, args...)
 	fmt.Fprintf(s.conn, "%s\r\n", msg)
 }
 
 // processData parses the raw email using enmime and enqueues it for each recipient.
-func (l *Listener) processData(ctx context.Context, from string, rcptTo []string, data []byte) {
+func (l *Listener) processData(ctx context.Context, from string, rcptTo []string, data []byte, remoteIP string) bool {
 	envelope, err := enmime.ReadEnvelope(bytes.NewReader(data))
 	if err != nil {
 		slog.Error("smtp: failed to parse email", "error", err, "from", from)
 		// Fall back to raw data if MIME parsing fails.
+		allOK := true
 		for _, to := range rcptTo {
 			email := &InboundEmail{
-				From:       from,
-				To:         to,
-				Subject:    "(parse error)",
-				BodyText:   string(data),
-				Headers:    map[string]string{},
-				SizeBytes:  int64(len(data)),
-				ReceivedAt: time.Now(),
+				From:         from,
+				To:           to,
+				Subject:      "(parse error)",
+				BodyText:     string(data),
+				Headers:      map[string]string{},
+				SizeBytes:    int64(len(data)),
+				ReceivedAt:   time.Now(),
+				ConnectingIP: remoteIP,
 			}
-			l.server.Enqueue(email)
+			if !l.server.Enqueue(email) {
+				allOK = false
+			}
 		}
-		return
+		return allOK
 	}
 
 	// Extract headers.
@@ -306,21 +362,24 @@ func (l *Listener) processData(ctx context.Context, from string, rcptTo []string
 	messageID := envelope.GetHeader("Message-ID")
 	subject := envelope.GetHeader("Subject")
 
+	allOK := true
 	for _, to := range rcptTo {
 		email := &InboundEmail{
-			MessageID:   messageID,
-			From:        from,
-			To:          to,
-			Subject:     subject,
-			BodyText:    envelope.Text,
-			BodyHTML:    envelope.HTML,
-			Headers:     headers,
-			SizeBytes:   int64(len(data)),
-			Attachments: attachments,
-			ReceivedAt:  time.Now(),
+			MessageID:    messageID,
+			From:         from,
+			To:           to,
+			Subject:      subject,
+			BodyText:     envelope.Text,
+			BodyHTML:     envelope.HTML,
+			Headers:      headers,
+			SizeBytes:    int64(len(data)),
+			Attachments:  attachments,
+			ReceivedAt:   time.Now(),
+			ConnectingIP: remoteIP,
 		}
 		if !l.server.Enqueue(email) {
 			slog.Warn("smtp queue full, dropping email", "to", to, "from", from, "subject", subject)
+			allOK = false
 		}
 	}
 
@@ -331,6 +390,8 @@ func (l *Listener) processData(ctx context.Context, from string, rcptTo []string
 		"attachments", len(attachments),
 		"size", len(data),
 	)
+
+	return allOK
 }
 
 // parseCommand splits an SMTP command line into the command verb and its argument.

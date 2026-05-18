@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuthStore } from "@/stores/auth-store";
-import { api } from "@/lib/api";
+import { api, setAccessToken } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,14 @@ import { SessionConflictDialog } from "@/components/session-conflict-dialog";
 import type { Session } from "@/types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
+
+function safeRedirect(url: string | null): string {
+  if (!url) return "/dashboard";
+  if (!url.startsWith("/") || url.startsWith("//") || url.includes("://")) {
+    return "/dashboard";
+  }
+  return url;
+}
 
 interface SSOStatusProvider {
   name: string;
@@ -55,6 +63,29 @@ export default function LoginPage() {
   });
 
   useEffect(() => {
+    // Handle SSO code exchange (new secure flow)
+    const ssoCode = searchParams.get("sso_code");
+    if (ssoCode) {
+      window.history.replaceState(null, "", window.location.pathname);
+      api.post<{ access_token: string; refresh_token: string; user_id: string }>("/auth/sso/exchange", { code: ssoCode })
+        .then((res) => {
+          setAccessToken(res.access_token);
+          localStorage.setItem("refresh_token", res.refresh_token);
+          const pendingInvite = sessionStorage.getItem("pending_invite_token");
+          if (pendingInvite) {
+            sessionStorage.removeItem("pending_invite_token");
+            fetchMe().then(() => router.replace(`/invite?token=${pendingInvite}`));
+            return;
+          }
+          const redirect = safeRedirect(searchParams.get("redirect"));
+          fetchMe().then(() => router.replace(redirect));
+        })
+        .catch(() => {
+          toast.error("SSO login failed: code expired or invalid. Please try again.");
+        });
+      return;
+    }
+
     const hash = window.location.hash;
     if (!hash) return;
     const params = new URLSearchParams(hash.substring(1));
@@ -86,22 +117,6 @@ export default function LoginPage() {
         });
       return;
     }
-    const accessToken = params.get("access_token");
-    const refreshToken = params.get("refresh_token");
-    if (accessToken && refreshToken) {
-      window.history.replaceState(null, "", window.location.pathname + window.location.search);
-      localStorage.setItem("access_token", accessToken);
-      localStorage.setItem("refresh_token", refreshToken);
-      // Check for pending invite token from SSO flow started on invite page
-      const pendingInvite = sessionStorage.getItem("pending_invite_token");
-      if (pendingInvite) {
-        sessionStorage.removeItem("pending_invite_token");
-        fetchMe().then(() => router.replace(`/invite?token=${pendingInvite}`));
-        return;
-      }
-      const redirect = searchParams.get("redirect") || "/";
-      fetchMe().then(() => router.replace(redirect));
-    }
   }, [searchParams, fetchMe, router]);
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -124,7 +139,7 @@ export default function LoginPage() {
       if (conflict) {
         return;
       }
-      const redirect = searchParams.get("redirect") || "/";
+      const redirect = safeRedirect(searchParams.get("redirect"));
       router.push(redirect);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Login failed");
@@ -136,7 +151,7 @@ export default function LoginPage() {
   const handleConflictResolved = async () => {
     clearSessionConflict();
     await fetchMe();
-    const redirect = searchParams.get("redirect") || "/";
+    const redirect = safeRedirect(searchParams.get("redirect"));
     router.push(redirect);
   };
 

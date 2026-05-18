@@ -42,6 +42,7 @@ func (h *AuthHandler) PublicRoutes(r chi.Router, rl *middleware.RateLimiter) {
 	r.With(rl.LoginLimiter).Get("/auth/verify-email/{token}", h.VerifyEmail)
 	r.Get("/auth/sso/{provider}", h.SSORedirect)
 	r.With(rl.LoginLimiter).Get("/auth/sso/{provider}/callback", h.SSOCallback)
+	r.With(rl.LoginLimiter).Post("/auth/sso/exchange", h.SSOExchange)
 	r.Get("/auth/sso-status", h.SSOStatus)
 }
 
@@ -59,14 +60,14 @@ func (h *AuthHandler) AuthenticatedRoutes(r chi.Router) {
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
-	if !h.cfg.Defaults.AllowRegistration {
-		writeError(w, http.StatusForbidden, "public registration is disabled")
-		return
-	}
-
 	var input domain.CreateUserInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if !h.cfg.Defaults.AllowRegistration && input.InviteToken == "" {
+		writeError(w, http.StatusForbidden, "public registration is disabled")
 		return
 	}
 
@@ -77,8 +78,8 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	user, tokens, err := h.svc.Register(r.Context(), input)
 	if err != nil {
-		if err.Error() == "email already registered" {
-			writeError(w, http.StatusConflict, err.Error())
+		if strings.Contains(err.Error(), "already registered") {
+			writeError(w, http.StatusBadRequest, "unable to complete registration")
 			return
 		}
 		writeServiceError(w, err)
@@ -498,7 +499,7 @@ func (h *AuthHandler) SSORedirect(w http.ResponseWriter, r *http.Request) {
 	})
 	redirectURL, err := h.sso.RedirectURL(r.Context(), providerName, state)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		writeError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 	http.Redirect(w, r, redirectURL, http.StatusFound)
@@ -607,7 +608,7 @@ func (h *AuthHandler) SSOCallback(w http.ResponseWriter, r *http.Request) {
 		auditRecordEnhanced(r, uuid.Nil, "user.sso_login_failed", "user", uuid.Nil, result.Email, map[string]any{
 			"provider": providerName, "reason": err.Error(), "email": result.Email,
 		})
-		writeError(w, http.StatusInternalServerError, err.Error())
+		writeError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
@@ -615,11 +616,15 @@ func (h *AuthHandler) SSOCallback(w http.ResponseWriter, r *http.Request) {
 		"email": user.Email, "provider": providerName, "subject": result.Subject, "is_new_user": user.CreatedAt.After(time.Now().Add(-10*time.Second)),
 	})
 
-	http.Redirect(w, r, fmt.Sprintf("%s/login#access_token=%s&refresh_token=%s&user_id=%s",
+	code := uuid.New().String()
+	if err := h.svc.StoreSSOCode(r.Context(), code, tokens, user.ID); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to store SSO code")
+		return
+	}
+
+	http.Redirect(w, r, fmt.Sprintf("%s/login?sso_code=%s",
 		frontendURL,
-		url.QueryEscape(tokens.AccessToken),
-		url.QueryEscape(tokens.RefreshToken),
-		url.QueryEscape(user.ID.String())), http.StatusFound)
+		url.QueryEscape(code)), http.StatusFound)
 }
 
 func (h *AuthHandler) GetPendingSessions(w http.ResponseWriter, r *http.Request) {
@@ -636,6 +641,26 @@ func (h *AuthHandler) GetPendingSessions(w http.ResponseWriter, r *http.Request)
 	writeJSON(w, http.StatusOK, map[string]any{
 		"sessions": sessions,
 		"limit":    limit,
+	})
+}
+
+func (h *AuthHandler) SSOExchange(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Code string `json:"code"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Code == "" {
+		writeError(w, http.StatusBadRequest, "code is required")
+		return
+	}
+	data, err := h.svc.ExchangeSSOCode(r.Context(), body.Code)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "invalid or expired code")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{
+		"access_token":  data.AccessToken,
+		"refresh_token": data.RefreshToken,
+		"user_id":       data.UserID,
 	})
 }
 

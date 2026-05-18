@@ -394,11 +394,35 @@ func (h *AdminHandler) UpdatePlatformSettings(w http.ResponseWriter, r *http.Req
 	}
 	h.cfgMu.RUnlock()
 
+	// Validate duration fields before any mutation
+	var parsedDefaultTTL time.Duration
+	var hasDefaultTTL bool
+	if input.DefaultInboxTTL != "" {
+		d, err := time.ParseDuration(input.DefaultInboxTTL)
+		if err != nil || d < 0 || d > 365*24*time.Hour {
+			writeError(w, http.StatusBadRequest, "default_inbox_ttl must be between 0 and 365 days")
+			return
+		}
+		parsedDefaultTTL = d
+		hasDefaultTTL = true
+	}
+	var parsedMaxTTL time.Duration
+	var hasMaxTTL bool
+	if input.MaxInboxTTL != "" {
+		d, err := time.ParseDuration(input.MaxInboxTTL)
+		if err != nil || d < 0 || d > 365*24*time.Hour {
+			writeError(w, http.StatusBadRequest, "max_inbox_ttl must be between 0 and 365 days")
+			return
+		}
+		parsedMaxTTL = d
+		hasMaxTTL = true
+	}
+
 	if err := h.sysConfig.Set(r.Context(), "platform", input); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to save")
 		return
 	}
-	// Apply to running config under lock
+	// Apply to running config atomically
 	h.cfgMu.Lock()
 	h.cfg.Defaults.AllowRegistration = input.AllowRegistration
 	h.cfg.EmailVerification.Enabled = input.EmailVerification
@@ -412,21 +436,11 @@ func (h *AdminHandler) UpdatePlatformSettings(w http.ResponseWriter, r *http.Req
 	h.cfg.Defaults.Timezone = input.Timezone
 	h.cfg.Defaults.DateFormat = input.DateFormat
 	h.cfg.Defaults.TimeFormat = input.TimeFormat
-	if d, err := time.ParseDuration(input.DefaultInboxTTL); err == nil {
-		if d < 0 || d > 365*24*time.Hour {
-			writeError(w, http.StatusBadRequest, "default_inbox_ttl must be between 0 and 365 days")
-			h.cfgMu.Unlock()
-			return
-		}
-		h.cfg.Defaults.DefaultInboxTTL = d
+	if hasDefaultTTL {
+		h.cfg.Defaults.DefaultInboxTTL = parsedDefaultTTL
 	}
-	if d, err := time.ParseDuration(input.MaxInboxTTL); err == nil {
-		if d < 0 || d > 365*24*time.Hour {
-			writeError(w, http.StatusBadRequest, "max_inbox_ttl must be between 0 and 365 days")
-			h.cfgMu.Unlock()
-			return
-		}
-		h.cfg.Defaults.MaxInboxTTL = d
+	if hasMaxTTL {
+		h.cfg.Defaults.MaxInboxTTL = parsedMaxTTL
 	}
 	h.cfg.Defaults.MaxAttachmentSizeMB = input.MaxAttachmentSizeMB
 	h.cfg.Defaults.MaxDomains = input.MaxDomains

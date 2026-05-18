@@ -1,5 +1,7 @@
 // BurnerByte Service Worker — basic offline support
-const CACHE_NAME = "burnerbyte-v1";
+// Bump CACHE_VERSION on each deploy to invalidate old caches
+const CACHE_VERSION = "2";
+const CACHE_NAME = `burnerbyte-v${CACHE_VERSION}`;
 const OFFLINE_URL = "/offline";
 
 // Pre-cache the offline page and key assets on install

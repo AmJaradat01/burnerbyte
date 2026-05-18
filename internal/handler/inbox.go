@@ -157,7 +157,7 @@ func (h *InboxHandler) GetInbox(w http.ResponseWriter, r *http.Request) {
 
 func (h *InboxHandler) ExtendTTL(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
-	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "team.inboxes.view") {
+	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "team.inboxes.manage") {
 		writeError(w, http.StatusForbidden, "insufficient scope")
 		return
 	}
@@ -187,7 +187,7 @@ func (h *InboxHandler) ExtendTTL(w http.ResponseWriter, r *http.Request) {
 
 func (h *InboxHandler) DeleteInbox(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
-	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "team.inboxes.view") {
+	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "team.inboxes.manage") {
 		writeError(w, http.StatusForbidden, "insufficient scope")
 		return
 	}

@@ -50,6 +50,7 @@ type AuthService struct {
 	cfg               *config.Config
 	revocationCache   *auth.SessionRevocationCache
 	pendingLoginStore *auth.PendingLoginStore
+	ssoCodeStore      *auth.SSOCodeStore
 }
 
 func NewAuthService(
@@ -69,6 +70,7 @@ func NewAuthService(
 	cfg *config.Config,
 	revocationCache *auth.SessionRevocationCache,
 	pendingLoginStore *auth.PendingLoginStore,
+	ssoCodeStore *auth.SSOCodeStore,
 ) *AuthService {
 	return &AuthService{
 		pool: pool, userRepo: userRepo, sessionRepo: sessionRepo,
@@ -78,7 +80,16 @@ func NewAuthService(
 		tokens: tokens, lockout: lockout, mailer: mailer, cfg: cfg,
 		revocationCache:   revocationCache,
 		pendingLoginStore: pendingLoginStore,
+		ssoCodeStore:      ssoCodeStore,
 	}
+}
+
+func (s *AuthService) StoreSSOCode(ctx context.Context, code string, tokens *domain.TokenPair, userID uuid.UUID) error {
+	return s.ssoCodeStore.Store(ctx, code, tokens.AccessToken, tokens.RefreshToken, userID)
+}
+
+func (s *AuthService) ExchangeSSOCode(ctx context.Context, code string) (*auth.SSOCodeData, error) {
+	return s.ssoCodeStore.Exchange(ctx, code)
 }
 
 func (s *AuthService) Register(ctx context.Context, input domain.CreateUserInput) (*domain.User, *domain.TokenPair, error) {
