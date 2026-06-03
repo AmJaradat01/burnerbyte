@@ -6,7 +6,7 @@ import { useAuthStore } from "@/stores/auth-store";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useTranslations } from "next-intl";
-import { Home, BookOpen, LogOut, User } from "lucide-react";
+import { Home, BookOpen, LogOut } from "lucide-react";
 import { Logo } from "@/components/logo";
 
 export function TopNav() {
@@ -24,7 +24,7 @@ export function TopNav() {
   const userInitial = user?.display_name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || "?";
 
   return (
-    <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur-sm">
+    <header className="sticky top-0 z-40 border-b bg-background">
       <div className="flex h-14 items-center justify-between px-4 sm:px-6">
         {/* Left: logo + nav */}
         <div className="flex items-center gap-6">
@@ -42,7 +42,7 @@ export function TopNav() {
                   className={cn(
                     "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-150",
                     active
-                      ? "bg-primary/10 text-primary shadow-sm"
+                      ? "bg-primary/10 text-primary"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/80"
                   )}
                 >
@@ -60,7 +60,7 @@ export function TopNav() {
             href="/profile"
             className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-muted/80 transition-colors group"
           >
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/5 text-xs font-semibold text-primary ring-1 ring-border shadow-sm">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary ring-1 ring-border">
               {userInitial}
             </div>
             <span className="hidden sm:inline text-sm font-medium max-w-[120px] truncate group-hover:text-foreground transition-colors">
@@ -73,6 +73,7 @@ export function TopNav() {
             className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive transition-colors"
             onClick={logout}
             title={tc("signOut")}
+            aria-label={tc("signOut")}
           >
             <LogOut className="h-4 w-4" />
           </Button>

@@ -98,7 +98,6 @@ export default function LoginPage() {
     // Handle SSO session conflict redirect
     const sessionConflict = params.get("session_conflict");
     const ssoConflictToken = params.get("pending_token");
-    const limitParam = params.get("limit");
     if (sessionConflict === "true" && ssoConflictToken) {
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
       // Fetch sessions for this pending token

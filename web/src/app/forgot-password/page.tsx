@@ -47,7 +47,7 @@ export default function ForgotPasswordPage() {
           <p className="text-sm text-muted-foreground">Self-hosted temporary email</p>
         </div>
         {sent ? (
-          <Card className="w-full shadow">
+          <Card className="w-full">
             <CardHeader className="text-center">
               <CardTitle>Check your email</CardTitle>
               <CardDescription>If an account exists for {email}, we sent a password reset link.</CardDescription>
@@ -58,7 +58,7 @@ export default function ForgotPasswordPage() {
             </CardFooter>
           </Card>
         ) : (
-          <Card className="w-full shadow">
+          <Card className="w-full">
             <CardHeader className="text-center">
               <CardTitle className="text-xl">Reset password</CardTitle>
               <CardDescription>Enter your email to receive a reset link</CardDescription>

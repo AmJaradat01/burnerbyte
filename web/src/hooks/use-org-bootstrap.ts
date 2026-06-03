@@ -30,6 +30,8 @@ export function useOrgBootstrap() {
     if (orgsLoaded && !leftInvite) return;
 
     fetchingOrgs.current = true;
+    // Intentional: synchronous setState to reset loading flag before async fetchOrgs; preserves bootstrap sequence
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setOrgsLoaded(false);
     fetchOrgs()
       .finally(() => { fetchingOrgs.current = false; setOrgsLoaded(true); });

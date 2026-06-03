@@ -30,13 +30,6 @@ const RANGES = [
   { label: "90 days", value: "90" },
 ];
 
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return "0 B";
-  const units = ["B", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  return `${(bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0)} ${units[i]}`;
-}
-
 function formatHour(hour: number): string {
   if (hour === 0) return "12am";
   if (hour === 12) return "12pm";
@@ -264,6 +257,7 @@ function OrgAnalytics({ orgId }: { orgId: string }) {
   );
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function TeamAnalytics({ orgId, teamId, teamName }: { orgId: string; teamId: string; teamName?: string }) {
   const [days, setDays] = useState("30");
   const { data: stats, isLoading, isError, refetch } = useQuery({

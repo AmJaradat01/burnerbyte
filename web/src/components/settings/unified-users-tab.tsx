@@ -20,7 +20,7 @@ import { ErrorState } from "@/components/error-state";
 import { Pagination } from "@/components/pagination";
 import { useRoles } from "@/hooks/use-roles";
 import { Textarea } from "@/components/ui/textarea";
-import { AlertTriangle, CheckCircle2, Clock, Copy, KeyRound, Lock, LogOut, Mail, Minus, Plus, RefreshCw, Shield, Trash2, Upload, UserPlus, Users, XCircle } from "lucide-react";
+import { CheckCircle2, Clock, Copy, KeyRound, Lock, LogOut, Mail, Minus, Plus, RefreshCw, Shield, Trash2, Upload, UserPlus, Users, XCircle } from "lucide-react";
 import type { User, Membership, Invite, PaginatedResponse } from "@/types";
 import { ProviderIcon } from "@/components/provider-icon";
 
@@ -30,7 +30,7 @@ interface TeamAssignmentRow { team_id: string; team_role: string; }
 interface BulkInviteResult { created: number; skipped: { email: string; reason: string }[]; failed: { email: string; reason: string }[]; }
 
 const ROLE_COLORS: Record<string, string> = {
-  owner: "bg-warning/10 text-warning border-warning/20",
+  owner: "bg-secondary text-secondary-foreground border-border",
   admin: "bg-info/10 text-info border-info/20",
   member: "bg-muted text-foreground border-border",
 };
@@ -166,14 +166,15 @@ export function UnifiedUsersTab({ orgId }: { orgId: string }) {
         </CardHeader>
       </Card>
 
-      {/* Stats */}
-      <div className={`grid gap-4 ${isAdmin ? "grid-cols-2 md:grid-cols-5" : "grid-cols-3"}`}>
-        <StatCard label="Total Users" value={isAdmin ? (usersData?.total ?? 0) : members.length} icon={<Users className="h-4 w-4" />} accent="text-muted-foreground bg-muted" active={filter === "all"} onClick={() => setFilter("all")} />
-        <StatCard label="Members" value={memberCount} icon={<CheckCircle2 className="h-4 w-4" />} accent="text-success bg-success/10" active={filter === "members"} onClick={() => setFilter(filter === "members" ? "all" : "members")} />
-        {isAdmin && <StatCard label="No Org" value={nonMemberCount} icon={<AlertTriangle className="h-4 w-4" />} accent="text-warning bg-warning/10" active={filter === "non-members"} onClick={() => setFilter(filter === "non-members" ? "all" : "non-members")} />}
-        <StatCard label="Pending" value={pendingInvites.length} icon={<Clock className="h-4 w-4" />} accent="text-info bg-info/10" active={false} onClick={() => {}} />
-        {isAdmin && <StatCard label="Unverified" value={unverifiedCount} icon={<XCircle className="h-4 w-4" />} accent="text-destructive bg-destructive/10" active={filter === "unverified"} onClick={() => setFilter(filter === "unverified" ? "all" : "unverified")} />}
-      </div>
+      {/* Summary */}
+      <p className="text-sm text-muted-foreground tabular-nums">
+        <button className={`hover:text-foreground transition-colors ${filter === "all" ? "font-semibold text-foreground" : ""}`} onClick={() => setFilter("all")}>{isAdmin ? (usersData?.total ?? 0) : members.length} user{(isAdmin ? (usersData?.total ?? 0) : members.length) !== 1 ? "s" : ""}</button>
+        {" · "}
+        <button className={`hover:text-foreground transition-colors ${filter === "members" ? "font-semibold text-foreground" : ""}`} onClick={() => setFilter(filter === "members" ? "all" : "members")}>{memberCount} member{memberCount !== 1 ? "s" : ""}</button>
+        {isAdmin && <>{" · "}<button className={`hover:text-foreground transition-colors ${filter === "non-members" ? "font-semibold text-foreground" : ""}`} onClick={() => setFilter(filter === "non-members" ? "all" : "non-members")}>{nonMemberCount} no org</button></>}
+        {" · "}{pendingInvites.length} pending
+        {isAdmin && <>{" · "}<button className={`hover:text-foreground transition-colors ${filter === "unverified" ? "font-semibold text-foreground" : ""}`} onClick={() => setFilter(filter === "unverified" ? "all" : "unverified")}>{unverifiedCount} unverified</button></>}
+      </p>
 
       {/* Search + Invite */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -218,7 +219,7 @@ export function UnifiedUsersTab({ orgId }: { orgId: string }) {
                       <tr className="border-b last:border-0 hover:bg-primary/[0.03] cursor-pointer transition-all duration-150 group">
                         <td className="px-4 py-3.5">
                           <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/15 to-primary/5 text-sm font-bold text-primary shadow-sm ">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-sm font-bold text-primary">
                               {(u.display_name || u.email).charAt(0).toUpperCase()}
                             </div>
                             <div className="min-w-0">
@@ -329,21 +330,6 @@ export function UnifiedUsersTab({ orgId }: { orgId: string }) {
   );
 }
 
-function StatCard({ label, value, icon, accent, active, onClick }: { label: string; value: number; icon: React.ReactNode; accent: string; active: boolean; onClick: () => void }) {
-  return (
-    <Card className={`cursor-pointer transition-colors ${active ? "ring-2 ring-primary shadow-md" : ""}`} onClick={onClick}>
-      <CardContent className="pt-5 pb-4">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-medium text-muted-foreground">{label}</span>
-          <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${accent}`}>
-            {icon}
-          </div>
-        </div>
-        <p className="text-2xl font-bold tabular-nums">{value}</p>
-      </CardContent>
-    </Card>
-  );
-}
 
 function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: MergedUser; orgId: string; isYou: boolean; isAdmin: boolean; children: React.ReactNode }) {
   const qc = useQueryClient();
@@ -497,8 +483,8 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
 
         <div className="space-y-6">
           {/* ── Profile Header ── */}
-          <div className="flex items-start gap-5 p-5 rounded-xl bg-gradient-to-r from-muted/60 to-muted/30 border">
-            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-3xl font-bold text-primary shadow-sm">
+          <div className="flex items-start gap-5 p-5 rounded-xl bg-muted/40 border">
+            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-3xl font-bold text-primary">
               {(u.display_name || u.email).charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1 space-y-2.5">
@@ -532,7 +518,7 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
             <div className="space-y-6">
               {/* Account Information */}
               <div>
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Account Information</h3>
+                <h3 className="text-sm font-semibold mb-3">Account Information</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-lg border p-3 space-y-1">
                     <p className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Copy className="h-3 w-3" />User ID</p>
@@ -568,7 +554,7 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
               {/* Organization Actions */}
               {(!u.org_role || (u.org_role && !isYou)) && (
                 <div>
-                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Organization</h3>
+                  <h3 className="text-sm font-semibold mb-3">Organization</h3>
                   <div className="flex gap-2">
                     {!u.org_role && (
                       <Button variant="outline" className="gap-2" onClick={addToOrg}>
@@ -596,8 +582,8 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
             <div className="space-y-6">
               {/* Edit Profile */}
               <div>
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Edit Profile</h3>
-                <div className="space-y-4 rounded-lg border p-4">
+                <h3 className="text-sm font-semibold mb-3">Edit Profile</h3>
+                <div className="space-y-4 bg-muted/40 rounded-lg p-4">
                   <div className="space-y-2">
                     <Label>Display Name</Label>
                     <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
@@ -649,8 +635,8 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
           {/* ── Admin Controls (full width below the two columns) ── */}
           {isAdmin && (
             <div>
-              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Admin Controls</h3>
-              <div className="space-y-3 rounded-lg border p-4">
+              <h3 className="text-sm font-semibold mb-3">Admin Controls</h3>
+              <div className="space-y-3 bg-muted/40 rounded-lg p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-success/10">

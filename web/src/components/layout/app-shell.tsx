@@ -142,7 +142,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   if (!setupCompleted) return <main className="min-h-screen">{children}</main>;
 
   // Landing page — has its own header/footer
-  if (isLanding && !user) return <main className="min-h-screen bg-mesh">{children}</main>;
+  if (isLanding && !user) return <main className="min-h-screen">{children}</main>;
 
   // Auth/public pages for unauthenticated users — shared header & footer
   if (isPublic && !user) return (
@@ -173,7 +173,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Sidebar collapsed={false} onToggle={() => setMobileOpen(false)} />
           </SheetContent>
         </Sheet>
-        <div className="flex-1 flex flex-col min-h-0 bg-mesh">
+        <div className="flex-1 flex flex-col min-h-0">
           <main id="main-content" className="flex-1 overflow-auto p-4 pt-14 md:p-6 md:pt-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
@@ -197,7 +197,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   // ── Regular user layout: top nav + footer ──
   return (
-    <div className="flex flex-col min-h-screen bg-mesh">
+    <div className="flex flex-col min-h-screen">
       <SkipToContent />
       <PageProgress />
       <OfflineBanner />
@@ -231,11 +231,11 @@ function UnauthPublicLayout({ children }: { children: ReactNode }) {
   const allowRegistration = sso?.allow_registration ?? true;
 
   return (
-    <div className="flex flex-col min-h-screen bg-mesh">
+    <div className="flex flex-col min-h-screen">
       <SkipToContent />
       <PageProgress />
       <OfflineBanner />
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
+      <header className="sticky top-0 z-50 border-b bg-background">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
           <Link href="/">
             <Logo />

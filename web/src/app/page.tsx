@@ -20,10 +20,10 @@ import { ErrorState } from "@/components/error-state";
 import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
 import { PullToRefreshIndicator } from "@/components/pull-to-refresh-indicator";
 import { Pagination } from "@/components/pagination";
-import { Check, ChevronDown, Clock, Copy, ExternalLink, Key, Link as LinkIcon, Mail, RefreshCw, Server, Timer, Trash2, Users, Zap } from "lucide-react";
+import { Check, ChevronDown, Clock, Copy, ExternalLink, Mail, RefreshCw, Timer, Trash2, Zap } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { copyToClipboard } from "@/lib/clipboard";
-import { Logo } from "@/components/logo";
+import { LandingPage } from "@/components/landing/landing-page";
 import type { Inbox, PaginatedResponse, DomainAssignment } from "@/types";
 
 export default function RootPage() {
@@ -376,6 +376,8 @@ function InboxCard({ inbox, onExtend, onDelete }: { inbox: Inbox; onExtend: () =
   const addr = inbox.full_address || inbox.address;
   const [localPart, domainPart] = addr.split("@");
   const hasUnread = (inbox.unread_count ?? 0) > 0;
+  // Display-only time hint: Date.now() only controls a CSS border style, no logic depends on it
+  // eslint-disable-next-line react-hooks/purity
   const expiringSoon = inbox.is_active && (new Date(inbox.expires_at).getTime() - Date.now()) < 30 * 60 * 1000;
 
   return (
@@ -387,8 +389,8 @@ function InboxCard({ inbox, onExtend, onDelete }: { inbox: Inbox; onExtend: () =
         {/* Address */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="h-10 w-10 rounded-lg bg-warning/10 flex items-center justify-center shrink-0">
-              <Mail className="h-5 w-5 text-warning" />
+            <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
+              <Mail className="h-5 w-5 text-muted-foreground" />
             </div>
             <p className="font-mono text-sm font-medium truncate group-hover:text-primary transition-colors">
             <span>{localPart}</span>
@@ -479,145 +481,4 @@ function InboxGridSkeleton() {
   );
 }
 
-/* ── Public landing page ── */
-
-const featureKeys = ["inboxes", "multiTeam", "realTime", "webhooks", "apiKeys", "selfHosted"] as const;
-const featureIcons = [
-  { icon: Mail, bg: "bg-warning/10", fg: "text-warning", accent: "group-hover:border-warning/30", glow: "group-hover:shadow-warning/10" },
-  { icon: Users, bg: "bg-info/10", fg: "text-info", accent: "group-hover:border-info/30", glow: "group-hover:shadow-info/10" },
-  { icon: Zap, bg: "bg-warning/10", fg: "text-warning", accent: "group-hover:border-warning/30", glow: "group-hover:shadow-warning/10" },
-  { icon: LinkIcon, bg: "bg-primary/10", fg: "text-primary", accent: "group-hover:border-primary/30", glow: "group-hover:shadow-primary/10" },
-  { icon: Key, bg: "bg-success/10", fg: "text-success", accent: "group-hover:border-success/30", glow: "group-hover:shadow-success/10" },
-  { icon: Server, bg: "bg-destructive/10", fg: "text-destructive", accent: "group-hover:border-destructive/30", glow: "group-hover:shadow-destructive/10" },
-];
-
-interface SSOStatus {
-  enabled: boolean;
-  allow_registration: boolean;
-  enforce_sso?: boolean;
-}
-
-function LandingPage() {
-  const t = useTranslations("landing");
-  const tc = useTranslations("common");
-
-  const { data: sso } = useQuery({
-    queryKey: ["sso-status"],
-    queryFn: () => api.get<SSOStatus>("/auth/sso-status"),
-    staleTime: 60000,
-  });
-
-  const allowRegistration = sso?.allow_registration ?? true;
-
-  return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b backdrop-blur-sm bg-background/80 sticky top-0 z-50">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <Logo />
-          <div className="flex items-center gap-3">
-            {allowRegistration ? (
-              <>
-                <Link href="/login" className="rounded-md px-4 py-2 text-sm font-medium hover:bg-muted transition-colors">{tc("signIn")}</Link>
-                <Link href="/register" className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 transition-opacity">{tc("getStarted")}</Link>
-              </>
-            ) : (
-              <Link href="/login" className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 transition-opacity">{tc("signIn")}</Link>
-            )}
-          </div>
-        </div>
-      </header>
-      <main>
-        <section className="relative">
-          <div className="mx-auto max-w-3xl px-6 py-28 text-center">
-            <div className="inline-flex items-center gap-2 rounded-full border bg-muted/50 px-4 py-1.5 text-sm text-muted-foreground mb-6">
-              <span className="h-2 w-2 rounded-full bg-success" />
-              {t("tagline")}
-            </div>
-            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl text-foreground">{t("headline")}</h1>
-            <p className="mt-6 text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">{t("subtitle")}</p>
-            <div className="mt-10 flex justify-center gap-3">
-              {allowRegistration ? (
-                <>
-                  <Link href="/register" className="rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90 transition-opacity">{t("getStartedFree")}</Link>
-                  <Link href="/login" className="rounded-lg border px-6 py-2.5 text-sm font-medium hover:bg-muted transition-colors">{tc("signIn")}</Link>
-                </>
-              ) : (
-                <>
-                  <Link href="/login" className="rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90 transition-opacity">{tc("signIn")}</Link>
-                  <a href="#features" className="rounded-lg border px-6 py-2.5 text-sm font-medium hover:bg-muted transition-colors">{t("learnMore")}</a>
-                </>
-              )}
-            </div>
-          </div>
-        </section>
-        <section id="features" className="mx-auto max-w-5xl px-6 pb-28">
-          <div className="text-center mb-14">
-            <p className="text-sm font-medium text-primary mb-2 uppercase tracking-wider">{t("builtFor")}</p>
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">{t("everythingYouNeed")}</h2>
-          </div>
-          <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
-            {/* Featured: first two items as large cards */}
-            <div className="space-y-6">
-              {featureKeys.slice(0, 2).map((key, i) => {
-                const { icon: Icon, bg, fg } = featureIcons[i];
-                return (
-                  <div key={key} className="group rounded-xl border bg-card p-8 transition-colors hover:bg-accent/30">
-                    <div className={`h-10 w-10 rounded-lg flex items-center justify-center mb-5 ${bg}`}><Icon className={`h-5 w-5 ${fg}`} /></div>
-                    <h3 className="font-semibold text-lg">{t(`features.${key}.title`)}</h3>
-                    <p className="mt-2 text-sm text-muted-foreground leading-relaxed max-w-md">{t(`features.${key}.desc`)}</p>
-                  </div>
-                );
-              })}
-            </div>
-            {/* Compact: remaining items as a tight list */}
-            <div className="rounded-xl border bg-card p-8">
-              <div className="space-y-6">
-                {featureKeys.slice(2).map((key, i) => {
-                  const { icon: Icon, fg } = featureIcons[i + 2];
-                  return (
-                    <div key={key} className="flex items-start gap-4">
-                      <Icon className={`h-5 w-5 mt-0.5 shrink-0 ${fg}`} />
-                      <div>
-                        <h3 className="font-medium text-sm">{t(`features.${key}.title`)}</h3>
-                        <p className="mt-0.5 text-sm text-muted-foreground leading-relaxed">{t(`features.${key}.desc`)}</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </section>
-        <section className="border-t">
-          <div className="mx-auto max-w-3xl px-6 py-24 text-center">
-            <h2 className="text-3xl font-bold tracking-tight">{t("readyToStart")}</h2>
-            <p className="mt-3 text-muted-foreground">{t("deployInMinutes")}</p>
-            {allowRegistration ? (
-              <Link href="/register" className="mt-6 inline-block rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90 transition-opacity">{t("createAccount")}</Link>
-            ) : (
-              <Link href="/login" className="mt-6 inline-block rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90 transition-opacity">{tc("signIn")}</Link>
-            )}
-          </div>
-        </section>
-      </main>
-      <footer className="border-t py-12 bg-muted/20">
-        <div className="mx-auto max-w-5xl px-6">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <Logo />
-            </div>
-            <div className="flex items-center gap-6 text-sm text-muted-foreground">
-              <Link href="/docs" className="hover:text-foreground transition-colors">Documentation</Link>
-              <Link href="/docs/api" className="hover:text-foreground transition-colors">API Reference</Link>
-              <Link href="/docs/self-hosting/production" className="hover:text-foreground transition-colors">Self-Hosting</Link>
-            </div>
-          </div>
-          <div className="mt-6 pt-6 border-t text-center text-sm text-muted-foreground">
-            <p>{t("footer")}</p>
-            <p className="mt-1 text-xs">{t("license")}</p>
-          </div>
-        </div>
-      </footer>
-    </div>
-  );
-}
+/* Public landing page lives in @/components/landing/landing-page */

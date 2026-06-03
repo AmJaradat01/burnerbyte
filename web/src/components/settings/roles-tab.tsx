@@ -164,27 +164,14 @@ export function RolesTab() {
         </CardHeader>
       </Card>
 
-      {/* Summary stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Card>
-          <CardContent className="pt-4 pb-3">
-            <p className="text-2xl font-bold tabular-nums">{orgRoles.length}</p>
-            <p className="text-xs text-muted-foreground">Org Roles</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-3">
-            <p className="text-2xl font-bold tabular-nums">{teamRoles.length}</p>
-            <p className="text-xs text-muted-foreground">Team Roles</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-3">
-            <p className="text-2xl font-bold tabular-nums">{orgPermissions.length + teamPermissions.length}</p>
-            <p className="text-xs text-muted-foreground">Total Permissions</p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Summary */}
+      <p className="text-sm text-muted-foreground tabular-nums">
+        <span className="font-semibold text-foreground">{orgRoles.length}</span> org role{orgRoles.length !== 1 ? "s" : ""}
+        {" · "}
+        <span className="font-semibold text-foreground">{teamRoles.length}</span> team role{teamRoles.length !== 1 ? "s" : ""}
+        {" · "}
+        <span className="font-semibold text-foreground">{orgPermissions.length + teamPermissions.length}</span> total permissions
+      </p>
 
       {/* Tabbed interface */}
       <Tabs defaultValue="org">
@@ -323,7 +310,7 @@ function RoleCard({
             </div>
             <div className="flex items-center gap-1.5 mt-1.5">
               {role.is_system && (
-                <Badge className="text-[10px] bg-warning/10 text-warning border-warning/20">
+                <Badge variant="secondary" className="text-[10px]">
                   System
                 </Badge>
               )}

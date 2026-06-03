@@ -8,17 +8,14 @@ interface RelativeTimeProps {
 }
 
 export function RelativeTime({ datetime }: RelativeTimeProps) {
-  const [text, setText] = useState(() => timeAgo(datetime));
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
-    setText(timeAgo(datetime));
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
-    const interval = setInterval(() => {
-      setText(timeAgo(datetime));
-    }, 60_000);
-
-    return () => clearInterval(interval);
-  }, [datetime]);
+  const text = timeAgo(datetime, now);
 
   return (
     <time dateTime={datetime} title={datetime}>

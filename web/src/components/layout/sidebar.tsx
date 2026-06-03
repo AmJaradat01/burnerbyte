@@ -26,7 +26,6 @@ import {
   ClipboardList,
   BarChart3,
   Settings,
-  User,
   type LucideIcon,
 } from "lucide-react";
 
@@ -43,7 +42,7 @@ function NavLink({ href, icon: Icon, label, active, collapsed, badge }: {
         "relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150",
         collapsed && "justify-center px-2",
         active
-          ? "bg-primary/10 text-primary shadow-sm"
+          ? "bg-primary/10 text-primary"
           : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
       )}
     >
@@ -189,7 +188,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       )}
 
       {/* ── Navigation ── */}
-      <nav className={cn("flex-1 overflow-y-auto py-2 space-y-0.5", collapsed ? "px-1.5" : "px-3")}>
+      <nav aria-label="Main navigation" className={cn("flex-1 overflow-y-auto py-2 space-y-0.5", collapsed ? "px-1.5" : "px-3")}>
         {navItems.map((item) => (
           <NavLink
             key={item.href}
@@ -223,7 +222,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         {/* User profile link */}
         {collapsed ? (
           <Link href="/profile" title={user?.display_name || "Profile"} className="flex justify-center mb-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/5 text-sm font-semibold text-primary ring-2 ring-background shadow-sm transition-transform hover:scale-105">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary ring-2 ring-background transition-transform hover:scale-105">
               {userInitial}
             </div>
           </Link>
@@ -232,7 +231,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             href="/profile"
             className="flex items-center gap-2.5 rounded-lg px-2 py-2 hover:bg-muted/80 transition-colors group"
           >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/5 text-sm font-semibold text-primary ring-2 ring-background shadow-sm">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary ring-2 ring-background">
               {userInitial}
             </div>
             <div className="min-w-0 flex-1">
