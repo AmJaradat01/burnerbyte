@@ -192,6 +192,10 @@
     "forgotPassword": "Forgot password?",
     "noAccount": "Don't have an account?",
     "hasAccount": "Already have an account?",
-    "register": "Register"
+    "register": "Register",
+    "brandMasthead": "Self-hosted mail infrastructure",
+    "brandHeadline": "Disposable inboxes for teams who keep their own data.",
+    "brandSpec": "6-level RBAC · Real-time · Apache-2.0",
+    "brandTagline": "Self-hosted temporary email"
   }
 }
