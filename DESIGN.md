@@ -40,29 +40,29 @@ colors:
   chart-5: "oklch(0.58 0.20 25)"
 typography:
   body:
-    fontFamily: "Inter, system-ui, -apple-system, sans-serif"
+    fontFamily: "Geist Sans, system-ui, -apple-system, sans-serif"
     fontSize: "0.875rem"
     fontWeight: 400
     lineHeight: 1.5
   label:
-    fontFamily: "Inter, system-ui, -apple-system, sans-serif"
+    fontFamily: "Geist Sans, system-ui, -apple-system, sans-serif"
     fontSize: "0.75rem"
     fontWeight: 500
     lineHeight: 1.4
     letterSpacing: "0.01em"
   title:
-    fontFamily: "Inter, system-ui, -apple-system, sans-serif"
+    fontFamily: "Geist Sans, system-ui, -apple-system, sans-serif"
     fontSize: "1.125rem"
     fontWeight: 600
     lineHeight: 1.3
   headline:
-    fontFamily: "Inter, system-ui, -apple-system, sans-serif"
+    fontFamily: "Geist Sans, system-ui, -apple-system, sans-serif"
     fontSize: "1.5rem"
     fontWeight: 700
     lineHeight: 1.2
     letterSpacing: "-0.02em"
   mono:
-    fontFamily: "JetBrains Mono, ui-monospace, monospace"
+    fontFamily: "Geist Mono, ui-monospace, monospace"
     fontSize: "0.8125rem"
     fontWeight: 400
     lineHeight: 1.5
@@ -152,11 +152,11 @@ BurnerByte is honest infrastructure laid out the way an experienced operator wou
 
 The aesthetic rejects four neighbours by name. Generic SaaS dashboards (Intercom, HubSpot) lean on marketing chrome and competing colors; BurnerByte is infrastructure, not a funnel. Over-designed dev tools (Vercel clones) use dark mode as a fashion statement and gradients as decoration; BurnerByte chooses light by default and reserves color for meaning. Enterprise admin panels (AWS Console, Jira) drown the operator in undifferentiated density; BurnerByte ranks information visibly. Disposable email competitors (Guerrilla Mail, TempMail) are visually cheap; BurnerByte is something a security team can defend in a procurement review.
 
-The system is light by default with a dark theme that serves function (late-night sessions, low-light environments), not posture. Color is restrained: a single indigo accent for primary actions and focus states, a warm amber reserved exclusively for sidebar active state and chart accents. Everything else is a tinted neutral on the indigo hue axis. Visual intensity is rationed.
+The system is light only: the app is locked to the light theme via the theme provider (`forcedTheme="light"`), and a dark theme is intentionally not shipped at this time. Color is restrained: a single indigo accent for primary actions and focus states, a warm amber reserved exclusively for sidebar active state and chart accents. Everything else is a tinted neutral on the indigo hue axis. Visual intensity is rationed.
 
 **Key Characteristics:**
 - Restrained color strategy: tinted neutrals plus one accent at ≤10% surface coverage
-- Single type family (Inter) carrying every role through weight and size contrast
+- Single type family (Geist Sans) carrying every role through weight and size contrast
 - Flat by default; shadows appear only as state feedback or semantic elevation
 - 150–250ms transitions with exponential ease-out; no choreography, no bounce
 - Tabular figures on every numeric display; mono reserved for IDs, addresses, code
@@ -164,7 +164,7 @@ The system is light by default with a dark theme that serves function (late-nigh
 
 ## 2. Colors
 
-A cool-tinted neutral palette built on a single indigo accent, with a warm amber reserved for one purpose and one purpose only. Every color is defined in OKLCH for perceptual uniformity across the lightness range; chroma is reduced as lightness approaches the extremes to avoid garish edges. Dark theme is a parallel set of tokens, not a filter.
+A cool-tinted neutral palette built on a single indigo accent, with a warm amber reserved for one purpose and one purpose only. Every color is defined in OKLCH for perceptual uniformity across the lightness range; chroma is reduced as lightness approaches the extremes to avoid garish edges. The app currently ships only the light token set below; a dark theme is not implemented (the theme provider forces light).
 
 ### Primary
 - **Indigo Accent** (`oklch(0.55 0.20 260)`, light / `oklch(0.65 0.20 260)`, dark). Primary actions, focus rings, active selection indicators, links. The single dominant accent. Used on ≤10% of any given screen; its rarity is the point.
@@ -201,10 +201,10 @@ Five series, deliberately not in a single hue family. Used in `recharts` visuali
 
 ## 3. Typography
 
-**Body Font:** Inter (with system-ui, -apple-system fallback).
-**Mono Font:** JetBrains Mono (with ui-monospace fallback).
+**Body Font:** Geist Sans (with system-ui, -apple-system fallback).
+**Mono Font:** Geist Mono (with ui-monospace fallback).
 
-**Character:** A single sans-serif family carries every role, hierarchy emerging from weight and size contrast rather than family switching. Inter's optical sizing and tabular figures make it equally comfortable in dense data tables and spacious headings. The mono face appears only where character width carries meaning: email addresses, inbox IDs, countdowns, code.
+**Character:** A single sans-serif family carries every role, hierarchy emerging from weight and size contrast rather than family switching. Geist Sans's even rhythm and tabular figures keep it comfortable in dense data tables and spacious headings. The mono face appears only where character width carries meaning: email addresses, inbox IDs, countdowns, code.
 
 ### Hierarchy
 - **Headline** (700, 1.5rem / 1.2, `-0.02em` tracking). Page titles. One per view. Used via the `text-headline` utility.
@@ -215,11 +215,11 @@ Five series, deliberately not in a single hue family. Used in `recharts` visuali
 
 ### Named Rules
 
-**The One Family Rule.** Inter carries everything. No display font, no decorative pairing, no display-only weight. Hierarchy is achieved through weight (400→700) and size (0.75rem→1.5rem), never through family switching.
+**The One Family Rule.** Geist Sans carries everything. No display font, no decorative pairing, no display-only weight. Hierarchy is achieved through weight (400→700) and size (0.75rem→1.5rem), never through family switching.
 
 **The Tabular Figures Rule.** All numeric displays (countdowns, statistics, table columns, IDs) use `font-variant-numeric: tabular-nums` via the `tabular-nums` utility so digits do not shift width during updates.
 
-**The Mono Reservation Rule.** JetBrains Mono appears only where character-width is informational: addresses, IDs, code, countdowns, copyable identifiers. It is not used to make body copy look "technical" or "developer-friendly".
+**The Mono Reservation Rule.** Geist Mono appears only where character-width is informational: addresses, IDs, code, countdowns, copyable identifiers. It is not used to make body copy look "technical" or "developer-friendly".
 
 ## 4. Elevation
 
@@ -331,7 +331,7 @@ A consistent shape across all variants; differentiation through fill and border,
 - **Don't** use hero-metric templates inside the product (big number + small label + supporting stats + gradient accent). That pattern belongs to a marketing page, not a dashboard.
 - **Don't** add cute illustrated empty states. No hand-drawn characters, no pastel scenes, no mascots. A single sentence and (where useful) a primary action.
 - **Don't** nest cards inside cards. Use background tint (Accent Field over Porcelain) or spacing for hierarchy within a card.
-- **Don't** use display or decorative typefaces in UI labels, buttons, or data. Inter carries everything; mono is reserved for character-width-meaningful values only.
+- **Don't** use display or decorative typefaces in UI labels, buttons, or data. Geist Sans carries everything; mono is reserved for character-width-meaningful values only.
 - **Don't** add `animate-ping` or other persistent attention-seeking animation for static status indicators. A colored dot paired with an icon is sufficient. Reserve animation for transient events (incoming email, count change).
 - **Don't** add decorative motion: no orchestrated page-load sequences, no bounce, no elastic easing, no spring physics.
 - **Don't** repurpose chart colors for non-chart UI. Chart 1–5 exist as a series; pulling chart-4 (violet) into a badge breaks the system.

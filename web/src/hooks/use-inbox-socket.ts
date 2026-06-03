@@ -17,7 +17,7 @@ export function useInboxSocket(inboxId: string | undefined, onEmail: (email: unk
   const [status, setStatus] = useState<SocketStatus>("disconnected");
 
   // Always keep the latest callback without causing reconnects
-  onEmailRef.current = onEmail;
+  useEffect(() => { onEmailRef.current = onEmail; });
 
   useEffect(() => {
     if (!inboxId || !user) return;

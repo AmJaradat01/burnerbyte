@@ -1,4 +1,4 @@
-import { KeyRound, Shield } from "lucide-react";
+import { Shield } from "lucide-react";
 
 export function ProviderIcon({ providerType, className = "h-5 w-5" }: { providerType: string; className?: string }) {
   switch (providerType) {

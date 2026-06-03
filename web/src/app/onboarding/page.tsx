@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Logo } from "@/components/logo";
 import {
@@ -174,8 +173,8 @@ export default function OnboardingPage() {
               user?.is_system_admin ? (
                 <>
                   <div className="space-y-1.5">
-                    <Label>Organization name</Label>
-                    <Input value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="My Company" autoFocus onKeyDown={(e) => e.key === "Enter" && orgName && createOrg()} />
+                    <Label htmlFor="onb-org-name">Organization name</Label>
+                    <Input id="onb-org-name" value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="My Company" autoFocus onKeyDown={(e) => e.key === "Enter" && orgName && createOrg()} />
                   </div>
                   <div className="flex justify-between">
                     <Button variant="ghost" size="sm" onClick={skip} disabled={busy} className="gap-1.5 text-muted-foreground">
@@ -188,15 +187,13 @@ export default function OnboardingPage() {
                 </>
               ) : (
                 <div className="text-center py-8 space-y-4">
-                  <div className="h-16 w-16 rounded-2xl bg-info/10 flex items-center justify-center mx-auto">
-                    <Mail className="h-8 w-8 text-info" />
+                  <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                    <Mail className="h-5 w-5" />
+                    <span className="text-sm font-medium">Waiting for an invitation</span>
                   </div>
-                  <div>
-                    <h3 className="text-lg font-semibold tracking-tight">Waiting for an invitation</h3>
-                    <p className="text-sm text-muted-foreground mt-1 max-w-sm mx-auto">
-                      Ask your organization admin to send you an invite. Once accepted, you'll be redirected automatically.
-                    </p>
-                  </div>
+                  <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                    Ask your organization admin to send you an invite. Once accepted, you&apos;ll be redirected automatically.
+                  </p>
                   <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { fetchOrgs(); toast.info("Checking…"); }}>
                     <RefreshCw className="h-3.5 w-3.5" /> Check again
                   </Button>
@@ -208,9 +205,9 @@ export default function OnboardingPage() {
             {step === 1 && (
               <>
                 <div className="space-y-1.5">
-                  <Label>Domain name</Label>
-                  <Input value={domainInput} onChange={(e) => setDomainInput(e.target.value)} placeholder="mail.example.com" autoFocus onKeyDown={(e) => e.key === "Enter" && domainInput && addDomain()} />
-                  <p className="text-xs text-muted-foreground">This domain will receive inbound emails. You'll configure DNS records after setup.</p>
+                  <Label htmlFor="onb-domain">Domain name</Label>
+                  <Input id="onb-domain" value={domainInput} onChange={(e) => setDomainInput(e.target.value)} placeholder="mail.example.com" autoFocus onKeyDown={(e) => e.key === "Enter" && domainInput && addDomain()} />
+                  <p className="text-xs text-muted-foreground">This domain will receive inbound emails. You&apos;ll configure DNS records after setup.</p>
                 </div>
                 <div className="flex justify-between">
                   <div className="flex gap-2">
@@ -231,15 +228,15 @@ export default function OnboardingPage() {
                   <div className="rounded-lg border bg-warning/5 p-3 space-y-2">
                     <p className="text-sm font-medium text-warning">DNS Records for {domainName}</p>
                     <p className="text-xs text-warning">Add this TXT record to verify ownership:</p>
-                    <button onClick={copyRecord} className="w-full rounded-md bg-white border px-3 py-2 text-left font-mono text-xs break-all hover:bg-muted/50 group flex items-center gap-2">
+                    <button onClick={copyRecord} className="w-full rounded-md bg-card border px-3 py-2 text-left font-mono text-xs break-all hover:bg-muted/50 group flex items-center gap-2">
                       <span className="flex-1">{verificationRecord}</span>
                       {copied ? <Check className="h-3.5 w-3.5 text-success shrink-0" /> : <Copy className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
                     </button>
                   </div>
                 )}
                 <div className="space-y-1.5">
-                  <Label>Team name</Label>
-                  <Input value={teamName} onChange={(e) => setTeamName(e.target.value)} placeholder="Engineering" autoFocus onKeyDown={(e) => e.key === "Enter" && teamName && createTeam()} />
+                  <Label htmlFor="onb-team-name">Team name</Label>
+                  <Input id="onb-team-name" value={teamName} onChange={(e) => setTeamName(e.target.value)} placeholder="Engineering" autoFocus onKeyDown={(e) => e.key === "Enter" && teamName && createTeam()} />
                 </div>
                 <div className="flex justify-between">
                   <div className="flex gap-2">
@@ -257,9 +254,6 @@ export default function OnboardingPage() {
             {step === 3 && (
               <>
                 <div className="text-center py-4">
-                  <div className="h-14 w-14 rounded-2xl bg-success/10 flex items-center justify-center mx-auto mb-3">
-                    <Inbox className="h-7 w-7 text-success" />
-                  </div>
                   <p className="text-sm text-muted-foreground">
                     {assignmentId
                       ? "Create your first temporary inbox to start receiving emails."
@@ -285,12 +279,12 @@ export default function OnboardingPage() {
             {/* Step 4: Done */}
             {step === 4 && (
               <div className="text-center py-6 space-y-4">
-                <div className="h-16 w-16 rounded-2xl bg-success/10 flex items-center justify-center mx-auto">
-                  <CheckCircle2 className="h-8 w-8 text-success" />
+                <div className="flex items-center justify-center gap-2 text-success">
+                  <CheckCircle2 className="h-5 w-5" />
+                  <p className="text-lg font-semibold tracking-tight">You&apos;re all set!</p>
                 </div>
                 <div>
-                  <p className="text-lg font-semibold tracking-tight">You're all set!</p>
-                  <p className="text-sm text-muted-foreground mt-1">Your workspace is ready to go.</p>
+                  <p className="text-sm text-muted-foreground">Your workspace is ready to go.</p>
                 </div>
                 {inboxAddress && (
                   <div className="rounded-lg border bg-muted/30 p-3 text-center">
