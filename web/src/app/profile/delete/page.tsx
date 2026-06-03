@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { ArrowLeft } from "lucide-react";
+import { AlertTriangle, ArrowLeft } from "lucide-react";
 
 export default function DeleteAccountPage() {
   const user = useAuthStore((s) => s.user);
@@ -49,9 +49,17 @@ export default function DeleteAccountPage() {
         <p className="text-sm text-muted-foreground mt-0.5">Permanently delete your account and all associated data.</p>
       </div>
 
+      <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 flex items-start gap-3">
+        <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+        <div className="space-y-1">
+          <p className="text-sm font-semibold text-destructive">Permanent action — cannot be undone</p>
+          <p className="text-sm text-muted-foreground">Your account, all inboxes, received emails, API keys, and team memberships will be immediately and permanently deleted.</p>
+        </div>
+      </div>
+
       <Card>
         <CardHeader>
-          <CardTitle>This action is irreversible</CardTitle>
+          <CardTitle>Confirm account deletion</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">

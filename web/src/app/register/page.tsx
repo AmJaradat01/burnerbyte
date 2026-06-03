@@ -43,7 +43,7 @@ interface SSOStatus {
 
 function FormSkeleton() {
   return (
-    <Card className="w-full max-w-sm shadow">
+    <Card className="w-full max-w-sm">
       <CardHeader className="text-center space-y-2">
         <Skeleton className="h-7 w-48 mx-auto" />
         <Skeleton className="h-4 w-36 mx-auto" />
@@ -156,7 +156,7 @@ export default function RegisterPage() {
         {ssoLoading ? (
           <FormSkeleton />
         ) : (
-          <Card className="w-full shadow">
+          <Card className="w-full">
             <CardHeader className="text-center">
               <CardTitle className="text-xl">Create your account</CardTitle>
               <CardDescription>Get started with BurnerByte</CardDescription>
@@ -178,7 +178,7 @@ export default function RegisterPage() {
                     </div>
                     <div className="relative">
                       <Separator />
-                      <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-3 text-xs text-muted-foreground">
+                      <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-3 text-xs uppercase text-muted-foreground">
                         or
                       </span>
                     </div>
@@ -298,7 +298,7 @@ export default function RegisterPage() {
                     </button>
                   </div>
                   {passwordsMismatch && <p className="text-xs text-destructive">Passwords don&apos;t match</p>}
-                  {passwordsMatch && <p className="text-xs text-success">Passwords match</p>}
+                  {passwordsMatch && <p className="text-xs text-success flex items-center gap-1"><Check className="h-3 w-3" /> Passwords match</p>}
                 </div>
 
                 {/* Terms checkbox */}

@@ -2,7 +2,8 @@
 
 import { Button } from "@/components/ui/button";
 
-export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export default function Error({ error: _error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center gap-4 py-20">
       <span className="text-4xl">⚠️</span>

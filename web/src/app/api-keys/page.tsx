@@ -339,7 +339,7 @@ function ApiKeyCard({
           <div onClick={(e) => e.stopPropagation()}>
             <ConfirmDialog
               trigger={
-                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive shrink-0">
+                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive shrink-0" aria-label={`Revoke API key "${k.name}"`}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               }

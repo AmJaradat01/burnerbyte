@@ -19,7 +19,6 @@ import {
   Settings,
   User,
   Monitor,
-  FileText,
   ShieldCheck,
   Plus,
   LogOut,
@@ -158,11 +157,16 @@ export function CommandPalette() {
           placeholder="Search pages… (⌘K)"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="border-0 border-b rounded-none focus-visible:ring-0"
+          className="border-0 border-b rounded-none focus-visible:ring-2 focus-visible:ring-ring/40"
           autoFocus
           onKeyDown={handleKeyDown}
+          role="combobox"
+          aria-expanded={groupedFiltered.length > 0}
+          aria-controls="cmd-listbox"
+          aria-activedescendant={groupedFiltered.length > 0 ? `cmd-option-${selectedIndex}` : undefined}
+          aria-autocomplete="list"
         />
-        <div className="max-h-64 overflow-auto" ref={listRef}>
+        <div id="cmd-listbox" role="listbox" aria-label="Commands" className="max-h-64 overflow-auto" ref={listRef}>
           {/* Recent actions when no query */}
           {!query && recents.length > 0 && (
             <>
@@ -177,6 +181,9 @@ export function CommandPalette() {
                 return (
                   <button
                     key={`recent-${item.label}`}
+                    id={`cmd-option-${idx}`}
+                    role="option"
+                    aria-selected={idx === selectedIndex}
                     data-selected={idx === selectedIndex}
                     onClick={() => executeItem(item)}
                     onMouseEnter={() => setSelectedIndex(idx)}
@@ -202,6 +209,9 @@ export function CommandPalette() {
                 return (
                   <button
                     key={item.label}
+                    id={`cmd-option-${idx}`}
+                    role="option"
+                    aria-selected={idx === selectedIndex}
                     data-selected={idx === selectedIndex}
                     onClick={() => executeItem(item)}
                     onMouseEnter={() => setSelectedIndex(idx)}
@@ -227,6 +237,9 @@ export function CommandPalette() {
                 return (
                   <button
                     key={item.label}
+                    id={`cmd-option-${idx}`}
+                    role="option"
+                    aria-selected={idx === selectedIndex}
                     data-selected={idx === selectedIndex}
                     onClick={() => executeItem(item)}
                     onMouseEnter={() => setSelectedIndex(idx)}

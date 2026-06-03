@@ -94,25 +94,93 @@
     "24h": "24 hours"
   },
   "landing": {
-    "tagline": "Open Source · Apache 2.0",
-    "headline": "Self-Hosted Temporary Email",
-    "subtitle": "Team-based temporary email platform. Receive emails instantly, protect your privacy, and keep full control of your data.",
-    "getStartedFree": "Get Started Free",
-    "learnMore": "Learn More",
-    "everythingYouNeed": "Everything you need",
-    "builtFor": "Built for developers and teams who need disposable email infrastructure.",
-    "readyToStart": "Ready to get started?",
-    "deployInMinutes": "Deploy in minutes with Docker. No vendor lock-in.",
-    "createAccount": "Create Your Account",
-    "footer": "BurnerByte — Open source temporary email platform",
-    "license": "Apache 2.0 License",
-    "features": {
-      "inboxes": { "title": "Temporary Inboxes", "desc": "Create disposable email addresses that auto-expire with configurable TTL." },
-      "multiTeam": { "title": "Multi-Team", "desc": "Organize domains and inboxes across teams with 6-level RBAC." },
-      "realTime": { "title": "Real-Time", "desc": "WebSocket-powered live email delivery — see emails arrive instantly." },
-      "webhooks": { "title": "Webhooks", "desc": "HMAC-SHA256 signed delivery with automatic retry and delivery logs." },
-      "apiKeys": { "title": "API Keys", "desc": "Scoped API keys for programmatic inbox and email management." },
-      "selfHosted": { "title": "Self-Hosted", "desc": "Full control over your data. Deploy on your own infrastructure." }
+    "nav": {
+      "docs": "Docs",
+      "repo": "GitLab",
+      "signIn": "Sign in",
+      "getStarted": "Get started"
+    },
+    "meta": {
+      "infra": "Self-hosted mail infrastructure",
+      "license": "Apache-2.0"
+    },
+    "hero": {
+      "headlineA": "Disposable email,",
+      "headlineB": "on infrastructure you own.",
+      "subtitle": "Self-hosted temporary inboxes for technical teams. Spin one up in seconds, watch mail arrive in real time, and let it expire on a timer you set. Your data never leaves your servers.",
+      "getStarted": "Get started",
+      "docs": "Read the docs",
+      "spec": "6-level RBAC · Real-time WebSocket · HMAC webhooks · Docker · Apache-2.0"
+    },
+    "demo": {
+      "label": "Live inbox",
+      "inbox": "Inbox",
+      "expiresIn": "expires in",
+      "expired": "Inbox expired",
+      "caption": "A real inbox, start to finish: create, receive, expire."
+    },
+    "how": {
+      "kicker": "Lifecycle",
+      "title": "Three seconds to a working inbox.",
+      "createLabel": "Create",
+      "createTitle": "Generate an address",
+      "createDesc": "Pick a domain, set a lifetime, generate. The inbox is live the instant you create it.",
+      "receiveLabel": "Receive",
+      "receiveTitle": "Mail arrives live",
+      "receiveDesc": "Messages stream in over a WebSocket the moment they land. Nothing to refresh, nothing to poll.",
+      "expireLabel": "Expire",
+      "expireTitle": "It burns down",
+      "expireDesc": "At zero, the inbox and every message in it is gone. No cleanup, no residue, no trace."
+    },
+    "capabilities": {
+      "kicker": "Capabilities",
+      "title": "Built like infrastructure, not a toy.",
+      "subtitle": "Everything a security-conscious team needs to run disposable mail in production.",
+      "inboxesLabel": "Inboxes",
+      "inboxesTitle": "Configurable TTL",
+      "inboxesDesc": "Disposable addresses that auto-expire on the lifetime you choose, from ten minutes to a full day.",
+      "teamsLabel": "Teams",
+      "teamsTitle": "Six-level RBAC",
+      "teamsDesc": "Organize domains and inboxes across teams with granular, auditable access control.",
+      "realtimeLabel": "Real-time",
+      "realtimeTitle": "WebSocket delivery",
+      "realtimeDesc": "See email the moment it arrives, with live updates across every open session.",
+      "webhooksLabel": "Webhooks",
+      "webhooksTitle": "Signed and retried",
+      "webhooksDesc": "HMAC-SHA256 signed delivery with automatic retries and full delivery logs.",
+      "apiLabel": "API",
+      "apiTitle": "Scoped keys",
+      "apiDesc": "Programmatic inbox and email management with narrowly scoped API keys.",
+      "hostingLabel": "Hosting",
+      "hostingTitle": "Yours end to end",
+      "hostingDesc": "Deploy on your own infrastructure with Docker. No vendor, no lock-in, no third party."
+    },
+    "trust": {
+      "kicker": "Ownership",
+      "title": "Your servers. Your data. No exceptions.",
+      "body": "BurnerByte runs entirely on infrastructure you control. No inbox contents, no addresses, and no metadata ever reach a third party. Every administrative action is written to an audit trail your security team can defend.",
+      "deployCaption": "burnerbyte / deploy",
+      "facts": "Apache-2.0 · Self-hosted · No telemetry · Your domains",
+      "cta": "Read the self-hosting guide"
+    },
+    "cta": {
+      "title": "Run your first inbox today.",
+      "subtitle": "Deploy with Docker, point a domain, invite your team.",
+      "getStarted": "Get started",
+      "signIn": "Sign in"
+    },
+    "footer": {
+      "tagline": "Self-hosted temporary email for technical teams.",
+      "productLabel": "Product",
+      "resourcesLabel": "Resources",
+      "projectLabel": "Project",
+      "docs": "Documentation",
+      "api": "API reference",
+      "selfHosting": "Self-hosting",
+      "repo": "GitLab",
+      "license": "License",
+      "rights": "Open source temporary email platform.",
+      "licenseLine": "Apache 2.0 licensed."
     }
   },
   "auth": {

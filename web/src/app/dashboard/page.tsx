@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/error-state";
-import type { AnalyticsStats, AuditEntry, EmailsPerDay, Inbox, PaginatedResponse } from "@/types";
+import type { AnalyticsStats, AuditEntry, EmailsPerDay, Inbox, PaginatedResponse, User } from "@/types";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { timeAgo } from "@/lib/time";
@@ -94,7 +94,7 @@ export default function DashboardPage() {
 
 /* ── Member Dashboard ── */
 
-function MemberDashboard({ org, user, greeting }: { org: { id: string; name: string }; user: any; greeting: string }) {
+function MemberDashboard({ org, user, greeting }: { org: { id: string; name: string }; user: User | null; greeting: string }) {
   const { data: inboxes, isLoading } = useQuery({
     queryKey: ["member-inboxes-count", org.id],
     queryFn: () => api.get<PaginatedResponse<Inbox>>(`/inboxes`, { status: "active", per_page: "5" }),
@@ -109,7 +109,7 @@ function MemberDashboard({ org, user, greeting }: { org: { id: string; name: str
         <CardContent className="pt-5 pb-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-bold tracking-tight">{greeting}, {user?.display_name?.split(" ")[0] || "there"} 👋</h1>
+              <h1 className="text-xl font-bold tracking-tight">{greeting}, {user?.display_name?.split(" ")[0] || "there"}</h1>
               <p className="text-muted-foreground text-sm mt-0.5">Welcome to {org.name}</p>
             </div>
             <Button asChild>
@@ -124,7 +124,7 @@ function MemberDashboard({ org, user, greeting }: { org: { id: string; name: str
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-medium text-muted-foreground">Active Inboxes</span>
-              <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm text-success bg-success/10">
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-muted text-muted-foreground">
                 <InboxIcon className="h-4 w-4" />
               </div>
             </div>
@@ -140,7 +140,7 @@ function MemberDashboard({ org, user, greeting }: { org: { id: string; name: str
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-medium text-muted-foreground">Quick Actions</span>
-              <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm text-info bg-info/10">
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-muted text-muted-foreground">
                 <Zap className="h-4 w-4" />
               </div>
             </div>
@@ -166,8 +166,8 @@ function MemberDashboard({ org, user, greeting }: { org: { id: string; name: str
               {recentInboxes.map((inbox) => (
                 <Link key={inbox.id} href={`/inboxes/${inbox.id}`} className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="h-8 w-8 rounded-lg bg-warning/10 flex items-center justify-center shrink-0">
-                      <Mail className="h-4 w-4 text-warning" />
+                    <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-mono font-medium truncate">{inbox.full_address || inbox.address}</p>
@@ -189,7 +189,7 @@ function MemberDashboard({ org, user, greeting }: { org: { id: string; name: str
 
 /* ── Admin Dashboard ── */
 
-function AdminDashboard({ org, user, greeting }: { org: { id: string; name: string }; user: any; greeting: string }) {
+function AdminDashboard({ org, user, greeting }: { org: { id: string; name: string }; user: User | null; greeting: string }) {
   const qc = useQueryClient();
   const [autoRefresh, setAutoRefresh] = useState(() =>
     typeof window !== "undefined" ? localStorage.getItem("auto-refresh-enabled") === "true" : false
@@ -271,26 +271,17 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
     };
   }, [autoRefresh, org.id, qc]);
 
-  if (isError) return <ErrorState message="Failed to load dashboard" onRetry={() => refetch()} />;
-
-  // Computed values
+  // Computed values (kept above early return so hooks run unconditionally)
   const weekTotal = chartWeek?.data?.reduce((sum, d) => sum + d.count, 0) ?? 0;
   const todayStr = new Date().toISOString().slice(0, 10);
+  // Display-only time hint: Date.now() identifies yesterday's date bucket for a UI counter only
+  // eslint-disable-next-line react-hooks/purity
   const yesterdayStr = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
   const todayCount = chartWeek?.data?.find((d) => d.date.startsWith(todayStr))?.count ?? 0;
   const yesterdayCount = chartWeek?.data?.find((d) => d.date.startsWith(yesterdayStr))?.count ?? 0;
   const todayDelta = todayCount - yesterdayCount;
   const chartData = chart?.data ?? [];
-  const weekTrend = chartWeek?.data?.map((d) => d.count);
   const chartAvg = chartData.length > 0 ? Math.round(chartData.reduce((s, d) => s + d.count, 0) / chartData.length) : 0;
-
-  const greetingEmoji = (() => {
-    const h = new Date().getHours();
-    if (h >= 5 && h < 12) return "☀️";
-    if (h >= 12 && h < 17) return "🌤️";
-    if (h >= 17 && h < 21) return "🌆";
-    return "🌙";
-  })();
 
   const topSenders = stats?.top_sender_domains?.slice(0, 5);
   const maxSenderCount = topSenders?.[0]?.count ?? 1;
@@ -301,6 +292,8 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
     if (!insights?.peak_hours?.length) return null;
     return insights.peak_hours.reduce((max, h) => h.count > max.count ? h : max, insights.peak_hours[0]);
   }, [insights?.peak_hours]);
+
+  if (isError) return <ErrorState message="Failed to load dashboard" onRetry={() => refetch()} />;
 
   const tooltipStyle = {
     borderRadius: 8,
@@ -317,7 +310,7 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h1 className="text-xl font-bold tracking-tight">
-                {greetingEmoji} {greeting}, {user?.display_name?.split(" ")[0] || "there"}
+                {greeting}, {user?.display_name?.split(" ")[0] || "there"}
               </h1>
               <p className="text-muted-foreground text-sm mt-0.5">
                 Here&apos;s what&apos;s happening with {org.name}
@@ -356,9 +349,9 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
 
       {/* Primary stats — 4 cards, uniform height */}
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={Mail} label="Total Emails" value={stats?.total_emails_received ?? stats?.total_emails} loading={isLoading} accent="text-info bg-info/10" sub={`${formatBytes(stats?.total_storage_bytes ?? stats?.storage_used_bytes ?? 0)} storage`} delta={todayDelta} deltaLabel="vs yesterday" />
-        <StatCard icon={InboxIcon} label="Active Inboxes" value={stats?.active_inboxes} loading={isLoading} accent="text-success bg-success/10" sub={`${(stats?.total_inboxes_created ?? stats?.total_inboxes ?? 0).toLocaleString()} total created`} />
-        <StatCard icon={Globe} label="Domains" value={stats?.total_domains} loading={isLoading} accent="text-primary bg-primary/10" sub={`${stats?.total_members ?? 0} members · ${stats?.total_teams ?? 0} teams`} link="/domains" />
+        <StatCard icon={Mail} label="Total Emails" value={stats?.total_emails_received ?? stats?.total_emails} loading={isLoading} accent="text-muted-foreground bg-muted" sub={`${formatBytes(stats?.total_storage_bytes ?? stats?.storage_used_bytes ?? 0)} storage`} delta={todayDelta} deltaLabel="vs yesterday" />
+        <StatCard icon={InboxIcon} label="Active Inboxes" value={stats?.active_inboxes} loading={isLoading} accent="text-muted-foreground bg-muted" sub={`${(stats?.total_inboxes_created ?? stats?.total_inboxes ?? 0).toLocaleString()} total created`} />
+        <StatCard icon={Globe} label="Domains" value={stats?.total_domains} loading={isLoading} accent="text-muted-foreground bg-muted" sub={`${stats?.total_members ?? 0} members · ${stats?.total_teams ?? 0} teams`} link="/domains" />
         <StatCard icon={HardDrive} label="Storage" value={formatBytes(stats?.total_storage_bytes ?? stats?.storage_used_bytes ?? 0)} loading={isLoading} accent="text-muted-foreground bg-muted" isString sub="All-time usage" />
       </div>
 
@@ -386,18 +379,12 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
               {chartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={280}>
                   <RechartsAreaChart data={chartData}>
-                    <defs>
-                      <linearGradient id="emailGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2} />
-                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                     <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(v) => v.slice(5)} stroke="hsl(var(--muted-foreground))" />
                     <YAxis tick={{ fontSize: 11 }} allowDecimals={false} stroke="hsl(var(--muted-foreground))" />
                     <Tooltip contentStyle={tooltipStyle} labelFormatter={(v) => `Date: ${v}`} formatter={(v) => [`${Number(v).toLocaleString()}`, "Emails"]} />
                     <ReferenceLine y={chartAvg} stroke="hsl(var(--muted-foreground))" strokeDasharray="6 4" strokeOpacity={0.5} />
-                    <Area type="monotone" dataKey="count" stroke="#6366f1" strokeWidth={2} fill="url(#emailGradient)" />
+                    <Area type="monotone" dataKey="count" stroke="var(--chart-1)" strokeWidth={2} fill="var(--chart-1)" fillOpacity={0.12} />
                   </RechartsAreaChart>
                 </ResponsiveContainer>
               ) : (
@@ -414,8 +401,8 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
               <CardHeader className="pb-2 bg-muted/20">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="h-6 w-6 rounded-md bg-warning/10 flex items-center justify-center">
-                      <Clock className="h-3.5 w-3.5 text-warning" />
+                    <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
+                      <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                     </div>
                     <CardTitle className="text-base">Activity by Hour</CardTitle>
                     {peakHour && (
@@ -432,7 +419,7 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
                     <XAxis dataKey="hour" tick={{ fontSize: 10 }} tickFormatter={formatHour} stroke="hsl(var(--muted-foreground))" />
                     <YAxis tick={{ fontSize: 10 }} allowDecimals={false} stroke="hsl(var(--muted-foreground))" />
                     <Tooltip contentStyle={tooltipStyle} labelFormatter={(v) => formatHour(Number(v))} formatter={(v) => [`${Number(v).toLocaleString()}`, "Emails"]} />
-                    <Bar dataKey="count" fill="#6366f1" radius={[3, 3, 0, 0]} fillOpacity={0.85} />
+                    <Bar dataKey="count" fill="var(--chart-1)" radius={[3, 3, 0, 0]} fillOpacity={0.85} />
                   </RechartsBarChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -524,10 +511,10 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-end justify-between">
-                <div>
-                  <p className="text-3xl font-bold tabular-nums">{weekTotal.toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground">emails received</p>
+              <div className="flex items-center justify-between">
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-xl font-semibold tabular-nums">{weekTotal.toLocaleString()}</span>
+                  <span className="text-xs text-muted-foreground">emails this week</span>
                 </div>
                 {todayDelta !== 0 && (
                   <div className={`flex items-center gap-1 text-xs font-medium ${todayDelta > 0 ? "text-success" : "text-destructive"}`}>
@@ -544,7 +531,7 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
                       return d.toLocaleDateString(undefined, { weekday: "short" });
                     }} stroke="hsl(var(--muted-foreground))" />
                     <Tooltip contentStyle={tooltipStyle} labelFormatter={(v) => v} formatter={(v) => [`${Number(v).toLocaleString()}`, "Emails"]} />
-                    <Bar dataKey="count" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="count" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
                   </RechartsBarChart>
                 </ResponsiveContainer>
               ) : (
@@ -597,7 +584,8 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
                 <div className="space-y-2.5">
                   {auditData.data.map((entry) => (
                     <div key={entry.id} className="flex items-start gap-3 group">
-                      <div className={`mt-1.5 h-2 w-2 rounded-full shrink-0 ${actionDotColor(entry.action)}`} />
+                      <div className={`mt-1.5 h-2 w-2 rounded-full shrink-0 ${actionDotColor(entry.action)}`} aria-hidden="true" />
+                      <span className="sr-only">{humanizeAction(entry.action)} status</span>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">{humanizeAction(entry.action)}</p>
                         <p className="text-[11px] text-muted-foreground truncate">
@@ -623,19 +611,19 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {[
-              { href: "/", icon: InboxIcon, label: "Inboxes", desc: "Create & manage", color: "text-warning bg-warning/10", border: "hover:border-warning/20" },
-              { href: "/domains", icon: Globe, label: "Domains", desc: "DNS & verification", color: "text-success bg-success/10", border: "hover:border-success/20" },
-              { href: "/teams", icon: Users, label: "Teams", desc: "Members & access", color: "text-primary bg-primary/10", border: "hover:border-primary/20" },
-              { href: "/webhooks", icon: Webhook, label: "Webhooks", desc: "Event callbacks", color: "text-warning bg-warning/10", border: "hover:border-warning/20" },
-              { href: "/api-keys", icon: Key, label: "API Keys", desc: "Programmatic access", color: "text-primary bg-primary/10", border: "hover:border-primary/20" },
-              { href: "/analytics", icon: BarChart3, label: "Analytics", desc: "Usage & trends", color: "text-destructive bg-destructive/10", border: "hover:border-destructive/20" },
+              { href: "/", icon: InboxIcon, label: "Inboxes", desc: "Create & manage" },
+              { href: "/domains", icon: Globe, label: "Domains", desc: "DNS & verification" },
+              { href: "/teams", icon: Users, label: "Teams", desc: "Members & access" },
+              { href: "/webhooks", icon: Webhook, label: "Webhooks", desc: "Event callbacks" },
+              { href: "/api-keys", icon: Key, label: "API Keys", desc: "Programmatic access" },
+              { href: "/analytics", icon: BarChart3, label: "Analytics", desc: "Usage & trends" },
             ].map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex flex-col items-center gap-2 rounded-xl border p-4 hover:bg-muted/50 transition-colors group text-center ${item.border}`}
+                className="flex flex-col items-center gap-2 rounded-xl border p-4 hover:bg-muted/50 transition-colors group text-center"
               >
-                <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${item.color}`}>
+                <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-muted text-muted-foreground">
                   <item.icon className="h-5 w-5" />
                 </div>
                 <div>

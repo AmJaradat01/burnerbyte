@@ -182,7 +182,12 @@ function EmailRow({ email, selected, onClick }: { email: EmailSummary; selected:
           {/* Row 1: sender + time */}
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5 min-w-0">
-              {unread && <span className="shrink-0 h-2 w-2 rounded-full bg-primary" />}
+              {unread && (
+                <>
+                  <span className="shrink-0 h-2 w-2 rounded-full bg-primary" aria-hidden="true" />
+                  <span className="sr-only">Unread</span>
+                </>
+              )}
               <p className={`text-sm truncate ${unread ? "font-semibold text-foreground" : "text-muted-foreground"}`}>
                 {name}
               </p>
@@ -228,7 +233,7 @@ function EmptyList({ hasSearch }: { hasSearch: boolean }) {
           <p className="text-sm font-medium">No emails yet</p>
           <p className="text-xs text-muted-foreground mt-1">Waiting for incoming mail…</p>
           <div className="flex items-center gap-1.5 mt-3 text-xs text-muted-foreground">
-            <RefreshCw className="h-3 w-3 animate-spin" />
+            <RefreshCw className="h-3 w-3 motion-safe:animate-spin" />
             Listening for new emails
           </div>
         </>
