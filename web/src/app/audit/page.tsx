@@ -18,7 +18,7 @@ import { EmptyState } from "@/components/empty-state";
 import { toast } from "sonner";
 import { timeAgo } from "@/lib/time";
 import {
-  Activity, ChevronDown, ChevronRight, Clock, Copy, Download,
+  ChevronDown, ChevronRight, Clock, Copy, Download,
   Globe, Inbox, Key, Mail, Search, Shield, User, Users, Webhook,
 } from "lucide-react";
 import type { AuditEntry, PaginatedResponse } from "@/types";

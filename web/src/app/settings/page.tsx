@@ -27,7 +27,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import type { Organization, OrgSettings, SystemStats } from "@/types";
 
 export default function SettingsPage() {
-  const { currentOrg, currentRole, fetchOrgs, hasPermission } = useOrgStore();
+  const { currentOrg, fetchOrgs, hasPermission } = useOrgStore();
   const user = useAuthStore((s) => s.user);
   const isAdmin = hasPermission("org.settings.manage") || user?.is_system_admin;
   if (!isAdmin) return <div className="flex items-center justify-center min-h-[50vh]"><p className="text-muted-foreground">You don&apos;t have permission to access settings.</p></div>;
@@ -63,7 +63,6 @@ export default function SettingsPage() {
 }
 
 function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }) {
-  const user = useAuthStore((s) => s.user);
   const [name, setName] = useState(org.name);
   const [logoUrl, setLogoUrl] = useState(org.logo_url ?? "");
   const [settings, setSettings] = useState<OrgSettings>(org.settings || {});
@@ -452,7 +451,7 @@ function PlatformSettingsCard() {
             <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
               <Users className="h-3.5 w-3.5 text-muted-foreground" />
             </div>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Access</p>
+            <p className="text-sm font-semibold">Access</p>
           </div>
           <div className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50">
             <div className="flex items-center gap-3">
@@ -486,9 +485,9 @@ function PlatformSettingsCard() {
             <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
               <Key className="h-3.5 w-3.5 text-muted-foreground" />
             </div>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Password Policy</p>
+            <p className="text-sm font-semibold">Password Policy</p>
           </div>
-          <div className="rounded-lg border p-4 space-y-4">
+          <div className="bg-muted/40 rounded-lg p-4 space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Min length</Label>
@@ -510,9 +509,9 @@ function PlatformSettingsCard() {
             <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
               <Lock className="h-3.5 w-3.5 text-muted-foreground" />
             </div>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Account Lockout</p>
+            <p className="text-sm font-semibold">Account Lockout</p>
           </div>
-          <div className="rounded-lg border p-4">
+          <div className="bg-muted/40 rounded-lg p-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Max failed attempts</Label>
@@ -532,9 +531,9 @@ function PlatformSettingsCard() {
             <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
               <Clock className="h-3.5 w-3.5 text-muted-foreground" />
             </div>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Date & Time Defaults</p>
+            <p className="text-sm font-semibold">Date & Time Defaults</p>
           </div>
-          <div className="rounded-lg border p-4 space-y-3">
+          <div className="bg-muted/40 rounded-lg p-4 space-y-3">
             <div className="space-y-1">
               <Label className="text-xs">Timezone</Label>
               <Select value={form.timezone} onValueChange={(v) => set("timezone", v)}>
@@ -578,9 +577,9 @@ function PlatformSettingsCard() {
             <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
               <Activity className="h-3.5 w-3.5 text-muted-foreground" />
             </div>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Quotas & Limits</p>
+            <p className="text-sm font-semibold">Quotas & Limits</p>
           </div>
-          <div className="rounded-lg border p-4">
+          <div className="bg-muted/40 rounded-lg p-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Default inbox TTL</Label>
@@ -616,9 +615,9 @@ function PlatformSettingsCard() {
             <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
               <Monitor className="h-3.5 w-3.5 text-muted-foreground" />
             </div>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Session Limits</p>
+            <p className="text-sm font-semibold">Session Limits</p>
           </div>
-          <div className="rounded-lg border p-4">
+          <div className="bg-muted/40 rounded-lg p-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Max sessions per user</Label>
@@ -946,22 +945,13 @@ function SSOProvidersTab() {
         </CardHeader>
       </Card>
 
-      {/* Summary stats */}
+      {/* Summary */}
       {providerList.length > 0 && (
-        <div className="grid grid-cols-2 gap-3">
-          <Card>
-            <CardContent className="pt-4 pb-3">
-              <p className="text-2xl font-bold tabular-nums">{enabledCount}</p>
-              <p className="text-xs text-muted-foreground">Enabled Providers</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4 pb-3">
-              <p className="text-2xl font-bold tabular-nums">{totalLinkedUsers}</p>
-              <p className="text-xs text-muted-foreground">Linked Users</p>
-            </CardContent>
-          </Card>
-        </div>
+        <p className="text-sm text-muted-foreground tabular-nums">
+          <span className="font-semibold text-foreground">{enabledCount}</span> enabled provider{enabledCount !== 1 ? "s" : ""}
+          {" · "}
+          <span className="font-semibold text-foreground">{totalLinkedUsers}</span> linked user{totalLinkedUsers !== 1 ? "s" : ""}
+        </p>
       )}
 
       {/* Provider list */}

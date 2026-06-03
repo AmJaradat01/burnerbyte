@@ -75,12 +75,12 @@ export default function ProfilePage() {
           <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
             <Avatar className="h-20 w-20 text-xl ring-4 ring-background">
               <AvatarImage src={user.avatar_url} alt={user.display_name} />
-              <AvatarFallback className="bg-gradient-to-br from-info to-info text-white font-bold">{initials}</AvatarFallback>
+              <AvatarFallback className="bg-muted text-muted-foreground font-bold">{initials}</AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0 pt-2">
               <div className="flex items-center gap-2 flex-wrap">
                 <p className="text-xl font-bold truncate">{user.display_name || "Unnamed"}</p>
-                {user.is_system_admin && <Badge className="bg-warning/10 text-warning border-warning/20">Admin</Badge>}
+                {user.is_system_admin && <Badge variant="secondary">Admin</Badge>}
               </div>
               <p className="text-sm text-muted-foreground font-mono truncate">{user.email}</p>
               <div className="mt-2 flex flex-wrap gap-2">
@@ -350,8 +350,8 @@ function DateTimePreferencesCard() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <div className="h-6 w-6 rounded-md bg-warning/10 flex items-center justify-center">
-            <Clock className="h-3.5 w-3.5 text-warning" />
+          <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
+            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
           </div>
           Date & Time Preferences
         </CardTitle>

@@ -74,7 +74,7 @@ export function EmailPreview({ email, onBack, onToggleRead, onDelete }: EmailPre
   return (
     <>
       {/* Header */}
-      <div className="shrink-0 bg-background px-5 py-4 border-b-2 border-b-blue-500/10">
+      <div className="shrink-0 bg-background px-5 py-4 border-b border-border">
         {/* Mobile back */}
         <button onClick={onBack} className="md:hidden flex items-center gap-1.5 text-xs text-muted-foreground mb-3 hover:text-foreground transition-colors">
           <ArrowLeft className="h-3.5 w-3.5" /> Back to list
@@ -112,11 +112,11 @@ export function EmailPreview({ email, onBack, onToggleRead, onDelete }: EmailPre
             <Button
               variant={email.is_read ? "ghost" : "outline"} size="sm"
               className={`h-8 gap-1.5 text-xs px-2.5 ${!email.is_read ? "border-primary/30 text-primary" : ""}`}
-              title={email.is_read ? "Mark as unread" : "Mark as read"}
+              aria-label={email.is_read ? "Mark as unread" : "Mark as read"}
               onClick={onToggleRead}
             >
               {email.is_read ? <MailOpen className="h-4 w-4" /> : <Mail className="h-4 w-4" />}
-              <span className="hidden sm:inline">{email.is_read ? "Mark unread" : "Mark read"}</span>
+              <span className="hidden sm:inline" aria-hidden="true">{email.is_read ? "Mark unread" : "Mark read"}</span>
             </Button>
             <ConfirmDialog
               trigger={

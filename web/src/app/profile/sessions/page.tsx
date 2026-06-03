@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, setAccessToken } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -7,11 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Monitor, CheckCircle2, Smartphone, Tablet } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Monitor, Smartphone, Tablet, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { ErrorState } from "@/components/error-state";
 import { EmptyState } from "@/components/empty-state";
-import { ConfirmDialog } from "@/components/confirm-dialog";
 import { UAParser } from "ua-parser-js";
 import type { Session } from "@/types";
 
@@ -39,6 +42,8 @@ function getDeviceIcon(deviceType: string) {
 
 export default function SessionsPage() {
   const qc = useQueryClient();
+  const [revokeAllOpen, setRevokeAllOpen] = useState(false);
+  const [revokeConfirmText, setRevokeConfirmText] = useState("");
 
   const { data: sessions, isLoading, isError, refetch } = useQuery({
     queryKey: ["sessions"],
@@ -78,43 +83,62 @@ export default function SessionsPage() {
               </div>
               <div>
                 <h1 className="text-base font-semibold tracking-tight">Active Sessions</h1>
-                <p className="text-sm text-muted-foreground">Manage your active sessions across devices.</p>
+                <p className="text-sm text-muted-foreground tabular-nums">
+                  Manage your active sessions across devices.{" "}
+                  {sessions !== undefined && <span>{sessions.length} session{sessions.length !== 1 ? "s" : ""} active.</span>}
+                </p>
               </div>
             </div>
-            <ConfirmDialog
-              trigger={<Button variant="destructive" size="sm">Revoke All</Button>}
-              title="Revoke all sessions?"
-              description="You will be signed out of all devices including this one."
-              onConfirm={() => revokeAll.mutate()}
-            />
+            <Button
+              variant="destructive"
+              size="sm"
+              aria-label="Revoke all sessions"
+              onClick={() => { setRevokeConfirmText(""); setRevokeAllOpen(true); }}
+            >
+              Revoke All
+            </Button>
           </div>
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-2 gap-4">
-        <Card>
-          <CardContent className="pt-5 pb-4">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-muted-foreground">Active Sessions</span>
-              <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-info/10">
-                <Monitor className="h-4 w-4 text-info" />
-              </div>
+      {/* Typed-confirm dialog for Revoke All — signs user out everywhere */}
+      <Dialog open={revokeAllOpen} onOpenChange={(v) => { setRevokeAllOpen(v); if (!v) setRevokeConfirmText(""); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Revoke all sessions?
+            </DialogTitle>
+            <DialogDescription>
+              You will be immediately signed out of all devices, including this one. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
+              All active sessions will be terminated and you will be redirected to the login page.
             </div>
-            <p className="text-2xl font-bold tabular-nums">{sessions?.length ?? 0}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-5 pb-4">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-muted-foreground">Current Session</span>
-              <div className="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-success/10">
-                <CheckCircle2 className="h-4 w-4 text-success" />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="revoke-confirm">Type <span className="font-mono font-semibold">REVOKE</span> to confirm</Label>
+              <Input
+                id="revoke-confirm"
+                value={revokeConfirmText}
+                onChange={(e) => setRevokeConfirmText(e.target.value)}
+                placeholder="REVOKE"
+              />
             </div>
-            <p className="text-2xl font-bold tabular-nums">Active</p>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setRevokeAllOpen(false); setRevokeConfirmText(""); }}>Cancel</Button>
+            <Button
+              variant="destructive"
+              disabled={revokeConfirmText !== "REVOKE" || revokeAll.isPending}
+              onClick={() => { revokeAll.mutate(); setRevokeAllOpen(false); }}
+            >
+              {revokeAll.isPending ? "Revoking…" : "Revoke All Sessions"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Card>
         <CardHeader><CardTitle>Sessions</CardTitle></CardHeader>
@@ -131,7 +155,7 @@ export default function SessionsPage() {
                   <TableHead className="hidden sm:table-cell">Device</TableHead>
                   <TableHead className="hidden md:table-cell">Created</TableHead>
                   <TableHead>Expires</TableHead>
-                  <TableHead></TableHead>
+                  <TableHead><span className="sr-only">Actions</span></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

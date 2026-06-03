@@ -14,7 +14,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Loader2, Shield, Users } from "lucide-react";
+import { AlertTriangle, Loader2, Users } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { ProviderIcon } from "@/components/provider-icon";
 
@@ -53,7 +53,6 @@ export default function InvitePage() {
   const authLoading = useAuthStore((s) => s.loading);
   const login = useAuthStore((s) => s.login);
   const register = useAuthStore((s) => s.register);
-  const fetchMe = useAuthStore((s) => s.fetchMe);
   const logout = useAuthStore((s) => s.logout);
   const { fetchOrgs } = useOrgStore();
 
@@ -231,16 +230,16 @@ export default function InvitePage() {
     return (
       <CenteredCard>
         <CardHeader className="text-center">
-          <div className="text-3xl mb-2">⚠️</div>
           <CardTitle>Wrong account</CardTitle>
           <CardDescription>
             This invite was sent to <strong className="font-mono">{preview?.email}</strong>, but you&apos;re signed in as <strong className="font-mono">{user?.email}</strong>.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <p className="text-sm text-muted-foreground text-center">
-            Sign out and log in with the correct account to accept this invite.
-          </p>
+          <div className="flex items-start gap-2 rounded-lg border border-warning/20 bg-warning/10 px-3 py-2.5 text-sm text-warning">
+            <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+            <span>You must be signed in with the invited email address to accept this invite.</span>
+          </div>
           <Button className="w-full" onClick={handleLogoutAndRetry}>
             Sign out &amp; try again
           </Button>
@@ -314,20 +313,20 @@ export default function InvitePage() {
           {showPasswordForm && !enforceSSO && (
             <form onSubmit={handleSubmit} className="space-y-3">
               <div className="space-y-1.5">
-                <Label className="text-xs">Email</Label>
-                <Input value={preview?.email ?? ""} disabled className="bg-muted font-mono text-sm" />
+                <Label htmlFor="invite-email" className="text-xs">Email</Label>
+                <Input id="invite-email" value={preview?.email ?? ""} disabled className="bg-muted font-mono text-sm" />
               </div>
 
               {mode === "register" && (
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Display name</Label>
-                  <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} required autoComplete="name" placeholder="Your full name" />
+                  <Label htmlFor="invite-name" className="text-xs">Display name</Label>
+                  <Input id="invite-name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} required autoComplete="name" placeholder="Your full name" />
                 </div>
               )}
 
               <div className="space-y-1.5">
-                <Label className="text-xs">Password</Label>
-                <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required
+                <Label htmlFor="invite-password" className="text-xs">Password</Label>
+                <Input id="invite-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required
                   autoComplete={mode === "register" ? "new-password" : "current-password"}
                   placeholder={mode === "register" ? "Create a password" : "Enter your password"} />
               </div>

@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { Logo } from "@/components/logo";
 import {
   ArrowLeft, ArrowRight, Building2, Check, CheckCircle2, Globe, HardDrive,
-  Key, Loader2, Mail, Paintbrush, Plus, RefreshCw, Shield, SkipForward,
+  Loader2, Mail, Paintbrush, Plus, RefreshCw, Shield, SkipForward,
   Trash2, UserPlus, Users,
 } from "lucide-react";
 
@@ -387,9 +387,9 @@ export default function SetupPage() {
               return (
                 <>
                   <div className="space-y-1.5">
-                    <Label>Provider</Label>
+                    <Label htmlFor="storage-provider">Provider</Label>
                     <Select value={s.provider} onValueChange={(v) => update({ provider: v })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectTrigger id="storage-provider"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="minio">MinIO</SelectItem>
                         <SelectItem value="s3">AWS S3</SelectItem>
@@ -398,33 +398,33 @@ export default function SetupPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <Label>Endpoint</Label>
-                      <Input value={s.endpoint} onChange={(e) => update({ endpoint: e.target.value })} placeholder={s.provider === "s3" ? "s3.amazonaws.com" : "localhost:9000"} />
+                      <Label htmlFor="storage-endpoint">Endpoint</Label>
+                      <Input id="storage-endpoint" value={s.endpoint} onChange={(e) => update({ endpoint: e.target.value })} placeholder={s.provider === "s3" ? "s3.amazonaws.com" : "localhost:9000"} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label>Bucket</Label>
-                      <Input value={s.bucket} onChange={(e) => update({ bucket: e.target.value })} placeholder="burnerbyte" className="font-mono text-sm" />
+                      <Label htmlFor="storage-bucket">Bucket</Label>
+                      <Input id="storage-bucket" value={s.bucket} onChange={(e) => update({ bucket: e.target.value })} placeholder="burnerbyte" className="font-mono text-sm" />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <Label>Access key</Label>
-                      <Input value={s.access_key} onChange={(e) => update({ access_key: e.target.value })} className="font-mono text-sm" />
+                      <Label htmlFor="storage-access-key">Access key</Label>
+                      <Input id="storage-access-key" value={s.access_key} onChange={(e) => update({ access_key: e.target.value })} className="font-mono text-sm" />
                     </div>
                     <div className="space-y-1.5">
-                      <Label>Secret key</Label>
-                      <Input type="password" value={s.secret_key} onChange={(e) => update({ secret_key: e.target.value })} />
+                      <Label htmlFor="storage-secret-key">Secret key</Label>
+                      <Input id="storage-secret-key" type="password" value={s.secret_key} onChange={(e) => update({ secret_key: e.target.value })} />
                     </div>
                   </div>
                   {s.provider === "s3" && (
                     <div className="space-y-1.5">
-                      <Label>Region</Label>
-                      <Input value={s.region} onChange={(e) => update({ region: e.target.value })} placeholder="us-east-1" />
+                      <Label htmlFor="storage-region">Region</Label>
+                      <Input id="storage-region" value={s.region} onChange={(e) => update({ region: e.target.value })} placeholder="us-east-1" />
                     </div>
                   )}
                   <div className="flex items-center justify-between rounded-lg border p-3">
-                    <Label className="cursor-pointer">Use SSL/TLS</Label>
-                    <Switch checked={s.use_ssl} onCheckedChange={(v) => update({ use_ssl: v })} />
+                    <Label htmlFor="storage-use-ssl" className="cursor-pointer">Use SSL/TLS</Label>
+                    <Switch id="storage-use-ssl" checked={s.use_ssl} onCheckedChange={(v) => update({ use_ssl: v })} />
                   </div>
                   <p className="text-xs text-muted-foreground">Skip to use environment variables or config file instead.</p>
                   {/* Test connection button */}
@@ -525,25 +525,25 @@ export default function SetupPage() {
 
             {/* Review */}
             {currentStep.key === "review" && (
-              <div className="space-y-2">
+              <div className="divide-y rounded-lg border overflow-hidden">
                 {[
-                  { icon: Shield, label: "Admin", value: `${data.admin.display_name} (${data.admin.email})`, color: "bg-info/10 text-info" },
-                  { icon: Building2, label: "Organization", value: data.org.name, color: "bg-primary/10 text-primary" },
-                  { icon: Mail, label: "SMTP", value: `${data.smtp.host}:${data.smtp.port} → ${data.smtp.from_address}`, color: "bg-warning/10 text-warning" },
-                  { icon: Globe, label: "Domain", value: data.domain.domain_name, color: "bg-success/10 text-success" },
-                  ...(data.storage?.endpoint ? [{ icon: HardDrive, label: "Storage", value: `${data.storage.provider.toUpperCase()} — ${data.storage.endpoint}`, color: "bg-muted text-muted-foreground" }] : []),
-                  ...(data.team?.name ? [{ icon: Users, label: "Team", value: data.team.name, color: "bg-primary/10 text-primary" }] : []),
-                  ...(data.branding?.primary_color ? [{ icon: Paintbrush, label: "Branding", value: data.branding.primary_color, color: "bg-primary/10 text-primary" }] : []),
-                  ...(data.invites.filter(i => i.email).length > 0 ? [{ icon: UserPlus, label: "Invites", value: data.invites.filter(i => i.email).map(i => i.email).join(", "), color: "bg-info/10 text-info" }] : []),
+                  { icon: Shield, label: "Admin", value: `${data.admin.display_name} (${data.admin.email})` },
+                  { icon: Building2, label: "Organization", value: data.org.name },
+                  { icon: Mail, label: "SMTP", value: `${data.smtp.host}:${data.smtp.port} → ${data.smtp.from_address}` },
+                  { icon: Globe, label: "Domain", value: data.domain.domain_name },
+                  ...(data.storage?.endpoint ? [{ icon: HardDrive, label: "Storage", value: `${data.storage.provider.toUpperCase()} — ${data.storage.endpoint}` }] : []),
+                  ...(data.team?.name ? [{ icon: Users, label: "Team", value: data.team.name }] : []),
+                  ...(data.branding?.primary_color ? [{ icon: Paintbrush, label: "Branding", value: data.branding.primary_color }] : []),
+                  ...(data.invites.filter(i => i.email).length > 0 ? [{ icon: UserPlus, label: "Invites", value: data.invites.filter(i => i.email).map(i => i.email).join(", ") }] : []),
                 ].map((item) => {
                   const Icon = item.icon;
                   return (
-                    <div key={item.label} className="flex items-center gap-3 rounded-lg border p-3">
-                      <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${item.color}`}>
-                        <Icon className="h-4 w-4" />
+                    <div key={item.label} className="flex items-center gap-3 px-3 py-2.5">
+                      <div className="h-7 w-7 rounded-md bg-muted flex items-center justify-center shrink-0">
+                        <Icon className="h-3.5 w-3.5 text-muted-foreground" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs text-muted-foreground">{item.label}</p>
+                        <span className="text-xs text-muted-foreground font-mono">{item.label}</span>
                         <p className="text-sm font-medium truncate">{item.value}</p>
                       </div>
                     </div>

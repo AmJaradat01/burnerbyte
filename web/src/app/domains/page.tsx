@@ -54,7 +54,7 @@ export default function DomainsPage() {
     onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
   });
 
-  const domains = data?.data ?? [];
+  const domains = useMemo(() => data?.data ?? [], [data?.data]);
   const totalDomains = data?.total ?? 0;
   const verifiedCount = domains.filter((d) => d.mx_verified && d.txt_verified).length;
   const pendingCount = domains.length - verifiedCount;

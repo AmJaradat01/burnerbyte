@@ -10,7 +10,8 @@ export function PageProgress() {
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
 
   useEffect(() => {
-    // Start progress on route change
+    // Start progress on route change; synchronous setState is intentional to give instant visual feedback on route transition
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setVisible(true);
     setProgress(30);
 
