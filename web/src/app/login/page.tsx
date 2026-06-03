@@ -13,7 +13,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
-import { Logo } from "@/components/logo";
+import { AuthShell } from "@/components/layout/auth-shell";
 import { ProviderIcon } from "@/components/provider-icon";
 import { SessionConflictDialog } from "@/components/session-conflict-dialog";
 import type { Session } from "@/types";
@@ -164,13 +164,8 @@ export default function LoginPage() {
   const ssoProviders = (sso?.providers ?? []).filter((p) => p.enabled);
 
   return (
-    <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center p-6">
-      <div className="w-full max-w-sm space-y-8">
-        <div className="text-center space-y-2">
-          <Logo size="lg" />
-          <p className="text-sm text-muted-foreground">Self-hosted temporary email</p>
-        </div>
-        <Card className="w-full">
+    <AuthShell>
+      <Card className="w-full">
           <CardHeader className="text-center pb-2">
             <CardTitle className="text-xl font-semibold">Sign in</CardTitle>
             <CardDescription className="text-sm">
@@ -263,7 +258,6 @@ export default function LoginPage() {
             </CardFooter>
           )}
         </Card>
-      </div>
 
       {sessionConflict && (
         <SessionConflictDialog
@@ -275,6 +269,6 @@ export default function LoginPage() {
           onResolved={handleConflictResolved}
         />
       )}
-    </div>
+    </AuthShell>
   );
 }

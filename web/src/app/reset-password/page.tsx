@@ -9,11 +9,11 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react";
-import { Logo } from "@/components/logo";
+import { AuthShell } from "@/components/layout/auth-shell";
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense fallback={<div className="flex min-h-[calc(100vh-8rem)] items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>}>
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>}>
       <ResetPasswordForm />
     </Suspense>
   );
@@ -47,24 +47,19 @@ function ResetPasswordForm() {
 
   if (!token) {
     return (
-      <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center p-6">
-        <Card className="w-full max-w-sm">
+      <AuthShell>
+        <Card className="w-full">
           <CardContent className="pt-6">
             <p className="text-center text-muted-foreground">Invalid or missing reset token.</p>
           </CardContent>
         </Card>
-      </div>
+      </AuthShell>
     );
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center p-6">
-      <div className="w-full max-w-sm space-y-8">
-        <div className="text-center space-y-2">
-          <Logo size="lg" />
-          <p className="text-sm text-muted-foreground">Self-hosted temporary email</p>
-        </div>
-        <Card className="w-full">
+    <AuthShell>
+      <Card className="w-full">
           <CardHeader className="text-center">
             <CardTitle className="text-xl">Reset Password</CardTitle>
             <CardDescription>Enter your new password</CardDescription>
@@ -122,7 +117,6 @@ function ResetPasswordForm() {
             </form>
           </CardContent>
         </Card>
-      </div>
-    </div>
+    </AuthShell>
   );
 }
