@@ -144,7 +144,18 @@ export function AppShell({ children }: { children: ReactNode }) {
   // Landing page — has its own header/footer
   if (isLanding && !user) return <main className="min-h-screen">{children}</main>;
 
-  // Auth/public pages for unauthenticated users — shared header & footer
+  // Auth funnel (login/register/forgot/reset/verify) for unauthenticated users —
+  // the split-screen AuthShell owns its own chrome.
+  if (shouldBounceAuth && !user) return (
+    <>
+      <SkipToContent />
+      <PageProgress />
+      <OfflineBanner />
+      {children}
+    </>
+  );
+
+  // Other public pages for unauthenticated users — shared header & footer
   if (isPublic && !user) return (
     <UnauthPublicLayout>{children}</UnauthPublicLayout>
   );

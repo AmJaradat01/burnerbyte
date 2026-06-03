@@ -15,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { Eye, EyeOff, Check, X, User, Mail, Lock, Info } from "lucide-react";
-import { Logo } from "@/components/logo";
+import { AuthShell } from "@/components/layout/auth-shell";
 import { ProviderIcon } from "@/components/provider-icon";
 
 interface PasswordPolicy {
@@ -147,13 +147,8 @@ export default function RegisterPage() {
   if (sso && !sso.allow_registration) return null;
 
   return (
-    <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center p-6">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="text-center">
-          <Logo size="lg" />
-          <p className="text-sm text-muted-foreground">Self-hosted temporary email</p>
-        </div>
-        {ssoLoading ? (
+    <AuthShell>
+      {ssoLoading ? (
           <FormSkeleton />
         ) : (
           <Card className="w-full">
@@ -327,7 +322,6 @@ export default function RegisterPage() {
             </form>
           </Card>
         )}
-      </div>
-    </div>
+    </AuthShell>
   );
 }

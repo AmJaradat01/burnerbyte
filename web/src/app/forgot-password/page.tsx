@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Logo } from "@/components/logo";
+import { AuthShell } from "@/components/layout/auth-shell";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -40,13 +40,8 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center p-6">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="text-center">
-          <Logo size="lg" />
-          <p className="text-sm text-muted-foreground">Self-hosted temporary email</p>
-        </div>
-        {sent ? (
+    <AuthShell>
+      {sent ? (
           <Card className="w-full">
             <CardHeader className="text-center">
               <CardTitle>Check your email</CardTitle>
@@ -89,7 +84,6 @@ export default function ForgotPasswordPage() {
             </form>
           </Card>
         )}
-      </div>
-    </div>
+    </AuthShell>
   );
 }
