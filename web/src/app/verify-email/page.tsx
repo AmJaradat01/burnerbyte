@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Logo } from "@/components/logo";
+import { AuthShell } from "@/components/layout/auth-shell";
 
 export default function VerifyEmailPage() {
   const params = useSearchParams();
@@ -27,13 +27,8 @@ export default function VerifyEmailPage() {
   }, [status, router]);
 
   return (
-    <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center p-6">
-      <div className="w-full max-w-sm space-y-8">
-        <div className="text-center space-y-2">
-          <Logo size="lg" />
-          <p className="text-sm text-muted-foreground">Self-hosted temporary email</p>
-        </div>
-        <Card className="w-full">
+    <AuthShell>
+      <Card className="w-full">
           <CardHeader>
             <CardTitle>{status === "loading" ? "Verifying…" : status === "success" ? "Email verified" : "Verification failed"}</CardTitle>
             <CardDescription>
@@ -45,7 +40,6 @@ export default function VerifyEmailPage() {
             <Link href="/login" className="text-sm text-muted-foreground hover:underline">Go to sign in</Link>
           </CardFooter>
         </Card>
-      </div>
-    </div>
+    </AuthShell>
   );
 }
