@@ -18,8 +18,8 @@ export function Sparkline({ data }: { data: number[] }) {
           <Area
             type="monotone"
             dataKey="value"
-            stroke="#6366f1"
-            fill="#6366f1"
+            stroke="var(--chart-2)"
+            fill="var(--chart-2)"
             fillOpacity={0.15}
             strokeWidth={1.5}
             dot={false}

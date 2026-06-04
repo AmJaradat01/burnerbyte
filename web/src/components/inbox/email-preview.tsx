@@ -15,14 +15,7 @@ import type { Email, Attachment } from "@/types";
 /* ── Avatar color (same algo as email-list) ── */
 
 const AVATAR_COLORS = [
-  "bg-info/10 text-info",
-  "bg-success/10 text-success",
-  "bg-primary/10 text-primary",
-  "bg-warning/10 text-warning",
-  "bg-destructive/10 text-destructive",
-  "bg-info/10 text-info",
-  "bg-warning/10 text-warning",
-  "bg-primary/10 text-primary",
+  "bg-muted text-muted-foreground",
 ];
 
 function avatarColor(email: string) {
@@ -84,8 +77,8 @@ export function EmailPreview({ email, onBack, onToggleRead, onDelete }: EmailPre
           <div className="min-w-0 flex-1">
             {/* Subject */}
             <div className="flex items-center gap-2">
-              <div className="h-6 w-6 rounded-md bg-info/10 flex items-center justify-center shrink-0">
-                <Mail className="h-3 w-3 text-info" />
+              <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center shrink-0">
+                <Mail className="h-3 w-3 text-muted-foreground" />
               </div>
               <h2 className="text-lg font-semibold leading-tight">{email.subject || "(no subject)"}</h2>
             </div>

@@ -58,7 +58,7 @@ export default function TeamsPage() {
           <Button variant="ghost" size="sm" onClick={() => setSelectedTeam(null)} className="gap-1.5" aria-label="Back to teams">
             <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Teams
           </Button>
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-sm font-bold text-primary" aria-hidden="true">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-sm font-bold text-muted-foreground" aria-hidden="true">
             {selectedTeam.name.charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0">
@@ -97,8 +97,8 @@ export default function TeamsPage() {
       {/* Header */}
       <header className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0" aria-hidden="true">
-            <Users className="h-4 w-4 text-primary" />
+          <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center shrink-0" aria-hidden="true">
+            <Users className="h-4 w-4 text-muted-foreground" />
           </div>
           <div className="min-w-0">
             <h1 className="text-headline">Teams</h1>
@@ -148,7 +148,7 @@ function TeamCard({ team, onSelect }: { team: Team; onSelect: () => void }) {
     >
       <CardContent className="space-y-3">
         <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-sm font-bold text-primary" aria-hidden="true">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-sm font-bold text-muted-foreground" aria-hidden="true">
             {team.name.charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
@@ -335,7 +335,7 @@ function CreateTeamDialog({ orgId, existingTeams }: { orgId: string; existingTea
               <div className="space-y-1.5">
                 {initialMembers.map((m) => (
                   <div key={m.email} className="flex items-center gap-2 rounded-lg border px-3 py-2">
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">
                       {(m.display_name || m.email).charAt(0).toUpperCase()}
                     </div>
                     <div className="min-w-0 flex-1">
@@ -376,7 +376,7 @@ function CreateTeamDialog({ orgId, existingTeams }: { orgId: string; existingTea
                     suggestions.map((s) => (
                       <button key={s.user_id} type="button" className="flex items-center gap-3 w-full px-3 py-2 text-left hover:bg-accent transition-colors cursor-pointer"
                         onMouseDown={(e) => { e.preventDefault(); addMember(s); }}>
-                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">
                           {(s.display_name || s.email).charAt(0).toUpperCase()}
                         </div>
                         <div className="min-w-0 flex-1">
@@ -629,7 +629,7 @@ function TeamMembersTab({ orgId, teamId, isAdmin }: { orgId: string; teamId: str
                             className="flex items-center gap-3 w-full px-3 py-2 text-left hover:bg-accent transition-colors cursor-pointer"
                             onMouseDown={(e) => { e.preventDefault(); selectSuggestion(s); }}
                           >
-                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">
                               {(s.display_name || s.email || "?").charAt(0).toUpperCase()}
                             </div>
                             <div className="min-w-0 flex-1">
@@ -700,7 +700,7 @@ function TeamMembersTab({ orgId, teamId, isAdmin }: { orgId: string; teamId: str
                 <TableRow key={m.id} className="hover:bg-muted/30">
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">
                         {(m.display_name || m.email || "?").charAt(0).toUpperCase()}
                       </div>
                       <div className="min-w-0">
