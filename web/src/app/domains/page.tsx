@@ -87,8 +87,8 @@ export default function DomainsPage() {
       {/* Header */}
       <header className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0" aria-hidden="true">
-            <Globe className="h-4 w-4 text-primary" />
+          <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center shrink-0" aria-hidden="true">
+            <Globe className="h-4 w-4 text-muted-foreground" />
           </div>
           <div className="min-w-0">
             <h1 className="text-headline">Domains</h1>
@@ -309,7 +309,7 @@ function DnsChipWithCopy({ verified, label, value }: { verified: boolean; label:
       {verified ? <CheckCircle2 className="h-3 w-3" /> : <Circle className="h-3 w-3" />}
       {label}
       {value && (
-        <button onClick={handleCopy} className="ml-0.5 hover:opacity-70 transition-opacity" title={`Copy ${label} record`}>
+        <button onClick={handleCopy} className="ml-0.5 hover:opacity-70 transition-opacity" title={`Copy ${label} record`} aria-label={`Copy ${label} record`}>
           {justCopied ? <Check className="h-2.5 w-2.5 text-success" /> : <Copy className="h-2.5 w-2.5" />}
         </button>
       )}
