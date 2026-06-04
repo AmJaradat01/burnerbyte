@@ -9,7 +9,7 @@ Emails are stored in PostgreSQL with fields for `from_address`, `to_address`, `s
 
 ## HTML Rendering
 
-HTML email bodies are rendered in a sandboxed `<iframe>` with `sandbox=""` (no permissions), preventing JavaScript execution, form submissions, and navigation.
+Inbound HTML is sanitized server-side at ingest with bluemonday's UGC policy (a permissive allowlist that strips scripts and dangerous attributes). The frontend then renders the sanitized HTML in a sandboxed `<iframe>` with `sandbox=""` (no permissions), preventing JavaScript execution, form submissions, and navigation.
 
 ## Attachments
 
@@ -19,6 +19,8 @@ Attachments are stored in MinIO (S3-compatible) and served via presigned URLs:
 2. Settings resolver checks if attachments are allowed (org → domain assignment cascade)
 3. Files uploaded to MinIO at `{inbox_id}/{email_id}/{attachment_id}/{filename}`
 4. Download generates a time-limited presigned URL (configurable via `defaults.presigned_url_ttl`)
+
+Attachments with dangerous executable extensions (such as `.exe`, `.bat`, `.js`) are rejected at ingest.
 
 ## API Operations
 

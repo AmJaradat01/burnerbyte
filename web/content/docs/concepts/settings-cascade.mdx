@@ -5,21 +5,25 @@ description: How settings inherit from org to domain assignment.
 
 ## Inheritance Model
 
+The effective value is resolved most-specific-first: a domain assignment overrides the domain, which overrides the org, which falls back to the system default.
+
 ```
-Global Defaults → Org Settings → Domain Assignment Settings → Effective Settings
+System Defaults → Org Settings → Domain Settings → Domain Assignment Settings → Effective Settings
 ```
+
+During inbox creation, `default_inbox_ttl` resolves through an additional team tier (Team → Domain → Org → System Default).
 
 ## Configurable Settings
 
 | Setting | Level | Description |
 |---|---|---|
-| `attachments_enabled` | Org, Assignment | Whether file attachments are accepted |
+| `attachments_enabled` | Org, Domain, Assignment | Whether file attachments are accepted |
 | `max_attachment_size_mb` | Org | Maximum attachment file size |
-| `default_inbox_ttl` | Org | Default inbox lifetime |
-| `max_inbox_ttl` | Org, Assignment | Maximum inbox lifetime |
+| `default_inbox_ttl` | Org, Domain, Team | Default inbox lifetime |
+| `max_inbox_ttl` | Org, Domain, Assignment | Maximum inbox lifetime |
 | `max_domains` | Org | Maximum domains per org |
 | `max_teams` | Org | Maximum teams per org |
-| `max_inboxes_per_domain` | Org | Maximum inboxes per domain |
+| `max_inboxes_per_domain` | Org, Domain | Maximum inboxes per domain |
 | `enforce_sso` | Org | Require SSO for all members |
 | `primary_color` | Org | Branding primary color |
 | `footer_text` | Org | Branding footer text |

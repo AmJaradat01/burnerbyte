@@ -15,7 +15,9 @@ POST /inboxes
 ```
 
 - **alias** — Optional. If omitted, a random alias is generated
-- **ttl** — Duration string (e.g., `10m`, `1h`, `24h`). Capped by `defaults.max_inbox_ttl`
+- **ttl** — Duration string (e.g., `10m`, `1h`, `24h`). Minimum 1 minute, capped by `defaults.max_inbox_ttl`
+
+Limits: an `alias` is 2–64 characters, and each user may hold at most **50 active inboxes** at once.
 
 ## TTL Lifecycle
 

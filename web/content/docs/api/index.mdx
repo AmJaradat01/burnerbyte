@@ -119,7 +119,7 @@ X-RateLimit-Reset: 1709251200
 | Group | Endpoints |
 |---|---|
 | Setup | `GET /setup/status`, `POST /setup/complete` |
-| Auth | `POST /auth/register`, `POST /auth/login`, `POST /auth/login/resolve`, `POST /auth/refresh`, `GET /auth/me`, `PATCH /auth/me`, `PUT /auth/me/password`, `DELETE /auth/me`, `POST /auth/forgot-password`, `POST /auth/reset-password`, `GET /auth/verify-email/:token`, `GET /auth/sso-status`, `GET /auth/datetime-settings` |
+| Auth | `POST /auth/register`, `POST /auth/login`, `POST /auth/login/resolve`, `POST /auth/refresh`, `GET /auth/me`, `PATCH /auth/me`, `PUT /auth/me/password`, `DELETE /auth/me`, `POST /auth/forgot-password`, `POST /auth/reset-password`, `GET /auth/verify-email/:token`, `GET /auth/sso-status`, `GET /auth/datetime-settings`, `GET /auth/login/pending-sessions`, `POST /auth/sso/exchange` |
 | Sessions | `GET /auth/sessions`, `DELETE /auth/sessions/:id`, `DELETE /auth/sessions` |
 | SSO | `GET /auth/sso/:provider`, `GET /auth/sso/:provider/callback` |
 | SSO Identities | `GET /auth/me/sso`, `DELETE /auth/me/sso/:provider` |
@@ -142,18 +142,20 @@ X-RateLimit-Reset: 1709251200
 | Admin Roles | `POST /admin/roles`, `PATCH /admin/roles/:id`, `DELETE /admin/roles/:id` |
 | Notifications | `GET /notifications`, `POST /notifications/mark-all-read`, `PATCH /notifications/:id/read`, `DELETE /notifications`, `DELETE /notifications/:id` |
 | Roles | `GET /roles` |
-| WebSocket | `GET /ws/inboxes/:id`, `GET /ws/notifications`, `GET /ws/admin-stats` |
+| WebSocket | `POST /ws/ticket`, `GET /ws/inboxes/:id`, `GET /ws/notifications`, `GET /ws/admin-stats` |
 | Docs | `GET /docs`, `GET /docs/openapi.json` |
 | Health | `GET /healthz`, `GET /readyz`, `GET /metrics` (root level, not under `/api/v1`) |
 
+The domain and team `POST .../transfer` endpoints require a **system admin**.
+
 ## WebSocket Endpoints
 
-All WebSocket endpoints authenticate via a `token` query parameter containing a valid JWT.
+WebSocket endpoints authenticate with a single-use ticket, not the JWT directly. Call `POST /api/v1/ws/ticket` with your Bearer token to obtain a ticket (a UUID stored in Redis with a 30-second TTL), then connect with `?ticket=<ticket>`.
 
 ### Inbox Stream
 
 ```
-GET /ws/inboxes/{inboxId}?token=<jwt>
+GET /ws/inboxes/{inboxId}?ticket=<ticket>
 ```
 
 Streams new emails to a specific inbox in real-time. Messages are JSON with `type: "email.received"` and the email data in `data`.
@@ -161,7 +163,7 @@ Streams new emails to a specific inbox in real-time. Messages are JSON with `typ
 ### Notification Stream
 
 ```
-GET /ws/notifications?token=<jwt>
+GET /ws/notifications?ticket=<ticket>
 ```
 
 Streams all notifications for the authenticated user. Powers the notification bell in the UI. Messages include `type` (e.g., `email.received`, `inbox.created`, `inbox.expired`) and `data` with event details.
@@ -169,7 +171,7 @@ Streams all notifications for the authenticated user. Powers the notification be
 ### Admin Stats Stream
 
 ```
-GET /ws/admin-stats?token=<jwt>
+GET /ws/admin-stats?ticket=<ticket>
 ```
 
 **Requires system admin.** Streams real-time platform statistics. Messages have `type: "admin.stats"` with `data` containing:
