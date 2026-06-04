@@ -6,9 +6,10 @@ import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, XCircle } from "lucide-react";
+import Link from "next/link";
 import { AuthShell } from "@/components/layout/auth-shell";
 
 export default function ResetPasswordPage() {
@@ -49,9 +50,19 @@ function ResetPasswordForm() {
     return (
       <AuthShell>
         <Card className="w-full">
-          <CardContent className="pt-6">
-            <p className="text-center text-muted-foreground">Invalid or missing reset token.</p>
-          </CardContent>
+          <CardHeader className="items-center text-center">
+            <div className="mb-1 flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10" aria-hidden="true">
+              <XCircle className="h-6 w-6 text-destructive" />
+            </div>
+            <CardTitle className="text-xl">Invalid reset link</CardTitle>
+            <CardDescription>This password reset link is invalid or missing. Request a new one to continue.</CardDescription>
+          </CardHeader>
+          <CardFooter className="flex-col gap-3">
+            <Button asChild className="w-full">
+              <Link href="/forgot-password">Request a new link</Link>
+            </Button>
+            <Link href="/login" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Back to sign in</Link>
+          </CardFooter>
         </Card>
       </AuthShell>
     );
@@ -61,13 +72,13 @@ function ResetPasswordForm() {
     <AuthShell>
       <Card className="w-full">
           <CardHeader className="text-center">
-            <CardTitle className="text-xl">Reset Password</CardTitle>
-            <CardDescription>Enter your new password</CardDescription>
+            <CardTitle className="text-xl">Set a new password</CardTitle>
+            <CardDescription>Enter and confirm your new password</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={submit} className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="new-password">New Password</Label>
+                <Label htmlFor="new-password">New password</Label>
                 <div className="relative">
                   <Input
                     id="new-password"
@@ -91,7 +102,7 @@ function ResetPasswordForm() {
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="confirm-password">Confirm Password</Label>
+                <Label htmlFor="confirm-password">Confirm password</Label>
                 <div className="relative">
                   <Input
                     id="confirm-password"
