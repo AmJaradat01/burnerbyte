@@ -76,12 +76,13 @@ export default function DashboardPage() {
   const { hasPermission } = useOrgStore();
   const isAdmin = hasPermission("org.analytics.view") || user?.is_system_admin;
 
-  const greeting = (() => {
+  // Computed once on mount so render stays pure (the hour does not change mid-session).
+  const [greeting] = useState(() => {
     const h = new Date().getHours();
     if (h < 12) return "Good morning";
     if (h < 18) return "Good afternoon";
     return "Good evening";
-  })();
+  });
 
   if (!org) return <p className="text-muted-foreground">Select an organization to view the dashboard.</p>;
 
@@ -297,9 +298,9 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
 
   const tooltipStyle = {
     borderRadius: 8,
-    border: "1px solid hsl(var(--border))",
-    background: "hsl(var(--popover))",
-    color: "hsl(var(--popover-foreground))",
+    border: "1px solid var(--border)",
+    background: "var(--popover)",
+    color: "var(--popover-foreground)",
   };
 
   return (
@@ -364,8 +365,8 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
             <CardHeader className="pb-2 bg-muted/20">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="h-6 w-6 rounded-md bg-primary/10 flex items-center justify-center">
-                    <Mail className="h-3.5 w-3.5 text-primary" />
+                  <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
+                    <Mail className="h-3.5 w-3.5 text-muted-foreground" />
                   </div>
                   <CardTitle className="text-base">Email Volume</CardTitle>
                   {chartAvg > 0 && (
@@ -379,11 +380,11 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
               {chartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={280}>
                   <RechartsAreaChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                    <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(v) => v.slice(5)} stroke="hsl(var(--muted-foreground))" />
-                    <YAxis tick={{ fontSize: 11 }} allowDecimals={false} stroke="hsl(var(--muted-foreground))" />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+                    <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(v) => v.slice(5)} stroke="var(--muted-foreground)" />
+                    <YAxis tick={{ fontSize: 11 }} allowDecimals={false} stroke="var(--muted-foreground)" />
                     <Tooltip contentStyle={tooltipStyle} labelFormatter={(v) => `Date: ${v}`} formatter={(v) => [`${Number(v).toLocaleString()}`, "Emails"]} />
-                    <ReferenceLine y={chartAvg} stroke="hsl(var(--muted-foreground))" strokeDasharray="6 4" strokeOpacity={0.5} />
+                    <ReferenceLine y={chartAvg} stroke="var(--muted-foreground)" strokeDasharray="6 4" strokeOpacity={0.5} />
                     <Area type="monotone" dataKey="count" stroke="var(--chart-1)" strokeWidth={2} fill="var(--chart-1)" fillOpacity={0.12} />
                   </RechartsAreaChart>
                 </ResponsiveContainer>
@@ -415,9 +416,9 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
               <CardContent>
                 <ResponsiveContainer width="100%" height={180}>
                   <RechartsBarChart data={insights.peak_hours}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                    <XAxis dataKey="hour" tick={{ fontSize: 10 }} tickFormatter={formatHour} stroke="hsl(var(--muted-foreground))" />
-                    <YAxis tick={{ fontSize: 10 }} allowDecimals={false} stroke="hsl(var(--muted-foreground))" />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+                    <XAxis dataKey="hour" tick={{ fontSize: 10 }} tickFormatter={formatHour} stroke="var(--muted-foreground)" />
+                    <YAxis tick={{ fontSize: 10 }} allowDecimals={false} stroke="var(--muted-foreground)" />
                     <Tooltip contentStyle={tooltipStyle} labelFormatter={(v) => formatHour(Number(v))} formatter={(v) => [`${Number(v).toLocaleString()}`, "Emails"]} />
                     <Bar dataKey="count" fill="var(--chart-1)" radius={[3, 3, 0, 0]} fillOpacity={0.85} />
                   </RechartsBarChart>
@@ -433,8 +434,8 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
                 <CardHeader className="pb-2 bg-muted/20">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="h-6 w-6 rounded-md bg-destructive/10 flex items-center justify-center">
-                        <TrendingUp className="h-3.5 w-3.5 text-destructive" />
+                      <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
+                        <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
                       </div>
                       <CardTitle className="text-sm">Top Senders</CardTitle>
                     </div>
@@ -454,7 +455,7 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
                           <span className="text-[11px] text-muted-foreground tabular-nums shrink-0 ml-2">{sd.count} ({pct.toFixed(0)}%)</span>
                         </div>
                         <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                          <div className="h-full rounded-full bg-info/50 transition-all" style={{ width: `${Math.max((sd.count / maxSenderCount) * 100, 4)}%` }} />
+                          <div className="h-full rounded-full bg-primary/50 transition-all" style={{ width: `${Math.max((sd.count / maxSenderCount) * 100, 4)}%` }} />
                         </div>
                       </div>
                     );
@@ -467,8 +468,8 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
               <Card className="overflow-hidden">
                 <CardHeader className="pb-2 bg-muted/20">
                   <div className="flex items-center gap-2">
-                    <div className="h-6 w-6 rounded-md bg-primary/10 flex items-center justify-center">
-                      <Globe className="h-3.5 w-3.5 text-primary" />
+                    <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
+                      <Globe className="h-3.5 w-3.5 text-muted-foreground" />
                     </div>
                     <CardTitle className="text-sm">Emails by Domain</CardTitle>
                   </div>
@@ -484,7 +485,7 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
                           <span className="text-[11px] text-muted-foreground tabular-nums shrink-0 ml-2">{d.count} ({pct.toFixed(0)}%)</span>
                         </div>
                         <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                          <div className="h-full rounded-full bg-primary/60 transition-all" style={{ width: `${Math.max(pct, 4)}%` }} />
+                          <div className="h-full rounded-full bg-primary/50 transition-all" style={{ width: `${Math.max(pct, 4)}%` }} />
                         </div>
                       </div>
                     );
@@ -502,8 +503,8 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
             <CardHeader className="pb-2 bg-muted/20">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="h-6 w-6 rounded-md bg-primary/10 flex items-center justify-center">
-                    <Activity className="h-3.5 w-3.5 text-primary" />
+                  <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
+                    <Activity className="h-3.5 w-3.5 text-muted-foreground" />
                   </div>
                   <CardTitle className="text-base">This Week</CardTitle>
                 </div>
@@ -529,7 +530,7 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
                     <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={(v) => {
                       const d = new Date(v);
                       return d.toLocaleDateString(undefined, { weekday: "short" });
-                    }} stroke="hsl(var(--muted-foreground))" />
+                    }} stroke="var(--muted-foreground)" />
                     <Tooltip contentStyle={tooltipStyle} labelFormatter={(v) => v} formatter={(v) => [`${Number(v).toLocaleString()}`, "Emails"]} />
                     <Bar dataKey="count" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
                   </RechartsBarChart>
@@ -559,8 +560,8 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
             <CardHeader className="pb-2 bg-muted/20">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="h-6 w-6 rounded-md bg-info/10 flex items-center justify-center">
-                    <Shield className="h-3.5 w-3.5 text-info" />
+                  <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
+                    <Shield className="h-3.5 w-3.5 text-muted-foreground" />
                   </div>
                   <CardTitle className="text-base">Recent Activity</CardTitle>
                 </div>
