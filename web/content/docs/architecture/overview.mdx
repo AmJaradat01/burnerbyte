@@ -7,7 +7,7 @@ description: How BurnerByte's two-binary architecture works.
 
 BurnerByte runs as two independent Go binaries that share the same database, Redis, and MinIO:
 
-- **`cmd/api`** — HTTP API server (Chi router) + 5 background workers
+- **`cmd/api`** — HTTP API server (Chi router) + 7 background workers
 - **`cmd/smtpd`** — SMTP inbound server with worker pool
 
 Both binaries load the same `config.yaml` and connect to the same PostgreSQL, Redis, and MinIO instances. They can be scaled independently.
@@ -43,7 +43,7 @@ The SMTP server accepts connections, validates the recipient domain against the 
 | Services | `internal/service` | 13 business logic services |
 | Repositories | `internal/repository` | 17 PostgreSQL + 1 Redis repo |
 | SMTP | `internal/smtp` | Server, router, handler, listener |
-| Workers | `internal/worker` | 5 background jobs |
+| Workers | `internal/worker` | 7 background jobs |
 | Realtime | `internal/realtime` | WebSocket hubs for inbox + notifications |
 | Webhooks | `internal/webhook` | HMAC-signed dispatch with retry |
 | Mailer | `internal/mailer` | Outbound email (invites, resets) |
@@ -53,9 +53,9 @@ The SMTP server accepts connections, validates the recipient domain against the 
 
 ## Database
 
-23 tables across 28 migration pairs. Key tables: `users`, `organizations`, `org_memberships`, `teams`, `team_memberships`, `domains`, `domain_assignments`, `inboxes`, `emails`, `attachments`, `webhooks`, `webhook_delivery_logs`, `api_keys`, `audit_logs`, `invites`, `sessions`, `setup_state`, `password_reset_tokens`, `system_configs`, `email_verification_tokens`, `roles`, `permissions`, `role_permissions`, `notifications`.
+36 tables across 43 migrations (including SSO and analytics tables). Key tables: `users`, `organizations`, `org_memberships`, `teams`, `team_memberships`, `domains`, `domain_assignments`, `inboxes`, `emails`, `attachments`, `webhooks`, `webhook_delivery_logs`, `api_keys`, `audit_logs`, `invites`, `sessions`, `setup_state`, `password_reset_tokens`, `system_configs`, `email_verification_tokens`, `roles`, `permissions`, `role_permissions`, `notifications`.
 
-52+ indexes and 7 triggers handle cascading deletes, automatic timestamps, and data integrity.
+74 indexes and 7 triggers handle cascading deletes, automatic timestamps, and data integrity.
 
 ## Frontend
 
