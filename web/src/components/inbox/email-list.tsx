@@ -9,18 +9,6 @@ import { Pagination } from "@/components/pagination";
 import { Mail, Paperclip, RefreshCw, Search } from "lucide-react";
 import type { EmailSummary } from "@/types";
 
-/* ── Deterministic avatar color from email address ── */
-
-const AVATAR_COLORS = [
-  "bg-muted text-muted-foreground",
-];
-
-function avatarColor(email: string) {
-  let hash = 0;
-  for (let i = 0; i < email.length; i++) hash = ((hash << 5) - hash + email.charCodeAt(i)) | 0;
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
-
 function senderName(email: string) {
   const local = email.split("@")[0] || "";
   return local.replace(/[._-]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -149,7 +137,6 @@ export function EmailList({
 /* ── Email row ── */
 
 function EmailRow({ email, selected, onClick }: { email: EmailSummary; selected: boolean; onClick: () => void }) {
-  const color = avatarColor(email.from_address);
   const initial = email.from_address.charAt(0).toUpperCase();
   const name = senderName(email.from_address);
   const unread = !email.is_read;
@@ -167,7 +154,7 @@ function EmailRow({ email, selected, onClick }: { email: EmailSummary; selected:
     >
       <div className="flex items-start gap-2.5">
         {/* Avatar */}
-        <div className={`shrink-0 h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold mt-0.5 ${color}`}>
+        <div className="shrink-0 h-8 w-8 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-xs font-semibold mt-0.5">
           {initial}
         </div>
 

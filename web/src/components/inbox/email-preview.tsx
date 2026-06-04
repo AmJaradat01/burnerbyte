@@ -8,21 +8,9 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import {
-  ArrowLeft, Code, Download, FileText, Globe, Mail, MailOpen, Paperclip, Trash2,
+  ArrowLeft, Code, Download, FileText, Globe, Image as ImageIcon, Mail, MailOpen, Paperclip, Trash2,
 } from "lucide-react";
 import type { Email, Attachment } from "@/types";
-
-/* ── Avatar color (same algo as email-list) ── */
-
-const AVATAR_COLORS = [
-  "bg-muted text-muted-foreground",
-];
-
-function avatarColor(email: string) {
-  let hash = 0;
-  for (let i = 0; i < email.length; i++) hash = ((hash << 5) - hash + email.charCodeAt(i)) | 0;
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
 
 function senderName(email: string) {
   const local = email.split("@")[0] || "";
@@ -58,7 +46,6 @@ interface EmailPreviewProps {
 }
 
 export function EmailPreview({ email, onBack, onToggleRead, onDelete }: EmailPreviewProps) {
-  const color = avatarColor(email.from_address);
   const initial = email.from_address.charAt(0).toUpperCase();
   const name = senderName(email.from_address);
   const hasHtml = !!email.body_html;
@@ -76,16 +63,11 @@ export function EmailPreview({ email, onBack, onToggleRead, onDelete }: EmailPre
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
             {/* Subject */}
-            <div className="flex items-center gap-2">
-              <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center shrink-0">
-                <Mail className="h-3 w-3 text-muted-foreground" />
-              </div>
-              <h2 className="text-lg font-semibold leading-tight">{email.subject || "(no subject)"}</h2>
-            </div>
+            <h2 className="text-lg font-semibold leading-tight">{email.subject || "(no subject)"}</h2>
 
             {/* Sender info */}
             <div className="flex items-center gap-3 mt-3">
-              <div className={`shrink-0 h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold ${color}`}>
+              <div className="shrink-0 h-10 w-10 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-sm font-bold">
                 {initial}
               </div>
               <div className="min-w-0">
@@ -222,7 +204,7 @@ function AttachmentChip({ attachment, emailId }: { attachment: Attachment; email
 
   const sizeKB = Math.round(attachment.size_bytes / 1024);
   const isImage = attachment.content_type?.startsWith("image/");
-  const Icon = isImage ? Globe : FileText;
+  const Icon = isImage ? ImageIcon : FileText;
 
   return (
     <button
