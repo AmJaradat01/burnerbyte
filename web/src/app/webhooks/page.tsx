@@ -10,7 +10,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -35,7 +35,7 @@ interface DeliveryLog {
   created_at: string;
 }
 
-const EVENT_INFO: { key: string; label: string; description: string; icon: LucideIcon; example: string }[] = [
+const EVENT_INFO: { key: string; label: string; description: string; icon: LucideIcon; example: string; note?: string }[] = [
   {
     key: "email.received",
     label: "Email Received",
@@ -56,6 +56,7 @@ const EVENT_INFO: { key: string; label: string; description: string; icon: Lucid
     description: "Fires when an inbox reaches its TTL and expires.",
     icon: Clock,
     example: '{ "inbox_id": "...", "address": "abc@domain.com", "expired_at": "..." }',
+    note: "Reserved — not dispatched yet, so subscribing won't deliver events.",
   },
 ];
 
@@ -293,8 +294,16 @@ function WebhookListSkeleton() {
     <div className="space-y-4">
       {Array.from({ length: 3 }).map((_, i) => (
         <Card key={i}>
-          <CardHeader className="pb-3"><Skeleton className="h-4 w-2/3" /><Skeleton className="h-4 w-1/3 mt-2" /></CardHeader>
-          <CardContent><Skeleton className="h-3 w-1/2" /></CardContent>
+          <CardContent className="space-y-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-2/3" />
+                <div className="flex gap-2"><Skeleton className="h-5 w-16 rounded-full" /><Skeleton className="h-5 w-20 rounded-full" /></div>
+              </div>
+              <Skeleton className="h-6 w-10 rounded-full" />
+            </div>
+            <div className="border-t pt-2"><Skeleton className="h-3 w-1/2" /></div>
+          </CardContent>
         </Card>
       ))}
     </div>
@@ -321,6 +330,11 @@ function EventCard({ info, selected, onToggle }: { info: typeof EVENT_INFO[numbe
             <Badge variant="outline" className="text-[10px] font-mono ml-auto shrink-0">{info.key}</Badge>
           </div>
           <p className="text-xs text-muted-foreground mt-1">{info.description}</p>
+          {info.note && (
+            <p className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground/80">
+              <AlertCircle className="h-3 w-3 shrink-0" aria-hidden="true" /> {info.note}
+            </p>
+          )}
         </div>
         <Switch checked={selected} onCheckedChange={onToggle} className="mt-1 shrink-0" aria-label={`Subscribe to ${info.label}`} />
       </label>
