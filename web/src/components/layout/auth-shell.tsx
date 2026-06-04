@@ -3,13 +3,15 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Logo } from "@/components/logo";
+import { LiveInboxDemo } from "@/components/landing/live-inbox-demo";
 
 /**
  * Shared frame for the unauthenticated auth funnel (login, register, forgot /
  * reset password, verify email). A split layout: a dark, art-directed brand
- * panel that echoes the landing page's datasheet language, beside a calm
- * warm-paper column that holds the form unchanged. The panel is desktop-only;
- * on small screens a compact logo + tagline takes its place.
+ * panel that echoes the landing page's datasheet language and shows a calm,
+ * static preview of the product, beside a warm-paper column that holds the
+ * form unchanged. The panel is desktop-only; on small screens a compact logo
+ * + tagline takes its place.
  *
  * Light is forced app-wide, so the panel's dark tokens are set explicitly.
  */
@@ -23,10 +25,11 @@ const panel = {
 
 export function AuthShell({ children }: { children: React.ReactNode }) {
   const t = useTranslations("auth");
+  const td = useTranslations("landing");
 
   return (
     <div className="lg:grid lg:min-h-screen lg:grid-cols-2">
-      <aside className={`relative hidden flex-col justify-between p-10 lg:flex ${panel.bg} ${panel.text}`}>
+      <aside className={`relative hidden flex-col p-10 lg:flex ${panel.bg} ${panel.text}`}>
         <Link href="/" aria-label="BurnerByte home" className="inline-flex flex-col">
           <span className="text-xl font-bold tracking-tight">
             Burner<span className={panel.accent}>Byte</span>
@@ -35,13 +38,22 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
             {t("brandMasthead")}
           </span>
         </Link>
-        <div>
-          <p className="max-w-sm text-balance text-2xl font-semibold leading-snug tracking-tight">
-            {t("brandHeadline")}
-          </p>
-          <div className="mt-6 flex items-center gap-3">
-            <span className={`h-px w-8 shrink-0 ${panel.rule}`} />
-            <span className={`font-mono text-[11px] ${panel.dim}`}>{t("brandSpec")}</span>
+
+        <div className="flex flex-1 flex-col justify-center py-10">
+          <div className="w-full max-w-sm space-y-8">
+            <p className="text-balance text-[1.7rem] font-semibold leading-snug tracking-tight">
+              {t("brandHeadline")}
+            </p>
+
+            <LiveInboxDemo
+              staticPreview
+              labels={{ inboxLabel: td("demo.inbox"), expiresIn: td("demo.expiresIn"), expired: td("demo.expired") }}
+            />
+
+            <div className="flex items-center gap-3">
+              <span className={`h-px w-8 shrink-0 ${panel.rule}`} />
+              <span className={`font-mono text-[11px] ${panel.dim}`}>{t("brandSpec")}</span>
+            </div>
           </div>
         </div>
       </aside>
