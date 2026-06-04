@@ -29,6 +29,26 @@ test.example.com.  IN  TXT  "burnerbyte-verify=<your-token>"
 test.example.com.  IN  TXT  "v=spf1 mx -all"
 ```
 
+### DKIM
+
+If you sign outbound mail, publish the DKIM public key your signer generates:
+
+```
+<selector>._domainkey.test.example.com.  IN  TXT  "v=DKIM1; k=rsa; p=<public-key>"
+```
+
+### DMARC
+
+Publish a DMARC policy so receivers know how to handle unauthenticated mail:
+
+```
+_dmarc.test.example.com.  IN  TXT  "v=DMARC1; p=quarantine; rua=mailto:dmarc@example.com"
+```
+
+<Callout type="info">
+BurnerByte verifies MX and TXT to receive mail. SPF, DKIM, and DMARC affect deliverability and how other servers treat mail from your domain; configure them on any domain that also sends.
+</Callout>
+
 ## Verification
 
 After adding DNS records:

@@ -6,6 +6,7 @@ description: Hardening BurnerByte for production use.
 ## Checklist
 
 - Set a strong, random `JWT_SECRET` (64+ characters)
+- Set `BB_ENCRYPTION_KEY` to a 32-byte hex key (`openssl rand -hex 32`), required to encrypt SSO secrets and SMTP passwords at rest
 - Change default database and MinIO passwords
 - Configure `FRONTEND_URL` and `API_BASE_URL` with your actual domain
 - Set `BB_CORS_ALLOWED_ORIGINS` to your frontend domain only
@@ -22,6 +23,7 @@ description: Hardening BurnerByte for production use.
 DATABASE_URL=postgres://user:pass@db:5432/burnerbyte?sslmode=require
 REDIS_URL=redis://:password@redis:6379/0
 JWT_SECRET=<random-64-char-string>
+BB_ENCRYPTION_KEY=<64-char-hex-string>
 FRONTEND_URL=https://app.example.com
 API_BASE_URL=https://api.example.com
 BB_SMTP_HOSTNAME=mail.example.com
