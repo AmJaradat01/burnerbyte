@@ -292,17 +292,15 @@ function ApiKeyCard({
     <Card
       className={`cursor-pointer ${dimmed ? "border-dashed opacity-60" : ""}`}
       onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }}
+      aria-label={`View API key ${k.name}`}
     >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3 min-w-0 flex-1">
-            <div
-              className={`flex items-center justify-center h-10 w-10 rounded-lg shrink-0 ${
-                dimmed
-                  ? "bg-muted text-muted-foreground"
-                  : "bg-muted text-muted-foreground"
-              }`}
-            >
+            <div className="flex items-center justify-center h-10 w-10 rounded-lg shrink-0 bg-muted text-muted-foreground">
               <Key className="h-5 w-5" />
             </div>
             <div className="min-w-0 flex-1">
@@ -405,12 +403,22 @@ function ApiKeyListSkeleton() {
       {Array.from({ length: 3 }).map((_, i) => (
         <Card key={i}>
           <CardHeader className="pb-3">
-            <Skeleton className="h-4 w-1/3" />
-            <Skeleton className="h-3 w-1/4 mt-1" />
+            <div className="flex items-start gap-3">
+              <Skeleton className="h-10 w-10 rounded-lg shrink-0" />
+              <div className="flex-1 space-y-1.5">
+                <Skeleton className="h-4 w-1/3" />
+                <Skeleton className="h-3 w-1/4" />
+              </div>
+              <Skeleton className="h-8 w-8 rounded-md shrink-0" />
+            </div>
           </CardHeader>
-          <CardContent>
-            <Skeleton className="h-4 w-2/3" />
-            <Skeleton className="h-3 w-1/2 mt-2" />
+          <CardContent className="pt-0 space-y-2">
+            <div className="flex gap-1.5">
+              <Skeleton className="h-5 w-16 rounded-full" />
+              <Skeleton className="h-5 w-20 rounded-full" />
+              <Skeleton className="h-5 w-14 rounded-full" />
+            </div>
+            <Skeleton className="h-3 w-1/2" />
           </CardContent>
         </Card>
       ))}
