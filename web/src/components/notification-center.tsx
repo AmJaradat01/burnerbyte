@@ -6,7 +6,7 @@ import { api, WS_BASE, getWsTicket } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import { Bell, Check, ChevronDown, ChevronRight, Inbox, Mail, Trash2, X } from "lucide-react";
+import { Bell, Check, ChevronDown, ChevronRight, Clock, Inbox, Mail, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -32,7 +32,7 @@ interface GroupedNotification {
 const TYPE_CONFIG: Record<string, { icon: typeof Mail; color: string }> = {
   "email.received": { icon: Mail, color: "text-info" },
   "inbox.created": { icon: Inbox, color: "text-success" },
-  "inbox.expired": { icon: Inbox, color: "text-warning" },
+  "inbox.expired": { icon: Clock, color: "text-warning" },
 };
 
 function formatTime(ts: string): string {

@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import Link from "next/link";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { Clock, KeyRound, Link2, LogOut, Monitor, Shield, Trash2, Unlink } from "lucide-react";
+import { Clock, KeyRound, Link2, Monitor, Shield, Trash2, Unlink } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useDateFormat } from "@/hooks/use-date-format";
 import { ProviderIcon, providerTypeLabel } from "@/components/provider-icon";
@@ -58,8 +58,8 @@ export default function ProfilePage() {
       <Card>
         <CardContent className="pt-5 pb-4">
           <div className="flex items-center gap-3">
-            <div className="h-7 w-7 rounded-md bg-info/10 flex items-center justify-center">
-              <Shield className="h-4 w-4 text-info" />
+            <div className="h-7 w-7 rounded-md bg-muted flex items-center justify-center">
+              <Shield className="h-4 w-4 text-muted-foreground" />
             </div>
             <div>
               <h1 className="text-base font-semibold tracking-tight">Profile</h1>
@@ -124,8 +124,8 @@ export default function ProfilePage() {
               <Link href="/profile/sessions" className="block">
                 <div className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50">
                   <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-md bg-info/10 flex items-center justify-center shrink-0">
-                      <Monitor className="h-4 w-4 text-info" />
+                    <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center shrink-0">
+                      <Monitor className="h-4 w-4 text-muted-foreground" />
                     </div>
                     <div>
                       <p className="text-sm font-medium">Manage Sessions</p>
@@ -159,8 +159,8 @@ export default function ProfilePage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <div className="h-6 w-6 rounded-md bg-primary/10 flex items-center justify-center">
-                    <KeyRound className="h-3.5 w-3.5 text-primary" />
+                  <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
+                    <KeyRound className="h-3.5 w-3.5 text-muted-foreground" />
                   </div>
                   Password
                 </CardTitle>
@@ -199,8 +199,8 @@ function ProfileForm({ user, onSaved }: { user: NonNullable<ReturnType<typeof us
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <div className="h-6 w-6 rounded-md bg-info/10 flex items-center justify-center">
-            <Shield className="h-3.5 w-3.5 text-info" />
+          <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
+            <Shield className="h-3.5 w-3.5 text-muted-foreground" />
           </div>
           Account Details
         </CardTitle>
@@ -266,8 +266,8 @@ function ChangePasswordForm() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <div className="h-6 w-6 rounded-md bg-primary/10 flex items-center justify-center">
-            <LogOut className="h-3.5 w-3.5 text-primary" />
+          <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
+            <KeyRound className="h-3.5 w-3.5 text-muted-foreground" />
           </div>
           Change Password
         </CardTitle>
@@ -472,8 +472,8 @@ function ConnectedAccountsCard() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <div className="h-6 w-6 rounded-md bg-success/10 flex items-center justify-center">
-            <Link2 className="h-3.5 w-3.5 text-success" />
+          <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
+            <Link2 className="h-3.5 w-3.5 text-muted-foreground" />
           </div>
           Connected Accounts
         </CardTitle>

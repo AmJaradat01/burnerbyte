@@ -124,8 +124,8 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center">
-                  <Settings className="h-4 w-4 text-primary" />
+                <div className="h-7 w-7 rounded-md bg-muted flex items-center justify-center">
+                  <Settings className="h-4 w-4 text-muted-foreground" />
                 </div>
                 Organization
               </CardTitle>
@@ -137,7 +137,7 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
                   /* eslint-disable-next-line @next/next/no-img-element */
                   <img src={logoUrl} alt="" className="h-14 w-14 rounded-lg border object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
                 ) : (
-                  <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-primary/10 text-xl font-bold text-primary">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-muted text-xl font-bold text-muted-foreground">
                     {name.charAt(0).toUpperCase()}
                   </div>
                 )}
@@ -170,8 +170,8 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center">
-                  <Shield className="h-4 w-4 text-primary" />
+                <div className="h-7 w-7 rounded-md bg-muted flex items-center justify-center">
+                  <Shield className="h-4 w-4 text-muted-foreground" />
                 </div>
                 Organization Policies
               </CardTitle>
@@ -180,8 +180,8 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
             <CardContent className="space-y-3">
               <div className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50">
                 <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-md bg-success/10 flex items-center justify-center shrink-0">
-                    <Paperclip className="h-4 w-4 text-success" />
+                  <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center shrink-0">
+                    <Paperclip className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div>
                     <Label>Attachments enabled</Label>
@@ -192,8 +192,8 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
               </div>
               <div className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50">
                 <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-md bg-info/10 flex items-center justify-center shrink-0">
-                    <Lock className="h-4 w-4 text-info" />
+                  <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center shrink-0">
+                    <Lock className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div>
                     <Label>Enforce SSO</Label>
@@ -455,8 +455,8 @@ function PlatformSettingsCard() {
           </div>
           <div className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50">
             <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-md bg-success/10 flex items-center justify-center shrink-0">
-                <Users className="h-4 w-4 text-success" />
+              <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center shrink-0">
+                <Users className="h-4 w-4 text-muted-foreground" />
               </div>
               <div>
                 <Label>Allow public registration</Label>
@@ -467,8 +467,8 @@ function PlatformSettingsCard() {
           </div>
           <div className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50">
             <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-md bg-success/10 flex items-center justify-center shrink-0">
-                <Mail className="h-4 w-4 text-success" />
+              <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center shrink-0">
+                <Mail className="h-4 w-4 text-muted-foreground" />
               </div>
               <div>
                 <Label>Require email verification</Label>
@@ -930,8 +930,8 @@ function SSOProvidersTab() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-7 w-7 rounded-md bg-success/10 flex items-center justify-center" aria-hidden="true">
-                <Shield className="h-4 w-4 text-success" />
+              <div className="h-7 w-7 rounded-md bg-muted flex items-center justify-center" aria-hidden="true">
+                <Shield className="h-4 w-4 text-muted-foreground" />
               </div>
               <div>
                 <CardTitle className="text-base">SSO Providers</CardTitle>
@@ -1239,7 +1239,7 @@ function ProviderCard({
       <CardContent className="pt-5 pb-4">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className={`h-10 w-10 rounded-lg flex items-center justify-center shadow-sm ${iconBg}`}>
+            <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${iconBg}`}>
               <ProviderIcon providerType={p.provider_type} />
             </div>
             <div>
@@ -1603,12 +1603,12 @@ function DomainMappingsSection({ providerId, providerName }: { providerId: strin
                 <Badge variant="outline" className="text-[10px]">org: {m.org_role}</Badge>
               </div>
               <div className="flex items-center gap-1 shrink-0">
-                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => startEdit(m)} title="Edit">
+                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => startEdit(m)} title="Edit" aria-label="Edit mapping">
                   <Pencil className="h-3 w-3" />
                 </Button>
                 <ConfirmDialog
                   trigger={
-                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive" disabled={deletingId === m.id} title="Delete">
+                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive" disabled={deletingId === m.id} title="Delete" aria-label="Delete mapping">
                       <Trash2 className="h-3 w-3" />
                     </Button>
                   }

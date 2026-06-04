@@ -11,7 +11,7 @@ interface ErrorStateProps {
 export function ErrorState({ message = "Something went wrong", onRetry }: ErrorStateProps) {
   return (
     <div className="flex flex-col items-center justify-center gap-4 py-12">
-      <AlertTriangle className="h-10 w-10 text-destructive" />
+      <AlertTriangle className="h-10 w-10 text-destructive" aria-hidden="true" />
       <p className="text-muted-foreground">{message}</p>
       {onRetry && (
         <Button variant="outline" size="sm" onClick={onRetry}>
