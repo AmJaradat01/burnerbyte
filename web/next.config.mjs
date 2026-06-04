@@ -44,7 +44,7 @@ const config = {
           ...securityHeaders,
           {
             key: 'Link',
-            value: `</.well-known/api-catalog>; rel="api-catalog", <${siteUrl}/docs/api>; rel="service-doc", </docs/openapi.json>; rel="service-desc"`,
+            value: `</.well-known/api-catalog>; rel="api-catalog", <${siteUrl}/docs/api>; rel="service-doc", <${apiUrl}/docs/openapi.json>; rel="service-desc"`,
           },
         ],
       },

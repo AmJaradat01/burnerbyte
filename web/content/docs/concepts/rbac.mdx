@@ -7,6 +7,8 @@ description: BurnerByte's dynamic RBAC system with DB-backed roles and permissio
 
 BurnerByte uses a two-level, permission-based RBAC system. Every API endpoint checks a specific permission key from the `role_permissions` table in the database — there are no hardcoded rank checks. Roles and their permissions are stored in the `roles`, `permissions`, and `role_permissions` tables and can be managed via the admin API or **Settings → Roles** in the UI.
 
+There are **5 default roles** in total: 3 org-scoped (`owner`, `admin`, `member`) and 2 team-scoped (`lead`, `member`). `is_system_admin` is a separate boolean flag on the user row — it is not an RBAC role and does not appear in the roles tables (see [System Admin](#system-admin) below).
+
 ## Org Roles
 
 | Role | Rank | Description |
