@@ -37,10 +37,15 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-headline">Settings</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Manage your organization, members, and system configuration.</p>
-      </div>
+      <header className="flex items-center gap-3">
+        <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center shrink-0" aria-hidden="true">
+          <Settings className="h-4 w-4 text-muted-foreground" />
+        </div>
+        <div className="min-w-0">
+          <h1 className="text-headline">Settings</h1>
+          <p className="text-sm text-muted-foreground">Manage your organization, members, and system configuration.</p>
+        </div>
+      </header>
       <Tabs defaultValue="general">
         <TabsList className="flex-wrap">
           <TabsTrigger value="general" className="gap-1.5"><Settings className="h-3.5 w-3.5" /> General</TabsTrigger>
@@ -317,7 +322,24 @@ function OverviewTab() {
   });
 
   if (isError) return <ErrorState message="Failed to load stats" onRetry={() => refetch()} />;
-  if (isLoading) return <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">{Array.from({ length: 10 }).map((_, i) => <Card key={i}><CardContent className="pt-6"><Skeleton className="h-4 w-20 mb-2" /><Skeleton className="h-8 w-16" /></CardContent></Card>)}</div>;
+  if (isLoading) return (
+    <div className="space-y-4">
+      <Skeleton className="h-4 w-80" />
+      <Card>
+        <CardContent className="pt-5 pb-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-6 gap-y-3">
+            {Array.from({ length: 10 }).map((_, i) => (
+              <div key={i} className="flex items-baseline justify-between gap-2">
+                <Skeleton className="h-3 w-16" />
+                <Skeleton className="h-4 w-10" />
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+      <Card><CardContent className="pt-6"><Skeleton className="h-40 w-full" /></CardContent></Card>
+    </div>
+  );
   if (!data) return null;
 
   const stats: { label: string; value: string; href?: string }[] = [
@@ -1114,7 +1136,7 @@ function SSOProvidersTab() {
               </div>
               {(editing.claim_mappings ?? []).map((m, i) => (
                 <div key={i} className="relative rounded-lg border p-3 space-y-2">
-                  <Button variant="ghost" size="sm" className="absolute top-2 right-2 h-6 w-6 p-0" onClick={() => {
+                  <Button variant="ghost" size="sm" className="absolute top-2 right-2 h-6 w-6 p-0" aria-label="Remove claim mapping" title="Remove" onClick={() => {
                     const mappings = (editing.claim_mappings ?? []).filter((_, idx) => idx !== i);
                     set("claim_mappings", mappings);
                   }}>
