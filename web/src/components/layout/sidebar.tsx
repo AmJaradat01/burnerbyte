@@ -42,13 +42,13 @@ function NavLink({ href, icon: Icon, label, active, collapsed, badge }: {
         "relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150",
         collapsed && "justify-center px-2",
         active
-          ? "bg-primary/10 text-primary"
+          ? "bg-sidebar-primary/10 text-sidebar-primary"
           : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
       )}
     >
       {/* Active indicator bar */}
       {active && (
-        <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-0.5 rounded-full bg-primary transition-all" />
+        <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-0.5 rounded-full bg-sidebar-primary transition-all" />
       )}
       <Icon className={cn("shrink-0 transition-colors", collapsed ? "h-5 w-5" : "h-4 w-4")} />
       {!collapsed && (
@@ -163,7 +163,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               {currentOrg.logo_url ? (
                 <Image src={currentOrg.logo_url} alt="" width={28} height={28} className="h-7 w-7 rounded-md object-cover" unoptimized />
               ) : (
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-xs font-bold text-primary">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-bold text-muted-foreground">
                   {currentOrg.name.charAt(0).toUpperCase()}
                 </div>
               )}
@@ -180,7 +180,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           {currentOrg.logo_url ? (
             <Image src={currentOrg.logo_url} alt="" width={32} height={32} className="h-8 w-8 rounded-md object-cover" unoptimized />
           ) : (
-            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-xs font-bold text-primary">
+            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted text-xs font-bold text-muted-foreground">
               {currentOrg.name.charAt(0).toUpperCase()}
             </div>
           )}
@@ -222,7 +222,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         {/* User profile link */}
         {collapsed ? (
           <Link href="/profile" title={user?.display_name || "Profile"} className="flex justify-center mb-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary ring-2 ring-background transition-transform hover:scale-105">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-sm font-semibold text-muted-foreground ring-2 ring-background transition-transform hover:scale-105">
               {userInitial}
             </div>
           </Link>
@@ -231,7 +231,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             href="/profile"
             className="flex items-center gap-2.5 rounded-lg px-2 py-2 hover:bg-muted/80 transition-colors group"
           >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary ring-2 ring-background">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold text-muted-foreground ring-2 ring-background">
               {userInitial}
             </div>
             <div className="min-w-0 flex-1">
