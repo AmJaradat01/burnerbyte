@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import Link from "next/link";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { Clock, KeyRound, Link2, Monitor, Shield, Trash2, Unlink } from "lucide-react";
+import { Clock, KeyRound, Link2, Monitor, Save, Shield, Trash2, Unlink, UserRound } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useDateFormat } from "@/hooks/use-date-format";
 import { ProviderIcon, providerTypeLabel } from "@/components/provider-icon";
@@ -55,19 +55,15 @@ export default function ProfilePage() {
   return (
     <div className="mx-auto max-w-5xl space-y-8">
       {/* Header */}
-      <Card>
-        <CardContent className="pt-5 pb-4">
-          <div className="flex items-center gap-3">
-            <div className="h-7 w-7 rounded-md bg-muted flex items-center justify-center">
-              <Shield className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <div>
-              <h1 className="text-base font-semibold tracking-tight">Profile</h1>
-              <p className="text-sm text-muted-foreground">Manage your account settings and preferences.</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <header className="flex items-center gap-3">
+        <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center shrink-0" aria-hidden="true">
+          <UserRound className="h-4 w-4 text-muted-foreground" />
+        </div>
+        <div className="min-w-0">
+          <h1 className="text-headline">Profile</h1>
+          <p className="text-sm text-muted-foreground">Manage your account settings and preferences.</p>
+        </div>
+      </header>
 
       {/* Identity banner */}
       <Card>
@@ -230,7 +226,7 @@ function ProfileForm({ user, onSaved }: { user: NonNullable<ReturnType<typeof us
         </div>
         {dirty && (
           <Button onClick={handleSave} disabled={saving} className="w-full gap-2">
-            <Shield className="h-4 w-4" />
+            <Save className="h-4 w-4" />
             {saving ? "Saving…" : "Save Changes"}
           </Button>
         )}
@@ -481,7 +477,17 @@ function ConnectedAccountsCard() {
       </CardHeader>
       <CardContent className="space-y-3">
         {identitiesLoading ? (
-          <p className="text-sm text-muted-foreground">Loading...</p>
+          <div className="space-y-3">
+            {[0, 1].map((i) => (
+              <div key={i} className="flex items-center gap-3 rounded-lg border p-3">
+                <Skeleton className="h-8 w-8 rounded-md shrink-0" />
+                <div className="space-y-1.5">
+                  <Skeleton className="h-4 w-28" />
+                  <Skeleton className="h-3 w-40" />
+                </div>
+              </div>
+            ))}
+          </div>
         ) : (
           <>
             {(identities ?? []).map((identity) => {
