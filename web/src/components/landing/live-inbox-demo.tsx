@@ -53,7 +53,7 @@ type Phase = "live" | "burning" | "expired";
  * Marked aria-hidden: it is a decorative demonstration. The surrounding
  * section carries a real text caption for assistive technology.
  */
-export function LiveInboxDemo({ labels }: { labels: LiveInboxDemoLabels }) {
+export function LiveInboxDemo({ labels, staticPreview = false }: { labels: LiveInboxDemoLabels; staticPreview?: boolean }) {
   const [reduced, setReduced] = useState(false);
   const [local, setLocal] = useState(INITIAL_LOCAL);
   const [domain, setDomain] = useState(DOMAINS[0]);
@@ -70,7 +70,7 @@ export function LiveInboxDemo({ labels }: { labels: LiveInboxDemoLabels }) {
   }, []);
 
   useEffect(() => {
-    if (reduced) {
+    if (reduced || staticPreview) {
       setLocal(INITIAL_LOCAL);
       setDomain(DOMAINS[0]);
       setSeconds(START_SECONDS);
@@ -134,7 +134,7 @@ export function LiveInboxDemo({ labels }: { labels: LiveInboxDemoLabels }) {
       if (countdown) clearInterval(countdown);
       if (burndown) clearInterval(burndown);
     };
-  }, [reduced]);
+  }, [reduced, staticPreview]);
 
   const expired = phase === "expired";
   const dimmed = phase === "expired" || phase === "burning";
