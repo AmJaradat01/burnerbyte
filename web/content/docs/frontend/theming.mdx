@@ -1,13 +1,11 @@
 ---
 title: Theming
-description: Dark mode, light mode, design tokens, and customization.
+description: Design tokens, typography, and customization.
 ---
 
-## Theme Modes
+## Theme Mode
 
-BurnerByte supports three theme modes: **Light** (default), **Dark**, and **System** (follows OS preference). Toggle via the sun/moon button in the sidebar footer. Powered by `next-themes`.
-
-The default is light. Dark mode serves function (reduced eye strain in low-light environments), not fashion.
+BurnerByte is **light-only**. The `ThemeProvider` is configured with `forcedTheme="light"`, and the docs site uses `forcedTheme: "light"` as well. There is no dark mode toggle and no `.dark` token block. All OKLCH tokens are defined once in `:root`.
 
 ## Design System
 
@@ -24,29 +22,24 @@ All colors use the **OKLCH color space** for perceptual uniformity. The palette 
 
 ### Semantic Tokens
 
-| Token | Light | Dark | Usage |
-|---|---|---|---|
-| `--primary` | Deep Indigo | Lighter Indigo | Primary actions, focus rings |
-| `--destructive` | Red | Lighter Red | Errors, delete actions |
-| `--success` | Green | Lighter Green | Success states (always paired with icon) |
-| `--warning` | Amber | Amber | Warning states (always paired with icon) |
-| `--info` | Blue | Lighter Blue | Informational states |
-| `--muted` | Light gray | Dark gray | Secondary surfaces |
-| `--background` | Warm paper | Dark surface | Page background |
+| Token | Value (`:root`) | Usage |
+|---|---|---|
+| `--primary` | `oklch(0.55 0.20 260)` — deep indigo | Primary actions, focus rings |
+| `--destructive` | `oklch(0.577 0.245 27.325)` — red | Errors, delete actions |
+| `--success` | `oklch(0.60 0.17 155)` — green | Success states (always paired with icon) |
+| `--warning` | `oklch(0.75 0.16 70)` — amber | Warning states (always paired with icon) |
+| `--info` | `oklch(0.60 0.15 245)` — blue | Informational states |
+| `--muted` | `oklch(0.955 0.005 260)` — light indigo-gray | Secondary surfaces |
+| `--background` | `oklch(0.985 0.003 75)` — warm paper | Page background |
 
 ### Overriding Colors
 
-Override CSS custom properties in `globals.css`:
+Override CSS custom properties in `globals.css`. Because the app is light-only, a single `:root` block is all that is needed:
 
 ```css
 :root {
   --primary: oklch(0.55 0.20 260);
   --primary-foreground: oklch(0.985 0 0);
-}
-
-.dark {
-  --primary: oklch(0.65 0.20 260);
-  --primary-foreground: oklch(0.14 0.02 260);
 }
 ```
 
@@ -58,7 +51,7 @@ Override CSS custom properties in `globals.css`:
 
 ## Typography
 
-Single font family: **Inter** (with system-ui fallback). Hierarchy through weight (400–700) and size (0.75rem–1.5rem).
+Single sans family: **Geist Sans** (with system-ui fallback); **Geist Mono** for code, email addresses, and monospace values. Hierarchy through weight (400–700) and size (0.75rem–1.5rem).
 
 | Role | Size | Weight | Usage |
 |---|---|---|---|

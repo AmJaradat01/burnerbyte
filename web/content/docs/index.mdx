@@ -23,7 +23,7 @@ BurnerByte is open-source under the Apache 2.0 license. Source code is available
 ## Core Concepts
 
 <Cards>
-  <Card title="RBAC & Roles" description="Dynamic permission-based access control with 6 roles across org and team levels" href="/docs/concepts/rbac" />
+  <Card title="RBAC & Roles" description="Dynamic permission-based access control with 5 roles across org and team levels" href="/docs/concepts/rbac" />
   <Card title="Domains & DNS" description="Domain verification, MX/TXT records, and team assignment" href="/docs/concepts/domains" />
   <Card title="Inboxes" description="Temporary inbox lifecycle, TTL management, and Redis routing" href="/docs/concepts/inboxes" />
   <Card title="Emails" description="MIME parsing, HTML rendering, and attachment handling" href="/docs/concepts/emails" />
@@ -39,8 +39,8 @@ BurnerByte is open-source under the Apache 2.0 license. Source code is available
   <Card title="System Overview" description="Two-binary design, request flow, and key components" href="/docs/architecture/overview" />
   <Card title="SMTP Pipeline" description="How inbound emails are received, parsed, and stored" href="/docs/architecture/smtp-pipeline" />
   <Card title="Real-time & WebSocket" description="Live email delivery and notification streaming" href="/docs/architecture/realtime" />
-  <Card title="Database Schema" description="23 tables, 52+ indexes, 7 triggers" href="/docs/architecture/database" />
-  <Card title="Background Workers" description="5 periodic jobs: cleanup, DNS, webhooks, reconciler, analytics" href="/docs/architecture/workers" />
+  <Card title="Database Schema" description="36 tables, 74 indexes, 7 triggers" href="/docs/architecture/database" />
+  <Card title="Background Workers" description="7 periodic jobs: cleanup, DNS, webhooks, reconciler, analytics, invite expiry, admin stats" href="/docs/architecture/workers" />
 </Cards>
 
 ## Deploy & Operate
@@ -55,7 +55,7 @@ BurnerByte is open-source under the Apache 2.0 license. Source code is available
 ## API & Frontend
 
 <Cards>
-  <Card title="API Reference" description="Authentication, pagination, errors, and 80+ endpoints" href="/docs/api" />
+  <Card title="API Reference" description="Authentication, pagination, errors, and 100+ endpoints" href="/docs/api" />
   <Card title="Frontend Overview" description="Next.js architecture, keyboard shortcuts, and UX patterns" href="/docs/frontend/overview" />
   <Card title="Theming" description="CSS variables, color customization, and component library" href="/docs/frontend/theming" />
   <Card title="Troubleshooting" description="Common issues and solutions" href="/docs/troubleshooting" />
@@ -64,21 +64,21 @@ BurnerByte is open-source under the Apache 2.0 license. Source code is available
 ## Architecture at a Glance
 
 ```
-┌─────────────┐     ┌──────────────┐     ┌───────────┐
-│  Next.js UI │────▶│   Go API     │────▶│ PostgreSQL│
-│  (port 3000)│     │  (port 8080) │     └───────────┘
-└─────────────┘     │              │────▶┌───────────┐
-                    │  Chi Router  │     │   Redis   │
-┌─────────────┐     │  + Workers   │     └───────────┘
-│ Mail Server │────▶│              │────▶┌───────────┐
-│  (external) │     └──────────────┘     │   MinIO   │
-└─────────────┘                          └───────────┘
-       │
-       ▼
-┌──────────────┐
-│  Go SMTPD    │
-│  (port 2525) │
-└──────────────┘
+                        ┌─────────────────┐
+   Next.js UI ────────▶ │     Go API      │ ───▶ PostgreSQL
+   (:3000)              │     (:8080)     │ ───▶ Redis  (pub/sub)
+                        │  Chi + Workers  │ ───▶ MinIO  (attachments)
+                        └─────────────────┘
+                                 ▲
+                                 │ subscribes: live email + notifications
+                                 │
+   External MTAs ─────▶  ┌─────────────────┐
+   (inbound SMTP)        │    Go SMTPD     │ ──▶ parses + stores,
+                         │     (:2525)     │     publishes to Redis
+                         └─────────────────┘
+
+Two independent Go binaries: cmd/smtpd receives mail and publishes to Redis
+pub/sub; cmd/api persists it, fans out over WebSocket, and serves the UI/API.
 ```
 
 Two separate Go binaries scale independently:
@@ -91,7 +91,7 @@ Two separate Go binaries scale independently:
 |---|---|
 | **Setup Wizard** | Guided first-run setup: admin account, org, SMTP, domain, team, branding, invites |
 | **Multi-team** | Single org with teams scoped to specific domains |
-| **Full RBAC** | 6 roles across org and team levels, DB-backed permissions |
+| **Full RBAC** | 5 roles across org and team levels, DB-backed permissions |
 | **Real-time** | WebSocket streaming for instant email and notification delivery |
 | **Attachments** | Configurable policies with org → domain assignment inheritance |
 | **Webhooks** | HMAC-SHA256 signed with exponential backoff retry |
@@ -109,7 +109,7 @@ Two separate Go binaries scale independently:
 | Backend | Go 1.25+, Chi router, pgxpool, go-redis, gorilla/websocket, enmime |
 | Frontend | Next.js 16, React 19, shadcn/ui, Tailwind CSS 4, Zustand, TanStack Query, Recharts |
 | Docs | Fumadocs (MDX, full-text search, syntax highlighting) |
-| Database | PostgreSQL 16 (28 migration pairs, 52+ indexes, 7 triggers) |
+| Database | PostgreSQL 16 (43 migrations, 74 indexes, 7 triggers) |
 | Cache | Redis 7 (inbox routing, analytics cache, rate limiting) |
 | Storage | MinIO (S3-compatible object storage for attachments) |
 | Infrastructure | Docker, Docker Compose |
