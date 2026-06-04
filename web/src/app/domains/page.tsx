@@ -118,22 +118,26 @@ export default function DomainsPage() {
           <div className="flex items-center gap-2">
             {/* Status filter tabs */}
             <div className="flex items-center gap-1" role="tablist" aria-label="Status filter">
-              {(["all", "verified", "pending"] as const).map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  role="tab"
-                  aria-selected={statusFilter === s}
-                  onClick={() => setStatusFilter(s)}
-                  className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
-                    statusFilter === s
-                      ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:bg-muted/80"
-                  }`}
-                >
-                  {s === "all" ? "All" : s === "verified" ? "Verified" : "Pending"}
-                </button>
-              ))}
+              {(["all", "verified", "pending"] as const).map((s) => {
+                const count = s === "all" ? domains.length : s === "verified" ? verifiedCount : pendingCount;
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    role="tab"
+                    aria-selected={statusFilter === s}
+                    onClick={() => setStatusFilter(s)}
+                    className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+                      statusFilter === s
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:bg-muted/80"
+                    }`}
+                  >
+                    {s === "all" ? "All" : s === "verified" ? "Verified" : "Pending"}
+                    <span className="tabular-nums opacity-60">{count}</span>
+                  </button>
+                );
+              })}
             </div>
             {/* Sort dropdown */}
             <Select value={sort} onValueChange={(v) => setSort(v as SortOption)}>
@@ -212,10 +216,10 @@ function DomainCard({ domain: d, onVerify, onDelete, verifying }: {
         {/* Header: icon + name + status */}
         <div className="flex items-start gap-3">
           <div
-            className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${fullyVerified ? "bg-success/10" : "bg-warning/10"}`}
+            className="h-10 w-10 rounded-lg flex items-center justify-center shrink-0 bg-muted"
             aria-hidden="true"
           >
-            <Globe className={`h-5 w-5 ${fullyVerified ? "text-success" : "text-warning"}`} />
+            <Globe className="h-5 w-5 text-muted-foreground" />
           </div>
           <div className="min-w-0 flex-1">
             <Link href={`/domains/${d.id}`} className="group/link">
@@ -324,7 +328,7 @@ function DomainGridSkeleton() {
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: 3 }).map((_, i) => (
         <Card key={i}>
-          <CardContent className="pt-4 pb-3 space-y-3">
+          <CardContent className="space-y-3">
             <div className="flex justify-between"><Skeleton className="h-4 w-3/4" /><Skeleton className="h-5 w-16 rounded-full" /></div>
             <div className="flex gap-2"><Skeleton className="h-5 w-12 rounded-full" /><Skeleton className="h-5 w-12 rounded-full" /></div>
             <Skeleton className="h-3 w-1/2" />
