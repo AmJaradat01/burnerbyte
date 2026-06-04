@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
+import { MailCheck } from "lucide-react";
 import { AuthShell } from "@/components/layout/auth-shell";
 
 export default function ForgotPasswordPage() {
@@ -43,12 +44,15 @@ export default function ForgotPasswordPage() {
     <AuthShell>
       {sent ? (
           <Card className="w-full">
-            <CardHeader className="text-center">
+            <CardHeader className="items-center text-center">
+              <div className="mb-1 flex h-12 w-12 items-center justify-center rounded-full bg-success/10" aria-hidden="true">
+                <MailCheck className="h-6 w-6 text-success" />
+              </div>
               <CardTitle>Check your email</CardTitle>
               <CardDescription>If an account exists for {email}, we sent a password reset link.</CardDescription>
             </CardHeader>
-            <CardFooter className="flex gap-4">
-              <Button variant="outline" onClick={() => setSent(false)}>Try again</Button>
+            <CardFooter className="flex-col gap-3">
+              <Button variant="outline" className="w-full" onClick={() => setSent(false)}>Try a different email</Button>
               <Link href="/login" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Back to sign in</Link>
             </CardFooter>
           </Card>
