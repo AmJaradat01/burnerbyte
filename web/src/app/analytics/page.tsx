@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from "recharts";
 import { ErrorState } from "@/components/error-state";
-import { Mail } from "lucide-react";
+import { BarChart3 } from "lucide-react";
 
 interface OrgStats {
   total_members: number; total_teams: number; total_domains: number;
@@ -46,10 +46,10 @@ export default function AnalyticsPage() {
   return (
     <div className="space-y-6">
       <header className="flex items-center gap-3">
-        <div className="h-7 w-7 rounded-md bg-muted flex items-center justify-center">
-          <Mail className="h-4 w-4 text-muted-foreground" />
+        <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center shrink-0" aria-hidden="true">
+          <BarChart3 className="h-4 w-4 text-muted-foreground" />
         </div>
-        <div>
+        <div className="min-w-0">
           <h1 className="text-headline">Analytics</h1>
           <p className="text-sm text-muted-foreground">Usage metrics and trends for your organization.</p>
         </div>
@@ -72,7 +72,7 @@ export default function AnalyticsPage() {
       </div>
 
       {selectedTeamId && selectedTeam ? (
-        <TeamAnalytics orgId={currentOrg.id} teamId={selectedTeam.id} teamName={selectedTeam.name} />
+        <TeamAnalytics orgId={currentOrg.id} teamId={selectedTeam.id} />
       ) : (
         <OrgAnalytics orgId={currentOrg.id} />
       )}
@@ -96,7 +96,7 @@ function OrgAnalytics({ orgId }: { orgId: string }) {
   });
 
   if (isError) return <ErrorState message="Failed to load analytics" onRetry={() => refetch()} />;
-  if (isLoading) return <StatsSkeleton count={7} />;
+  if (isLoading) return <AnalyticsSkeleton columns={2} />;
 
   const emailAvg = timeSeries?.data?.length
     ? Math.round(timeSeries.data.reduce((s, d) => s + d.count, 0) / timeSeries.data.length)
@@ -257,8 +257,7 @@ function OrgAnalytics({ orgId }: { orgId: string }) {
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function TeamAnalytics({ orgId, teamId, teamName }: { orgId: string; teamId: string; teamName?: string }) {
+function TeamAnalytics({ orgId, teamId }: { orgId: string; teamId: string }) {
   const [days, setDays] = useState("30");
   const { data: stats, isLoading, isError, refetch } = useQuery({
     queryKey: ["analytics-team", teamId],
@@ -270,7 +269,7 @@ function TeamAnalytics({ orgId, teamId, teamName }: { orgId: string; teamId: str
   });
 
   if (isError) return <ErrorState message="Failed to load team analytics" onRetry={() => refetch()} />;
-  if (isLoading) return <StatsSkeleton count={4} />;
+  if (isLoading) return <AnalyticsSkeleton columns={1} />;
 
   return (
     <div className="space-y-6">
@@ -301,12 +300,19 @@ function DateRangeSelector({ value, onChange }: { value: string; onChange: (v: s
   );
 }
 
-function StatsSkeleton({ count }: { count: number }) {
+function AnalyticsSkeleton({ columns }: { columns: 1 | 2 }) {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-      {Array.from({ length: count }).map((_, i) => (
-        <Card key={i}><CardContent className="pt-6"><Skeleton className="h-4 w-20 mb-2" /><Skeleton className="h-8 w-16" /></CardContent></Card>
-      ))}
+    <div className="space-y-6">
+      <Skeleton className="h-4 w-72" />
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-5 w-28" />
+        <Skeleton className="h-8 w-32 rounded-md" />
+      </div>
+      <div className={columns === 2 ? "grid grid-cols-1 lg:grid-cols-2 gap-6" : ""}>
+        {Array.from({ length: columns }).map((_, i) => (
+          <Skeleton key={i} className="h-[340px] w-full rounded-xl" />
+        ))}
+      </div>
     </div>
   );
 }
