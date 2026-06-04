@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { AlertTriangle, ArrowLeft } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Trash2 } from "lucide-react";
 
 export default function DeleteAccountPage() {
   const user = useAuthStore((s) => s.user);
@@ -44,10 +44,15 @@ export default function DeleteAccountPage() {
           <Button variant="ghost" size="sm" className="gap-1.5"><ArrowLeft className="h-4 w-4" /> Back to Profile</Button>
         </Link>
       </div>
-      <div>
-        <h1 className="text-headline">Delete Account</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Permanently delete your account and all associated data.</p>
-      </div>
+      <header className="flex items-center gap-3">
+        <div className="h-9 w-9 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0" aria-hidden="true">
+          <Trash2 className="h-4 w-4 text-destructive" />
+        </div>
+        <div className="min-w-0">
+          <h1 className="text-headline">Delete Account</h1>
+          <p className="text-sm text-muted-foreground">Permanently delete your account and all associated data.</p>
+        </div>
+      </header>
 
       <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 flex items-start gap-3">
         <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
@@ -62,9 +67,6 @@ export default function DeleteAccountPage() {
           <CardTitle>Confirm account deletion</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            All your data, inboxes, and emails will be permanently deleted.
-          </p>
           {!isSSO && (
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>

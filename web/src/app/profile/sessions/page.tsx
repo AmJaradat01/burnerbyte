@@ -4,15 +4,16 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, setAccessToken } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Monitor, Smartphone, Tablet, AlertTriangle } from "lucide-react";
+import { Monitor, Smartphone, Tablet, AlertTriangle, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
+import Link from "next/link";
 import { ErrorState } from "@/components/error-state";
 import { EmptyState } from "@/components/empty-state";
 import { UAParser } from "ua-parser-js";
@@ -74,32 +75,33 @@ export default function SessionsPage() {
 
   return (
     <div className="max-w-3xl space-y-6">
-      <Card>
-        <CardContent className="pt-5 pb-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-7 w-7 rounded-md bg-muted flex items-center justify-center" aria-hidden="true">
-                <Monitor className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <div>
-                <h1 className="text-base font-semibold tracking-tight">Active Sessions</h1>
-                <p className="text-sm text-muted-foreground tabular-nums">
-                  Manage your active sessions across devices.{" "}
-                  {sessions !== undefined && <span>{sessions.length} session{sessions.length !== 1 ? "s" : ""} active.</span>}
-                </p>
-              </div>
-            </div>
-            <Button
-              variant="destructive"
-              size="sm"
-              aria-label="Revoke all sessions"
-              onClick={() => { setRevokeConfirmText(""); setRevokeAllOpen(true); }}
-            >
-              Revoke All
-            </Button>
+      <div className="flex items-center gap-2">
+        <Link href="/profile">
+          <Button variant="ghost" size="sm" className="gap-1.5"><ArrowLeft className="h-4 w-4" /> Back to Profile</Button>
+        </Link>
+      </div>
+      <header className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center shrink-0" aria-hidden="true">
+            <Monitor className="h-4 w-4 text-muted-foreground" />
           </div>
-        </CardContent>
-      </Card>
+          <div className="min-w-0">
+            <h1 className="text-headline">Active Sessions</h1>
+            <p className="text-sm text-muted-foreground tabular-nums">
+              Manage your active sessions across devices.{" "}
+              {sessions !== undefined && <span>{sessions.length} session{sessions.length !== 1 ? "s" : ""} active.</span>}
+            </p>
+          </div>
+        </div>
+        <Button
+          variant="destructive"
+          size="sm"
+          aria-label="Revoke all sessions"
+          onClick={() => { setRevokeConfirmText(""); setRevokeAllOpen(true); }}
+        >
+          Revoke All
+        </Button>
+      </header>
 
       {/* Typed-confirm dialog for Revoke All — signs user out everywhere */}
       <Dialog open={revokeAllOpen} onOpenChange={(v) => { setRevokeAllOpen(v); if (!v) setRevokeConfirmText(""); }}>
@@ -141,8 +143,7 @@ export default function SessionsPage() {
       </Dialog>
 
       <Card>
-        <CardHeader><CardTitle>Sessions</CardTitle></CardHeader>
-        <CardContent className="overflow-x-auto">
+        <CardContent className="overflow-x-auto pt-6">
           {isLoading ? (
             <div className="space-y-2">{[1,2,3].map(i => <Skeleton key={i} className="h-10 w-full" />)}</div>
           ) : (!sessions || sessions.length === 0) ? (
