@@ -15,7 +15,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { EmptyState } from "@/components/empty-state";
 import { ErrorState } from "@/components/error-state";
 import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
 import { PullToRefreshIndicator } from "@/components/pull-to-refresh-indicator";
@@ -62,12 +61,13 @@ function HomePage() {
   const qc = useQueryClient();
   const t = useTranslations("home");
 
-  const greeting = (() => {
+  // Computed once on mount so render stays pure (the hour does not change mid-session).
+  const [greeting] = useState(() => {
     const h = new Date().getHours();
     if (h < 12) return t("goodMorning");
     if (h < 18) return t("goodAfternoon");
     return t("goodEvening");
-  })();
+  });
 
   const [page, setPage] = useState(1);
 
@@ -107,34 +107,33 @@ function HomePage() {
       {/* Quick Create Hero */}
       <QuickCreateCard />
 
-      {/* Your Inboxes */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">{t("recentInboxes")}</h2>
-          {data && data.total > 0 && (
-            <p className="text-sm font-medium text-muted-foreground tabular-nums">{data.total} active</p>
+      {/* Your Inboxes — shown once you have some; the create card above is the empty action */}
+      {(isLoading || isError || (data?.data?.length ?? 0) > 0) && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">{t("recentInboxes")}</h2>
+            {data && data.total > 0 && (
+              <p className="text-sm font-medium text-muted-foreground tabular-nums">{data.total} active</p>
+            )}
+          </div>
+
+          {isError ? <ErrorState message="Failed to load inboxes" onRetry={() => refetch()} /> :
+           isLoading ? <InboxGridSkeleton /> : (
+            <>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {data?.data?.map((inbox) => (
+                  <InboxCard key={inbox.id} inbox={inbox} onExtend={() => extend.mutate(inbox.id)} onDelete={() => remove.mutate(inbox.id)} />
+                ))}
+              </div>
+              {data && data.total_pages > 1 && (
+                <div className="mt-4">
+                  <Pagination page={page} totalPages={data.total_pages} onPageChange={setPage} />
+                </div>
+              )}
+            </>
           )}
         </div>
-
-        {isError ? <ErrorState message="Failed to load inboxes" onRetry={() => refetch()} /> :
-         isLoading ? <InboxGridSkeleton /> :
-         (!data?.data || data.data.length === 0) ? (
-          <EmptyState title={t("noActiveInboxes")} description={t("createToStart")} />
-        ) : (
-          <>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {data.data.map((inbox) => (
-                <InboxCard key={inbox.id} inbox={inbox} onExtend={() => extend.mutate(inbox.id)} onDelete={() => remove.mutate(inbox.id)} />
-              ))}
-            </div>
-            {data.total_pages > 1 && (
-              <div className="mt-4">
-                <Pagination page={page} totalPages={data.total_pages} onPageChange={setPage} />
-              </div>
-            )}
-          </>
-        )}
-      </div>
+      )}
     </div>
   );
 }
@@ -284,8 +283,6 @@ function QuickCreateCard() {
   // ── Pre-create state — domain selector + generate button ──
   return (
     <div className="text-center space-y-5">
-      <p className="text-xs text-muted-foreground uppercase tracking-wider">{t("quickCreate")}</p>
-
       {/* Domain selector as the hero element */}
       <div className="inline-flex items-center gap-2 rounded-xl border border-dashed border-muted-foreground/20 bg-muted/20 px-5 py-3 sm:px-6 sm:py-4 max-w-full">
         <Mail className="h-5 w-5 text-muted-foreground shrink-0" />
@@ -321,7 +318,7 @@ function QuickCreateCard() {
           )}
         </Button>
         {ttlPreset && presetLabels[ttlPreset] && (
-          <p className="text-[11px] text-muted-foreground mt-2">{presetLabels[ttlPreset]}</p>
+          <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">{presetLabels[ttlPreset]}</p>
         )}
       </div>
 
