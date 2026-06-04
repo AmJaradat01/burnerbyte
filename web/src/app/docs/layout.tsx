@@ -6,7 +6,7 @@ import { baseOptions } from '@/lib/docs-layout';
 
 export default function Layout({ children }: { children: ReactNode }) {
   return (
-    <RootProvider>
+    <RootProvider theme={{ forcedTheme: "light" }}>
       <DocsLayout tree={source.pageTree} {...baseOptions()}>
         {children}
       </DocsLayout>
