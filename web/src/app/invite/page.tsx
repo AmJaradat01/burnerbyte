@@ -14,7 +14,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { AlertTriangle, Loader2, Users } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Loader2, Users, XCircle } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { ProviderIcon } from "@/components/provider-icon";
 
@@ -209,11 +209,14 @@ export default function InvitePage() {
   if (status === "error") {
     return (
       <CenteredCard>
-        <CardHeader>
+        <CardHeader className="items-center text-center">
+          <div className="mb-1 flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10" aria-hidden="true">
+            <XCircle className="h-6 w-6 text-destructive" />
+          </div>
           <CardTitle>Invite failed</CardTitle>
           <CardDescription>{errorMsg || "This invite link is invalid or has expired."}</CardDescription>
         </CardHeader>
-        <CardFooter>
+        <CardFooter className="justify-center">
           <Link href="/" className="text-sm text-primary hover:underline">Go to dashboard</Link>
         </CardFooter>
       </CenteredCard>
@@ -255,8 +258,13 @@ export default function InvitePage() {
   if (status === "accepting") {
     return (
       <CenteredCard>
-        <CardHeader><CardTitle>Joining organization…</CardTitle></CardHeader>
-        <CardContent className="flex justify-center py-4"><Loader2 className="h-6 w-6 animate-spin text-primary" /></CardContent>
+        <CardHeader className="items-center text-center">
+          <div className="mb-1 flex h-12 w-12 items-center justify-center rounded-full bg-muted" aria-hidden="true">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+          <CardTitle>Joining organization…</CardTitle>
+          <CardDescription>Adding you to {preview?.org_name ?? "the organization"}.</CardDescription>
+        </CardHeader>
       </CenteredCard>
     );
   }
@@ -265,11 +273,14 @@ export default function InvitePage() {
   if (status === "accepted") {
     return (
       <CenteredCard>
-        <CardHeader>
+        <CardHeader className="items-center text-center">
+          <div className="mb-1 flex h-12 w-12 items-center justify-center rounded-full bg-success/10" aria-hidden="true">
+            <CheckCircle2 className="h-6 w-6 text-success" />
+          </div>
           <CardTitle>Welcome to {preview?.org_name}!</CardTitle>
           <CardDescription>You&apos;ve joined as {preview?.org_role}. Redirecting to dashboard…</CardDescription>
         </CardHeader>
-        <CardFooter>
+        <CardFooter className="justify-center">
           <Link href="/" className="text-sm text-primary hover:underline font-medium">Go to dashboard →</Link>
         </CardFooter>
       </CenteredCard>

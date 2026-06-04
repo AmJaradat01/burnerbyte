@@ -15,7 +15,7 @@ import { Logo } from "@/components/logo";
 import {
   ArrowLeft, ArrowRight, Building2, Check, CheckCircle2, Globe, HardDrive,
   Loader2, Mail, Paintbrush, Plus, RefreshCw, Shield, SkipForward,
-  Trash2, UserPlus, Users,
+  Trash2, UserPlus, Users, X, XCircle,
 } from "lucide-react";
 
 const STEPS = [
@@ -249,7 +249,7 @@ export default function SetupPage() {
                 {healthStatus && (
                   <div className={`rounded-lg border p-3 flex items-center gap-3 ${healthStatus.postgres && healthStatus.redis ? "bg-success/5 border-success/20" : "bg-destructive/5 border-destructive/20"}`}>
                     <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${healthStatus.postgres && healthStatus.redis ? "bg-success/10" : "bg-destructive/10"}`}>
-                      {healthStatus.postgres && healthStatus.redis ? <CheckCircle2 className="h-4 w-4 text-success" /> : <Shield className="h-4 w-4 text-destructive" />}
+                      {healthStatus.postgres && healthStatus.redis ? <CheckCircle2 className="h-4 w-4 text-success" /> : <XCircle className="h-4 w-4 text-destructive" />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className={`text-sm font-medium ${healthStatus.postgres && healthStatus.redis ? "text-success" : "text-destructive"}`}>
@@ -257,10 +257,10 @@ export default function SetupPage() {
                       </p>
                       <div className="flex items-center gap-3 mt-0.5">
                         <span className={`text-xs flex items-center gap-1 ${healthStatus.postgres ? "text-success" : "text-destructive"}`}>
-                          {healthStatus.postgres ? <Check className="h-3 w-3" /> : <Trash2 className="h-3 w-3" />} PostgreSQL
+                          {healthStatus.postgres ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />} PostgreSQL
                         </span>
                         <span className={`text-xs flex items-center gap-1 ${healthStatus.redis ? "text-success" : "text-destructive"}`}>
-                          {healthStatus.redis ? <Check className="h-3 w-3" /> : <Trash2 className="h-3 w-3" />} Redis
+                          {healthStatus.redis ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />} Redis
                         </span>
                       </div>
                     </div>
@@ -368,7 +368,7 @@ export default function SetupPage() {
                     </Button>
                     {smtpTest.result && (
                       <div className={`rounded-lg border p-3 text-sm flex items-start gap-2 ${smtpTest.result.success ? "bg-success/5 border-success/20 text-success" : "bg-destructive/5 border-destructive/20 text-destructive"}`}>
-                        {smtpTest.result.success ? <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" /> : <Shield className="h-4 w-4 mt-0.5 shrink-0" />}
+                        {smtpTest.result.success ? <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" /> : <XCircle className="h-4 w-4 mt-0.5 shrink-0" />}
                         <div>
                           <p className="font-medium">{smtpTest.result.success ? "Connection successful" : "Connection failed"}</p>
                           <p className="text-xs mt-0.5 opacity-80">{smtpTest.result.message}{smtpTest.result.response_time && ` (${smtpTest.result.response_time})`}</p>
@@ -435,7 +435,7 @@ export default function SetupPage() {
                       </Button>
                       {storageTest.result && (
                         <div className={`rounded-lg border p-3 text-sm flex items-start gap-2 ${storageTest.result.success ? "bg-success/5 border-success/20 text-success" : "bg-destructive/5 border-destructive/20 text-destructive"}`}>
-                          {storageTest.result.success ? <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" /> : <Shield className="h-4 w-4 mt-0.5 shrink-0" />}
+                          {storageTest.result.success ? <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" /> : <XCircle className="h-4 w-4 mt-0.5 shrink-0" />}
                           <div>
                             <p className="font-medium">{storageTest.result.success ? "Connection successful" : "Connection failed"}</p>
                             <p className="text-xs mt-0.5 opacity-80">{storageTest.result.message}{storageTest.result.response_time && ` (${storageTest.result.response_time})`}</p>
