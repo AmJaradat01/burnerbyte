@@ -141,9 +141,9 @@ function OrgAnalytics({ orgId }: { orgId: string }) {
                   ) : (
                     <ResponsiveContainer width="100%" height={300}>
                       <BarChart data={insights.inboxes_per_day}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                        <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(v) => v.slice(5)} />
-                        <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+                        <XAxis dataKey="date" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickFormatter={(v) => v.slice(5)} />
+                        <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} allowDecimals={false} />
                         <Tooltip
                           contentStyle={{ backgroundColor: 'var(--popover)', border: '1px solid var(--border)', color: 'var(--popover-foreground)' }}
                           labelFormatter={(v) => `Date: ${v}`}
@@ -173,9 +173,9 @@ function OrgAnalytics({ orgId }: { orgId: string }) {
                   ) : (
                     <ResponsiveContainer width="100%" height={300}>
                       <BarChart data={insights.peak_hours}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                        <XAxis dataKey="hour" tick={{ fontSize: 11 }} tickFormatter={formatHour} />
-                        <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+                        <XAxis dataKey="hour" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickFormatter={formatHour} />
+                        <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} allowDecimals={false} />
                         <Tooltip
                           contentStyle={{ backgroundColor: 'var(--popover)', border: '1px solid var(--border)', color: 'var(--popover-foreground)' }}
                           labelFormatter={(v) => formatHour(Number(v))}
@@ -321,9 +321,9 @@ function EmailChart({ data, average }: { data: TimeSeriesPoint[]; average?: numb
       <CardContent className="pt-6">
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(v) => v.slice(5)} />
-            <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+            <XAxis dataKey="date" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickFormatter={(v) => v.slice(5)} />
+            <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} allowDecimals={false} />
             <Tooltip
               contentStyle={{ backgroundColor: 'var(--popover)', border: '1px solid var(--border)', color: 'var(--popover-foreground)' }}
               labelFormatter={(v) => `Date: ${v}`}

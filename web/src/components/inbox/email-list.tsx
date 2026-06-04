@@ -12,14 +12,7 @@ import type { EmailSummary } from "@/types";
 /* ── Deterministic avatar color from email address ── */
 
 const AVATAR_COLORS = [
-  "bg-info/10 text-info",
-  "bg-success/10 text-success",
-  "bg-primary/10 text-primary",
-  "bg-warning/10 text-warning",
-  "bg-destructive/10 text-destructive",
-  "bg-info/10 text-info",
-  "bg-warning/10 text-warning",
-  "bg-primary/10 text-primary",
+  "bg-muted text-muted-foreground",
 ];
 
 function avatarColor(email: string) {

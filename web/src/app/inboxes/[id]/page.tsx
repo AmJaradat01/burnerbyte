@@ -239,8 +239,8 @@ export default function InboxDetailPage() {
             <div className="min-w-0">
               {address ? (
                 <div className="flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0" aria-hidden="true">
-                    <Mail className="h-4 w-4 text-primary" />
+                  <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center shrink-0" aria-hidden="true">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">

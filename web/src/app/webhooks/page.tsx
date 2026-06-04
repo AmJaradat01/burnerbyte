@@ -117,8 +117,8 @@ export default function WebhooksPage() {
       {/* Header */}
       <header className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0" aria-hidden="true">
-            <Link2 className="h-4 w-4 text-primary" />
+          <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center shrink-0" aria-hidden="true">
+            <Link2 className="h-4 w-4 text-muted-foreground" />
           </div>
           <div className="min-w-0">
             <h1 className="text-headline">Webhooks</h1>
@@ -274,8 +274,8 @@ function DeliveryLogPanel({ orgId, teamId, webhookId }: { orgId: string; teamId:
               <TableCell className="text-xs">{l.attempt}</TableCell>
               <TableCell>
                 {l.success
-                  ? <CheckCircle2 className="h-4 w-4 text-success" />
-                  : <XCircle className="h-4 w-4 text-destructive" />
+                  ? <CheckCircle2 className="h-4 w-4 text-success" aria-label="Success" />
+                  : <XCircle className="h-4 w-4 text-destructive" aria-label="Failed" />
                 }
               </TableCell>
             </TableRow>
