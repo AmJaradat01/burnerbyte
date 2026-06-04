@@ -37,6 +37,7 @@ export default function TeamsPage() {
   const { currentOrg, currentRole, hasPermission } = useOrgStore();
   const { user } = useAuthStore();
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
+  const [search, setSearch] = useState("");
 
   const { data: teamsData, isLoading, isError, refetch } = useQuery({
     queryKey: ["teams", currentOrg?.id],
@@ -91,6 +92,9 @@ export default function TeamsPage() {
   const teamList = teamsData?.data ?? [];
   const totalMembers = teamList.reduce((s, t) => s + (t.member_count ?? 0), 0);
   const totalInboxes = teamList.reduce((s, t) => s + (t.active_inboxes ?? 0), 0);
+  const filteredTeams = search
+    ? teamList.filter((t) => t.name.toLowerCase().includes(search.toLowerCase()) || t.slug.toLowerCase().includes(search.toLowerCase()))
+    : teamList;
 
   return (
     <div className="space-y-6">
@@ -123,11 +127,29 @@ export default function TeamsPage() {
           )}
         </EmptyState>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {teamList.map((t) => (
-            <TeamCard key={t.id} team={t} onSelect={() => setSelectedTeam(t)} />
-          ))}
-        </div>
+        <>
+          {teamList.length > 6 && (
+            <div className="relative max-w-sm">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+              <Input
+                placeholder="Filter teams…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+                aria-label="Filter teams by name"
+              />
+            </div>
+          )}
+          {filteredTeams.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">No teams match &quot;{search}&quot;.</p>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {filteredTeams.map((t) => (
+                <TeamCard key={t.id} team={t} onSelect={() => setSelectedTeam(t)} />
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -173,8 +195,16 @@ function TeamGridSkeleton() {
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: 3 }).map((_, i) => (
         <Card key={i}>
-          <CardHeader className="pb-3"><Skeleton className="h-4 w-2/3" /><Skeleton className="h-3 w-1/3 mt-1" /></CardHeader>
-          <CardContent><Skeleton className="h-4 w-full" /></CardContent>
+          <CardContent className="space-y-3">
+            <div className="flex items-start gap-3">
+              <Skeleton className="h-10 w-10 rounded-lg shrink-0" />
+              <div className="flex-1 space-y-1.5">
+                <Skeleton className="h-4 w-2/3" />
+                <Skeleton className="h-3 w-1/3" />
+              </div>
+            </div>
+            <div className="border-t pt-2"><Skeleton className="h-3 w-full" /></div>
+          </CardContent>
         </Card>
       ))}
     </div>
@@ -403,8 +433,8 @@ function CreateTeamDialog({ orgId, existingTeams }: { orgId: string; existingTea
               <div className="space-y-1.5">
                 {selectedDomains.map((d) => (
                   <div key={d.id} className="flex items-center gap-2 rounded-lg border px-3 py-2">
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-success/10">
-                      <Globe className="h-3.5 w-3.5 text-success" />
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
+                      <Globe className="h-3.5 w-3.5 text-muted-foreground" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium font-mono truncate">{d.name}</p>
@@ -443,7 +473,7 @@ function CreateTeamDialog({ orgId, existingTeams }: { orgId: string; existingTea
                         className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-mono hover:bg-accent transition-colors cursor-pointer"
                         onClick={() => { setSelectedDomains((prev) => [...prev, { id: d.id, name: d.domain_name, accessLevel: "full" }]); setDomainSearch(""); }}
                       >
-                        <Globe className="h-3 w-3 text-success" />
+                        <Globe className="h-3 w-3 text-muted-foreground" />
                         {d.domain_name}
                       </button>
                     ))}
@@ -746,6 +776,10 @@ function TeamMembersTab({ orgId, teamId, isAdmin }: { orgId: string; teamId: str
   );
 }
 
+function accessLabel(level: string): string {
+  return level === "full" ? "Full" : level === "create_inbox" ? "Create inbox" : level === "read_only" ? "Read only" : level;
+}
+
 function DomainAssignmentsTab({ orgId, teamId, isAdmin }: { orgId: string; teamId: string; isAdmin: boolean }) {
   const qc = useQueryClient();
   const [assignOpen, setAssignOpen] = useState(false);
@@ -852,6 +886,7 @@ function DomainAssignmentsTab({ orgId, teamId, isAdmin }: { orgId: string; teamI
             <TableHeader>
               <TableRow className="bg-muted/50">
                 <TableHead className="font-medium">Domain</TableHead>
+                <TableHead className="font-medium">Access</TableHead>
                 <TableHead className="font-medium hidden sm:table-cell">Assigned</TableHead>
                 {isAdmin && <TableHead className="text-right font-medium">Actions</TableHead>}
               </TableRow>
@@ -861,11 +896,14 @@ function DomainAssignmentsTab({ orgId, teamId, isAdmin }: { orgId: string; teamI
                 <TableRow key={a.id} className="hover:bg-muted/30">
                   <TableCell>
                     <Link href={`/domains/${a.domain_id}`} className="flex items-center gap-3 group">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-success/10">
-                        <Globe className="h-4 w-4 text-success" />
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+                        <Globe className="h-4 w-4 text-muted-foreground" />
                       </div>
                       <span className="font-medium font-mono text-sm group-hover:text-primary transition-colors">{a.domain_name || a.domain_id}</span>
                     </Link>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary" className="text-[10px]">{accessLabel(a.access_level)}</Badge>
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground hidden sm:table-cell">
                     {a.created_at ? new Date(a.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "—"}
