@@ -168,6 +168,14 @@ export default function AuditPage() {
     setPage(1);
   }, []);
 
+  const applyDatePreset = (days: number) => {
+    const from = new Date();
+    from.setDate(from.getDate() - days);
+    setDateFrom(from.toISOString().slice(0, 10));
+    setDateTo("");
+    setPage(1);
+  };
+
   const exportAll = async () => {
     if (!currentOrg) return;
     setExporting(true);
@@ -291,6 +299,16 @@ export default function AuditPage() {
           <div className="space-y-1">
             <Label className="text-xs">To</Label>
             <Input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1); }} className="w-40 h-8" aria-label="Filter to date" />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Range</Label>
+            <div className="flex gap-1">
+              {[{ label: "24h", days: 1 }, { label: "7d", days: 7 }, { label: "30d", days: 30 }].map((p) => (
+                <Button key={p.label} type="button" variant="outline" size="sm" className="h-8 px-2.5 text-xs" onClick={() => applyDatePreset(p.days)}>
+                  {p.label}
+                </Button>
+              ))}
+            </div>
           </div>
           {hasFilters && (
             <Button variant="ghost" size="sm" onClick={clearFilters}>Clear</Button>
@@ -482,6 +500,7 @@ function DetailField({ label, value, mono, copyable }: { label: string; value: s
             onClick={() => copyToClipboard(value)}
             className="shrink-0 p-0.5 rounded hover:bg-muted transition-colors"
             title="Copy to clipboard"
+            aria-label={`Copy ${label}`}
           >
             <Copy className="h-3 w-3 text-muted-foreground" />
           </button>
