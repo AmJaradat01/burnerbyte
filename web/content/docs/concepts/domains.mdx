@@ -36,7 +36,7 @@ test.example.com.  TXT  "burnerbyte-verify=abc123"
 2. **Auto-polling** — The frontend polls every 30 seconds while verification is pending
 3. **Background worker** — The DNS recheck worker re-verifies all unverified domains every hour
 
-Both MX and TXT must be verified before the domain can receive emails.
+Both MX and TXT must be verified before the domain can receive emails. The server also checks SPF and records the result, but SPF is informational only and does not gate verification.
 
 ## Team Assignment
 
@@ -47,4 +47,4 @@ POST /orgs/{orgId}/teams/{teamId}/domains
 {"domain_id": "...", "access_level": "full"}
 ```
 
-Access levels: `full` (create inboxes + receive emails) or `read` (view only). Each assignment can override org-level settings (attachments, max size, inbox TTL).
+Access levels: `full` (manage the assignment + create inboxes), `create_inbox` (create inboxes only), or `read_only` (view only). Each assignment can override org and domain settings (attachments, max size, inbox TTL).

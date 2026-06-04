@@ -1,11 +1,11 @@
 ---
 title: Background Workers
-description: The 5 background jobs that keep BurnerByte running.
+description: The 7 background jobs that keep BurnerByte running.
 ---
 
 ## Worker Manager
 
-The API server runs a worker manager that schedules 5 periodic jobs. Each job runs at a configurable interval and is gracefully stopped on shutdown.
+The API server runs a worker manager that schedules 7 periodic jobs. Each runs at its interval (most configurable, two fixed) and is gracefully stopped on shutdown.
 
 ## Jobs
 
@@ -25,7 +25,7 @@ Re-verifies MX and TXT DNS records for all domains that aren't fully verified.
 
 **Interval:** `workers.webhook_retry_interval` (default: 1m)
 
-Retries failed webhook deliveries using exponential backoff: 0s, 1s, 5s. After 3 attempts, the delivery is marked as permanently failed.
+Re-attempts webhook deliveries still pending retry, and periodically resets a webhook's failure count so one that hit its retry limit recovers on the next event. (Per-delivery retries use exponential backoff of 0s, 1s, 5s, 25s, applied inline by the dispatcher.)
 
 ### Reconciler
 
@@ -39,6 +39,18 @@ Synchronizes Redis inbox routing cache with PostgreSQL. Ensures active inboxes h
 
 Pre-computes analytics aggregates and caches them in Redis with a configurable TTL (`defaults.analytics_cache_ttl`, default: 2h).
 
+### Invite Expiry
+
+**Interval:** 24h (fixed)
+
+Expires pending organization invitations past their expiry and notifies the relevant admins.
+
+### Admin Stats
+
+**Interval:** 10s (fixed)
+
+Pushes live platform counts (emails, inboxes, domains, users, teams, storage) to the admin-stats WebSocket hub for the system-admin dashboard.
+
 ## Configuration
 
 ```yaml
@@ -48,4 +60,5 @@ workers:
   webhook_retry_interval: 1m
   reconciler_interval: 1m
   analytics_interval: 5m
+  # invite_expiry (24h) and admin_stats (10s) run at fixed, non-configurable intervals
 ```

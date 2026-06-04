@@ -107,11 +107,11 @@ Claim mappings let you map IdP claims to BurnerByte role and team assignments. E
   "claim_value": "engineering",
   "org_role": "member",
   "team_id": "uuid-of-team",
-  "team_role": "admin"
+  "team_role": "lead"
 }
 ```
 
-Claim mappings are configured per provider via the `claim_mappings` field. The `custom_claims` field on the provider specifies which additional claims to request from the IdP.
+Claim mappings are configured per provider via the `claim_mappings` field. The `custom_claims` field on the provider specifies which additional claims to request from the IdP. Note that `org_role` must be a valid org role (`owner`, `admin`, `member`) and `team_role` must be a valid team role (`lead` or `member`).
 
 ## Allowed Domains
 

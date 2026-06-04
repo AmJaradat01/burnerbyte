@@ -5,7 +5,7 @@ description: PostgreSQL schema overview — tables, indexes, and triggers.
 
 ## Overview
 
-BurnerByte uses PostgreSQL 16 with 28 migration pairs managing 23 tables, 52+ indexes, and 7 triggers.
+BurnerByte uses PostgreSQL 16 with 43 migrations managing 36 tables, 74 indexes, and 7 triggers.
 
 ## Core Tables
 
@@ -28,6 +28,7 @@ BurnerByte uses PostgreSQL 16 with 28 migration pairs managing 23 tables, 52+ in
 | `team_memberships` | User ↔ team relationship with role |
 | `domains` | Registered domains with MX/TXT verification status |
 | `domain_assignments` | Domain ↔ team mapping with access level and settings |
+| `domain_verification_history` | Per-check MX/TXT/SPF verification results over time |
 
 ### Email
 
@@ -51,6 +52,7 @@ BurnerByte uses PostgreSQL 16 with 28 migration pairs managing 23 tables, 52+ in
 |---|---|
 | `audit_logs` | Activity log with actor, action, resource, IP |
 | `invites` | Org invitations with token, email, role, expiry |
+| `invite_team_assignments` | Team + role assignments attached to a pending invite |
 | `notifications` | User notifications with type, inbox_id, read status |
 | `setup_state` | One-time setup wizard completion state |
 | `system_configs` | Runtime config overrides (mailer, storage) |
@@ -62,6 +64,26 @@ BurnerByte uses PostgreSQL 16 with 28 migration pairs managing 23 tables, 52+ in
 | `roles` | Named roles with description and scope (platform, org, team) |
 | `permissions` | Individual permission definitions (e.g., `inboxes.create`) |
 | `role_permissions` | Role ↔ permission mapping |
+
+### SSO
+
+| Table | Purpose |
+|---|---|
+| `sso_providers` | Configured OIDC providers (name, client ID/secret, endpoints) |
+| `sso_domain_mappings` | Email-domain → provider auto-routing rules |
+| `user_sso_identities` | Links a user to an external provider identity (subject) |
+
+### Analytics
+
+| Table | Purpose |
+|---|---|
+| `org_analytics_counters` | Running org-level counters |
+| `team_analytics_counters` | Running team-level counters |
+| `daily_email_stats` | Per-day org email totals |
+| `daily_team_email_stats` | Per-day, per-team email totals |
+| `daily_domain_email_stats` | Per-day, per-domain email totals |
+| `daily_sender_domain_stats` | Per-day sender-domain breakdown |
+| `hourly_email_stats` | Per-hour totals for peak-hour charts |
 
 ## Migrations
 

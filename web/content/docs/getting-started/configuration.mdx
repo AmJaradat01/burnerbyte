@@ -59,6 +59,8 @@ Common variables like `DATABASE_URL`, `REDIS_URL`, `JWT_SECRET` are mapped direc
 | `smtp.max_size` | `BB_SMTP_MAX_SIZE` | `26214400` | Max message size (25 MB) |
 | `smtp.queue_size` | `BB_SMTP_QUEUE_SIZE` | `1000` | Processing queue buffer |
 | `smtp.workers` | `BB_SMTP_WORKERS` | `4` | Worker goroutines |
+| `smtp.tls_cert` | `BB_SMTP_TLS_CERT` | — | TLS certificate path (enables STARTTLS) |
+| `smtp.tls_key` | `BB_SMTP_TLS_KEY` | — | TLS private key path |
 
 ## Mailer (Outbound)
 
@@ -111,10 +113,11 @@ Mailer config can be overridden at runtime via the setup wizard. Values are stor
 | Key | Env Var | Default | Description |
 |---|---|---|---|
 | `rate_limit.enabled` | `BB_RATE_LIMIT_ENABLED` | `true` | Enable rate limiting |
-| `rate_limit.authenticated` | `BB_RATE_LIMIT_AUTHENTICATED` | `100` | Requests/min (authenticated) |
-| `rate_limit.unauthenticated` | `BB_RATE_LIMIT_UNAUTHENTICATED` | `20` | Requests/min (unauthenticated) |
-| `rate_limit.login` | `BB_RATE_LIMIT_LOGIN` | `5` | Login attempts/min per IP |
+| `rate_limit.authenticated` | `BB_RATE_LIMIT_AUTHENTICATED` | `300` | Requests/min (authenticated) |
+| `rate_limit.unauthenticated` | `BB_RATE_LIMIT_UNAUTHENTICATED` | `60` | Requests/min (unauthenticated) |
+| `rate_limit.login` | `BB_RATE_LIMIT_LOGIN` | `10` | Login attempts/min per IP |
 | `rate_limit.forgot_password` | `BB_RATE_LIMIT_FORGOT_PASSWORD` | `3` | Reset requests/hour per IP |
+| `rate_limit.trusted_proxies` | `BB_RATE_LIMIT_TRUSTED_PROXIES` | — | Comma-separated proxy IPs trusted for client-IP resolution |
 
 ## Account Lockout
 
@@ -132,6 +135,7 @@ Mailer config can be overridden at runtime via the setup wizard. Values are stor
 | `password_policy.require_lowercase` | `BB_PASSWORD_POLICY_REQUIRE_LOWERCASE` | `true` | Require lowercase letter |
 | `password_policy.require_number` | `BB_PASSWORD_POLICY_REQUIRE_NUMBER` | `true` | Require digit |
 | `password_policy.require_special` | `BB_PASSWORD_POLICY_REQUIRE_SPECIAL` | `true` | Require special character |
+| `password_policy.bcrypt_cost` | `BB_PASSWORD_POLICY_BCRYPT_COST` | — | bcrypt hashing cost (higher is slower and stronger) |
 
 ## Defaults
 
@@ -182,6 +186,7 @@ Mailer config can be overridden at runtime via the setup wizard. Values are stor
 | Key | Env Var | Default | Description |
 |---|---|---|---|
 | `email_verification.enabled` | `BB_EMAIL_VERIFICATION_ENABLED` | `true` | Require email verification on registration |
+| `email_verification.ttl` | `BB_EMAIL_VERIFICATION_TTL` | — | Verification link lifetime |
 
 ## Logging & Metrics
 

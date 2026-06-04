@@ -23,12 +23,16 @@ The response includes a `secret` — the HMAC-SHA256 signing key. **Shown only o
 | `inbox.created` | New inbox created |
 | `inbox.expired` | Inbox TTL expired |
 
+**Note:** `inbox.expired` can be subscribed to, but the platform does not currently dispatch it. Treat it as reserved.
+
 ## HMAC-SHA256 Signing
 
-Every delivery includes an `X-BurnerByte-Signature` header:
+Every delivery includes these headers:
 
 ```
 X-BurnerByte-Signature: <hex-encoded-hmac>
+X-BurnerByte-Event: <event-name>
+X-BurnerByte-Delivery-ID: <delivery-uuid>
 ```
 
 ## Retry Logic
@@ -40,8 +44,9 @@ Failed deliveries (non-2xx or timeout) are retried with exponential backoff:
 | 1 | Immediate |
 | 2 | 1 second |
 | 3 | 5 seconds |
+| 4 | 25 seconds |
 
-After 3 failed attempts, the delivery is marked as permanently failed.
+After the retry limit, the webhook's failure count increments. The `webhook_retry` background worker periodically resets failure counts, so a webhook that hit its limit automatically recovers on the next event.
 
 ## Delivery Logs
 

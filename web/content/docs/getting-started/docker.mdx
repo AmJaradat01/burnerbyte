@@ -5,9 +5,10 @@ description: Running BurnerByte with Docker Compose.
 
 ## Full Stack with Docker Compose
 
-The included `docker-compose.yml` runs the entire stack:
+The included `docker-compose.yml` runs the entire stack. First create `config.yaml` (the images copy it in at build time):
 
 ```bash
+cp config.example.yaml config.yaml
 docker compose up -d
 ```
 
@@ -35,6 +36,7 @@ POSTGRES_PORT=5432
 
 # Redis
 REDIS_PORT=6379
+REDIS_PASSWORD=a-strong-redis-password
 
 # MinIO
 MINIO_ROOT_USER=minioadmin
@@ -51,8 +53,8 @@ FRONTEND_PORT=3000
 # Application
 JWT_SECRET=change-me-to-a-random-64-char-string
 FRONTEND_URL=http://localhost:3000
-API_BASE_URL=http://localhost:8080
-SMTP_HOSTNAME=mail.example.com
+API_BASE_URL=http://localhost:8080   # baked into the frontend image at build time
+SMTP_HOSTNAME=mail.example.com        # mapped to BB_SMTP_HOSTNAME for the api/smtpd
 ```
 
 ## Infrastructure Only
@@ -60,11 +62,14 @@ SMTP_HOSTNAME=mail.example.com
 To run just the infrastructure (database, cache, storage) while developing locally:
 
 ```bash
-make docker-up   # starts postgres, redis, minio
-make docker-down # stops them
+docker compose up -d postgres redis minio   # infrastructure only
 ```
 
 Then run the API and frontend locally with `make run-api` and `cd web && pnpm dev`.
+
+<Callout type="warn">
+`make docker-up` / `make docker-down` map to `docker compose up -d` / `down` and start or stop the **entire** stack (api, smtpd, and frontend included), not just infrastructure.
+</Callout>
 
 ## Health Checks
 
