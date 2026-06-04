@@ -282,7 +282,7 @@ A consistent shape across all variants; differentiation through fill and border,
 - **Width:** 240px expanded, 60px collapsed. Transition 200ms ease-out on width only (never on layout properties beyond width).
 - **Item shape:** Rounded-lg (10px), 6px / 8px internal padding.
 - **Resting state:** `text-muted-foreground` over transparent. Hover fills `muted/80` and promotes text to foreground.
-- **Active state:** `bg-primary/10 text-primary` tint plus a 2px-wide, 20px-tall rounded indicator bar positioned absolutely at the left edge in primary color. This indicator is rendered as a separate `<span>`, not via `border-left`, and is the single approved left-edge accent in the system.
+- **Active state:** `bg-sidebar-primary/10 text-sidebar-primary` (the reserved amber) plus a 2px-wide, 20px-tall rounded indicator bar positioned absolutely at the left edge in sidebar amber. This indicator is rendered as a separate `<span>`, not via `border-left`, and is the single approved left-edge accent in the system. Amber lives here and in chart-1 only; because it must not compete with indigo on the same surface, the org and user avatars in the sidebar stay neutral (`bg-muted`).
 - **Section dividers:** `border-t` at 50% opacity, never full-width rules.
 - **Collapsed state:** Items center, label hidden, tooltip on hover.
 
