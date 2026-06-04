@@ -60,7 +60,7 @@ export function TopNav() {
             href="/profile"
             className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-muted/80 transition-colors group"
           >
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary ring-1 ring-border">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground ring-1 ring-border">
               {userInitial}
             </div>
             <span className="hidden sm:inline text-sm font-medium max-w-[120px] truncate group-hover:text-foreground transition-colors">
