@@ -31,6 +31,11 @@ export default function ProfilePage() {
       window.history.replaceState(null, "", window.location.pathname);
       qc.invalidateQueries({ queryKey: ["sso-identities"] });
     }
+    const ssoError = params.get("sso_error");
+    if (ssoError) {
+      toast.error("Couldn't link account", { description: ssoError, duration: 8000 });
+      window.history.replaceState(null, "", window.location.pathname);
+    }
   }, [qc]);
 
   if (!user) return (

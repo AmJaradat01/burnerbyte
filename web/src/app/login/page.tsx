@@ -91,7 +91,9 @@ export default function LoginPage() {
     const params = new URLSearchParams(hash.substring(1));
     const error = params.get("error");
     if (error) {
-      toast.error(`SSO login failed: ${error}`);
+      // Backend redirects SSO failures here as #error=<message>. Some messages
+      // are actionable (e.g. "link from your profile"), so give them room and time.
+      toast.error("Sign-in failed", { description: error, duration: 8000 });
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
       return;
     }
