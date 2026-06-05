@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
 	"gitlab.com/burnerbyte/burnerbyte/internal/realtime"
 	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
 )
@@ -59,26 +60,7 @@ func CleanupJob(inboxRepo *postgres.InboxRepo, emailRepo *postgres.EmailRepo, at
 		if expired, err := inboxRepo.ListExpired(ctx); err != nil {
 			slog.Error("cleanup: failed to list expired inboxes", "error", err)
 		} else {
-			for _, ib := range expired {
-				if dispatcher != nil && ib.TeamID != uuid.Nil {
-					dispatcher.Dispatch(ctx, ib.TeamID, "inbox.expired", map[string]any{
-						"inbox_id": ib.ID, "address": ib.FullAddress, "expired_at": ib.ExpiresAt,
-					})
-				}
-				if auditRec != nil {
-					auditRec.RecordWithName(ctx, ib.OrgID, nil, "inbox.expired", "inbox", ib.ID, ib.FullAddress, map[string]any{
-						"address": ib.FullAddress, "expired_at": ib.ExpiresAt,
-					})
-				}
-				// Drive the notification bell (live push + persisted row) for the
-				// inbox owner via the realtime bridge.
-				if publisher != nil {
-					publisher.PublishInboxEvent(ctx, ib.ID, ib.CreatedBy, ib.OrgID, 0, "", "", ib.TeamID, -1, realtime.Message{
-						Type: "inbox.expired",
-						Data: map[string]any{"full_address": ib.FullAddress, "inbox_id": ib.ID},
-					})
-				}
-			}
+			emitInboxExpired(ctx, expired, dispatcher, auditRec, publisher)
 			if len(expired) > 0 {
 				slog.Info("cleanup: inbox.expired emitted", "count", len(expired))
 			}
@@ -115,5 +97,30 @@ func CleanupJob(inboxRepo *postgres.InboxRepo, emailRepo *postgres.EmailRepo, at
 		}
 
 		return nil
+	}
+}
+
+// emitInboxExpired announces inbox expiry on every channel: a webhook to the
+// owning team (only when the team is known), a system-initiated audit entry,
+// and a realtime event that drives the notification bell. Kept separate from
+// CleanupJob so the dispatch logic is testable without a database.
+func emitInboxExpired(ctx context.Context, expired []domain.Inbox, dispatcher WebhookDispatcher, auditRec ExpiryAuditRecorder, publisher InboxEventPublisher) {
+	for _, ib := range expired {
+		if dispatcher != nil && ib.TeamID != uuid.Nil {
+			dispatcher.Dispatch(ctx, ib.TeamID, "inbox.expired", map[string]any{
+				"inbox_id": ib.ID, "address": ib.FullAddress, "expired_at": ib.ExpiresAt,
+			})
+		}
+		if auditRec != nil {
+			auditRec.RecordWithName(ctx, ib.OrgID, nil, "inbox.expired", "inbox", ib.ID, ib.FullAddress, map[string]any{
+				"address": ib.FullAddress, "expired_at": ib.ExpiresAt,
+			})
+		}
+		if publisher != nil {
+			publisher.PublishInboxEvent(ctx, ib.ID, ib.CreatedBy, ib.OrgID, 0, "", "", ib.TeamID, -1, realtime.Message{
+				Type: "inbox.expired",
+				Data: map[string]any{"full_address": ib.FullAddress, "inbox_id": ib.ID},
+			})
+		}
 	}
 }
