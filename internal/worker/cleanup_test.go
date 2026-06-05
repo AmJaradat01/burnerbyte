@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -8,6 +9,7 @@ import (
 	"pgregory.net/rapid"
 
 	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
+	"gitlab.com/burnerbyte/burnerbyte/internal/realtime"
 )
 
 // Feature: enhanced-api-keys, Property 14: Expired Key Cleanup Correctness
@@ -250,4 +252,86 @@ func TestProperty_ExpiredKeyCleanupCorrectness(t *testing.T) {
 			}
 		})
 	})
+}
+
+// --- inbox.expired emission (cleanup worker) ---
+
+type dispatchCall struct {
+	teamID uuid.UUID
+	event  string
+	data   map[string]any
+}
+type fakeDispatcher struct{ calls []dispatchCall }
+
+func (f *fakeDispatcher) Dispatch(_ context.Context, teamID uuid.UUID, event string, data any) {
+	m, _ := data.(map[string]any)
+	f.calls = append(f.calls, dispatchCall{teamID, event, m})
+}
+
+type auditCall struct {
+	action string
+	actor  *uuid.UUID
+	name   string
+}
+type fakeAudit struct{ calls []auditCall }
+
+func (f *fakeAudit) RecordWithName(_ context.Context, _ uuid.UUID, actorID *uuid.UUID, action, _ string, _ uuid.UUID, resourceName string, _ any) {
+	f.calls = append(f.calls, auditCall{action, actorID, resourceName})
+}
+
+type publishCall struct {
+	teamID  uuid.UUID
+	msgType string
+}
+type fakePublisher struct{ calls []publishCall }
+
+func (f *fakePublisher) PublishInboxEvent(_ context.Context, _, _, _ uuid.UUID, _ int64, _, _ string, teamID uuid.UUID, _ int, msg realtime.Message) {
+	f.calls = append(f.calls, publishCall{teamID, msg.Type})
+}
+
+func TestEmitInboxExpired(t *testing.T) {
+	team := uuid.New()
+	withTeam := domain.Inbox{ID: uuid.New(), CreatedBy: uuid.New(), OrgID: uuid.New(), TeamID: team, FullAddress: "a@example.com", ExpiresAt: time.Now()}
+	noTeam := domain.Inbox{ID: uuid.New(), CreatedBy: uuid.New(), OrgID: uuid.New(), TeamID: uuid.Nil, FullAddress: "b@example.com", ExpiresAt: time.Now()}
+
+	disp := &fakeDispatcher{}
+	aud := &fakeAudit{}
+	pub := &fakePublisher{}
+
+	emitInboxExpired(context.Background(), []domain.Inbox{withTeam, noTeam}, disp, aud, pub)
+
+	// Webhook fires only for the inbox whose team is known.
+	if len(disp.calls) != 1 {
+		t.Fatalf("expected 1 webhook dispatch, got %d", len(disp.calls))
+	}
+	if disp.calls[0].event != "inbox.expired" || disp.calls[0].teamID != team {
+		t.Fatalf("unexpected webhook: %+v", disp.calls[0])
+	}
+	if disp.calls[0].data["address"] != "a@example.com" {
+		t.Fatalf("unexpected webhook payload: %+v", disp.calls[0].data)
+	}
+
+	// Audit + realtime publish fire for every expired inbox, team-independent.
+	if len(aud.calls) != 2 {
+		t.Fatalf("expected 2 audit records, got %d", len(aud.calls))
+	}
+	for _, c := range aud.calls {
+		if c.action != "inbox.expired" || c.actor != nil {
+			t.Fatalf("audit must be system-initiated inbox.expired (nil actor): %+v", c)
+		}
+	}
+	if len(pub.calls) != 2 {
+		t.Fatalf("expected 2 realtime publishes, got %d", len(pub.calls))
+	}
+	for _, c := range pub.calls {
+		if c.msgType != "inbox.expired" {
+			t.Fatalf("unexpected publish message type: %+v", c)
+		}
+	}
+}
+
+func TestEmitInboxExpired_NilSinks(t *testing.T) {
+	ib := domain.Inbox{ID: uuid.New(), TeamID: uuid.New(), FullAddress: "a@example.com", ExpiresAt: time.Now()}
+	// Optional sinks may be nil (e.g. before wiring); must not panic.
+	emitInboxExpired(context.Background(), []domain.Inbox{ib}, nil, nil, nil)
 }
