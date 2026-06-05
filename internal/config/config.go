@@ -2,6 +2,7 @@ package config
 
 import (
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/spf13/viper"
@@ -26,6 +27,49 @@ type Config struct {
 	Metrics  MetricsConfig  `mapstructure:"metrics"`
 	Workers  WorkersConfig  `mapstructure:"workers"`
 	Encryption EncryptionConfig `mapstructure:"encryption"`
+
+	// mu guards the runtime-mutable settings groups (Password, Lockout,
+	// Defaults, EmailVerification) that PUT /admin/platform updates while
+	// request handlers and services read them concurrently. Readers must use
+	// the accessors below; the writer applies changes via WriteLocked.
+	mu sync.RWMutex
+}
+
+// PasswordPolicy returns a consistent snapshot of the password policy.
+func (c *Config) PasswordPolicy() PasswordConfig {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.Password
+}
+
+// LockoutPolicy returns a consistent snapshot of the account-lockout policy.
+func (c *Config) LockoutPolicy() LockoutConfig {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.Lockout
+}
+
+// RuntimeDefaults returns a consistent snapshot of the defaults/limits group.
+func (c *Config) RuntimeDefaults() DefaultsConfig {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.Defaults
+}
+
+// EmailVerificationEnabled reports whether new users must verify their email.
+func (c *Config) EmailVerificationEnabled() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.EmailVerification.Enabled
+}
+
+// WriteLocked applies fn under the write lock so the runtime-mutable groups
+// update atomically with respect to readers. fn must not call the read
+// accessors above, as it already holds the lock.
+func (c *Config) WriteLocked(fn func(*Config)) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	fn(c)
 }
 
 // EncryptionConfig holds the key for encrypting sensitive data at rest (DB).
