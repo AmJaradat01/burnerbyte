@@ -77,7 +77,7 @@ func NewAuthService(
 		resetRepo: resetRepo, emailVerifyRepo: emailVerifyRepo, orgRepo: orgRepo,
 		ssoIdentityRepo: ssoIdentityRepo, ssoProviderRepo: ssoProviderRepo, teamRepo: teamRepo,
 		domainMappingRepo: domainMappingRepo,
-		tokens: tokens, lockout: lockout, mailer: mailer, cfg: cfg,
+		tokens:            tokens, lockout: lockout, mailer: mailer, cfg: cfg,
 		revocationCache:   revocationCache,
 		pendingLoginStore: pendingLoginStore,
 		ssoCodeStore:      ssoCodeStore,
@@ -384,7 +384,9 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken, ip, userAgent s
 
 	// Create new session in same family
 	rawRefresh, refreshHash, err := s.tokens.GenerateRefreshToken()
-	if err != nil { return nil, fmt.Errorf("generate refresh token: %w", err) }
+	if err != nil {
+		return nil, fmt.Errorf("generate refresh token: %w", err)
+	}
 	accessToken, err := s.tokens.GenerateAccessToken(user.ID, user.Email, user.IsSystemAdmin)
 	if err != nil {
 		return nil, err
@@ -734,9 +736,15 @@ func (s *AuthService) SSOLogin(ctx context.Context, result *domain.SSOCallbackRe
 				}
 			}
 		} else {
-			// Existing user by email — auto-link SSO identity.
-			// The email from the SSO provider is verified by the provider (GitHub, Google, etc.),
-			// so it's safe to trust it as proof of identity.
+			// Existing account with this email. Only auto-link the SSO identity
+			// when the provider asserted the email is verified — otherwise an
+			// unverified-email assertion (e.g. a permissive OIDC provider, or a
+			// secondary GitHub email) could take over an existing password
+			// account. Explicit linking from the profile, where the user has
+			// already authenticated, is unaffected and matches by subject.
+			if !result.EmailVerified {
+				return nil, nil, fmt.Errorf("the %s account did not verify this email address, so it can't be auto-linked to an existing account; sign in to that account and link %s from your profile instead", result.Provider, result.Provider)
+			}
 			// Check auth method lock for existing users
 			if err := checkAuthMethodLock(user, "sso"); err != nil {
 				return nil, nil, err
@@ -1051,7 +1059,9 @@ func (s *AuthService) createSession(ctx context.Context, repo *postgres.SessionR
 	}
 
 	rawRefresh, refreshHash, err := s.tokens.GenerateRefreshToken()
-	if err != nil { return nil, fmt.Errorf("generate refresh token: %w", err) }
+	if err != nil {
+		return nil, fmt.Errorf("generate refresh token: %w", err)
+	}
 
 	// ── Session limit enforcement (best-effort) ──
 	limit := s.resolveSessionLimit(user)
@@ -1313,12 +1323,12 @@ func (s *AuthService) createAndProvisionFromMappings(ctx context.Context, result
 	userRepoTx := s.userRepo.WithTx(tx)
 
 	user := &domain.User{
-		ID:            uuid.New(),
-		Email:         email,
-		DisplayName:   result.DisplayName,
-		SSOProvider:   &provider,
-		IsSystemAdmin: false,
-		EmailVerified: true,
+		ID:                uuid.New(),
+		Email:             email,
+		DisplayName:       result.DisplayName,
+		SSOProvider:       &provider,
+		IsSystemAdmin:     false,
+		EmailVerified:     true,
 		PasswordChangedAt: func() *time.Time { t := time.Now(); return &t }(),
 	}
 	if result.AvatarURL != "" {
