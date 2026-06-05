@@ -296,14 +296,26 @@ func (h *AuthHandler) GetDateTimeSettings(w http.ResponseWriter, r *http.Request
 		return
 	}
 	tz := h.cfg.RuntimeDefaults().Timezone
-	if tz == "" { tz = "UTC" }
+	if tz == "" {
+		tz = "UTC"
+	}
 	df := h.cfg.RuntimeDefaults().DateFormat
-	if df == "" { df = "YYYY-MM-DD" }
+	if df == "" {
+		df = "YYYY-MM-DD"
+	}
 	tf := h.cfg.RuntimeDefaults().TimeFormat
-	if tf == "" { tf = "24h" }
-	if user.Timezone != nil && *user.Timezone != "" { tz = *user.Timezone }
-	if user.DateFormat != nil && *user.DateFormat != "" { df = *user.DateFormat }
-	if user.TimeFormat != nil && *user.TimeFormat != "" { tf = *user.TimeFormat }
+	if tf == "" {
+		tf = "24h"
+	}
+	if user.Timezone != nil && *user.Timezone != "" {
+		tz = *user.Timezone
+	}
+	if user.DateFormat != nil && *user.DateFormat != "" {
+		df = *user.DateFormat
+	}
+	if user.TimeFormat != nil && *user.TimeFormat != "" {
+		tf = *user.TimeFormat
+	}
 	writeJSON(w, http.StatusOK, map[string]string{
 		"timezone":    tz,
 		"date_format": df,
@@ -567,7 +579,10 @@ func (h *AuthHandler) SSOCallback(w http.ResponseWriter, r *http.Request) {
 		auditRecordEnhanced(r, uuid.Nil, "user.sso_login_failed", "user", uuid.Nil, "", map[string]any{
 			"provider": providerName, "reason": err.Error(), "ip_address": r.RemoteAddr,
 		})
-		writeError(w, http.StatusUnauthorized, err.Error())
+		// The browser is sitting on this callback URL, so send it back to the
+		// SPA login page (which surfaces #error) rather than rendering raw JSON.
+		// The provider-side detail stays in the audit log, not the response.
+		redirectSSOLoginError(w, r, frontendURL, "could not verify the sign-in response. Please try again.")
 		return
 	}
 
@@ -580,7 +595,13 @@ func (h *AuthHandler) SSOCallback(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if err := h.svc.LinkSSOIdentity(r.Context(), userID, result); err != nil {
-			writeServiceError(w, err)
+			// A failed link (e.g. the identity is already bound to another
+			// account) is security-relevant, so record it and send the browser
+			// back to the profile page with a curated message rather than JSON.
+			auditRecordEnhanced(r, userID, "user.sso_link_failed", "user", userID, result.Email, map[string]any{
+				"provider": providerName, "subject": result.Subject, "reason": err.Error(),
+			})
+			http.Redirect(w, r, frontendURL+"/profile?sso_error="+url.QueryEscape(ssoLinkErrorMessage(err)), http.StatusFound)
 			return
 		}
 		auditRecordEnhanced(r, uuid.Nil, "user.sso_linked", "user", userID, result.Email, map[string]any{
@@ -608,12 +629,16 @@ func (h *AuthHandler) SSOCallback(w http.ResponseWriter, r *http.Request) {
 		auditRecordEnhanced(r, uuid.Nil, "user.sso_login_failed", "user", uuid.Nil, result.Email, map[string]any{
 			"provider": providerName, "reason": err.Error(), "email": result.Email,
 		})
-		writeError(w, http.StatusInternalServerError, "internal server error")
+		// Send the browser back to the login page with an actionable message for
+		// known rejections (unverified email, auth-method lock, invite required);
+		// anything else collapses to a generic message so internal errors aren't
+		// leaked into the URL.
+		redirectSSOLoginError(w, r, frontendURL, ssoLoginErrorMessage(err))
 		return
 	}
 
 	auditRecordEnhanced(r, uuid.Nil, "user.sso_login", "user", user.ID, user.Email, map[string]any{
-		"email": user.Email, "provider": providerName, "subject": result.Subject, "is_new_user": user.CreatedAt.After(time.Now().Add(-10*time.Second)),
+		"email": user.Email, "provider": providerName, "subject": result.Subject, "is_new_user": user.CreatedAt.After(time.Now().Add(-10 * time.Second)),
 	})
 
 	code := uuid.New().String()
@@ -625,6 +650,48 @@ func (h *AuthHandler) SSOCallback(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, fmt.Sprintf("%s/login?sso_code=%s",
 		frontendURL,
 		url.QueryEscape(code)), http.StatusFound)
+}
+
+// redirectSSOLoginError sends the browser back to the SPA login page with the
+// message in the URL fragment (#error=...). The login page reads it and shows a
+// toast. A fragment is used rather than a query param so the message is not sent
+// to the server on the follow-up navigation and does not leak via Referer.
+func redirectSSOLoginError(w http.ResponseWriter, r *http.Request, frontendURL, message string) {
+	http.Redirect(w, r, frontendURL+"/login#error="+url.QueryEscape(message), http.StatusFound)
+}
+
+// ssoLoginErrorMessage maps an SSOLogin error to a user-facing message. Known
+// rejections the user can act on are passed through verbatim; everything else
+// (wrapped database/provider errors) collapses to a generic message so internal
+// detail is never rendered in the browser. This mirrors the string-matching
+// convention used by writeServiceError.
+func ssoLoginErrorMessage(err error) string {
+	msg := err.Error()
+	switch {
+	case strings.Contains(msg, "is not verified by"),
+		strings.Contains(msg, "requires an invite"),
+		strings.Contains(msg, "is not allowed for this invite"),
+		strings.Contains(msg, "locked to SSO"),
+		strings.Contains(msg, "locked to password"):
+		return msg
+	default:
+		return "we couldn't complete the sign-in. Please try again or contact your administrator."
+	}
+}
+
+// ssoLinkErrorMessage maps a LinkSSOIdentity error to a user-facing message for
+// the profile linking flow, passing through the actionable cases and hiding
+// wrapped internal errors behind a generic message.
+func ssoLinkErrorMessage(err error) string {
+	msg := err.Error()
+	switch {
+	case strings.Contains(msg, "already linked to another account"),
+		strings.Contains(msg, "already have a"),
+		strings.Contains(msg, "locked to"):
+		return msg
+	default:
+		return "we couldn't link this account. Please try again."
+	}
 }
 
 func (h *AuthHandler) GetPendingSessions(w http.ResponseWriter, r *http.Request) {
