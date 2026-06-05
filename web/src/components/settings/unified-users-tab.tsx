@@ -219,7 +219,7 @@ export function UnifiedUsersTab({ orgId }: { orgId: string }) {
                       <tr className="border-b last:border-0 hover:bg-primary/[0.03] cursor-pointer transition-all duration-150 group">
                         <td className="px-4 py-3.5">
                           <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-sm font-bold text-primary">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted text-sm font-bold text-muted-foreground">
                               {(u.display_name || u.email).charAt(0).toUpperCase()}
                             </div>
                             <div className="min-w-0">
@@ -775,7 +775,7 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
                             description={`This will set a new password for ${u.display_name || u.email}, lock them to password-only login, and revoke all active sessions.`}
                             onConfirm={migrateToPassword}
                           />
-                          <Button variant="ghost" size="sm" className="h-9 w-9 p-0 shrink-0" onClick={() => { setMigratePasswordOpen(false); setMigratePassword(""); }}>
+                          <Button variant="ghost" size="sm" aria-label="Cancel" className="h-9 w-9 p-0 shrink-0" onClick={() => { setMigratePasswordOpen(false); setMigratePassword(""); }}>
                             <XCircle className="h-4 w-4" />
                           </Button>
                         </div>
@@ -1034,7 +1034,7 @@ function InviteDialog({ orgId }: { orgId: string }) {
                       ))}
                     </SelectContent>
                   </Select>
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive" onClick={() => removeTeamAssignment(i)}>
+                  <Button variant="ghost" size="sm" aria-label="Remove team assignment" className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive" onClick={() => removeTeamAssignment(i)}>
                     <Minus className="h-3.5 w-3.5" />
                   </Button>
                 </div>
@@ -1273,7 +1273,7 @@ function BulkInviteDialog({ orgId }: { orgId: string }) {
                       ))}
                     </SelectContent>
                   </Select>
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive" onClick={() => removeTeamAssignment(i)}>
+                  <Button variant="ghost" size="sm" aria-label="Remove team assignment" className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive" onClick={() => removeTeamAssignment(i)}>
                     <Minus className="h-3.5 w-3.5" />
                   </Button>
                 </div>
@@ -1382,7 +1382,7 @@ function PendingInviteRow({ invite: inv, orgId }: { invite: Invite; orgId: strin
           <RefreshCw className={`h-3 w-3 ${resending ? "animate-spin" : ""}`} /> Resend
         </Button>
         <ConfirmDialog
-          trigger={<Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:text-destructive"><XCircle className="h-3.5 w-3.5" /></Button>}
+          trigger={<Button variant="ghost" size="sm" aria-label="Revoke invite" className="h-7 w-7 p-0 text-destructive hover:text-destructive"><XCircle className="h-3.5 w-3.5" /></Button>}
           title="Revoke invite?"
           description={`The invite to ${inv.email} will be cancelled.`}
           onConfirm={() => revoke.mutate()}
