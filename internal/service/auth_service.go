@@ -743,7 +743,7 @@ func (s *AuthService) SSOLogin(ctx context.Context, result *domain.SSOCallbackRe
 			// account. Explicit linking from the profile, where the user has
 			// already authenticated, is unaffected and matches by subject.
 			if !result.EmailVerified {
-				return nil, nil, fmt.Errorf("the %s account did not verify this email address, so it can't be auto-linked to an existing account; sign in to that account and link %s from your profile instead", result.Provider, result.Provider)
+				return nil, nil, fmt.Errorf("this email address is not verified by %s, so it can't be linked to an existing account automatically. Sign in to that account, then link %s from your profile.", result.Provider, result.Provider)
 			}
 			// Check auth method lock for existing users
 			if err := checkAuthMethodLock(user, "sso"); err != nil {
