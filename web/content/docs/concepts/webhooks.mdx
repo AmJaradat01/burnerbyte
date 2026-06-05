@@ -23,7 +23,7 @@ The response includes a `secret` — the HMAC-SHA256 signing key. **Shown only o
 | `inbox.created` | New inbox created |
 | `inbox.expired` | Inbox TTL expired |
 
-**Note:** `inbox.expired` can be subscribed to, but the platform does not currently dispatch it. Treat it as reserved.
+**Note:** `inbox.expired` is emitted by the cleanup worker as it removes a lapsed inbox, so it fires on the first cleanup cycle after the TTL elapses rather than at the exact expiry instant.
 
 ## HMAC-SHA256 Signing
 

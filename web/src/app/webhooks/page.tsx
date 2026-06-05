@@ -56,7 +56,6 @@ const EVENT_INFO: { key: string; label: string; description: string; icon: Lucid
     description: "Fires when an inbox reaches its TTL and expires.",
     icon: Clock,
     example: '{ "inbox_id": "...", "address": "abc@domain.com", "expired_at": "..." }',
-    note: "Reserved — not dispatched yet, so subscribing won't deliver events.",
   },
 ];
 

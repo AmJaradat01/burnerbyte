@@ -175,7 +175,8 @@ func main() {
 	// RBAC & Audit
 	rbac.SetDefaultCache(permCache)
 	handler.InitRBAC(rbac.NewChecker(orgRepo, teamRepo, permCache))
-	handler.InitAudit(audit.NewRecorder(auditSvc))
+	auditRecorder := audit.NewRecorder(auditSvc)
+	handler.InitAudit(auditRecorder)
 	handler.InitWebhookDispatch(webhookDispatcher)
 
 	// WebSocket hubs
@@ -710,7 +711,7 @@ func main() {
 	// Background workers
 	workerCtx, workerCancel := context.WithCancel(context.Background())
 	wm := worker.NewManager()
-	wm.Add("cleanup", cfg.Workers.CleanupInterval, worker.CleanupJob(inboxRepo, emailRepo, attachmentSvc, sessionRepo, resetRepo, apikeyRepo))
+	wm.Add("cleanup", cfg.Workers.CleanupInterval, worker.CleanupJob(inboxRepo, emailRepo, attachmentSvc, sessionRepo, resetRepo, apikeyRepo, webhookDispatcher, auditRecorder))
 	wm.Add("reconciler", cfg.Workers.ReconcilerInterval, worker.ReconcilerJob(inboxRepo, redisInboxRepo))
 	wm.Add("dns_recheck", cfg.Workers.DNSRecheckInterval, worker.DNSRecheckJob(domainRepo, verHistoryRepo, cfg.SMTP.Hostname))
 	wm.Add("webhook_retry", cfg.Workers.WebhookRetryInterval, worker.WebhookRetryJob(webhookRepo, webhookDispatcher))
