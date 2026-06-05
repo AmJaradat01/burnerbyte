@@ -23,14 +23,6 @@ func NewDomainAssignmentHandler(svc *service.DomainAssignmentService, inboxRepo 
 	return &DomainAssignmentHandler{svc: svc, inboxRepo: inboxRepo, teamSvc: teamSvc}
 }
 
-func (h *DomainAssignmentHandler) Routes(r chi.Router) {
-		r.Get("/my/domains", h.ListMyDomains)
-		r.Post("/orgs/{orgId}/teams/{teamId}/domains", h.AssignDomain)
-		r.Get("/orgs/{orgId}/teams/{teamId}/domains", h.ListAssignments)
-		r.Patch("/orgs/{orgId}/teams/{teamId}/domains/{domainId}", h.UpdateAssignment)
-		r.Delete("/orgs/{orgId}/teams/{teamId}/domains/{domainId}", h.Unassign)
-}
-
 func (h *DomainAssignmentHandler) ListMyDomains(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
 	assignments, err := h.svc.ListByUser(r.Context(), uc.UserID)

@@ -16,16 +16,6 @@ type APIKeyHandler struct{ svc *service.APIKeyService }
 
 func NewAPIKeyHandler(svc *service.APIKeyService) *APIKeyHandler { return &APIKeyHandler{svc: svc} }
 
-func (h *APIKeyHandler) Routes(r chi.Router) {
-	r.Post("/orgs/{orgId}/teams/{teamId}/api-keys", h.Create)
-	r.Get("/orgs/{orgId}/teams/{teamId}/api-keys", h.List)
-	r.Get("/orgs/{orgId}/teams/{teamId}/api-keys/{keyId}", h.Get)
-	r.Patch("/orgs/{orgId}/teams/{teamId}/api-keys/{keyId}", h.Update)
-	r.Delete("/orgs/{orgId}/teams/{teamId}/api-keys/{keyId}", h.Revoke)
-	r.Post("/orgs/{orgId}/teams/{teamId}/api-keys/{keyId}/rotate", h.Rotate)
-	r.Post("/orgs/{orgId}/teams/{teamId}/api-keys/bulk-revoke", h.BulkRevoke)
-}
-
 func (h *APIKeyHandler) Create(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
 	orgID, _ := uuid.Parse(chi.URLParam(r, "orgId"))

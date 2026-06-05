@@ -37,10 +37,6 @@ type AuditHandler struct{ svc *service.AuditService }
 
 func NewAuditHandler(svc *service.AuditService) *AuditHandler { return &AuditHandler{svc: svc} }
 
-func (h *AuditHandler) Routes(r chi.Router) {
-	r.Get("/orgs/{orgId}/audit", h.List)
-}
-
 // parseAuditFilter parses common audit filter query parameters from the request.
 // Returns the filter and true if valid, or writes an error response and returns false.
 func parseAuditFilter(w http.ResponseWriter, r *http.Request) (domain.AuditFilter, bool) {

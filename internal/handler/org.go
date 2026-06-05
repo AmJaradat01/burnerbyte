@@ -24,24 +24,6 @@ func NewOrgHandler(svc *service.OrgService) *OrgHandler {
 	return &OrgHandler{svc: svc}
 }
 
-func (h *OrgHandler) Routes(r chi.Router) {
-	r.Post("/orgs", h.CreateOrg)
-	r.Get("/orgs", h.ListOrgs)
-	r.Get("/orgs/{orgId}", h.GetOrg)
-	r.Patch("/orgs/{orgId}", h.UpdateOrg)
-	r.Delete("/orgs/{orgId}", h.DeleteOrg)
-	r.Get("/orgs/{orgId}/settings", h.GetSettings)
-	r.Patch("/orgs/{orgId}/settings", h.UpdateSettings)
-	r.Put("/orgs/{orgId}/settings", h.UpdateSettings)
-	r.Post("/orgs/{orgId}/members", h.InviteMember)
-	r.Get("/orgs/{orgId}/members", h.ListMembers)
-	r.Patch("/orgs/{orgId}/members/{userId}", h.ChangeRole)
-	r.Post("/orgs/{orgId}/invites", h.InviteMember)
-	r.Get("/orgs/{orgId}/invites", h.ListPendingInvites)
-	r.Delete("/orgs/{orgId}/invites/{inviteId}", h.RevokeInvite)
-	r.Post("/invites/{token}/accept", h.AcceptInvite)
-}
-
 func (h *OrgHandler) PreviewInvite(w http.ResponseWriter, r *http.Request) {
 	token := chi.URLParam(r, "token")
 	invite, err := h.svc.PreviewInvite(r.Context(), token)
