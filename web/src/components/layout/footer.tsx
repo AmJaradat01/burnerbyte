@@ -11,7 +11,7 @@ export function Footer() {
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground">
           <div className="flex items-center gap-1.5">
             <Logo size="sm" />
-            <span className="hidden sm:inline">— Self-hosted temporary email</span>
+            <span className="hidden sm:inline">· Self-hosted temporary email</span>
           </div>
           <div className="flex items-center gap-3 sm:gap-4">
             <Link href="/docs" className="hover:text-foreground transition-colors">Docs</Link>
