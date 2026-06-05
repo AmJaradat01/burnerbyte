@@ -25,16 +25,6 @@ func NewDomainHandler(svc *service.DomainService, inboxRepo *postgres.InboxRepo,
 	return &DomainHandler{svc: svc, inboxRepo: inboxRepo, mxTarget: smtpHostname}
 }
 
-func (h *DomainHandler) Routes(r chi.Router) {
-	r.Post("/orgs/{orgId}/domains", h.CreateDomain)
-	r.Get("/orgs/{orgId}/domains", h.ListDomains)
-	r.Get("/orgs/{orgId}/domains/{domainId}", h.GetDomain)
-	r.Patch("/orgs/{orgId}/domains/{domainId}", h.UpdateDomain)
-	r.Delete("/orgs/{orgId}/domains/{domainId}", h.DeleteDomain)
-	r.Post("/orgs/{orgId}/domains/{domainId}/verify", h.VerifyDomain)
-	r.Get("/orgs/{orgId}/domains/{domainId}/impact", h.GetDomainImpact)
-}
-
 func (h *DomainHandler) CreateDomain(w http.ResponseWriter, r *http.Request) {
 	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
 	if err != nil {
