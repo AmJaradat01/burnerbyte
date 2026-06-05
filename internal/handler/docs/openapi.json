@@ -1147,6 +1147,28 @@
         }
       }
     },
+    "/orgs/{orgId}/members/me": {
+      "get": {
+        "tags": [
+          "Members"
+        ],
+        "summary": "Get own membership",
+        "description": "Returns the authenticated caller's own membership (role) in the organization, so the caller's role can be resolved without listing every member.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The caller's membership"
+          },
+          "404": {
+            "description": "Not a member of this organization"
+          }
+        }
+      }
+    },
     "/orgs/{orgId}/members/{userId}": {
       "patch": {
         "tags": [
