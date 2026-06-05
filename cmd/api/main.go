@@ -309,6 +309,7 @@ func main() {
 			r.Post("/orgs/{orgId}/members", orgHandler.InviteMember)
 			r.Post("/orgs/{orgId}/members/add", orgHandler.DirectAddMember)
 			r.Get("/orgs/{orgId}/members", orgHandler.ListMembers)
+			r.Get("/orgs/{orgId}/members/me", orgHandler.GetMyMembership)
 			r.Get("/orgs/{orgId}/members/search", orgHandler.SearchMembers)
 			r.Patch("/orgs/{orgId}/members/{userId}", orgHandler.ChangeRole)
 			r.Post("/orgs/{orgId}/members/{userId}/deactivate", orgHandler.DeactivateUser)

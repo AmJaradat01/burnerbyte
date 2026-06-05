@@ -35,7 +35,6 @@ func (h *OrgHandler) Routes(r chi.Router) {
 	r.Put("/orgs/{orgId}/settings", h.UpdateSettings)
 	r.Post("/orgs/{orgId}/members", h.InviteMember)
 	r.Get("/orgs/{orgId}/members", h.ListMembers)
-	r.Get("/orgs/{orgId}/members/me", h.GetMyMembership)
 	r.Patch("/orgs/{orgId}/members/{userId}", h.ChangeRole)
 	r.Post("/orgs/{orgId}/invites", h.InviteMember)
 	r.Get("/orgs/{orgId}/invites", h.ListPendingInvites)
