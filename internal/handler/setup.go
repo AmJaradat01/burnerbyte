@@ -187,7 +187,7 @@ func (h *SetupHandler) Complete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate password policy
-	if err := auth.ValidatePassword(input.Admin.Password, h.cfg.Password); err != nil {
+	if err := auth.ValidatePassword(input.Admin.Password, h.cfg.PasswordPolicy()); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -217,7 +217,7 @@ func (h *SetupHandler) Complete(w http.ResponseWriter, r *http.Request) {
 	sessionRepoTx := h.sessionRepo.WithTx(tx)
 
 	// Step 1: Create admin user
-	hash, err := auth.HashPassword(input.Admin.Password, h.cfg.Password)
+	hash, err := auth.HashPassword(input.Admin.Password, h.cfg.PasswordPolicy())
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to hash password")
 		return
@@ -365,13 +365,13 @@ func (h *SetupHandler) Complete(w http.ResponseWriter, r *http.Request) {
 			OrgRole:   inv.Role,
 			Token:     token,
 			InvitedBy: &adminUser.ID,
-			ExpiresAt: time.Now().Add(h.cfg.Defaults.InviteExpiryTTL),
+			ExpiresAt: time.Now().Add(h.cfg.RuntimeDefaults().InviteExpiryTTL),
 		}
 		if invite.OrgRole == "" {
 			invite.OrgRole = "member"
 		}
 		if invite.ExpiresAt.Before(time.Now()) {
-			invite.ExpiresAt = time.Now().Add(h.cfg.Defaults.InviteExpiryTTL)
+			invite.ExpiresAt = time.Now().Add(h.cfg.RuntimeDefaults().InviteExpiryTTL)
 		}
 		if err := orgRepoTx.CreateInvite(r.Context(), invite); err != nil {
 			slog.Error("failed to create invite", "error", err, "email", inv.Email)
@@ -436,7 +436,7 @@ func (h *SetupHandler) Complete(w http.ResponseWriter, r *http.Request) {
 					"OrgName":     org.Name,
 					"InviterName": "The platform admin",
 					"AcceptURL":   inviteURL,
-					"ExpiresIn":   mailer.HumanDuration(h.cfg.Defaults.InviteExpiryTTL),
+					"ExpiresIn":   mailer.HumanDuration(h.cfg.RuntimeDefaults().InviteExpiryTTL),
 				}); err != nil {
 					slog.Error("failed to send invite", "error", err, "email", inv.Email)
 				}

@@ -91,7 +91,7 @@ func (s *DomainService) AddDomain(ctx context.Context, orgID uuid.UUID, input do
 		return nil, err
 	}
 
-	maxDomains := s.cfg.Defaults.MaxDomains
+	maxDomains := s.cfg.RuntimeDefaults().MaxDomains
 	if org.Settings.MaxDomains != nil {
 		maxDomains = *org.Settings.MaxDomains
 	}
@@ -489,7 +489,7 @@ func (s *DomainService) TransferDomain(ctx context.Context, orgID, domainID, tar
 		return nil, fmt.Errorf("target organization not found")
 	}
 
-	maxDomains := s.cfg.Defaults.MaxDomains
+	maxDomains := s.cfg.RuntimeDefaults().MaxDomains
 	if targetOrg.Settings.MaxDomains != nil {
 		maxDomains = *targetOrg.Settings.MaxDomains
 	}

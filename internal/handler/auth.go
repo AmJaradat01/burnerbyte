@@ -66,7 +66,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !h.cfg.Defaults.AllowRegistration && input.InviteToken == "" {
+	if !h.cfg.RuntimeDefaults().AllowRegistration && input.InviteToken == "" {
 		writeError(w, http.StatusForbidden, "public registration is disabled")
 		return
 	}
@@ -295,11 +295,11 @@ func (h *AuthHandler) GetDateTimeSettings(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusInternalServerError, "failed to load user")
 		return
 	}
-	tz := h.cfg.Defaults.Timezone
+	tz := h.cfg.RuntimeDefaults().Timezone
 	if tz == "" { tz = "UTC" }
-	df := h.cfg.Defaults.DateFormat
+	df := h.cfg.RuntimeDefaults().DateFormat
 	if df == "" { df = "YYYY-MM-DD" }
-	tf := h.cfg.Defaults.TimeFormat
+	tf := h.cfg.RuntimeDefaults().TimeFormat
 	if tf == "" { tf = "24h" }
 	if user.Timezone != nil && *user.Timezone != "" { tz = *user.Timezone }
 	if user.DateFormat != nil && *user.DateFormat != "" { df = *user.DateFormat }
@@ -411,7 +411,7 @@ func (h *AuthHandler) SSOStatus(w http.ResponseWriter, r *http.Request) {
 
 	resp := map[string]any{
 		"enabled":            enabled,
-		"allow_registration": h.cfg.Defaults.AllowRegistration,
+		"allow_registration": h.cfg.RuntimeDefaults().AllowRegistration,
 		"providers":          providers,
 	}
 
@@ -423,11 +423,11 @@ func (h *AuthHandler) SSOStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp["password_policy"] = map[string]any{
-		"min_length":        h.cfg.Password.MinLength,
-		"require_uppercase": h.cfg.Password.RequireUppercase,
-		"require_lowercase": h.cfg.Password.RequireLowercase,
-		"require_number":    h.cfg.Password.RequireNumber,
-		"require_special":   h.cfg.Password.RequireSpecial,
+		"min_length":        h.cfg.PasswordPolicy().MinLength,
+		"require_uppercase": h.cfg.PasswordPolicy().RequireUppercase,
+		"require_lowercase": h.cfg.PasswordPolicy().RequireLowercase,
+		"require_number":    h.cfg.PasswordPolicy().RequireNumber,
+		"require_special":   h.cfg.PasswordPolicy().RequireSpecial,
 	}
 	writeJSON(w, http.StatusOK, resp)
 }
