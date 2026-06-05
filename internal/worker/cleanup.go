@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"gitlab.com/burnerbyte/burnerbyte/internal/realtime"
 	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
 )
 
@@ -24,7 +25,14 @@ type ExpiryAuditRecorder interface {
 	RecordWithName(ctx context.Context, orgID uuid.UUID, actorID *uuid.UUID, action, resourceType string, resourceID uuid.UUID, resourceName string, metadata any)
 }
 
-func CleanupJob(inboxRepo *postgres.InboxRepo, emailRepo *postgres.EmailRepo, attachmentCleaner AttachmentCleaner, sessionRepo *postgres.SessionRepo, resetRepo *postgres.PasswordResetRepo, apikeyRepo *postgres.APIKeyRepo, dispatcher WebhookDispatcher, auditRec ExpiryAuditRecorder) func(ctx context.Context) error {
+// InboxEventPublisher publishes a realtime inbox event. Going through the
+// realtime bridge drives both the live notification push and the persisted
+// notification row, the same way email.received does.
+type InboxEventPublisher interface {
+	PublishInboxEvent(ctx context.Context, inboxID, userID, orgID uuid.UUID, sizeBytes int64, senderDomain, domainName string, teamID uuid.UUID, hour int, msg realtime.Message)
+}
+
+func CleanupJob(inboxRepo *postgres.InboxRepo, emailRepo *postgres.EmailRepo, attachmentCleaner AttachmentCleaner, sessionRepo *postgres.SessionRepo, resetRepo *postgres.PasswordResetRepo, apikeyRepo *postgres.APIKeyRepo, dispatcher WebhookDispatcher, auditRec ExpiryAuditRecorder, publisher InboxEventPublisher) func(ctx context.Context) error {
 	return func(ctx context.Context) error {
 		// Delete expired emails and collect IDs for attachment cleanup
 		emailIDs, err := emailRepo.DeleteExpiredReturningIDs(ctx)
@@ -60,6 +68,14 @@ func CleanupJob(inboxRepo *postgres.InboxRepo, emailRepo *postgres.EmailRepo, at
 				if auditRec != nil {
 					auditRec.RecordWithName(ctx, ib.OrgID, nil, "inbox.expired", "inbox", ib.ID, ib.FullAddress, map[string]any{
 						"address": ib.FullAddress, "expired_at": ib.ExpiresAt,
+					})
+				}
+				// Drive the notification bell (live push + persisted row) for the
+				// inbox owner via the realtime bridge.
+				if publisher != nil {
+					publisher.PublishInboxEvent(ctx, ib.ID, ib.CreatedBy, ib.OrgID, 0, "", "", ib.TeamID, -1, realtime.Message{
+						Type: "inbox.expired",
+						Data: map[string]any{"full_address": ib.FullAddress, "inbox_id": ib.ID},
 					})
 				}
 			}
