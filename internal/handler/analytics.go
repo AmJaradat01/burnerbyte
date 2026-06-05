@@ -22,13 +22,6 @@ func NewAnalyticsHandler(svc *service.AnalyticsService, defaultDays int) *Analyt
 	return &AnalyticsHandler{svc: svc, defaultDays: defaultDays}
 }
 
-func (h *AnalyticsHandler) Routes(r chi.Router) {
-		r.Get("/orgs/{orgId}/analytics", h.OrgAnalytics)
-		r.Get("/orgs/{orgId}/analytics/emails-per-day", h.OrgEmailsPerDay)
-		r.Get("/orgs/{orgId}/teams/{teamId}/analytics", h.TeamAnalytics)
-		r.Get("/orgs/{orgId}/teams/{teamId}/analytics/emails-per-day", h.TeamEmailsPerDay)
-}
-
 func (h *AnalyticsHandler) OrgAnalytics(w http.ResponseWriter, r *http.Request) {
 	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
 	if err != nil {

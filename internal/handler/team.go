@@ -23,18 +23,6 @@ func NewTeamHandler(svc *service.TeamService) *TeamHandler {
 	return &TeamHandler{svc: svc}
 }
 
-func (h *TeamHandler) Routes(r chi.Router) {
-	r.Post("/orgs/{orgId}/teams", h.CreateTeam)
-	r.Get("/orgs/{orgId}/teams", h.ListTeams)
-	r.Get("/orgs/{orgId}/teams/{teamId}", h.GetTeam)
-	r.Patch("/orgs/{orgId}/teams/{teamId}", h.UpdateTeam)
-	r.Delete("/orgs/{orgId}/teams/{teamId}", h.DeleteTeam)
-	r.Post("/orgs/{orgId}/teams/{teamId}/members", h.AddMember)
-	r.Get("/orgs/{orgId}/teams/{teamId}/members", h.ListMembers)
-	r.Patch("/orgs/{orgId}/teams/{teamId}/members/{userId}", h.ChangeRole)
-	r.Delete("/orgs/{orgId}/teams/{teamId}/members/{userId}", h.RemoveMember)
-}
-
 func (h *TeamHandler) CreateTeam(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
 	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))

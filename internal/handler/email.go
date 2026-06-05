@@ -22,14 +22,6 @@ func NewEmailHandler(svc *service.EmailService, attachmentSvc *service.Attachmen
 	return &EmailHandler{svc: svc, attachmentSvc: attachmentSvc, inboxSvc: inboxSvc}
 }
 
-func (h *EmailHandler) Routes(r chi.Router) {
-		r.Get("/inboxes/{inboxId}/emails", h.ListEmails)
-		r.Post("/inboxes/{inboxId}/emails/mark-all-read", h.MarkAllRead)
-		r.Get("/emails/{emailId}", h.GetEmail)
-		r.Patch("/emails/{emailId}", h.MarkReadUnread)
-		r.Delete("/emails/{emailId}", h.DeleteEmail)
-}
-
 func (h *EmailHandler) ListEmails(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
 	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "team.emails.view") {

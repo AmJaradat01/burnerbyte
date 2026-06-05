@@ -29,17 +29,6 @@ func strPtr(s string) *string {
 	return &s
 }
 
-func (h *InboxHandler) Routes(r chi.Router) {
-		// User-scoped
-		r.Get("/inboxes", h.ListMyInboxes)
-		r.Post("/inboxes", h.CreateInboxFlat)
-		r.Get("/inboxes/{inboxId}", h.GetInbox)
-		r.Delete("/inboxes/{inboxId}", h.DeleteInbox)
-		r.Post("/inboxes/{inboxId}/extend", h.ExtendTTL)
-		// Team-scoped
-		r.Get("/orgs/{orgId}/teams/{teamId}/inboxes", h.ListInboxes)
-}
-
 func (h *InboxHandler) CreateInboxFlat(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
 	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "team.inboxes.create") {
