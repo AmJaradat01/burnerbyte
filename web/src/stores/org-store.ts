@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { api } from "@/lib/api";
-import type { Organization, Team, Membership } from "@/types";
+import type { Organization, Team } from "@/types";
 
 interface RoleInfo {
   id: string;
@@ -30,7 +30,7 @@ interface OrgState {
   fetchOrgs: () => Promise<void>;
   setCurrentOrg: (org: Organization) => void;
   fetchTeams: (orgId: string) => Promise<void>;
-  fetchRole: (orgId: string, userId: string) => Promise<void>;
+  fetchRole: (orgId: string) => Promise<void>;
   setCurrentTeam: (team: Team) => void;
   hasPermission: (key: string) => boolean;
 }
@@ -50,10 +50,9 @@ export const useOrgStore = create<OrgState>((set, get) => ({
 
   setCurrentOrg: (org) => set({ currentOrg: org, currentRole: null, permissions: [], teams: [], currentTeam: null }),
 
-  fetchRole: async (orgId, userId) => {
+  fetchRole: async (orgId) => {
     try {
-      const res = await api.get<{ data: Membership[] }>(`/orgs/${orgId}/members`, { page: "1", per_page: "10000" });
-      const me = res.data?.find((m) => m.user_id === userId);
+      const me = await api.get<{ role: string }>(`/orgs/${orgId}/members/me`);
       const role = me?.role ?? "member";
       set({ currentRole: role });
 
