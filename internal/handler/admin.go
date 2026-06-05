@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -37,7 +36,6 @@ type AdminHandler struct {
 	ssoMgr             *auth.SSOManager
 	encryptor          *appcrypto.Encryptor
 	cfg                *config.Config
-	cfgMu              sync.RWMutex
 	pool               *pgxpool.Pool
 	rdb                *redis.Client
 	s3                 *minio.Client
@@ -294,29 +292,30 @@ type PlatformSettings struct {
 }
 
 func (h *AdminHandler) GetPlatformSettings(w http.ResponseWriter, r *http.Request) {
-	h.cfgMu.RLock()
-	tz := h.cfg.Defaults.Timezone
-	df := h.cfg.Defaults.DateFormat
-	tf := h.cfg.Defaults.TimeFormat
+	d := h.cfg.RuntimeDefaults()
+	pw := h.cfg.PasswordPolicy()
+	lk := h.cfg.LockoutPolicy()
+	tz := d.Timezone
+	df := d.DateFormat
+	tf := d.TimeFormat
 	ps := PlatformSettings{
-		AllowRegistration:    h.cfg.Defaults.AllowRegistration,
-		EmailVerification:    h.cfg.EmailVerification.Enabled,
-		PasswordMinLength:    h.cfg.Password.MinLength,
-		PasswordRequireUpper: h.cfg.Password.RequireUppercase,
-		PasswordRequireLower: h.cfg.Password.RequireLowercase,
-		PasswordRequireNum:   h.cfg.Password.RequireNumber,
-		PasswordRequireSpec:  h.cfg.Password.RequireSpecial,
-		LockoutMaxAttempts:   h.cfg.Lockout.MaxAttempts,
-		LockoutDurationMins:  int(h.cfg.Lockout.Duration.Minutes()),
-		DefaultInboxTTL:      h.cfg.Defaults.DefaultInboxTTL.String(),
-		MaxInboxTTL:          h.cfg.Defaults.MaxInboxTTL.String(),
-		MaxAttachmentSizeMB:  h.cfg.Defaults.MaxAttachmentSizeMB,
-		MaxDomains:           h.cfg.Defaults.MaxDomains,
-		MaxTeams:             h.cfg.Defaults.MaxTeams,
-		MaxInboxesPerDomain:  h.cfg.Defaults.MaxInboxesPerDomain,
-		MaxSessionsPerUser:   h.cfg.Defaults.MaxSessionsPerUser,
+		AllowRegistration:    d.AllowRegistration,
+		EmailVerification:    h.cfg.EmailVerificationEnabled(),
+		PasswordMinLength:    pw.MinLength,
+		PasswordRequireUpper: pw.RequireUppercase,
+		PasswordRequireLower: pw.RequireLowercase,
+		PasswordRequireNum:   pw.RequireNumber,
+		PasswordRequireSpec:  pw.RequireSpecial,
+		LockoutMaxAttempts:   lk.MaxAttempts,
+		LockoutDurationMins:  int(lk.Duration.Minutes()),
+		DefaultInboxTTL:      d.DefaultInboxTTL.String(),
+		MaxInboxTTL:          d.MaxInboxTTL.String(),
+		MaxAttachmentSizeMB:  d.MaxAttachmentSizeMB,
+		MaxDomains:           d.MaxDomains,
+		MaxTeams:             d.MaxTeams,
+		MaxInboxesPerDomain:  d.MaxInboxesPerDomain,
+		MaxSessionsPerUser:   d.MaxSessionsPerUser,
 	}
-	h.cfgMu.RUnlock()
 	if tz == "" { tz = "UTC" }
 	if df == "" { df = "YYYY-MM-DD" }
 	if tf == "" { tf = "24h" }
@@ -378,21 +377,22 @@ func (h *AdminHandler) UpdatePlatformSettings(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// Capture before state under read lock
-	h.cfgMu.RLock()
+	// Capture before state via synchronized snapshots
+	pwBefore := h.cfg.PasswordPolicy()
+	lkBefore := h.cfg.LockoutPolicy()
+	dBefore := h.cfg.RuntimeDefaults()
 	before := map[string]any{
-		"allow_registration":    h.cfg.Defaults.AllowRegistration,
-		"email_verification":    h.cfg.EmailVerification.Enabled,
-		"password_min_length":   h.cfg.Password.MinLength,
-		"password_require_upper": h.cfg.Password.RequireUppercase,
-		"password_require_lower": h.cfg.Password.RequireLowercase,
-		"password_require_number": h.cfg.Password.RequireNumber,
-		"password_require_special": h.cfg.Password.RequireSpecial,
-		"lockout_max_attempts":  h.cfg.Lockout.MaxAttempts,
-		"lockout_duration_mins": int(h.cfg.Lockout.Duration.Minutes()),
-		"max_sessions_per_user": h.cfg.Defaults.MaxSessionsPerUser,
+		"allow_registration":    dBefore.AllowRegistration,
+		"email_verification":    h.cfg.EmailVerificationEnabled(),
+		"password_min_length":   pwBefore.MinLength,
+		"password_require_upper": pwBefore.RequireUppercase,
+		"password_require_lower": pwBefore.RequireLowercase,
+		"password_require_number": pwBefore.RequireNumber,
+		"password_require_special": pwBefore.RequireSpecial,
+		"lockout_max_attempts":  lkBefore.MaxAttempts,
+		"lockout_duration_mins": int(lkBefore.Duration.Minutes()),
+		"max_sessions_per_user": dBefore.MaxSessionsPerUser,
 	}
-	h.cfgMu.RUnlock()
 
 	// Validate duration fields before any mutation
 	var parsedDefaultTTL time.Duration
@@ -422,32 +422,33 @@ func (h *AdminHandler) UpdatePlatformSettings(w http.ResponseWriter, r *http.Req
 		writeError(w, http.StatusInternalServerError, "failed to save")
 		return
 	}
-	// Apply to running config atomically
-	h.cfgMu.Lock()
-	h.cfg.Defaults.AllowRegistration = input.AllowRegistration
-	h.cfg.EmailVerification.Enabled = input.EmailVerification
-	h.cfg.Password.MinLength = input.PasswordMinLength
-	h.cfg.Password.RequireUppercase = input.PasswordRequireUpper
-	h.cfg.Password.RequireLowercase = input.PasswordRequireLower
-	h.cfg.Password.RequireNumber = input.PasswordRequireNum
-	h.cfg.Password.RequireSpecial = input.PasswordRequireSpec
-	h.cfg.Lockout.MaxAttempts = input.LockoutMaxAttempts
-	h.cfg.Lockout.Duration = time.Duration(input.LockoutDurationMins) * time.Minute
-	h.cfg.Defaults.Timezone = input.Timezone
-	h.cfg.Defaults.DateFormat = input.DateFormat
-	h.cfg.Defaults.TimeFormat = input.TimeFormat
-	if hasDefaultTTL {
-		h.cfg.Defaults.DefaultInboxTTL = parsedDefaultTTL
-	}
-	if hasMaxTTL {
-		h.cfg.Defaults.MaxInboxTTL = parsedMaxTTL
-	}
-	h.cfg.Defaults.MaxAttachmentSizeMB = input.MaxAttachmentSizeMB
-	h.cfg.Defaults.MaxDomains = input.MaxDomains
-	h.cfg.Defaults.MaxTeams = input.MaxTeams
-	h.cfg.Defaults.MaxInboxesPerDomain = input.MaxInboxesPerDomain
-	h.cfg.Defaults.MaxSessionsPerUser = input.MaxSessionsPerUser
-	h.cfgMu.Unlock()
+	// Apply to running config under the shared config lock, so the services
+	// that read these fields never observe a torn update.
+	h.cfg.WriteLocked(func(c *config.Config) {
+		c.Defaults.AllowRegistration = input.AllowRegistration
+		c.EmailVerification.Enabled = input.EmailVerification
+		c.Password.MinLength = input.PasswordMinLength
+		c.Password.RequireUppercase = input.PasswordRequireUpper
+		c.Password.RequireLowercase = input.PasswordRequireLower
+		c.Password.RequireNumber = input.PasswordRequireNum
+		c.Password.RequireSpecial = input.PasswordRequireSpec
+		c.Lockout.MaxAttempts = input.LockoutMaxAttempts
+		c.Lockout.Duration = time.Duration(input.LockoutDurationMins) * time.Minute
+		c.Defaults.Timezone = input.Timezone
+		c.Defaults.DateFormat = input.DateFormat
+		c.Defaults.TimeFormat = input.TimeFormat
+		if hasDefaultTTL {
+			c.Defaults.DefaultInboxTTL = parsedDefaultTTL
+		}
+		if hasMaxTTL {
+			c.Defaults.MaxInboxTTL = parsedMaxTTL
+		}
+		c.Defaults.MaxAttachmentSizeMB = input.MaxAttachmentSizeMB
+		c.Defaults.MaxDomains = input.MaxDomains
+		c.Defaults.MaxTeams = input.MaxTeams
+		c.Defaults.MaxInboxesPerDomain = input.MaxInboxesPerDomain
+		c.Defaults.MaxSessionsPerUser = input.MaxSessionsPerUser
+	})
 
 	after := map[string]any{
 		"allow_registration":    input.AllowRegistration,
