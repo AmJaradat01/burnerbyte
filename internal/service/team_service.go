@@ -103,7 +103,7 @@ func (s *TeamService) CreateTeam(ctx context.Context, orgID uuid.UUID, input dom
 	if err != nil {
 		return nil, err
 	}
-	maxTeams := s.cfg.Defaults.MaxTeams
+	maxTeams := s.cfg.RuntimeDefaults().MaxTeams
 	if org.Settings.MaxTeams != nil {
 		maxTeams = *org.Settings.MaxTeams
 	}
@@ -692,7 +692,7 @@ func (s *TeamService) TransferTeam(ctx context.Context, orgID, teamID, targetOrg
 	}
 
 	// Check team limit on target org
-	maxTeams := s.cfg.Defaults.MaxTeams
+	maxTeams := s.cfg.RuntimeDefaults().MaxTeams
 	if targetOrg.Settings.MaxTeams != nil {
 		maxTeams = *targetOrg.Settings.MaxTeams
 	}

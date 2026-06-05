@@ -72,7 +72,7 @@ func (s *InboxService) CreateInbox(ctx context.Context, teamID, domainID, userID
 	if err != nil {
 		return nil, err
 	}
-	maxInboxes := s.cfg.Defaults.MaxInboxesPerDomain
+	maxInboxes := s.cfg.RuntimeDefaults().MaxInboxesPerDomain
 	if org.Settings.MaxInboxesPerDomain != nil {
 		maxInboxes = *org.Settings.MaxInboxesPerDomain
 	}
@@ -107,7 +107,7 @@ func (s *InboxService) CreateInbox(ctx context.Context, teamID, domainID, userID
 	fullAddress := address + "@" + dom.DomainName
 
 	// Resolve TTL via settings cascade (including team-level override)
-	resolver := NewSettingsResolver(s.assignmentRepo, s.domainRepo, s.orgRepo, s.cfg.Defaults)
+	resolver := NewSettingsResolver(s.assignmentRepo, s.domainRepo, s.orgRepo, s.cfg.RuntimeDefaults())
 
 	// Look up team settings for team-level default_inbox_ttl
 	team, _ := s.teamRepo.GetByID(ctx, teamID)
@@ -218,7 +218,7 @@ func (s *InboxService) ExtendTTL(ctx context.Context, id, userID uuid.UUID, exte
 		return nil, fmt.Errorf("forbidden: not your inbox")
 	}
 
-	resolver := NewSettingsResolver(s.assignmentRepo, s.domainRepo, s.orgRepo, s.cfg.Defaults)
+	resolver := NewSettingsResolver(s.assignmentRepo, s.domainRepo, s.orgRepo, s.cfg.RuntimeDefaults())
 
 	var ext time.Duration
 	if extension == "" {

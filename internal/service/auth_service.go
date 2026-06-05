@@ -102,12 +102,12 @@ func (s *AuthService) Register(ctx context.Context, input domain.CreateUserInput
 		return nil, nil, err
 	}
 
-	if err := auth.ValidatePassword(input.Password, s.cfg.Password); err != nil {
+	if err := auth.ValidatePassword(input.Password, s.cfg.PasswordPolicy()); err != nil {
 		return nil, nil, err
 	}
 
 	// Invite-only mode enforcement: when registration is restricted, require a pending invite
-	if !s.cfg.Defaults.AllowRegistration {
+	if !s.cfg.RuntimeDefaults().AllowRegistration {
 		if s.orgRepo == nil {
 			slog.Warn("invite-only registration rejected: orgRepo not configured", "email", input.Email)
 			return nil, nil, fmt.Errorf("registration requires an invite")
@@ -124,7 +124,7 @@ func (s *AuthService) Register(ctx context.Context, input domain.CreateUserInput
 		}
 	}
 
-	hash, err := auth.HashPassword(input.Password, s.cfg.Password)
+	hash, err := auth.HashPassword(input.Password, s.cfg.PasswordPolicy())
 	if err != nil {
 		return nil, nil, err
 	}
@@ -167,7 +167,7 @@ func (s *AuthService) Register(ctx context.Context, input domain.CreateUserInput
 	}
 
 	// Send verification email (non-blocking)
-	if s.cfg.EmailVerification.Enabled {
+	if s.cfg.EmailVerificationEnabled() {
 		go func() {
 			token := generateSecureToken(32)
 			tokenHash := postgres.HashToken(token)
@@ -228,8 +228,8 @@ func (s *AuthService) Login(ctx context.Context, input domain.LoginInput, ip, us
 		if wasLocked {
 			go func() {
 				_ = s.mailer.Send(user.Email, "Account locked", "lockout.html", map[string]string{
-					"Attempts": fmt.Sprintf("%d", s.cfg.Lockout.MaxAttempts),
-					"Duration": s.cfg.Lockout.Duration.String(),
+					"Attempts": fmt.Sprintf("%d", s.cfg.LockoutPolicy().MaxAttempts),
+					"Duration": s.cfg.LockoutPolicy().Duration.String(),
 				})
 			}()
 		}
@@ -461,11 +461,11 @@ func (s *AuthService) ChangePassword(ctx context.Context, userID uuid.UUID, inpu
 		return fmt.Errorf("current password is incorrect")
 	}
 
-	if err := auth.ValidatePassword(input.NewPassword, s.cfg.Password); err != nil {
+	if err := auth.ValidatePassword(input.NewPassword, s.cfg.PasswordPolicy()); err != nil {
 		return err
 	}
 
-	hash, err := auth.HashPassword(input.NewPassword, s.cfg.Password)
+	hash, err := auth.HashPassword(input.NewPassword, s.cfg.PasswordPolicy())
 	if err != nil {
 		return err
 	}
@@ -546,7 +546,7 @@ func (s *AuthService) ForgotPassword(ctx context.Context, input domain.ForgotPas
 	// Generate and store hashed token
 	rawToken := generateSecureToken(32)
 	tokenHash := postgres.HashToken(rawToken)
-	ttl := s.cfg.Defaults.PasswordResetTTL
+	ttl := s.cfg.RuntimeDefaults().PasswordResetTTL
 	if ttl <= 0 {
 		ttl = time.Hour
 	}
@@ -575,7 +575,7 @@ func (s *AuthService) ResetPassword(ctx context.Context, input domain.ResetPassw
 		return uuid.Nil, "", fmt.Errorf("token and new_password are required")
 	}
 
-	if err := auth.ValidatePassword(input.NewPassword, s.cfg.Password); err != nil {
+	if err := auth.ValidatePassword(input.NewPassword, s.cfg.PasswordPolicy()); err != nil {
 		return uuid.Nil, "", err
 	}
 
@@ -590,7 +590,7 @@ func (s *AuthService) ResetPassword(ctx context.Context, input domain.ResetPassw
 		return uuid.Nil, "", fmt.Errorf("user not found")
 	}
 
-	hash, err := auth.HashPassword(input.NewPassword, s.cfg.Password)
+	hash, err := auth.HashPassword(input.NewPassword, s.cfg.PasswordPolicy())
 	if err != nil {
 		return uuid.Nil, "", err
 	}
@@ -673,7 +673,7 @@ func (s *AuthService) SSOLogin(ctx context.Context, result *domain.SSOCallbackRe
 			isNew = true
 
 			// Invite-only mode enforcement for new SSO users
-			if !s.cfg.Defaults.AllowRegistration {
+			if !s.cfg.RuntimeDefaults().AllowRegistration {
 				// Step 1: Check domain mapping rules (bypass invite requirement)
 				var domainMappingMatched bool
 				if s.ssoProviderRepo != nil && s.domainMappingRepo != nil {
@@ -944,7 +944,7 @@ func (s *AuthService) resolveSessionLimit(user *domain.User) int {
 	if user.MaxSessions != nil && *user.MaxSessions >= 1 {
 		return *user.MaxSessions
 	}
-	limit := s.cfg.Defaults.MaxSessionsPerUser
+	limit := s.cfg.RuntimeDefaults().MaxSessionsPerUser
 	if limit <= 0 {
 		return 5 // safety fallback
 	}
@@ -1526,12 +1526,12 @@ func (s *AuthService) MigrateToPassword(ctx context.Context, userID uuid.UUID, n
 	}
 
 	// Validate password against policy
-	if err := auth.ValidatePassword(newPassword, s.cfg.Password); err != nil {
+	if err := auth.ValidatePassword(newPassword, s.cfg.PasswordPolicy()); err != nil {
 		return nil, err
 	}
 
 	// Hash and set password
-	hash, err := auth.HashPassword(newPassword, s.cfg.Password)
+	hash, err := auth.HashPassword(newPassword, s.cfg.PasswordPolicy())
 	if err != nil {
 		return nil, err
 	}
