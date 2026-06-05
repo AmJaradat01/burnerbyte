@@ -134,15 +134,17 @@ export function SessionConflictDialog({
         </DialogHeader>
 
         <div className="space-y-3 max-h-[400px] overflow-y-auto py-2">
-          {sessions.map((session) => (
+          {sessions.map((session) => {
+            const parsed = parseUserAgent(session.user_agent);
+            return (
             <Card key={session.id} className="overflow-hidden">
               <CardContent className="p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0 space-y-2">
                     <div className="flex items-center gap-2">
-                      {getDeviceIcon(parseUserAgent(session.user_agent).device)}
+                      {getDeviceIcon(parsed.device)}
                       <span className="text-sm font-medium truncate">
-                        {parseUserAgent(session.user_agent).browser} · {parseUserAgent(session.user_agent).os}
+                        {parsed.browser} · {parsed.os}
                       </span>
                     </div>
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
@@ -178,7 +180,8 @@ export function SessionConflictDialog({
                 </div>
               </CardContent>
             </Card>
-          ))}
+            );
+          })}
         </div>
 
         <DialogFooter>

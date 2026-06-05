@@ -351,6 +351,7 @@ function RoleCard({
                   <Button
                     variant="ghost"
                     size="icon"
+                    aria-label={`Delete ${role.label} role`}
                     className="h-8 w-8 text-muted-foreground hover:text-destructive"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
