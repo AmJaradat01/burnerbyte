@@ -106,6 +106,13 @@ func Subscribe(ctx context.Context, rdb *redis.Client, hub *Hub, notifHub *Notif
 						} else {
 							body = subj
 						}
+					case "inbox.expired":
+						title = "Inbox Expired"
+						if s, ok := m["full_address"].(string); ok {
+							body = s
+						} else {
+							body = "An inbox has expired"
+						}
 					default:
 						title = evt.Message.Type
 						if s, ok := m["full_address"].(string); ok {
