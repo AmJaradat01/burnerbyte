@@ -46,19 +46,6 @@ func NewAdminHandler(analyticsSvc *service.AnalyticsService, orgSvc *service.Org
 	return &AdminHandler{analyticsSvc: analyticsSvc, orgSvc: orgSvc, authSvc: authSvc, sysConfig: sysConfig, ssoProviderRepo: ssoProviderRepo, domainMappingRepo: domainMappingRepo, teamRepo: teamRepo, ssoMgr: ssoMgr, encryptor: encryptor, cfg: cfg, pool: pool, rdb: rdb, s3: s3, bucket: bucket}
 }
 
-func (h *AdminHandler) Routes(r chi.Router) {
-		r.Use(auth.RequireSystemAdmin)
-		r.Get("/admin/stats", h.Stats)
-		r.Get("/admin/orgs", h.ListOrgs)
-		r.Get("/admin/users", h.ListUsers)
-		r.Delete("/admin/users/{userId}", h.DeleteUser)
-		r.Patch("/admin/users/{userId}", h.UpdateUser)
-		r.Post("/admin/users/{userId}/migrate-auth", h.MigrateAuth)
-		r.Get("/admin/health", h.Health)
-		r.Get("/admin/platform", h.GetPlatformSettings)
-		r.Put("/admin/platform", h.UpdatePlatformSettings)
-}
-
 func (h *AdminHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	stats, err := h.analyticsSvc.GetSystemStats(r.Context())
 	if err != nil { writeError(w, http.StatusInternalServerError, "failed"); return }

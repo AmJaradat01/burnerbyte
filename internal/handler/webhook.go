@@ -20,14 +20,6 @@ func NewWebhookHandler(svc *service.WebhookService) *WebhookHandler {
 	return &WebhookHandler{svc: svc}
 }
 
-func (h *WebhookHandler) Routes(r chi.Router) {
-		r.Post("/orgs/{orgId}/teams/{teamId}/webhooks", h.Create)
-		r.Get("/orgs/{orgId}/teams/{teamId}/webhooks", h.List)
-		r.Patch("/orgs/{orgId}/teams/{teamId}/webhooks/{webhookId}", h.Update)
-		r.Delete("/orgs/{orgId}/teams/{teamId}/webhooks/{webhookId}", h.Delete)
-		r.Get("/orgs/{orgId}/teams/{teamId}/webhooks/{webhookId}/deliveries", h.ListDeliveryLogs)
-}
-
 func (h *WebhookHandler) Create(w http.ResponseWriter, r *http.Request) {
 	uc := auth.GetUser(r.Context())
 	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "team.webhooks.manage") {
