@@ -16,12 +16,15 @@ export function setAccessToken(token: string | null) {
 
 interface RequestOptions extends RequestInit {
   params?: Record<string, string>;
+  // Internal: set on the retried request after a token refresh so a dead
+  // session can't trigger an endless refresh loop.
+  _retry?: boolean;
 }
 
 let refreshPromise: Promise<boolean> | null = null;
 
 async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
-  const { params, ...init } = opts;
+  const { params, _retry, ...init } = opts;
   let url = `${API_BASE}${path}`;
   if (params) {
     const qs = new URLSearchParams(params).toString();
@@ -40,9 +43,13 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
 
   const res = await fetch(url, { ...init, headers });
 
-  if (res.status === 401 && token) {
+  // Attempt a refresh on any 401 — including the page-reload bootstrap, where
+  // there is no in-memory token yet but a refresh_token sits in localStorage.
+  // tryRefresh() returns false when there is no refresh_token, so this can't
+  // loop; _retry caps it at a single retry.
+  if (res.status === 401 && !_retry) {
     const refreshed = await tryRefresh();
-    if (refreshed) return request<T>(path, opts);
+    if (refreshed) return request<T>(path, { ...opts, _retry: true });
     if (typeof window !== "undefined") {
       _accessToken = null;
       localStorage.removeItem("refresh_token");
