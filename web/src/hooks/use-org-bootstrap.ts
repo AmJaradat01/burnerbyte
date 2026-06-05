@@ -62,6 +62,6 @@ export function useOrgBootstrap() {
 
   // Fetch role when org and user are available
   useEffect(() => {
-    if (currentOrg && user) fetchRole(currentOrg.id, user.id);
+    if (currentOrg && user) fetchRole(currentOrg.id);
   }, [currentOrg, user, fetchRole]);
 }
