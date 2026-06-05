@@ -145,8 +145,8 @@ export function RolesTab() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center">
-                <Shield className="h-4 w-4 text-primary" />
+              <div className="h-7 w-7 rounded-md bg-muted flex items-center justify-center">
+                <Shield className="h-4 w-4 text-muted-foreground" />
               </div>
               <div>
                 <CardTitle className="text-base">Roles &amp; Permissions</CardTitle>
