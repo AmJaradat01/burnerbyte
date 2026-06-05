@@ -54,12 +54,16 @@ type ClaimMapping struct {
 
 // SSOCallbackResult holds the extracted data from an SSO callback.
 type SSOCallbackResult struct {
-	Email       string         `json:"email"`
-	DisplayName string         `json:"display_name"`
-	Provider    string         `json:"provider"`
-	Subject     string         `json:"subject"`
-	AvatarURL   string         `json:"avatar_url,omitempty"`
-	Claims      map[string]any `json:"claims,omitempty"`
+	Email string `json:"email"`
+	// EmailVerified reports whether the provider asserted the email is verified
+	// (OIDC email_verified claim; always true for GitHub, which only returns
+	// verified addresses). Gates auto-linking an SSO login to an existing account.
+	EmailVerified bool           `json:"email_verified"`
+	DisplayName   string         `json:"display_name"`
+	Provider      string         `json:"provider"`
+	Subject       string         `json:"subject"`
+	AvatarURL     string         `json:"avatar_url,omitempty"`
+	Claims        map[string]any `json:"claims,omitempty"`
 }
 
 // SSOTestResult holds the result of an SSO connection test.
@@ -73,11 +77,11 @@ type SSOTestResult struct {
 
 // SSOStatusResponse is returned by the SSO status endpoint.
 type SSOStatusResponse struct {
-	Enabled           bool              `json:"enabled"`
-	AllowRegistration bool              `json:"allow_registration"`
-	EnforceSSO        bool              `json:"enforce_sso"`
+	Enabled           bool                `json:"enabled"`
+	AllowRegistration bool                `json:"allow_registration"`
+	EnforceSSO        bool                `json:"enforce_sso"`
 	Providers         []SSOStatusProvider `json:"providers"`
-	PasswordPolicy    any               `json:"password_policy"`
+	PasswordPolicy    any                 `json:"password_policy"`
 }
 
 // SSOStatusProvider is a public-facing summary of a configured provider.
@@ -113,13 +117,13 @@ type DomainMappingPreviewInput struct {
 // DomainMappingPreviewResult shows what would happen if a user with the given email
 // authenticated via the given SSO provider.
 type DomainMappingPreviewResult struct {
-	Email             string                    `json:"email"`
-	EmailDomain       string                    `json:"email_domain"`
-	Provider          string                    `json:"provider"`
-	MatchingRules     []SSODomainMapping        `json:"matching_rules"`
-	WouldBypassInvite bool                      `json:"would_bypass_invite"`
+	Email             string                     `json:"email"`
+	EmailDomain       string                     `json:"email_domain"`
+	Provider          string                     `json:"provider"`
+	MatchingRules     []SSODomainMapping         `json:"matching_rules"`
+	WouldBypassInvite bool                       `json:"would_bypass_invite"`
 	TeamAssignments   []DomainMappingPreviewTeam `json:"team_assignments"`
-	OrgRole           string                    `json:"org_role,omitempty"`
+	OrgRole           string                     `json:"org_role,omitempty"`
 }
 
 // DomainMappingPreviewTeam represents a predicted team assignment from a domain mapping preview.

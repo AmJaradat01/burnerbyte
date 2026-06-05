@@ -160,15 +160,15 @@ func TestProperty_BugCondition_SSOIdentityLookupSetsEmailVerified(t *testing.T) 
 				case strings.Contains(sql, "user_sso_identities"):
 					// GetByProviderSubject → return identity
 					return &mockRow{values: []any{
-						identityID,       // id
-						userID,           // user_id
-						provider,         // provider
-						subject,          // subject
-						email,            // email
-						displayName,      // display_name
-						any(nil),         // metadata
-						now,              // linked_at
-						now,              // last_used_at
+						identityID,  // id
+						userID,      // user_id
+						provider,    // provider
+						subject,     // subject
+						email,       // email
+						displayName, // display_name
+						any(nil),    // metadata
+						now,         // linked_at
+						now,         // last_used_at
 					}}
 
 				case strings.Contains(sql, "FROM users"):
@@ -338,20 +338,20 @@ func TestProperty_Preservation_AlreadyVerifiedIdentityLookup(t *testing.T) {
 						userID,
 						email,
 						displayName,
-						nilStr,      // avatar_url
-						nilStr,      // password_hash
-						nilStr,      // sso_provider
-						nilStr,      // sso_subject
-						false,       // is_system_admin
-						true,        // email_verified — ALREADY TRUE
-						nilTime,     // password_changed_at
-						nilStr,      // timezone
-						nilStr,      // date_format
-						nilStr,      // time_format
-						nilStr,      // auth_method_lock
-						nilInt,      // max_sessions
-						now,         // created_at
-						now,         // updated_at
+						nilStr,  // avatar_url
+						nilStr,  // password_hash
+						nilStr,  // sso_provider
+						nilStr,  // sso_subject
+						false,   // is_system_admin
+						true,    // email_verified — ALREADY TRUE
+						nilTime, // password_changed_at
+						nilStr,  // timezone
+						nilStr,  // date_format
+						nilStr,  // time_format
+						nilStr,  // auth_method_lock
+						nilInt,  // max_sessions
+						now,     // created_at
+						now,     // updated_at
 					}}
 
 				default:
@@ -604,10 +604,11 @@ func TestProperty_Preservation_EmailLookupSSO(t *testing.T) {
 		)
 
 		callbackResult := &domain.SSOCallbackResult{
-			Email:       email,
-			DisplayName: displayName,
-			Provider:    provider,
-			Subject:     subject,
+			Email:         email,
+			EmailVerified: true, // verified provider email — required to auto-link to an existing account
+			DisplayName:   displayName,
+			Provider:      provider,
+			Subject:       subject,
 		}
 
 		user, tokenPair, err := svc.SSOLogin(context.Background(), callbackResult, "127.0.0.1", "test-agent")
@@ -627,6 +628,113 @@ func TestProperty_Preservation_EmailLookupSSO(t *testing.T) {
 			rt.Fatalf("PRESERVATION VIOLATED: userRepo.Update not called with EmailVerified=true for email-lookup path "+
 				"(updateCalled=%v, updatedEmailVerified=%v, provider=%q, subject=%q)",
 				updateCalled, updatedEmailVerified, provider, subject)
+		}
+	})
+}
+
+// Security regression: SSO account-takeover via unverified email.
+//
+// When no SSO identity exists but the email matches an existing (password)
+// account, SSOLogin must refuse to auto-link unless the provider asserted the
+// email is verified (result.EmailVerified). Otherwise a provider that returns
+// an attacker-controlled, unverified email for a victim's address could take
+// over the victim's account. This asserts the unverified case is rejected and
+// the existing account is left untouched (no userRepo.Update).
+func TestProperty_Security_UnverifiedEmailNoAutoLink(t *testing.T) {
+	rapid.Check(t, func(rt *rapid.T) {
+		provider := rapid.StringMatching(`[a-z]{3,12}`).Draw(rt, "provider")
+		subject := rapid.StringMatching(`[a-zA-Z0-9]{8,32}`).Draw(rt, "subject")
+		email := rapid.StringMatching(`[a-z]{3,8}@[a-z]{3,8}\.[a-z]{2,4}`).Draw(rt, "email")
+		displayName := rapid.StringMatching(`[A-Z][a-z]{2,8} [A-Z][a-z]{2,8}`).Draw(rt, "displayName")
+
+		userID := uuid.New()
+		now := time.Now()
+
+		updateCalled := false
+
+		db := &mockDBTX{
+			queryRowHandler: func(sql string, args ...any) pgx.Row {
+				switch {
+				case strings.Contains(sql, "sso_providers"):
+					return &mockRow{err: pgx.ErrNoRows}
+				case strings.Contains(sql, "user_sso_identities"):
+					return &mockRow{err: pgx.ErrNoRows} // no identity
+				case strings.Contains(sql, "FROM users"):
+					// Existing account matched by email (a password account).
+					var nilStr *string
+					var nilTime *time.Time
+					var nilInt *int
+					return &mockRow{values: []any{
+						userID, email, displayName,
+						nilStr,  // avatar_url
+						nilStr,  // password_hash
+						nilStr,  // sso_provider
+						nilStr,  // sso_subject
+						false,   // is_system_admin
+						false,   // email_verified
+						nilTime, // password_changed_at
+						nilStr,  // timezone
+						nilStr,  // date_format
+						nilStr,  // time_format
+						nilStr,  // auth_method_lock
+						nilInt,  // max_sessions
+						now, now,
+					}}
+				default:
+					return &mockRow{err: pgx.ErrNoRows}
+				}
+			},
+			execHandler: func(sql string, args ...any) (pgconn.CommandTag, error) {
+				if strings.Contains(sql, "UPDATE users") {
+					updateCalled = true
+				}
+				return pgconn.NewCommandTag("UPDATE 1"), nil
+			},
+		}
+
+		userRepo := postgres.NewUserRepo(db)
+		sessionRepo := postgres.NewSessionRepo(db)
+		ssoIdentityRepo := postgres.NewSSOIdentityRepo(db)
+		ssoProviderRepo := postgres.NewSSOProviderRepo(db, nil)
+
+		cfg := &config.Config{
+			JWT: config.JWTConfig{
+				Secret:     "test-secret-key-at-least-32-bytes-long!!",
+				AccessTTL:  15 * time.Minute,
+				RefreshTTL: 7 * 24 * time.Hour,
+			},
+		}
+		tokens := auth.NewTokenManager(cfg.JWT)
+
+		svc := NewAuthService(
+			nil, userRepo, sessionRepo, nil, nil, nil,
+			ssoIdentityRepo, ssoProviderRepo, nil, nil,
+			tokens, nil, nil, cfg, nil, nil, nil,
+		)
+
+		// Unverified provider email for an address that already has an account.
+		callbackResult := &domain.SSOCallbackResult{
+			Email:         email,
+			EmailVerified: false,
+			DisplayName:   displayName,
+			Provider:      provider,
+			Subject:       subject,
+		}
+
+		user, tokenPair, err := svc.SSOLogin(context.Background(), callbackResult, "127.0.0.1", "test-agent")
+
+		// SECURITY: must be rejected — no login, no tokens, no account mutation.
+		if err == nil {
+			rt.Fatalf("SECURITY VIOLATION: unverified SSO email auto-linked to existing account "+
+				"(provider=%q, subject=%q, email=%q)", provider, subject, email)
+		}
+		if user != nil || tokenPair != nil {
+			rt.Fatalf("SECURITY VIOLATION: SSOLogin returned a session for an unverified email "+
+				"(user=%v, tokenPair=%v)", user != nil, tokenPair != nil)
+		}
+		if updateCalled {
+			rt.Fatalf("SECURITY VIOLATION: existing account was modified during a rejected unverified-email SSO login "+
+				"(provider=%q, email=%q)", provider, email)
 		}
 	})
 }

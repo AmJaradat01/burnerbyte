@@ -358,11 +358,12 @@ func (s *SSOManager) handleGitHubCallback(ctx context.Context, ps *providerState
 	}
 
 	return &domain.SSOCallbackResult{
-		Email:       email,
-		DisplayName: displayName,
-		Provider:    ps.config.Name,
-		Subject:     strconv.FormatInt(ghUser.ID, 10),
-		AvatarURL:   ghUser.AvatarURL,
+		Email:         email,
+		EmailVerified: true, // fetchGitHubPrimaryEmail only returns verified addresses
+		DisplayName:   displayName,
+		Provider:      ps.config.Name,
+		Subject:       strconv.FormatInt(ghUser.ID, 10),
+		AvatarURL:     ghUser.AvatarURL,
 		Claims: map[string]any{
 			"login":      ghUser.Login,
 			"avatar_url": ghUser.AvatarURL,
@@ -444,13 +445,26 @@ func (s *SSOManager) handleOIDCCallback(ctx context.Context, ps *providerState, 
 	avatarURL, _ := claims["picture"].(string)
 
 	return &domain.SSOCallbackResult{
-		Email:       email,
-		DisplayName: displayName,
-		Provider:    ps.config.Name,
-		Subject:     subject,
-		AvatarURL:   avatarURL,
-		Claims:      claims,
+		Email:         email,
+		EmailVerified: claimBool(claims["email_verified"]),
+		DisplayName:   displayName,
+		Provider:      ps.config.Name,
+		Subject:       subject,
+		AvatarURL:     avatarURL,
+		Claims:        claims,
 	}, nil
+}
+
+// claimBool interprets an OIDC claim that may be a JSON boolean or a string
+// ("true"/"false"); some providers encode email_verified as a string.
+func claimBool(v any) bool {
+	switch x := v.(type) {
+	case bool:
+		return x
+	case string:
+		return x == "true"
+	}
+	return false
 }
 
 // extractClaims extracts standard + custom claims from an ID token.
@@ -463,7 +477,7 @@ func (s *SSOManager) extractClaims(idToken *oidc.IDToken, customClaims []string)
 	result := make(map[string]any)
 
 	// Standard claims
-	standardClaims := []string{"email", "name", "given_name", "family_name", "picture", "locale", "sub"}
+	standardClaims := []string{"email", "email_verified", "name", "given_name", "family_name", "picture", "locale", "sub"}
 	for _, key := range standardClaims {
 		if v, ok := allClaims[key]; ok {
 			result[key] = v
