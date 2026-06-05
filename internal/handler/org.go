@@ -35,6 +35,7 @@ func (h *OrgHandler) Routes(r chi.Router) {
 	r.Put("/orgs/{orgId}/settings", h.UpdateSettings)
 	r.Post("/orgs/{orgId}/members", h.InviteMember)
 	r.Get("/orgs/{orgId}/members", h.ListMembers)
+	r.Get("/orgs/{orgId}/members/me", h.GetMyMembership)
 	r.Patch("/orgs/{orgId}/members/{userId}", h.ChangeRole)
 	r.Post("/orgs/{orgId}/invites", h.InviteMember)
 	r.Get("/orgs/{orgId}/invites", h.ListPendingInvites)
@@ -368,6 +369,27 @@ func (h *OrgHandler) ListMembers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, paginatedResponse(members, total, page, perPage))
+}
+
+// GetMyMembership returns the authenticated user's own membership (role) in the
+// org, so the frontend can resolve the caller's role without listing every
+// member. Same permission as ListMembers; scoped to the caller.
+func (h *OrgHandler) GetMyMembership(w http.ResponseWriter, r *http.Request) {
+	uc := auth.GetUser(r.Context())
+	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid org ID")
+		return
+	}
+	if checkOrgPermission(w, r, orgID, "org.members.view") {
+		return
+	}
+	membership, err := h.svc.GetMembership(r.Context(), uc.UserID, orgID)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "membership not found")
+		return
+	}
+	writeJSON(w, http.StatusOK, membership)
 }
 
 func (h *OrgHandler) ChangeRole(w http.ResponseWriter, r *http.Request) {
