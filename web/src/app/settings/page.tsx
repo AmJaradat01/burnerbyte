@@ -1230,7 +1230,7 @@ function ProviderCard({
   onDelete: (p: SSOProviderData) => void;
 }) {
   const providerColors: Record<string, string> = {
-    github: "bg-foreground text-white",
+    github: "bg-foreground text-background",
     google: "bg-info/10 text-info",
     azure: "bg-info/10 text-info",
     okta: "bg-primary/10 text-primary",
