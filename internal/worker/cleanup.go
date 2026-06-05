@@ -14,7 +14,17 @@ type AttachmentCleaner interface {
 	DeleteByEmail(ctx context.Context, emailID uuid.UUID) error
 }
 
-func CleanupJob(inboxRepo *postgres.InboxRepo, emailRepo *postgres.EmailRepo, attachmentCleaner AttachmentCleaner, sessionRepo *postgres.SessionRepo, resetRepo *postgres.PasswordResetRepo, apikeyRepo *postgres.APIKeyRepo) func(ctx context.Context) error {
+// WebhookDispatcher dispatches a webhook event to a team's subscribers.
+type WebhookDispatcher interface {
+	Dispatch(ctx context.Context, teamID uuid.UUID, event string, data any)
+}
+
+// ExpiryAuditRecorder records a system-initiated audit entry (nil actor).
+type ExpiryAuditRecorder interface {
+	RecordWithName(ctx context.Context, orgID uuid.UUID, actorID *uuid.UUID, action, resourceType string, resourceID uuid.UUID, resourceName string, metadata any)
+}
+
+func CleanupJob(inboxRepo *postgres.InboxRepo, emailRepo *postgres.EmailRepo, attachmentCleaner AttachmentCleaner, sessionRepo *postgres.SessionRepo, resetRepo *postgres.PasswordResetRepo, apikeyRepo *postgres.APIKeyRepo, dispatcher WebhookDispatcher, auditRec ExpiryAuditRecorder) func(ctx context.Context) error {
 	return func(ctx context.Context) error {
 		// Delete expired emails and collect IDs for attachment cleanup
 		emailIDs, err := emailRepo.DeleteExpiredReturningIDs(ctx)
@@ -33,6 +43,29 @@ func CleanupJob(inboxRepo *postgres.InboxRepo, emailRepo *postgres.EmailRepo, at
 				}
 			}
 			slog.Info("cleanup: expired emails + attachments deleted", "count", len(emailIDs))
+		}
+
+		// Emit inbox.expired before removing the rows, so webhook subscribers
+		// and the audit log observe the lifecycle event. Without this the
+		// inbox.expired event is registered but never dispatched.
+		if expired, err := inboxRepo.ListExpired(ctx); err != nil {
+			slog.Error("cleanup: failed to list expired inboxes", "error", err)
+		} else {
+			for _, ib := range expired {
+				if dispatcher != nil && ib.TeamID != uuid.Nil {
+					dispatcher.Dispatch(ctx, ib.TeamID, "inbox.expired", map[string]any{
+						"inbox_id": ib.ID, "address": ib.FullAddress, "expired_at": ib.ExpiresAt,
+					})
+				}
+				if auditRec != nil {
+					auditRec.RecordWithName(ctx, ib.OrgID, nil, "inbox.expired", "inbox", ib.ID, ib.FullAddress, map[string]any{
+						"address": ib.FullAddress, "expired_at": ib.ExpiresAt,
+					})
+				}
+			}
+			if len(expired) > 0 {
+				slog.Info("cleanup: inbox.expired emitted", "count", len(expired))
+			}
 		}
 
 		inboxes, err := inboxRepo.DeleteExpired(ctx)

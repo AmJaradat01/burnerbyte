@@ -279,6 +279,35 @@ func (r *InboxRepo) DeleteExpired(ctx context.Context) (int64, error) {
 	return tag.RowsAffected(), nil
 }
 
+// ListExpired returns inboxes whose TTL has elapsed, joined to their org and
+// team, so the cleanup worker can emit inbox.expired events before the rows are
+// removed. The assignment join is a LEFT JOIN so an inbox is still returned
+// (with a zero team) even if its assignment was already deleted.
+func (r *InboxRepo) ListExpired(ctx context.Context) ([]domain.Inbox, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT i.id, i.domain_assignment_id, i.domain_id, i.created_by, i.address, i.full_address,
+		        i.expires_at, i.created_at, d.domain_name, d.org_id,
+		        COALESCE(da.team_id, '00000000-0000-0000-0000-000000000000'::uuid)
+		 FROM inboxes i
+		 JOIN domains d ON i.domain_id = d.id
+		 LEFT JOIN domain_assignments da ON i.domain_assignment_id = da.id
+		 WHERE i.expires_at < NOW()`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var inboxes []domain.Inbox
+	for rows.Next() {
+		var i domain.Inbox
+		if err := rows.Scan(&i.ID, &i.DomainAssignmentID, &i.DomainID, &i.CreatedBy, &i.Address, &i.FullAddress,
+			&i.ExpiresAt, &i.CreatedAt, &i.DomainName, &i.OrgID, &i.TeamID); err != nil {
+			return nil, err
+		}
+		inboxes = append(inboxes, i)
+	}
+	return inboxes, rows.Err()
+}
+
 func (r *InboxRepo) ListActive(ctx context.Context) ([]domain.Inbox, error) {
 	rows, err := r.db.Query(ctx,
 		`SELECT i.id, i.domain_assignment_id, i.domain_id, i.created_by, i.address, i.full_address,
