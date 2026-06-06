@@ -8,7 +8,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import {
-  ArrowLeft, Code, Download, FileText, Globe, Image as ImageIcon, Mail, MailOpen, Paperclip, Trash2,
+  ArrowLeft, Code, Download, FileText, Globe, Image as ImageIcon, ImageOff, Mail, MailOpen, Paperclip, Trash2,
 } from "lucide-react";
 import type { Email, Attachment } from "@/types";
 
@@ -19,8 +19,22 @@ function senderName(email: string) {
 
 /* ── Sandboxed HTML with base styles ── */
 
-function buildSandboxedHtml(html: string): string {
-  const baseStyles = `
+// Auto-loaded remote references (tracking pixels, hosted images, CSS url()).
+// href is excluded: links only leak when clicked, not on open.
+function hasRemoteContent(html: string): boolean {
+  return /(?:src|background)\s*=\s*["']?https?:\/\//i.test(html) || /url\(\s*['"]?https?:\/\//i.test(html);
+}
+
+function buildSandboxedHtml(html: string, blockRemote: boolean): string {
+  // CSP inside the (script-less) sandbox: 'none' by default, inline styles for
+  // email formatting. When blocking, images are limited to embedded data: URIs
+  // so tracking pixels can't phone home or leak the reader's IP; loading flips
+  // img/media/font to allow https/http on explicit user action.
+  const csp = blockRemote
+    ? `default-src 'none'; img-src data:; style-src 'unsafe-inline'; font-src data:;`
+    : `default-src 'none'; img-src https: http: data:; media-src https: http: data:; style-src 'unsafe-inline'; font-src https: http: data:;`;
+  const head = `
+    <meta http-equiv="Content-Security-Policy" content="${csp}">
     <style>
       body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px; line-height: 1.6; color: #1a1a1a; margin: 0; padding: 16px; word-wrap: break-word; }
       img { max-width: 100%; height: auto; }
@@ -29,11 +43,11 @@ function buildSandboxedHtml(html: string): string {
       pre { overflow-x: auto; background: #f5f5f5; padding: 12px; border-radius: 6px; }
     </style>
   `;
-  // Inject base styles before closing </head> or at the start
+  // Inject CSP + base styles before closing </head> or at the start
   if (html.includes("</head>")) {
-    return html.replace("</head>", `${baseStyles}</head>`);
+    return html.replace("</head>", `${head}</head>`);
   }
-  return `${baseStyles}${html}`;
+  return `${head}${html}`;
 }
 
 /* ── Props ── */
@@ -50,6 +64,16 @@ export function EmailPreview({ email, onBack, onToggleRead, onDelete }: EmailPre
   const name = senderName(email.from_address);
   const hasHtml = !!email.body_html;
   const [activeTab, setActiveTab] = useState(hasHtml ? "html" : "text");
+  // Remote images are blocked by default (tracking-pixel / IP-leak protection);
+  // the reader opts in per email. Reset on email change via the render-time
+  // adjustment pattern (no effect, no flash of the previous email's choice).
+  const [showRemote, setShowRemote] = useState(false);
+  const [seenEmailId, setSeenEmailId] = useState(email.id);
+  if (email.id !== seenEmailId) {
+    setSeenEmailId(email.id);
+    setShowRemote(false);
+  }
+  const remoteBlocked = hasHtml && !showRemote && hasRemoteContent(email.body_html!);
 
   return (
     <>
@@ -142,8 +166,19 @@ export function EmailPreview({ email, onBack, onToggleRead, onDelete }: EmailPre
         <div className="flex-1 overflow-y-auto">
           {activeTab === "html" && hasHtml && (
             <div className="p-5 h-full">
+              {remoteBlocked && (
+                <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/40 px-3 py-2">
+                  <span className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <ImageOff className="h-3.5 w-3.5 shrink-0" />
+                    Remote images blocked to protect your privacy.
+                  </span>
+                  <Button size="sm" variant="outline" className="h-7 shrink-0 text-xs" onClick={() => setShowRemote(true)}>
+                    Load images
+                  </Button>
+                </div>
+              )}
               <iframe
-                srcDoc={buildSandboxedHtml(email.body_html!)}
+                srcDoc={buildSandboxedHtml(email.body_html!, !showRemote)}
                 title="Email content"
                 className="w-full h-full min-h-[500px] border rounded-lg bg-white"
                 sandbox="allow-popups"
