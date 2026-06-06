@@ -55,6 +55,9 @@ type OrgMembershipRepo interface {
 
 type TeamMembershipRepo interface {
 	GetMembership(ctx context.Context, userID, teamID uuid.UUID) (*domain.TeamMembership, error)
+	// GetTeamOrgID returns the org a team belongs to, used to bind a route's
+	// {teamId} to its {orgId} so org-level access can't reach another org's team.
+	GetTeamOrgID(ctx context.Context, teamID uuid.UUID) (uuid.UUID, error)
 }
 
 // Role is a local representation of a role for the permission cache.
@@ -228,6 +231,18 @@ func (c *Checker) RequireTeamPermission(r *http.Request, orgID, teamID uuid.UUID
 	}
 	if uc.IsSystemAdmin {
 		return nil
+	}
+
+	// Bind the route's teamID to its orgID. Every grant below keys off orgID
+	// (org-level fallback) or teamID (team membership); without confirming the
+	// team actually lives in this org, an admin of their own org could pair that
+	// orgID with another org's teamID and act across the tenant boundary.
+	teamOrgID, err := c.team.GetTeamOrgID(r.Context(), teamID)
+	if err != nil {
+		return ErrNotTeamMember
+	}
+	if teamOrgID != orgID {
+		return ErrNotTeamMember
 	}
 
 	// Org-level fallback: if the user's org role rank >= admin rank (2), grant access.
