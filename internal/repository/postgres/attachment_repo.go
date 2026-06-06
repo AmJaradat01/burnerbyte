@@ -46,6 +46,24 @@ func (r *AttachmentRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Att
 	return &a, nil
 }
 
+// GetByStorageKey looks up an attachment by its storage key. Used to authorize
+// access to a file served by key (the local-FS download path), where the key is
+// the only identifier the request carries.
+func (r *AttachmentRepo) GetByStorageKey(ctx context.Context, storageKey string) (*domain.Attachment, error) {
+	var a domain.Attachment
+	err := r.db.QueryRow(ctx,
+		`SELECT id, email_id, filename, content_type, size_bytes, storage_key, created_at
+		 FROM attachments WHERE storage_key = $1`, storageKey).
+		Scan(&a.ID, &a.EmailID, &a.Filename, &a.ContentType, &a.SizeBytes, &a.StorageKey, &a.CreatedAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return &a, nil
+}
+
 func (r *AttachmentRepo) ListByEmail(ctx context.Context, emailID uuid.UUID) ([]domain.Attachment, error) {
 	rows, err := r.db.Query(ctx,
 		`SELECT id, email_id, filename, content_type, size_bytes, storage_key, created_at
