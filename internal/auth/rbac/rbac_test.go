@@ -32,6 +32,11 @@ func (m *mockOrgMembershipRepo) GetMembership(_ context.Context, _, _ uuid.UUID)
 type mockTeamMembershipRepo struct {
 	membership *domain.TeamMembership
 	err        error
+	// teamOrgID is the org GetTeamOrgID reports the team belongs to. Tests set
+	// it to the orgID they pass so the team->org binding check is satisfied.
+	teamOrgID uuid.UUID
+	// teamOrgErr, when set, makes GetTeamOrgID fail (team not found).
+	teamOrgErr error
 }
 
 func (m *mockTeamMembershipRepo) GetMembership(_ context.Context, _, _ uuid.UUID) (*domain.TeamMembership, error) {
@@ -39,6 +44,13 @@ func (m *mockTeamMembershipRepo) GetMembership(_ context.Context, _, _ uuid.UUID
 		return nil, m.err
 	}
 	return m.membership, nil
+}
+
+func (m *mockTeamMembershipRepo) GetTeamOrgID(_ context.Context, _ uuid.UUID) (uuid.UUID, error) {
+	if m.teamOrgErr != nil {
+		return uuid.Nil, m.teamOrgErr
+	}
+	return m.teamOrgID, nil
 }
 
 // makeRequest creates an *http.Request with the given UserContext set in context.
@@ -173,6 +185,7 @@ func TestFixVerification_MemberCanReadTeamResources(t *testing.T) {
 			TeamID: teamID,
 			Role:   "member",
 		},
+		teamOrgID: orgID, // team belongs to this org (binding check)
 	}
 
 	checker := NewChecker(orgRepo, teamRepo, cache)
@@ -277,5 +290,43 @@ func TestFixVerification_PermissionEditTakesEffect(t *testing.T) {
 	err = checker.RequireOrgPermission(r, orgID, "org.domains.manage")
 	if err != ErrInsufficientOrg {
 		t.Fatalf("admin without org.domains.manage should get ErrInsufficientOrg, but got: %v", err)
+	}
+}
+
+// --- Security: team->org binding (cross-tenant IDOR prevention) ---
+// An org admin must NOT reach another org's team by pairing their own orgID
+// (where they hold admin, which triggers the org-level fallback) with a teamID
+// that belongs to a different org. RequireTeamPermission must deny this.
+func TestSecurity_TeamOrgBinding_BlocksCrossTenantTeamAccess(t *testing.T) {
+	userID := uuid.New()
+	attackerOrgID := uuid.New() // org the user administers
+	victimOrgID := uuid.New()   // org that actually owns the team
+	teamID := uuid.New()        // a team living in the victim org
+
+	repo := &mockRolePermissionRepo{
+		orgRoles:  []Role{{Value: "admin", Rank: 2, Permissions: []string{"org.view"}}},
+		teamRoles: []Role{{Value: "member", Rank: 1, Permissions: []string{"team.webhooks.view"}}},
+	}
+	cache, err := NewPermissionCache(context.Background(), repo)
+	if err != nil {
+		t.Fatalf("failed to create permission cache: %v", err)
+	}
+
+	// User is an ADMIN of attackerOrgID — rank 2 would trigger the org fallback.
+	orgRepo := &mockOrgMembershipRepo{
+		membership: &domain.OrgMembership{UserID: userID, OrgID: attackerOrgID, Role: "admin"},
+	}
+	// The team belongs to victimOrgID, and the user is not a member of it.
+	teamRepo := &mockTeamMembershipRepo{
+		err:       errors.New("not a team member"),
+		teamOrgID: victimOrgID,
+	}
+	checker := NewChecker(orgRepo, teamRepo, cache)
+	r := makeRequest(&auth.UserContext{UserID: userID})
+
+	// Attack: pair the admin's own orgID with the victim org's teamID.
+	err = checker.RequireTeamPermission(r, attackerOrgID, teamID, "team.webhooks.view")
+	if err != ErrNotTeamMember {
+		t.Fatalf("cross-tenant IDOR: org admin reached another org's team; got %v, want ErrNotTeamMember", err)
 	}
 }
