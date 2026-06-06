@@ -665,8 +665,13 @@ func main() {
 				json.NewEncoder(w).Encode(map[string]string{"message": "ok"})
 			})
 
-			// File serving for local attachment storage
+			// File serving for local attachment storage.
 			r.Get("/files", func(w http.ResponseWriter, r *http.Request) {
+				uc := auth.GetUser(r.Context())
+				if uc == nil {
+					http.Error(w, "unauthorized", http.StatusUnauthorized)
+					return
+				}
 				key := r.URL.Query().Get("key")
 				if key == "" {
 					http.Error(w, "missing key", http.StatusBadRequest)
@@ -676,6 +681,15 @@ func main() {
 				resolved, _ := filepath.Abs(filepath.Join(base, filepath.Clean(key)))
 				if !strings.HasPrefix(resolved, base+string(filepath.Separator)) {
 					http.Error(w, "invalid path", http.StatusBadRequest)
+					return
+				}
+				// Authorize: this endpoint has no URL signature or expiry, so the
+				// key alone is not a capability. Confirm the caller owns the
+				// attachment before serving, or any logged-in user could read any
+				// file by key (IDOR). Respond 404 on failure to avoid disclosing
+				// which keys exist.
+				if attachmentSvc == nil || attachmentSvc.AuthorizeKeyAccess(r.Context(), key, uc.UserID) != nil {
+					http.Error(w, "not found", http.StatusNotFound)
 					return
 				}
 				data, err := os.ReadFile(resolved)
