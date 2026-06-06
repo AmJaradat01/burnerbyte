@@ -188,5 +188,8 @@ func isPrivateIP(ip net.IP) bool {
 			return true
 		}
 	}
-	return ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast()
+	// IsUnspecified blocks 0.0.0.0 / :: — connect() to 0.0.0.0 reaches localhost
+	// on Linux, so a hostname rebound to it after validation would otherwise be a
+	// dial-time SSRF bypass (the create/update validation already rejects it).
+	return ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsUnspecified()
 }
