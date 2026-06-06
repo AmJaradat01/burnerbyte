@@ -97,17 +97,8 @@ func (s *AttachmentService) GetDownloadURL(ctx context.Context, attachmentID, us
 		return "", err
 	}
 
-	// Ownership check
-	email, err := s.emailRepo.GetByID(ctx, a.EmailID)
-	if err != nil {
+	if err := s.checkOwnership(ctx, a, userID); err != nil {
 		return "", err
-	}
-	inbox, err := s.inboxRepo.GetByID(ctx, email.InboxID)
-	if err != nil {
-		return "", err
-	}
-	if inbox.CreatedBy != userID {
-		return "", fmt.Errorf("forbidden: not your attachment")
 	}
 
 	// Set response headers on the presigned URL to force download and prevent XSS
@@ -121,6 +112,43 @@ func (s *AttachmentService) GetDownloadURL(ctx context.Context, attachmentID, us
 	}
 
 	return presignedURL.String(), nil
+}
+
+// checkOwnership returns nil only when userID owns the inbox the attachment's
+// email belongs to. This is the single authorization rule for attachment access.
+func (s *AttachmentService) checkOwnership(ctx context.Context, a *domain.Attachment, userID uuid.UUID) error {
+	email, err := s.emailRepo.GetByID(ctx, a.EmailID)
+	if err != nil {
+		return err
+	}
+	inbox, err := s.inboxRepo.GetByID(ctx, email.InboxID)
+	if err != nil {
+		return err
+	}
+	if inbox.CreatedBy != userID {
+		return fmt.Errorf("forbidden: not your attachment")
+	}
+	return nil
+}
+
+// AuthorizeKeyAccess verifies that userID may read the file served at the given
+// local-storage URL key. The key is "{bucket}/{storage_key}" (see LocalFS.
+// PresignedGetObject); the bucket segment is stripped to recover the stored
+// storage_key, the attachment is resolved by it, and ownership is enforced.
+// The local-FS /files endpoint carries no signature or expiry, so without this
+// any authenticated user could read any attachment by key (IDOR).
+func (s *AttachmentService) AuthorizeKeyAccess(ctx context.Context, urlKey string, userID uuid.UUID) error {
+	// Strip the leading bucket segment. Bucket names contain no "/", so the
+	// remainder is exactly the stored storage_key ("attachments/<email>/...").
+	parts := strings.SplitN(urlKey, "/", 2)
+	if len(parts) != 2 || parts[1] == "" {
+		return fmt.Errorf("forbidden: invalid key")
+	}
+	a, err := s.attachmentRepo.GetByStorageKey(ctx, parts[1])
+	if err != nil {
+		return err
+	}
+	return s.checkOwnership(ctx, a, userID)
 }
 
 func (s *AttachmentService) DeleteByEmail(ctx context.Context, emailID uuid.UUID) error {
