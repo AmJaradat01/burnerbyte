@@ -124,7 +124,10 @@ workers:
   reconciler_interval: 1m
   analytics_interval: 5m
 
-# Encryption at rest for sensitive DB values (SSO secrets, SMTP passwords)
+# Encryption at rest for sensitive DB values (SSO client secrets, SMTP passwords,
+# object-storage credentials). Strongly recommended. Env var: ENCRYPTION_KEY.
 # Generate with: openssl rand -hex 32
 encryption:
-  key: "" # Leave empty to disable, or set 64-char hex string for AES-256-GCM
+  # 64-char hex string (32 bytes) for AES-256-GCM. If left empty, the values
+  # above are stored UNENCRYPTED (plaintext) in the database, not just "disabled".
+  key: ""

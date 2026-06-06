@@ -113,6 +113,12 @@ func main() {
 		}
 		sysConfigRepo.WithEncryptor(enc)
 		slog.Info("encryption enabled for sensitive config values")
+	} else {
+		// No key: the repos fall back to storing secrets verbatim. The column is
+		// named *_encrypted but would hold plaintext, so warn loudly — operators
+		// shouldn't discover unprotected OAuth/SMTP/storage credentials only after
+		// a database leak.
+		slog.Warn("encryption key not set: SSO client secrets and other sensitive configuration (SMTP, object-storage credentials) are stored UNENCRYPTED in the database; set encryption.key to a 32-byte hex value (64 hex chars) to protect them at rest")
 	}
 
 	// SSO repositories

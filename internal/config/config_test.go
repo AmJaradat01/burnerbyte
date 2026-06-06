@@ -69,3 +69,21 @@ func TestPlatformSettingsConcurrency(t *testing.T) {
 	close(stop)
 	wg.Wait()
 }
+
+// TestEncryptionKeyEnvBinding simulates an env-only deployment (no config file)
+// and asserts the encryption key loads from ENCRYPTION_KEY. Without the explicit
+// BindEnv, viper's AutomaticEnv + Unmarshal does not populate this nested key
+// from a bare (unprefixed) env var, which silently left credential encryption
+// off and stored SSO/SMTP/storage secrets in plaintext.
+func TestEncryptionKeyEnvBinding(t *testing.T) {
+	const key = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+	t.Setenv("ENCRYPTION_KEY", key)
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() failed: %v", err)
+	}
+	if cfg.Encryption.Key != key {
+		t.Fatalf("encryption key not bound from ENCRYPTION_KEY: got %q, want it set", cfg.Encryption.Key)
+	}
+}
