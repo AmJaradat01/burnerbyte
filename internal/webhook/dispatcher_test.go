@@ -42,7 +42,9 @@ func TestIsPrivateIP(t *testing.T) {
 		"172.16.0.1", "172.31.255.255",
 		"192.168.0.1", "192.168.255.255",
 		"127.0.0.1", "169.254.1.1",
+		"169.254.169.254", // cloud metadata
 		"::1", "fc00::1", "fe80::1",
+		"0.0.0.0", "::", // unspecified — connect() reaches localhost on Linux
 	}
 	for _, s := range private {
 		ip := net.ParseIP(s)
