@@ -243,6 +243,10 @@ func Load() (*Config, error) {
 	v.BindEnv("database.url", "DATABASE_URL")
 	v.BindEnv("redis.url", "REDIS_URL")
 	v.BindEnv("jwt.secret", "JWT_SECRET")
+	// Bind explicitly: without it, viper's AutomaticEnv + Unmarshal won't pick up
+	// this nested key in env-only deployments (no config file), silently leaving
+	// credential encryption off and storing SSO/SMTP/storage secrets in plaintext.
+	v.BindEnv("encryption.key", "ENCRYPTION_KEY")
 	v.BindEnv("server.port", "API_PORT")
 	v.BindEnv("server.base_url", "API_BASE_URL")
 	v.BindEnv("server.frontend_url", "FRONTEND_URL")
