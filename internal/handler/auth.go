@@ -261,6 +261,9 @@ func (h *AuthHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
+	if rejectAPIKey(w, r) {
+		return
+	}
 	uc := auth.GetUser(r.Context())
 	var input domain.UpdateProfileInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
@@ -324,6 +327,9 @@ func (h *AuthHandler) GetDateTimeSettings(w http.ResponseWriter, r *http.Request
 }
 
 func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
+	if rejectAPIKey(w, r) {
+		return
+	}
 	uc := auth.GetUser(r.Context())
 	var input domain.ChangePasswordInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
@@ -344,6 +350,9 @@ func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
+	if rejectAPIKey(w, r) {
+		return
+	}
 	uc := auth.GetUser(r.Context())
 	var input domain.DeleteAccountInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
@@ -377,6 +386,9 @@ func (h *AuthHandler) ListSessions(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) RevokeSession(w http.ResponseWriter, r *http.Request) {
+	if rejectAPIKey(w, r) {
+		return
+	}
 	uc := auth.GetUser(r.Context())
 	sessionID, err := uuid.Parse(chi.URLParam(r, "sessionId"))
 	if err != nil {
@@ -406,6 +418,9 @@ func (h *AuthHandler) RevokeSession(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) RevokeAllSessions(w http.ResponseWriter, r *http.Request) {
+	if rejectAPIKey(w, r) {
+		return
+	}
 	uc := auth.GetUser(r.Context())
 	count, err := h.svc.RevokeAllSessions(r.Context(), uc.UserID)
 	if err != nil {
@@ -745,6 +760,9 @@ func (h *AuthHandler) ListSSOIdentities(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *AuthHandler) UnlinkSSO(w http.ResponseWriter, r *http.Request) {
+	if rejectAPIKey(w, r) {
+		return
+	}
 	uc := auth.GetUser(r.Context())
 	provider := chi.URLParam(r, "provider")
 	if provider == "" {
