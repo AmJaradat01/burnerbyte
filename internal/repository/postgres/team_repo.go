@@ -56,6 +56,21 @@ func (r *TeamRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Team, err
 	return &t, nil
 }
 
+// GetTeamOrgID returns the org a team belongs to. Used by the RBAC checker to
+// bind a route's {teamId} to its {orgId}. Returns ErrNotFound if the team
+// does not exist.
+func (r *TeamRepo) GetTeamOrgID(ctx context.Context, teamID uuid.UUID) (uuid.UUID, error) {
+	var orgID uuid.UUID
+	err := r.db.QueryRow(ctx, `SELECT org_id FROM teams WHERE id = $1`, teamID).Scan(&orgID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return uuid.Nil, ErrNotFound
+		}
+		return uuid.Nil, err
+	}
+	return orgID, nil
+}
+
 func (r *TeamRepo) GetDetail(ctx context.Context, id uuid.UUID) (*domain.TeamDetail, error) {
 	var td domain.TeamDetail
 	var settings []byte

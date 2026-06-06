@@ -153,9 +153,11 @@ func TestPreservation_NonMemberDenial_TeamPermission(t *testing.T) {
 		teamID := uuid.New()
 		permKey := genPermissionKey(t, "permissionKey")
 
-		// Both org and team repos return errors (user not a member of either)
+		// Both org and team repos return errors (user not a member of either);
+		// the team belongs to orgID so the team->org binding passes and we reach
+		// the membership denial this test targets.
 		orgRepo := &mockOrgMembershipRepo{err: errors.New("not found")}
-		teamRepo := &mockTeamMembershipRepo{err: errors.New("not found")}
+		teamRepo := &mockTeamMembershipRepo{err: errors.New("not found"), teamOrgID: orgID}
 		checker := NewChecker(orgRepo, teamRepo, nil)
 
 		uc := &auth.UserContext{
@@ -209,8 +211,8 @@ func TestPreservation_OrgFallbackForTeams(t *testing.T) {
 				Role:   userOrgRole,
 			},
 		}
-		// Team repo: user is NOT a team member
-		teamRepo := &mockTeamMembershipRepo{err: errors.New("not found")}
+		// Team repo: user is NOT a team member, but the team belongs to this org
+		teamRepo := &mockTeamMembershipRepo{err: errors.New("not found"), teamOrgID: orgID}
 		checker := NewChecker(orgRepo, teamRepo, cache)
 
 		uc := &auth.UserContext{
@@ -274,4 +276,3 @@ func TestPreservation_OwnerFullAccess(t *testing.T) {
 		}
 	})
 }
-
