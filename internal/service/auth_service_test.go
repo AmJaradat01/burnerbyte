@@ -52,6 +52,10 @@ func (r *mockRow) Scan(dest ...any) error {
 			}
 		case *bool:
 			*d = v.(bool)
+		case *int64:
+			*d = v.(int64)
+		case *float32:
+			*d = v.(float32)
 		case *time.Time:
 			*d = v.(time.Time)
 		case **time.Time:
