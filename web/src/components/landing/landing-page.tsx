@@ -128,19 +128,26 @@ export function LandingPage() {
             <div className="mt-9 flex flex-wrap items-center gap-3">
               <Link
                 href={allowRegistration ? "/register" : "/login"}
-                className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                className="inline-flex h-11 items-center gap-2 rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
               >
                 {allowRegistration ? t("hero.getStarted") : t("cta.signIn")}
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 href="/docs"
-                className="inline-flex h-11 items-center rounded-lg border border-border bg-background px-6 text-sm font-medium transition-colors hover:bg-muted"
+                className="inline-flex h-11 items-center rounded-md border border-border bg-background px-6 text-sm font-medium transition-colors hover:bg-muted"
               >
                 {t("hero.docs")}
               </Link>
             </div>
-            <p className="mt-8 font-mono text-xs leading-relaxed text-muted-foreground">{t("hero.spec")}</p>
+            <ul className="mt-8 flex flex-wrap items-center gap-x-3 gap-y-2 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+              {t("hero.spec").split("·").map((item, i) => (
+                <li key={item} className="flex items-center gap-3">
+                  {i > 0 && <span className="h-3 w-px bg-border" aria-hidden="true" />}
+                  <span>{item.trim()}</span>
+                </li>
+              ))}
+            </ul>
           </div>
 
           <div className="lg:col-span-5">
@@ -268,7 +275,7 @@ export function LandingPage() {
           <div className="mt-8 flex justify-center">
             <Link
               href={allowRegistration ? "/register" : "/login"}
-              className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+              className="inline-flex h-11 items-center gap-2 rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
             >
               {allowRegistration ? t("cta.getStarted") : t("cta.signIn")}
               <ArrowRight className="h-4 w-4" />
