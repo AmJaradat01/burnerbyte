@@ -748,3 +748,37 @@ func TestProperty_Security_UnverifiedEmailNoAutoLink(t *testing.T) {
 // cannot be mocked without additional infrastructure. The EmailVerified=false
 // behavior is set directly in the Register function's user struct construction
 // and is verified by inspection and integration tests.
+
+// TestRegister_InviteOnly_RejectsInvalidToken guards the fix that, in
+// invite-only mode, registration validates the invite TOKEN rather than merely
+// finding any pending invite for the email. A garbage/unknown token must be
+// rejected so an attacker can't pre-register (squat) an invited address. The
+// rejection path returns before the DB transaction, so no pool is needed.
+func TestRegister_InviteOnly_RejectsInvalidToken(t *testing.T) {
+	db := &mockDBTX{
+		queryRowHandler: func(sql string, args ...any) pgx.Row {
+			// GetInviteByToken finds no invite matching the presented token.
+			return &mockRow{err: pgx.ErrNoRows}
+		},
+	}
+	orgRepo := postgres.NewOrgRepo(db)
+	cfg := &config.Config{} // Defaults.AllowRegistration defaults false => invite-only
+
+	svc := NewAuthService(
+		nil, nil, nil, nil, nil, orgRepo, nil, nil, nil, nil,
+		nil, nil, nil, cfg, nil, nil, nil,
+	)
+
+	_, _, err := svc.Register(context.Background(), domain.CreateUserInput{
+		Email:       "victim@corp.com",
+		Password:    "Str0ng-Passw0rd!",
+		DisplayName: "Victim",
+		InviteToken: "garbage-not-a-real-token",
+	})
+	if err == nil {
+		t.Fatal("invite-only registration with an invalid token must be rejected (squatting)")
+	}
+	if !strings.Contains(err.Error(), "valid invite") {
+		t.Fatalf("expected a 'valid invite' rejection, got: %v", err)
+	}
+}
