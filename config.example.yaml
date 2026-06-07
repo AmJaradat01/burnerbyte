@@ -131,3 +131,15 @@ encryption:
   # 64-char hex string (32 bytes) for AES-256-GCM. If left empty, the values
   # above are stored UNENCRYPTED (plaintext) in the database, not just "disabled".
   key: ""
+
+# Public "try it" demo inbox on the landing page. Off by default. When enabled,
+# logged-out visitors can create a real, short-lived disposable inbox and watch
+# real mail arrive (POST /api/v1/try/inbox, rate-limited; receive-only). It is
+# IDOR-safe: the read endpoint is scoped to the demo user, so only demo inboxes
+# are ever readable. Provision a dedicated org/team/user and assign a domain to
+# that team, then set the assignment + user IDs below.
+demo:
+  enabled: false           # DEMO_ENABLED
+  assignment_id: ""        # DEMO_ASSIGNMENT_ID — a domain assignment the demo user's team owns
+  user_id: ""              # DEMO_USER_ID — the demo account that owns created inboxes
+  ttl: 10m                 # DEMO_TTL — how long each demo inbox lives

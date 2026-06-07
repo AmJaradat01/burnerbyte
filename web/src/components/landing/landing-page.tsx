@@ -7,7 +7,7 @@ import { ArrowRight, Gitlab, Inbox, Users, Zap, Webhook, KeyRound, Server } from
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/logo";
-import { LiveInboxDemo } from "./live-inbox-demo";
+import { TryInbox } from "./try-inbox";
 
 /** Canonical repository, from the go.mod module path (gitlab.com/burnerbyte/burnerbyte). */
 const REPO_URL = "https://gitlab.com/burnerbyte/burnerbyte";
@@ -144,17 +144,19 @@ export function LandingPage() {
           </div>
 
           <div className="lg:col-span-5">
-            <LiveInboxDemo
+            <TryInbox
               labels={{
                 inboxLabel: t("demo.inbox"),
                 expiresIn: t("demo.expiresIn"),
                 expired: t("demo.expired"),
+                caption: t("demo.caption"),
+                liveCaption: t("demo.liveCaption"),
+                emptyHint: t("demo.emptyHint"),
+                copy: t("demo.copy"),
+                copied: t("demo.copied"),
+                newInbox: t("demo.newInbox"),
               }}
             />
-            <p className="mt-3 flex items-center gap-2 font-mono text-[11px] text-muted-foreground">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-success" aria-hidden="true" />
-              {t("demo.caption")}
-            </p>
           </div>
         </div>
       </section>
