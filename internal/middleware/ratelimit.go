@@ -212,6 +212,33 @@ func (rl *RateLimiter) LoginLimiter(next http.Handler) http.Handler {
 	})
 }
 
+// DemoLimiter returns middleware for the public "try it" demo (per-IP,
+// per-minute). More generous than LoginLimiter because the landing page polls a
+// demo inbox for incoming mail; still bounded so it can't be abused for load.
+func (rl *RateLimiter) DemoLimiter(next http.Handler) http.Handler {
+	if !rl.cfg.Enabled {
+		return next
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		key := "demo:" + rl.RealIP(r)
+		limit := 60
+		var allowed bool
+		var remaining int
+		var resetUnix int64
+		if rl.rdb != nil {
+			allowed, remaining, resetUnix = rl.allowRedis(r.Context(), key, limit, time.Minute)
+		} else {
+			allowed, remaining, resetUnix = rl.allow(key, limit, time.Minute)
+		}
+		writeRateLimitHeaders(w, limit, remaining, resetUnix)
+		if !allowed {
+			rejectRateLimit(w, limit, resetUnix)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 // ForgotPasswordLimiter returns middleware for forgot-password (per-IP, per-hour).
 func (rl *RateLimiter) ForgotPasswordLimiter(next http.Handler) http.Handler {
 	if !rl.cfg.Enabled {

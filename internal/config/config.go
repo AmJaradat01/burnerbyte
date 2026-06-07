@@ -27,6 +27,7 @@ type Config struct {
 	Metrics  MetricsConfig  `mapstructure:"metrics"`
 	Workers  WorkersConfig  `mapstructure:"workers"`
 	Encryption EncryptionConfig `mapstructure:"encryption"`
+	Demo     DemoConfig     `mapstructure:"demo"`
 
 	// mu guards the runtime-mutable settings groups (Password, Lockout,
 	// Defaults, EmailVerification) that PUT /admin/platform updates while
@@ -76,6 +77,17 @@ func (c *Config) WriteLocked(fn func(*Config)) {
 type EncryptionConfig struct {
 	// Key must be exactly 32 bytes (hex-encoded = 64 chars) for AES-256-GCM.
 	Key string `mapstructure:"key"`
+}
+
+// DemoConfig powers the public "try it" inbox on the landing page. Off by
+// default: the public endpoints only activate when Enabled is true and a demo
+// AssignmentID + UserID (provisioned by the operator) are set. Demo inboxes are
+// created under that user/assignment with a short TTL.
+type DemoConfig struct {
+	Enabled      bool          `mapstructure:"enabled"`
+	AssignmentID string        `mapstructure:"assignment_id"`
+	UserID       string        `mapstructure:"user_id"`
+	TTL          time.Duration `mapstructure:"ttl"`
 }
 
 type ServerConfig struct {
@@ -247,6 +259,10 @@ func Load() (*Config, error) {
 	// this nested key in env-only deployments (no config file), silently leaving
 	// credential encryption off and storing SSO/SMTP/storage secrets in plaintext.
 	v.BindEnv("encryption.key", "ENCRYPTION_KEY")
+	v.BindEnv("demo.enabled", "DEMO_ENABLED")
+	v.BindEnv("demo.assignment_id", "DEMO_ASSIGNMENT_ID")
+	v.BindEnv("demo.user_id", "DEMO_USER_ID")
+	v.BindEnv("demo.ttl", "DEMO_TTL")
 	v.BindEnv("server.port", "API_PORT")
 	v.BindEnv("server.base_url", "API_BASE_URL")
 	v.BindEnv("server.frontend_url", "FRONTEND_URL")
