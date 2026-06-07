@@ -233,6 +233,7 @@ func main() {
 	r.Use(chimw.RealIP)
 	r.Use(requestLogger(logger))
 	r.Use(chimw.Recoverer)
+	r.Use(mw.SecurityHeaders)
 	maxBody := cfg.Server.MaxBodySize
 	if maxBody <= 0 {
 		maxBody = 1 << 20 // 1 MB default
