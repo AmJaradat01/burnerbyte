@@ -209,6 +209,7 @@ func main() {
 	assignmentHandler := handler.NewDomainAssignmentHandler(assignmentSvc, inboxRepo, teamSvc)
 	inboxHandler := handler.NewInboxHandler(inboxSvc)
 	emailHandler := handler.NewEmailHandler(emailSvc, attachmentSvc, inboxSvc)
+	tryHandler := handler.NewTryHandler(inboxSvc, emailSvc, cfg.Demo)
 	webhookHandler := handler.NewWebhookHandler(webhookSvc)
 	apikeyHandler := handler.NewAPIKeyHandler(apikeySvc)
 	auditHandler := handler.NewAuditHandler(auditSvc)
@@ -275,6 +276,7 @@ func main() {
 		// Public routes (no auth)
 		setupHandler.Routes(r)
 		authHandler.PublicRoutes(r, rateLimiter)
+		tryHandler.Routes(r, rateLimiter)
 		r.Get("/invites/{token}/preview", orgHandler.PreviewInvite)
 
 		// Roles (public — returns role definitions from DB)

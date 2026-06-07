@@ -131,3 +131,44 @@ export async function getWsTicket(): Promise<string> {
   const { ticket } = await api.post<{ ticket: string }>("/ws/ticket");
   return ticket;
 }
+
+/* ── Public "try it" demo (landing page, unauthenticated) ──
+   Plain fetch, deliberately bypassing the auth interceptor: these run for
+   logged-out visitors and must never trigger the 401 refresh/redirect flow.
+   They return null when demo mode is disabled or unreachable so the caller
+   can fall back to the simulated demo. */
+
+export interface TryInboxInfo {
+  inbox_id: string;
+  address: string;
+  expires_at: string;
+}
+
+export interface TryEmail {
+  id: string;
+  from_address: string;
+  subject?: string;
+  snippet: string;
+  received_at: string;
+}
+
+export async function tryCreateInbox(): Promise<TryInboxInfo | null> {
+  try {
+    const res = await fetch(`${API_BASE}/try/inbox`, { method: "POST" });
+    if (!res.ok) return null;
+    return (await res.json()) as TryInboxInfo;
+  } catch {
+    return null;
+  }
+}
+
+export async function tryGetEmails(inboxId: string): Promise<TryEmail[] | null> {
+  try {
+    const res = await fetch(`${API_BASE}/try/inbox/${encodeURIComponent(inboxId)}/emails`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return (data.emails ?? []) as TryEmail[];
+  } catch {
+    return null;
+  }
+}
