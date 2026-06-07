@@ -147,7 +147,7 @@ export default function InvitePage() {
     setSubmitting(true);
     try {
       if (mode === "register") {
-        await register(preview.email, password, displayName);
+        await register(preview.email, password, displayName, token ?? undefined);
       } else {
         await login(preview.email, password);
       }

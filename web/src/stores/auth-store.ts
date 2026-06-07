@@ -19,7 +19,7 @@ interface AuthState {
   loading: boolean;
   sessionConflict: SessionConflictState | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, displayName: string) => Promise<void>;
+  register: (email: string, password: string, displayName: string, inviteToken?: string) => Promise<void>;
   logout: () => Promise<void>;
   fetchMe: () => Promise<void>;
   clearSessionConflict: () => void;
@@ -53,8 +53,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  register: async (email, password, display_name) => {
-    const res = await api.post<{ user: User; tokens: TokenPair }>("/auth/register", { email, password, display_name });
+  register: async (email, password, display_name, inviteToken) => {
+    const res = await api.post<{ user: User; tokens: TokenPair }>("/auth/register", { email, password, display_name, invite_token: inviteToken });
     setAccessToken(res.tokens.access_token);
     // refresh_token stays in localStorage — TODO: move to httpOnly cookie
     localStorage.setItem("refresh_token", res.tokens.refresh_token);
