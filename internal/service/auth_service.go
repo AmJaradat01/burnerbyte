@@ -112,10 +112,16 @@ func (s *AuthService) Register(ctx context.Context, input domain.CreateUserInput
 			slog.Warn("invite-only registration rejected: orgRepo not configured", "email", input.Email)
 			return nil, nil, fmt.Errorf("registration requires an invite")
 		}
-		invite, err := s.orgRepo.GetPendingInviteByEmail(ctx, input.Email)
-		if err != nil {
-			slog.Info("invite-only registration rejected: no pending invite", "email", input.Email)
-			return nil, nil, fmt.Errorf("registration requires an invite")
+		// Validate by the invite token, not just the email: the token is the
+		// proof of invitation. Matching on email alone let anyone who knew an
+		// invited address pre-register it (squatting the invitee, blocking their
+		// signup) with any non-empty token. Require a pending, unexpired invite
+		// whose email matches the one being registered.
+		invite, err := s.orgRepo.GetInviteByToken(ctx, input.InviteToken)
+		if err != nil || invite.AcceptedAt != nil || time.Now().After(invite.ExpiresAt) ||
+			!strings.EqualFold(invite.Email, input.Email) {
+			slog.Info("invite-only registration rejected: no valid invite for email", "email", input.Email)
+			return nil, nil, fmt.Errorf("registration requires a valid invite for this email address")
 		}
 		if !isAuthMethodAllowed(invite.AllowedAuth, "password") {
 			slog.Info("invite-only registration rejected: password auth not allowed",
