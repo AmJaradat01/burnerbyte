@@ -277,6 +277,7 @@ type PlatformSettings struct {
 	MaxInboxesPerDomain  int    `json:"max_inboxes_per_domain"`
 	MaxSessionsPerUser   int    `json:"max_sessions_per_user"`
 	DemoEnabled          bool   `json:"demo_enabled"`
+	DemoConfigured       bool   `json:"demo_configured"`
 }
 
 func (h *AdminHandler) GetPlatformSettings(w http.ResponseWriter, r *http.Request) {
@@ -304,6 +305,7 @@ func (h *AdminHandler) GetPlatformSettings(w http.ResponseWriter, r *http.Reques
 		MaxInboxesPerDomain:  d.MaxInboxesPerDomain,
 		MaxSessionsPerUser:   d.MaxSessionsPerUser,
 		DemoEnabled:          h.cfg.DemoEnabled(),
+		DemoConfigured:       h.cfg.DemoConfigured(),
 	}
 	if tz == "" { tz = "UTC" }
 	if df == "" { df = "YYYY-MM-DD" }

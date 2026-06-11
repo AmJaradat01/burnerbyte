@@ -3,7 +3,10 @@ package handler
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+
+	"github.com/google/uuid"
 
 	"gitlab.com/burnerbyte/burnerbyte/internal/config"
 )
@@ -36,5 +39,44 @@ func TestTryHandler_InvalidConfigDisables(t *testing.T) {
 	h.CreateInbox(rec, httptest.NewRequest(http.MethodPost, "/try/inbox", nil))
 	if rec.Code != http.StatusNotFound {
 		t.Errorf("CreateInbox with invalid demo config: want 404 (disabled), got %d", rec.Code)
+	}
+}
+
+// TestTryHandler_RuntimeToggle verifies that with valid demo IDs configured,
+// the endpoints follow the runtime DemoEnabled() switch (the admin platform
+// toggle) without a restart, and Status reports the live state.
+func TestTryHandler_RuntimeToggle(t *testing.T) {
+	cfg := &config.Config{Demo: config.DemoConfig{
+		Enabled:      true,
+		AssignmentID: uuid.New().String(),
+		UserID:       uuid.New().String(),
+	}}
+	h := NewTryHandler(nil, nil, cfg)
+
+	// Configured + enabled -> Status reports enabled.
+	rec := httptest.NewRecorder()
+	h.Status(rec, httptest.NewRequest(http.MethodGet, "/try/status", nil))
+	if !strings.Contains(rec.Body.String(), `"enabled":true`) {
+		t.Fatalf("Status should report enabled=true, got %s", rec.Body.String())
+	}
+
+	// Admin turns it off at runtime (same path UpdatePlatformSettings uses).
+	cfg.WriteLocked(func(c *config.Config) { c.Demo.Enabled = false })
+
+	rec = httptest.NewRecorder()
+	h.Status(rec, httptest.NewRequest(http.MethodGet, "/try/status", nil))
+	if !strings.Contains(rec.Body.String(), `"enabled":false`) {
+		t.Errorf("Status should report enabled=false after toggle-off, got %s", rec.Body.String())
+	}
+	// And the endpoints are gated off even though IDs remain configured.
+	rec = httptest.NewRecorder()
+	h.CreateInbox(rec, httptest.NewRequest(http.MethodPost, "/try/inbox", nil))
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("CreateInbox after toggle-off: want 404, got %d", rec.Code)
+	}
+
+	// DemoConfigured reflects that IDs are present.
+	if !cfg.DemoConfigured() {
+		t.Error("DemoConfigured should be true when assignment/user IDs are set")
 	}
 }
