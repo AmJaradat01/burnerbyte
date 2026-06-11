@@ -34,6 +34,12 @@ pipeline {
             }
         }
 
+        stage('Test Backend') {
+            steps {
+                sh 'go test ./...'
+            }
+        }
+
         stage('Build Go') {
             steps {
                 sh '''
@@ -44,11 +50,12 @@ pipeline {
             }
         }
 
-        stage('Build Frontend') {
+        stage('Test & Build Frontend') {
             steps {
                 dir('web') {
                     sh '''
                         pnpm install --frozen-lockfile
+                        pnpm test
                         NEXT_PUBLIC_API_URL=https://burnerbyte.com/api/v1 NEXT_PUBLIC_WS_URL=wss://burnerbyte.com/api/v1/ws pnpm build
                     '''
                 }
@@ -61,7 +68,11 @@ pipeline {
                     mkdir -p dist
                     cp bin/api bin/smtpd dist/
                     cp -r migrations dist/
-                    cp config.yaml dist/
+                    # config.yaml is gitignored/per-deployment; the deploy script
+                    # preserves the server's /etc/burnerbyte/config.yaml when the
+                    # artifact omits it. Ship the example as a reference.
+                    [ -f config.yaml ] && cp config.yaml dist/ || true
+                    cp config.example.yaml dist/ 2>/dev/null || true
                     cp -r web/.next/standalone dist/frontend
                     cp -r web/.next/static dist/frontend/.next/static
                     [ -d web/public ] && cp -r web/public dist/frontend/public
