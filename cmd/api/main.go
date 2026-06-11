@@ -209,7 +209,7 @@ func main() {
 	assignmentHandler := handler.NewDomainAssignmentHandler(assignmentSvc, inboxRepo, teamSvc)
 	inboxHandler := handler.NewInboxHandler(inboxSvc)
 	emailHandler := handler.NewEmailHandler(emailSvc, attachmentSvc, inboxSvc)
-	tryHandler := handler.NewTryHandler(inboxSvc, emailSvc, cfg.Demo)
+	tryHandler := handler.NewTryHandler(inboxSvc, emailSvc, cfg)
 	webhookHandler := handler.NewWebhookHandler(webhookSvc)
 	apikeyHandler := handler.NewAPIKeyHandler(apikeySvc)
 	auditHandler := handler.NewAuditHandler(auditSvc)

@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ErrorState } from "@/components/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Activity, AlertTriangle, CheckCircle2, Clock, Database, HardDrive, Info, Key, Loader2, Lock, Mail, Monitor, Paperclip, Pencil, Plus, Save, Search, Settings, Shield, Trash2, Users, XCircle } from "lucide-react";
+import { Activity, AlertTriangle, CheckCircle2, Clock, Database, HardDrive, Info, Key, Loader2, Lock, Mail, Monitor, Paperclip, Pencil, Play, Plus, Save, Search, Settings, Shield, Trash2, Users, XCircle } from "lucide-react";
 import Link from "next/link";
 import { UnifiedUsersTab } from "@/components/settings/unified-users-tab";
 import { RolesTab } from "@/components/settings/roles-tab";
@@ -419,6 +419,7 @@ function PlatformSettingsCard() {
       default_inbox_ttl: string; max_inbox_ttl: string;
       max_attachment_size_mb: number; max_domains: number; max_teams: number; max_inboxes_per_domain: number;
       max_sessions_per_user: number;
+      demo_enabled: boolean;
     }>("/admin/platform"),
     staleTime: 300_000,
   });
@@ -432,6 +433,7 @@ function PlatformSettingsCard() {
     default_inbox_ttl: "", max_inbox_ttl: "",
     max_attachment_size_mb: 0, max_domains: 0, max_teams: 0, max_inboxes_per_domain: 0,
     max_sessions_per_user: 5,
+    demo_enabled: false,
   });
   const [saving, setSaving] = useState(false);
 
@@ -646,6 +648,28 @@ function PlatformSettingsCard() {
                 <Input type="number" min={1} max={100} value={form.max_sessions_per_user} onChange={(e) => set("max_sessions_per_user", Math.max(1, Math.min(100, Number(e.target.value) || 1)))} className="h-8" />
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Demo Mode */}
+        <div className="space-y-3 border-t pt-5">
+          <div className="flex items-center gap-2">
+            <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
+              <Play className="h-3.5 w-3.5 text-muted-foreground" />
+            </div>
+            <p className="text-sm font-semibold">Demo Mode</p>
+          </div>
+          <div className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center shrink-0">
+                <Play className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div>
+                <Label>Enable &ldquo;Try it live&rdquo;</Label>
+                <p className="text-xs text-muted-foreground">Show a public demo inbox on the landing page and /try route.</p>
+              </div>
+            </div>
+            <Switch checked={form.demo_enabled} onCheckedChange={(v) => set("demo_enabled", v)} />
           </div>
         </div>
 

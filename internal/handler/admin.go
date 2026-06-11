@@ -276,6 +276,7 @@ type PlatformSettings struct {
 	MaxTeams             int    `json:"max_teams"`
 	MaxInboxesPerDomain  int    `json:"max_inboxes_per_domain"`
 	MaxSessionsPerUser   int    `json:"max_sessions_per_user"`
+	DemoEnabled          bool   `json:"demo_enabled"`
 }
 
 func (h *AdminHandler) GetPlatformSettings(w http.ResponseWriter, r *http.Request) {
@@ -302,6 +303,7 @@ func (h *AdminHandler) GetPlatformSettings(w http.ResponseWriter, r *http.Reques
 		MaxTeams:             d.MaxTeams,
 		MaxInboxesPerDomain:  d.MaxInboxesPerDomain,
 		MaxSessionsPerUser:   d.MaxSessionsPerUser,
+		DemoEnabled:          h.cfg.DemoEnabled(),
 	}
 	if tz == "" { tz = "UTC" }
 	if df == "" { df = "YYYY-MM-DD" }
@@ -435,6 +437,7 @@ func (h *AdminHandler) UpdatePlatformSettings(w http.ResponseWriter, r *http.Req
 		c.Defaults.MaxTeams = input.MaxTeams
 		c.Defaults.MaxInboxesPerDomain = input.MaxInboxesPerDomain
 		c.Defaults.MaxSessionsPerUser = input.MaxSessionsPerUser
+		c.Demo.Enabled = input.DemoEnabled
 	})
 
 	after := map[string]any{

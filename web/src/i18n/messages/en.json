@@ -110,6 +110,7 @@
       "subtitle": "Self-hosted temporary inboxes for technical teams. Spin one up in seconds, watch mail arrive in real time, and let it expire on a timer you set. Your data never leaves your servers.",
       "getStarted": "Get started",
       "docs": "Read the docs",
+      "tryIt": "Try it live",
       "spec": "6-level RBAC · Real-time WebSocket · HMAC webhooks · Docker · Apache-2.0"
     },
     "demo": {

@@ -64,6 +64,13 @@ func (c *Config) EmailVerificationEnabled() bool {
 	return c.EmailVerification.Enabled
 }
 
+// DemoEnabled reports whether the public demo (try-it) inbox is active.
+func (c *Config) DemoEnabled() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.Demo.Enabled
+}
+
 // WriteLocked applies fn under the write lock so the runtime-mutable groups
 // update atomically with respect to readers. fn must not call the read
 // accessors above, as it already holds the lock.

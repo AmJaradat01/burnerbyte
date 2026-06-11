@@ -4,10 +4,10 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { ArrowRight, Gitlab, Inbox, Users, Zap, Webhook, KeyRound, Server } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, tryGetStatus } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/logo";
-import { TryInbox } from "./try-inbox";
+import { LiveInboxDemo } from "./live-inbox-demo";
 
 /** Canonical repository, from the go.mod module path (gitlab.com/burnerbyte/burnerbyte). */
 const REPO_URL = "https://gitlab.com/burnerbyte/burnerbyte";
@@ -54,6 +54,13 @@ export function LandingPage() {
     staleTime: 60_000,
   });
   const allowRegistration = sso?.allow_registration ?? true;
+
+  const { data: demoStatus } = useQuery({
+    queryKey: ["demo-status"],
+    queryFn: tryGetStatus,
+    staleTime: 60_000,
+  });
+  const demoEnabled = demoStatus === true;
 
   const steps = [
     { num: "01", label: t("how.createLabel"), title: t("how.createTitle"), desc: t("how.createDesc") },
@@ -139,6 +146,14 @@ export function LandingPage() {
               >
                 {t("hero.docs")}
               </Link>
+              {demoEnabled && (
+              <Link
+                href="/try"
+                className="inline-flex h-11 items-center gap-2 rounded-md border border-border bg-background px-6 text-sm font-medium transition-colors hover:bg-muted"
+              >
+                {t("hero.tryIt")}
+              </Link>
+              )}
             </div>
             <ul className="mt-8 flex flex-wrap items-center gap-x-3 gap-y-2 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
               {t("hero.spec").split("·").map((item, i) => (
@@ -151,17 +166,11 @@ export function LandingPage() {
           </div>
 
           <div className="lg:col-span-5">
-            <TryInbox
+            <LiveInboxDemo
               labels={{
                 inboxLabel: t("demo.inbox"),
                 expiresIn: t("demo.expiresIn"),
                 expired: t("demo.expired"),
-                caption: t("demo.caption"),
-                liveCaption: t("demo.liveCaption"),
-                emptyHint: t("demo.emptyHint"),
-                copy: t("demo.copy"),
-                copied: t("demo.copied"),
-                newInbox: t("demo.newInbox"),
               }}
             />
           </div>
