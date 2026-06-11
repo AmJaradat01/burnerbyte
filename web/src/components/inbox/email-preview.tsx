@@ -3,13 +3,15 @@
 import { useState } from "react";
 import { timeAgo } from "@/lib/time";
 import { buildSandboxedHtml, hasRemoteContent } from "@/lib/email-html";
+import { extractVerificationCode } from "@/lib/verification-code";
+import { copyToClipboard } from "@/lib/clipboard";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import {
-  ArrowLeft, Code, Download, FileText, Globe, Image as ImageIcon, ImageOff, Mail, MailOpen, Paperclip, Trash2,
+  ArrowLeft, Check, Code, Copy, Download, FileText, Globe, Image as ImageIcon, ImageOff, KeyRound, Mail, MailOpen, Paperclip, Trash2,
 } from "lucide-react";
 import type { Email, Attachment } from "@/types";
 
@@ -42,6 +44,18 @@ export function EmailPreview({ email, onBack, onToggleRead, onDelete }: EmailPre
     setShowRemote(false);
   }
   const remoteBlocked = hasHtml && !showRemote && hasRemoteContent(email.body_html!);
+
+  // Surface a likely one-time / verification code (common for the signup-flow
+  // testing this tool is built for). Reset the "copied" state per email.
+  const verificationCode = extractVerificationCode([email.subject, email.body_text].filter(Boolean).join("  "));
+  const [codeCopied, setCodeCopied] = useState(false);
+  if (email.id !== seenEmailId && codeCopied) setCodeCopied(false);
+  const copyCode = () => {
+    if (!verificationCode) return;
+    copyToClipboard(verificationCode);
+    setCodeCopied(true);
+    setTimeout(() => setCodeCopied(false), 1500);
+  };
 
   return (
     <>
@@ -110,6 +124,27 @@ export function EmailPreview({ email, onBack, onToggleRead, onDelete }: EmailPre
           </div>
         )}
       </div>
+
+      {verificationCode && (
+        <div className="shrink-0 px-5 pb-3">
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <KeyRound className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+              <span className="text-xs text-muted-foreground">Verification code</span>
+              <span className="font-mono text-base font-semibold tracking-[0.2em] tabular-nums">{verificationCode}</span>
+            </div>
+            <button
+              type="button"
+              onClick={copyCode}
+              aria-label="Copy verification code"
+              className="flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
+            >
+              {codeCopied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+              {codeCopied ? "Copied" : "Copy"}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Body with tabs */}
       <div className="flex-1 flex flex-col min-h-0">
