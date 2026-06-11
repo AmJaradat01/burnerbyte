@@ -76,6 +76,21 @@ func (r *mockRow) Scan(dest ...any) error {
 				n := v.(int)
 				*d = &n
 			}
+		case **uuid.UUID:
+			if v == nil {
+				*d = nil
+			} else if up, ok := v.(*uuid.UUID); ok {
+				*d = up
+			} else {
+				u := v.(uuid.UUID)
+				*d = &u
+			}
+		case *[]byte:
+			if v == nil {
+				*d = nil
+			} else {
+				*d = v.([]byte)
+			}
 		case *any:
 			*d = v
 		default:
