@@ -14,7 +14,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"gitlab.com/burnerbyte/burnerbyte/internal/auth"
 	"gitlab.com/burnerbyte/burnerbyte/internal/config"
@@ -33,8 +32,17 @@ func stripPort(addr string) string {
 	return host
 }
 
+// dbPool is the subset of *pgxpool.Pool the auth service uses — transactions
+// and direct queries. Abstracting it lets the transactional flows (registration,
+// login, password reset) be unit-tested without a live database. *pgxpool.Pool
+// satisfies it, so production wiring is unchanged.
+type dbPool interface {
+	Begin(ctx context.Context) (pgx.Tx, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}
+
 type AuthService struct {
-	pool              *pgxpool.Pool
+	pool              dbPool
 	userRepo          *postgres.UserRepo
 	sessionRepo       *postgres.SessionRepo
 	resetRepo         *postgres.PasswordResetRepo
@@ -54,7 +62,7 @@ type AuthService struct {
 }
 
 func NewAuthService(
-	pool *pgxpool.Pool,
+	pool dbPool,
 	userRepo *postgres.UserRepo,
 	sessionRepo *postgres.SessionRepo,
 	resetRepo *postgres.PasswordResetRepo,
