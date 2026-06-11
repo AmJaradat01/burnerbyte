@@ -71,6 +71,14 @@ func (c *Config) DemoEnabled() bool {
 	return c.Demo.Enabled
 }
 
+// DemoConfigured reports whether the demo assignment/user IDs are set. The
+// admin toggle has no effect until they are, so the UI surfaces this.
+func (c *Config) DemoConfigured() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.Demo.AssignmentID != "" && c.Demo.UserID != ""
+}
+
 // WriteLocked applies fn under the write lock so the runtime-mutable groups
 // update atomically with respect to readers. fn must not call the read
 // accessors above, as it already holds the lock.
