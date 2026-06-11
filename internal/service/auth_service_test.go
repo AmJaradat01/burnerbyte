@@ -94,7 +94,34 @@ type mockDBTX struct {
 	execHandler func(sql string, args ...any) (pgconn.CommandTag, error)
 	// queryHandler is called for Query calls.
 	queryHandler func(sql string, args ...any) (pgx.Rows, error)
+	// committed is set true when a transaction begun from this mock is committed.
+	committed bool
 }
+
+// Begin lets mockDBTX stand in for the auth service's dbPool. The returned tx
+// reuses this mock for data ops, so configured handlers apply inside the
+// transaction too.
+func (m *mockDBTX) Begin(context.Context) (pgx.Tx, error) { return &mockTx{mockDBTX: m}, nil }
+
+// mockTx adapts mockDBTX to pgx.Tx so transactional service methods (Register,
+// ResetPassword, …) run against the mock. Data ops use the embedded mock,
+// Commit is recorded, and the rest of pgx.Tx is unused by the code under test.
+type mockTx struct {
+	*mockDBTX
+}
+
+func (m *mockTx) Begin(context.Context) (pgx.Tx, error) { return m, nil }
+func (m *mockTx) Commit(context.Context) error          { m.mockDBTX.committed = true; return nil }
+func (m *mockTx) Rollback(context.Context) error        { return nil }
+func (m *mockTx) CopyFrom(context.Context, pgx.Identifier, []string, pgx.CopyFromSource) (int64, error) {
+	return 0, nil
+}
+func (m *mockTx) SendBatch(context.Context, *pgx.Batch) pgx.BatchResults { return nil }
+func (m *mockTx) LargeObjects() pgx.LargeObjects                         { return pgx.LargeObjects{} }
+func (m *mockTx) Prepare(context.Context, string, string) (*pgconn.StatementDescription, error) {
+	return nil, nil
+}
+func (m *mockTx) Conn() *pgx.Conn { return nil }
 
 func (m *mockDBTX) Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error) {
 	if m.execHandler != nil {
@@ -780,5 +807,89 @@ func TestRegister_InviteOnly_RejectsInvalidToken(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "valid invite") {
 		t.Fatalf("expected a 'valid invite' rejection, got: %v", err)
+	}
+}
+
+// TestRegister_OpenRegistration_Success exercises the full transactional happy
+// path (previously untestable: Register opened a real *pgxpool.Pool tx). With
+// the pool abstracted behind dbPool, the mock transaction runs the user insert,
+// session creation, and commit.
+func TestRegister_OpenRegistration_Success(t *testing.T) {
+	db := &mockDBTX{
+		execHandler: func(sql string, args ...any) (pgconn.CommandTag, error) {
+			return pgconn.NewCommandTag("INSERT 1"), nil // user + session inserts succeed
+		},
+		queryRowHandler: func(sql string, args ...any) pgx.Row {
+			// The only QueryRow is the best-effort active-session count; erroring
+			// it simply skips limit enforcement.
+			return &mockRow{err: pgx.ErrNoRows}
+		},
+	}
+	cfg := &config.Config{JWT: config.JWTConfig{
+		Secret:     "test-secret-key-at-least-32-bytes-long!!",
+		AccessTTL:  15 * time.Minute,
+		RefreshTTL: 7 * 24 * time.Hour,
+	}}
+	cfg.Defaults.AllowRegistration = true // open registration: skip the invite gate
+	tokens := auth.NewTokenManager(cfg.JWT)
+
+	svc := NewAuthService(
+		db, postgres.NewUserRepo(db), postgres.NewSessionRepo(db),
+		nil, nil, nil, nil, nil, nil, nil,
+		tokens, nil, nil, cfg, nil, nil, nil,
+	)
+
+	user, tp, err := svc.Register(context.Background(), domain.CreateUserInput{
+		Email:       "New@Corp.com",
+		Password:    "Str0ng-Passw0rd!",
+		DisplayName: "New User",
+	})
+	if err != nil {
+		t.Fatalf("Register failed: %v", err)
+	}
+	if user == nil || user.Email != "new@corp.com" { // normalized to lowercase
+		t.Fatalf("unexpected user: %+v", user)
+	}
+	if user.EmailVerified {
+		t.Error("a freshly registered user must not be email-verified")
+	}
+	if tp == nil || tp.AccessToken == "" || tp.RefreshToken == "" {
+		t.Fatal("expected a populated token pair")
+	}
+	if !db.committed {
+		t.Error("the registration transaction should have been committed")
+	}
+}
+
+// TestRegister_DuplicateEmail confirms a unique-violation on the user insert
+// surfaces as a friendly "already registered" error (and not the raw DB error).
+func TestRegister_DuplicateEmail(t *testing.T) {
+	db := &mockDBTX{
+		execHandler: func(sql string, args ...any) (pgconn.CommandTag, error) {
+			if strings.Contains(sql, "INSERT INTO users") {
+				return pgconn.CommandTag{}, &pgconn.PgError{Code: "23505"} // unique_violation
+			}
+			return pgconn.NewCommandTag("OK"), nil
+		},
+	}
+	cfg := &config.Config{}
+	cfg.Defaults.AllowRegistration = true
+
+	svc := NewAuthService(
+		db, postgres.NewUserRepo(db), postgres.NewSessionRepo(db),
+		nil, nil, nil, nil, nil, nil, nil,
+		nil, nil, nil, cfg, nil, nil, nil,
+	)
+
+	_, _, err := svc.Register(context.Background(), domain.CreateUserInput{
+		Email:       "taken@corp.com",
+		Password:    "Str0ng-Passw0rd!",
+		DisplayName: "Taken",
+	})
+	if err == nil || !strings.Contains(err.Error(), "already registered") {
+		t.Fatalf("expected an 'already registered' error, got: %v", err)
+	}
+	if db.committed {
+		t.Error("a failed registration must not commit")
 	}
 }
