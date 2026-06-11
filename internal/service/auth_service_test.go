@@ -893,3 +893,27 @@ func TestRegister_DuplicateEmail(t *testing.T) {
 		t.Error("a failed registration must not commit")
 	}
 }
+
+// TestLogin_UnknownEmail_GenericError locks in the account-enumeration defense:
+// an unknown email returns the same generic "invalid email or password" as a
+// wrong password (after a dummy bcrypt comparison to equalize timing), never
+// revealing whether the address exists.
+func TestLogin_UnknownEmail_GenericError(t *testing.T) {
+	db := &mockDBTX{
+		queryRowHandler: func(sql string, args ...any) pgx.Row {
+			return &mockRow{err: pgx.ErrNoRows} // GetByEmail -> not found
+		},
+	}
+	cfg := &config.Config{}
+	svc := NewAuthService(
+		db, postgres.NewUserRepo(db), postgres.NewSessionRepo(db),
+		nil, nil, nil, nil, nil, nil, nil,
+		nil, nil, nil, cfg, nil, nil, nil,
+	)
+
+	_, _, err := svc.Login(context.Background(),
+		domain.LoginInput{Email: "ghost@corp.com", Password: "whatever"}, "1.2.3.4", "agent")
+	if err == nil || !strings.Contains(err.Error(), "invalid email or password") {
+		t.Fatalf("expected the generic 'invalid email or password', got: %v", err)
+	}
+}
