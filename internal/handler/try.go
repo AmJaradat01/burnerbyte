@@ -21,45 +21,57 @@ import (
 type TryHandler struct {
 	inboxSvc     *service.InboxService
 	emailSvc     *service.EmailService
-	enabled      bool
+	cfg          *config.Config
 	assignmentID uuid.UUID
 	userID       uuid.UUID
 	ttl          time.Duration
+	configured   bool // true when assignment_id and user_id are valid UUIDs
 }
 
 // NewTryHandler builds the handler from demo config. Misconfiguration (demo
 // enabled but invalid IDs) disables the feature rather than failing startup.
-func NewTryHandler(inboxSvc *service.InboxService, emailSvc *service.EmailService, cfg config.DemoConfig) *TryHandler {
-	h := &TryHandler{inboxSvc: inboxSvc, emailSvc: emailSvc, ttl: cfg.TTL}
+func NewTryHandler(inboxSvc *service.InboxService, emailSvc *service.EmailService, appCfg *config.Config) *TryHandler {
+	demoCfg := appCfg.Demo
+	h := &TryHandler{inboxSvc: inboxSvc, emailSvc: emailSvc, cfg: appCfg, ttl: demoCfg.TTL}
 	if h.ttl <= 0 {
 		h.ttl = 10 * time.Minute
 	}
-	if !cfg.Enabled {
-		return h
-	}
-	aID, err1 := uuid.Parse(cfg.AssignmentID)
-	uID, err2 := uuid.Parse(cfg.UserID)
+	aID, err1 := uuid.Parse(demoCfg.AssignmentID)
+	uID, err2 := uuid.Parse(demoCfg.UserID)
 	if err1 != nil || err2 != nil {
-		slog.Warn("demo mode enabled but demo.assignment_id/demo.user_id are not valid UUIDs; demo disabled")
+		if demoCfg.Enabled {
+			slog.Warn("demo mode enabled but demo.assignment_id/demo.user_id are not valid UUIDs; demo disabled")
+		}
 		return h
 	}
-	h.enabled = true
+	h.configured = true
 	h.assignmentID = aID
 	h.userID = uID
-	slog.Info("demo (try-it) inbox enabled", "ttl", h.ttl.String())
+	if demoCfg.Enabled {
+		slog.Info("demo (try-it) inbox enabled", "ttl", h.ttl.String())
+	}
 	return h
 }
 
+func (h *TryHandler) enabled() bool {
+	return h.configured && h.cfg.DemoEnabled()
+}
+
 func (h *TryHandler) Routes(r chi.Router, rl *middleware.RateLimiter) {
-	// Create is strict (LoginLimiter, ~5/min/IP); polling for mail is lenient.
+	r.Get("/try/status", h.Status)
 	r.With(rl.LoginLimiter).Post("/try/inbox", h.CreateInbox)
 	r.With(rl.DemoLimiter).Get("/try/inbox/{inboxId}/emails", h.ListEmails)
+}
+
+// Status returns whether demo mode is enabled (public, unauthenticated).
+func (h *TryHandler) Status(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]bool{"enabled": h.enabled()})
 }
 
 // CreateInbox provisions a short-lived demo inbox under the configured demo
 // assignment/user and returns its address and expiry.
 func (h *TryHandler) CreateInbox(w http.ResponseWriter, r *http.Request) {
-	if !h.enabled {
+	if !h.enabled() {
 		writeError(w, http.StatusNotFound, "demo mode is not enabled")
 		return
 	}
@@ -81,7 +93,7 @@ func (h *TryHandler) CreateInbox(w http.ResponseWriter, r *http.Request) {
 // non-demo inbox id (e.g. a real user's) can't be read here — ListByInbox
 // rejects any inbox the demo user doesn't own.
 func (h *TryHandler) ListEmails(w http.ResponseWriter, r *http.Request) {
-	if !h.enabled {
+	if !h.enabled() {
 		writeError(w, http.StatusNotFound, "demo mode is not enabled")
 		return
 	}
