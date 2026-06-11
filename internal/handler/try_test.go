@@ -12,7 +12,7 @@ import (
 // unless explicitly enabled — the off-by-default guarantee that keeps this from
 // adding a live public attack surface to deployments that don't want it.
 func TestTryHandler_DisabledByDefault(t *testing.T) {
-	h := NewTryHandler(nil, nil, config.DemoConfig{}) // Enabled = false
+	h := NewTryHandler(nil, nil, &config.Config{}) // Demo.Enabled = false
 
 	rec := httptest.NewRecorder()
 	h.CreateInbox(rec, httptest.NewRequest(http.MethodPost, "/try/inbox", nil))
@@ -30,7 +30,7 @@ func TestTryHandler_DisabledByDefault(t *testing.T) {
 // TestTryHandler_InvalidConfigDisables verifies that enabling demo mode with
 // bad IDs fails safe (disabled) rather than activating with garbage.
 func TestTryHandler_InvalidConfigDisables(t *testing.T) {
-	h := NewTryHandler(nil, nil, config.DemoConfig{Enabled: true, AssignmentID: "not-a-uuid", UserID: "nope"})
+	h := NewTryHandler(nil, nil, &config.Config{Demo: config.DemoConfig{Enabled: true, AssignmentID: "not-a-uuid", UserID: "nope"}})
 
 	rec := httptest.NewRecorder()
 	h.CreateInbox(rec, httptest.NewRequest(http.MethodPost, "/try/inbox", nil))
