@@ -152,6 +152,17 @@ export interface TryEmail {
   received_at: string;
 }
 
+export async function tryGetStatus(): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_BASE}/try/status`);
+    if (!res.ok) return false;
+    const data = await res.json();
+    return data.enabled === true;
+  } catch {
+    return false;
+  }
+}
+
 export async function tryCreateInbox(): Promise<TryInboxInfo | null> {
   try {
     const res = await fetch(`${API_BASE}/try/inbox`, { method: "POST" });
