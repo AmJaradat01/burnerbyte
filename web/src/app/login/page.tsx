@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuthStore } from "@/stores/auth-store";
 import { api, setAccessToken } from "@/lib/api";
+import { safeRedirect } from "@/lib/safe-redirect";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,14 +20,6 @@ import { SessionConflictDialog } from "@/components/session-conflict-dialog";
 import type { Session } from "@/types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
-
-function safeRedirect(url: string | null): string {
-  if (!url) return "/dashboard";
-  if (!url.startsWith("/") || url.startsWith("//") || url.includes("://")) {
-    return "/dashboard";
-  }
-  return url;
-}
 
 interface SSOStatusProvider {
   name: string;
