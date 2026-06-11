@@ -420,6 +420,7 @@ function PlatformSettingsCard() {
       max_attachment_size_mb: number; max_domains: number; max_teams: number; max_inboxes_per_domain: number;
       max_sessions_per_user: number;
       demo_enabled: boolean;
+      demo_configured: boolean;
     }>("/admin/platform"),
     staleTime: 300_000,
   });
@@ -671,6 +672,15 @@ function PlatformSettingsCard() {
             </div>
             <Switch checked={form.demo_enabled} onCheckedChange={(v) => set("demo_enabled", v)} />
           </div>
+          {form.demo_enabled && data && !data.demo_configured && (
+            <p className="flex items-start gap-2 rounded-lg border border-warning/20 bg-warning/10 px-3 py-2 text-xs text-warning">
+              <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+              <span>
+                No effect until <code className="font-mono">DEMO_ASSIGNMENT_ID</code> and{" "}
+                <code className="font-mono">DEMO_USER_ID</code> are set (env or config). The demo stays off until then.
+              </span>
+            </p>
+          )}
         </div>
 
         <div className="border-t pt-5">
