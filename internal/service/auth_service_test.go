@@ -932,3 +932,138 @@ func TestLogin_UnknownEmail_GenericError(t *testing.T) {
 		t.Fatalf("expected the generic 'invalid email or password', got: %v", err)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Logout — cookie-mode sign-out revokes the whole token family
+// ---------------------------------------------------------------------------
+
+func newLogoutTestService(db *mockDBTX) *AuthService {
+	return NewAuthService(
+		nil, // pool
+		nil, // userRepo
+		postgres.NewSessionRepo(db),
+		nil, // resetRepo
+		nil, // emailVerifyRepo
+		nil, // orgRepo
+		nil, // ssoIdentityRepo
+		nil, // ssoProviderRepo
+		nil, // teamRepo
+		nil, // domainMappingRepo
+		nil, // tokens
+		nil, // lockout
+		nil, // mailer
+		&config.Config{},
+		nil, // revocationCache
+		nil, // pendingLoginStore
+		nil, // ssoCodeStore
+	)
+}
+
+func logoutSessionRow(sessionID, userID, family uuid.UUID, revoked bool) *mockRow {
+	now := time.Now()
+	return &mockRow{values: []any{
+		sessionID,            // id
+		userID,               // user_id
+		"hash",               // refresh_token_hash
+		family,               // token_family
+		nil,                  // ip_address
+		nil,                  // user_agent
+		now,                  // last_used_at
+		now.Add(time.Hour),   // expires_at
+		revoked,              // revoked
+		now,                  // created_at
+		nil,                  // sso_provider_name
+	}}
+}
+
+// TestLogout_RevokesTokenFamily verifies that logging out kills the session's
+// entire token family — the full rotation chain for that device — not just the
+// single current session row.
+func TestLogout_RevokesTokenFamily(t *testing.T) {
+	sessionID, userID, family := uuid.New(), uuid.New(), uuid.New()
+	var revokedFamily uuid.UUID
+	revokeCalls := 0
+
+	db := &mockDBTX{
+		queryRowHandler: func(sql string, args ...any) pgx.Row {
+			if strings.Contains(sql, "FROM sessions") {
+				return logoutSessionRow(sessionID, userID, family, false)
+			}
+			return &mockRow{err: pgx.ErrNoRows}
+		},
+		execHandler: func(sql string, args ...any) (pgconn.CommandTag, error) {
+			if strings.Contains(sql, "token_family") {
+				revokeCalls++
+				if fam, ok := args[0].(uuid.UUID); ok {
+					revokedFamily = fam
+				}
+			}
+			return pgconn.NewCommandTag("UPDATE 1"), nil
+		},
+	}
+
+	session, err := newLogoutTestService(db).Logout(context.Background(), "raw-refresh-token")
+	if err != nil {
+		t.Fatalf("Logout: %v", err)
+	}
+	if session == nil || session.UserID != userID {
+		t.Fatalf("expected the revoked session back for auditing, got %+v", session)
+	}
+	if revokeCalls != 1 || revokedFamily != family {
+		t.Errorf("expected exactly one family revocation for %s, got %d calls (family %s)", family, revokeCalls, revokedFamily)
+	}
+}
+
+// TestLogout_UnknownTokenIsNoop verifies logout is idempotent and silent for
+// unknown tokens: no error, no session, no writes — nothing an attacker could
+// use as a token-validity oracle.
+func TestLogout_UnknownTokenIsNoop(t *testing.T) {
+	execCalls := 0
+	db := &mockDBTX{
+		queryRowHandler: func(sql string, args ...any) pgx.Row {
+			return &mockRow{err: pgx.ErrNoRows}
+		},
+		execHandler: func(sql string, args ...any) (pgconn.CommandTag, error) {
+			execCalls++
+			return pgconn.NewCommandTag("UPDATE 0"), nil
+		},
+	}
+
+	session, err := newLogoutTestService(db).Logout(context.Background(), "no-such-token")
+	if err != nil || session != nil {
+		t.Fatalf("unknown token must be a silent no-op, got session=%+v err=%v", session, err)
+	}
+	if execCalls != 0 {
+		t.Errorf("unknown token must not write anything, got %d exec calls", execCalls)
+	}
+}
+
+// TestLogout_RevokedSessionStillRevokesFamily: a token that was already
+// rotated away (its row is revoked) still identifies the device's family, and
+// signing out must kill the live tail of that chain.
+func TestLogout_RevokedSessionStillRevokesFamily(t *testing.T) {
+	family := uuid.New()
+	revokeCalls := 0
+
+	db := &mockDBTX{
+		queryRowHandler: func(sql string, args ...any) pgx.Row {
+			if strings.Contains(sql, "FROM sessions") {
+				return logoutSessionRow(uuid.New(), uuid.New(), family, true)
+			}
+			return &mockRow{err: pgx.ErrNoRows}
+		},
+		execHandler: func(sql string, args ...any) (pgconn.CommandTag, error) {
+			if strings.Contains(sql, "token_family") {
+				revokeCalls++
+			}
+			return pgconn.NewCommandTag("UPDATE 1"), nil
+		},
+	}
+
+	if _, err := newLogoutTestService(db).Logout(context.Background(), "stale-rotated-token"); err != nil {
+		t.Fatalf("Logout: %v", err)
+	}
+	if revokeCalls != 1 {
+		t.Errorf("expected the family revocation even for an already-revoked row, got %d calls", revokeCalls)
+	}
+}

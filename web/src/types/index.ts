@@ -18,7 +18,8 @@ export interface User {
 
 export interface TokenPair {
   access_token: string;
-  refresh_token: string;
+  /** Absent in cookie mode, where it arrives as an httpOnly cookie instead. */
+  refresh_token?: string;
   expires_in: number;
 }
 
