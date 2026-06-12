@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { api, ApiError, setAccessToken } from "@/lib/api";
+import { api, ApiError, setAccessToken, setSessionHint } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -165,9 +165,10 @@ export default function SetupPage() {
       }
       if (data.invites.length > 0) payload.invites = data.invites.filter((i) => i.email);
 
-      const res = await api.post<{ tokens: { access_token: string; refresh_token: string } }>("/setup/complete", payload);
-      localStorage.setItem("refresh_token", res.tokens.refresh_token);
+      payload.use_cookie = true; // refresh token arrives as an httpOnly cookie
+      const res = await api.post<{ tokens: { access_token: string } }>("/setup/complete", payload);
       setAccessToken(res.tokens.access_token);
+      setSessionHint(true);
       toast.success("Setup complete! Redirecting…");
       setTimeout(() => { window.location.href = "/inboxes"; }, 1000);
     } catch (err) {

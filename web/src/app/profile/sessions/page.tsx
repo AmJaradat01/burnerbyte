@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, setAccessToken } from "@/lib/api";
+import { api, setAccessToken, setSessionHint } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -65,6 +65,7 @@ export default function SessionsPage() {
       setTimeout(() => {
         setAccessToken(null);
         localStorage.removeItem("refresh_token");
+        setSessionHint(false);
         window.location.href = "/login";
       }, 1000);
     },

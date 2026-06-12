@@ -1,10 +1,36 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
 export const WS_BASE = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8080/api/v1/ws";
 
 // Access token is kept in memory only — never persisted to localStorage.
-// This mitigates XSS token theft. On page reload the app will use the
-// refresh_token (localStorage) to obtain a new access_token.
+// This mitigates XSS token theft. The refresh token lives in an httpOnly
+// cookie set by the backend (use_cookie mode), so no credential survives in
+// script-readable storage; on page reload the cookie mints a new access token.
 let _accessToken: string | null = null;
+
+// The httpOnly cookie is invisible to JavaScript, so this non-sensitive flag
+// records that a session exists. It only gates whether the app bothers
+// attempting a refresh — the cookie itself remains the credential.
+const SESSION_HINT_KEY = "bb_has_session";
+
+export function setSessionHint(on: boolean) {
+  if (typeof window === "undefined") return;
+  if (on) localStorage.setItem(SESSION_HINT_KEY, "1");
+  else localStorage.removeItem(SESSION_HINT_KEY);
+}
+
+/** Whether a session plausibly exists: the cookie-era hint, or a legacy
+ * pre-cookie refresh token that can still be migrated. */
+export function hasSession(): boolean {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem(SESSION_HINT_KEY) === "1" || localStorage.getItem("refresh_token") !== null;
+}
+
+function clearSessionState() {
+  _accessToken = null;
+  if (typeof window === "undefined") return;
+  localStorage.removeItem("refresh_token"); // legacy pre-cookie storage
+  localStorage.removeItem(SESSION_HINT_KEY);
+}
 
 export function getAccessToken(): string | null {
   return _accessToken;
@@ -41,18 +67,25 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
   }
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const res = await fetch(url, { ...init, headers });
+  // Auth and setup endpoints exchange the httpOnly refresh cookie; everything
+  // else stays credential-free so the cookie is never attached to (or relied
+  // on by) regular API traffic.
+  const withCredentials = path.startsWith("/auth/") || path.startsWith("/setup/");
+  const res = await fetch(url, {
+    ...init,
+    headers,
+    ...(withCredentials ? { credentials: "include" as const } : {}),
+  });
 
   // Attempt a refresh on any 401 — including the page-reload bootstrap, where
-  // there is no in-memory token yet but a refresh_token sits in localStorage.
-  // tryRefresh() returns false when there is no refresh_token, so this can't
-  // loop; _retry caps it at a single retry.
+  // there is no in-memory token yet but the refresh cookie persists.
+  // tryRefresh() returns false when no session plausibly exists, so this
+  // can't loop; _retry caps it at a single retry.
   if (res.status === 401 && !_retry) {
     const refreshed = await tryRefresh();
     if (refreshed) return request<T>(path, { ...opts, _retry: true });
     if (typeof window !== "undefined") {
-      _accessToken = null;
-      localStorage.removeItem("refresh_token");
+      clearSessionState();
       const publicPrefixes = ["/login", "/register", "/invite", "/setup", "/onboarding", "/verify-email", "/forgot-password", "/reset-password"];
       const isPublic = publicPrefixes.some((p) => window.location.pathname.startsWith(p));
       if (!isPublic) {
@@ -79,21 +112,25 @@ async function tryRefresh(): Promise<boolean> {
   if (refreshPromise) return refreshPromise;
 
   refreshPromise = (async () => {
-    // refresh_token remains in localStorage for now.
-    // TODO: Move to httpOnly cookie once backend supports Set-Cookie on /auth/refresh.
-    const refreshToken = typeof window !== "undefined" ? localStorage.getItem("refresh_token") : null;
-    if (!refreshToken) return false;
+    if (typeof window === "undefined") return false;
+    // Legacy sessions (pre-cookie deploys) still hold a refresh token in
+    // localStorage. Hand it in once with use_cookie — the rotated token comes
+    // back as an httpOnly cookie and the localStorage copy is retired.
+    const legacyToken = localStorage.getItem("refresh_token");
+    if (!legacyToken && localStorage.getItem(SESSION_HINT_KEY) !== "1") return false;
 
     try {
       const res = await fetch(`${API_BASE}/auth/refresh`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refresh_token: refreshToken }),
+        credentials: "include",
+        body: JSON.stringify(legacyToken ? { refresh_token: legacyToken, use_cookie: true } : { use_cookie: true }),
       });
       if (!res.ok) return false;
       const data = await res.json();
       _accessToken = data.access_token;
-      localStorage.setItem("refresh_token", data.refresh_token);
+      localStorage.removeItem("refresh_token");
+      setSessionHint(true);
       return true;
     } catch {
       return false;
