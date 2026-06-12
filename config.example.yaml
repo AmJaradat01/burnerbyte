@@ -33,6 +33,12 @@ jwt:
   access_ttl: 15m
   refresh_ttl: 168h
 
+# httpOnly refresh-token cookie for browser clients (web UI).
+# same_site: lax (default) | strict | none — use "none" only when the frontend
+# and API are served from unrelated domains; it forces Secure (HTTPS required).
+auth_cookie:
+  same_site: lax
+
 smtp:
   listen: 0.0.0.0:2525
   hostname: mail.example.com

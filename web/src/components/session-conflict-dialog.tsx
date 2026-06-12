@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { api, ApiError, setAccessToken } from "@/lib/api";
+import { api, ApiError, setAccessToken, setSessionHint } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -96,9 +96,10 @@ export function SessionConflictDialog({
       const res = await api.post<{ user: User; tokens: TokenPair }>("/auth/login/resolve", {
         pending_token: pendingToken,
         revoke_session_id: sessionId,
+        use_cookie: true,
       });
       setAccessToken(res.tokens.access_token);
-      localStorage.setItem("refresh_token", res.tokens.refresh_token);
+      setSessionHint(true);
       onResolved(res.user, res.tokens);
     } catch (err) {
       if (err instanceof ApiError) {

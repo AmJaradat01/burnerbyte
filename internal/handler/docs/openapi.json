@@ -609,6 +609,10 @@
                   },
                   "display_name": {
                     "type": "string"
+                  },
+                  "use_cookie": {
+                    "type": "boolean",
+                    "description": "Browser clients: store the refresh token in an httpOnly cookie and omit it from the JSON response."
                   }
                 }
               }
@@ -648,6 +652,10 @@
                   },
                   "password": {
                     "type": "string"
+                  },
+                  "use_cookie": {
+                    "type": "boolean",
+                    "description": "Browser clients: store the refresh token in an httpOnly cookie and omit it from the JSON response."
                   }
                 }
               }
@@ -662,7 +670,7 @@
             "description": "Invalid credentials"
           },
           "409": {
-            "description": "Session limit reached \u2014 returns pending token and active sessions list",
+            "description": "Session limit reached — returns pending token and active sessions list",
             "content": {
               "application/json": {
                 "schema": {
@@ -690,7 +698,13 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ResolveLoginInput"
+                "$ref": "#/components/schemas/ResolveLoginInput",
+                "properties": {
+                  "use_cookie": {
+                    "type": "boolean",
+                    "description": "Browser clients: store the refresh token in an httpOnly cookie and omit it from the JSON response."
+                  }
+                }
               }
             }
           }
@@ -706,7 +720,7 @@
             "description": "Invalid or expired pending login token"
           },
           "409": {
-            "description": "Session limit still exceeded (race condition) \u2014 returns new pending token and updated sessions",
+            "description": "Session limit still exceeded (race condition) — returns new pending token and updated sessions",
             "content": {
               "application/json": {
                 "schema": {
@@ -774,10 +788,65 @@
           "Auth"
         ],
         "summary": "Refresh tokens",
+        "description": "Rotates the refresh token. The token is read from the request body or, when absent, from the httpOnly refresh cookie (cookie mode). In cookie mode the rotated token is returned via Set-Cookie and omitted from the JSON body.",
         "security": [],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "refresh_token": {
+                    "type": "string",
+                    "description": "Optional when the httpOnly refresh cookie is present."
+                  },
+                  "use_cookie": {
+                    "type": "boolean",
+                    "description": "Browser clients: store the refresh token in an httpOnly cookie and omit it from the JSON response."
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Tokens refreshed"
+          },
+          "401": {
+            "description": "Missing, invalid, expired, or reused refresh token"
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Logout",
+        "description": "Revokes the session chain identified by the refresh token (request body or httpOnly cookie) and expires the cookie. Idempotent; requires no access token.",
+        "security": [],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "refresh_token": {
+                    "type": "string",
+                    "description": "Optional when the httpOnly refresh cookie is present."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Logged out"
           }
         }
       }
@@ -2864,9 +2933,36 @@
           "Auth"
         ],
         "summary": "SSO exchange",
+        "description": "Exchanges the one-time sso_code from the SSO callback redirect for tokens.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "code"
+                ],
+                "properties": {
+                  "code": {
+                    "type": "string"
+                  },
+                  "use_cookie": {
+                    "type": "boolean",
+                    "description": "Browser clients: store the refresh token in an httpOnly cookie and omit it from the JSON response."
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "Tokens issued"
+          },
+          "401": {
+            "description": "Invalid or expired code"
           }
         }
       }

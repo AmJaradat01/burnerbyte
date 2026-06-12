@@ -54,7 +54,7 @@ If database providers are also configured, both the file-based provider and data
 5. Provider redirects back to `GET /auth/sso/{provider}/callback`
 6. Server validates the state, exchanges the code for tokens, and extracts user info
 7. If the user exists, they're logged in. If not and auto-provisioning is enabled, a new account is created
-8. Server redirects to the frontend with access and refresh tokens as URL fragment parameters
+8. Server redirects to the frontend login page with a one-time `sso_code` (60s TTL), which the frontend exchanges for tokens via `POST /auth/sso/exchange` — the web UI requests the refresh token as an httpOnly cookie
 
 The same flow supports **account linking** — authenticated users can link additional SSO identities by initiating the flow with `?intent=link`. Linked identities are listed at `GET /auth/me/sso` and can be removed with `DELETE /auth/me/sso/{provider}`.
 
