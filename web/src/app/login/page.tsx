@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuthStore } from "@/stores/auth-store";
-import { api, setAccessToken } from "@/lib/api";
+import { api, setAccessToken, setSessionHint } from "@/lib/api";
 import { safeRedirect } from "@/lib/safe-redirect";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -60,10 +60,10 @@ export default function LoginPage() {
     const ssoCode = searchParams.get("sso_code");
     if (ssoCode) {
       window.history.replaceState(null, "", window.location.pathname);
-      api.post<{ access_token: string; refresh_token: string; user_id: string }>("/auth/sso/exchange", { code: ssoCode })
+      api.post<{ access_token: string; user_id: string }>("/auth/sso/exchange", { code: ssoCode, use_cookie: true })
         .then((res) => {
           setAccessToken(res.access_token);
-          localStorage.setItem("refresh_token", res.refresh_token);
+          setSessionHint(true);
           const pendingInvite = sessionStorage.getItem("pending_invite_token");
           if (pendingInvite) {
             sessionStorage.removeItem("pending_invite_token");
