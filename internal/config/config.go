@@ -28,6 +28,7 @@ type Config struct {
 	Workers  WorkersConfig  `mapstructure:"workers"`
 	Encryption EncryptionConfig `mapstructure:"encryption"`
 	Demo     DemoConfig     `mapstructure:"demo"`
+	AuthCookie CookieConfig `mapstructure:"auth_cookie"`
 
 	// mu guards the runtime-mutable settings groups (Password, Lockout,
 	// Defaults, EmailVerification) that PUT /admin/platform updates while
@@ -140,6 +141,15 @@ type JWTConfig struct {
 	Secret     string        `mapstructure:"secret"`
 	AccessTTL  time.Duration `mapstructure:"access_ttl"`
 	RefreshTTL time.Duration `mapstructure:"refresh_ttl"`
+}
+
+// CookieConfig controls the httpOnly refresh-token cookie issued to browser
+// clients that opt into cookie mode on the auth endpoints.
+type CookieConfig struct {
+	// SameSite is "lax" (default), "strict", or "none". Use "none" only when
+	// the frontend and API are served from unrelated domains; it forces the
+	// Secure attribute, so it requires HTTPS.
+	SameSite string `mapstructure:"same_site"`
 }
 
 type SMTPConfig struct {
@@ -265,6 +275,7 @@ func Load() (*Config, error) {
 
 	// Defaults
 	v.SetDefault("defaults.max_sessions_per_user", 5)
+	v.SetDefault("auth_cookie.same_site", "lax")
 
 	// Map specific env vars to config keys
 	v.BindEnv("database.url", "DATABASE_URL")

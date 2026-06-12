@@ -549,6 +549,27 @@ func (s *AuthService) RevokeAllSessions(ctx context.Context, userID uuid.UUID) (
 	return count, nil
 }
 
+// Logout revokes the session chain (token family) behind the given refresh
+// token and returns the revoked session for auditing. Unknown tokens are a
+// successful no-op so logout stays idempotent and reveals nothing about token
+// validity.
+func (s *AuthService) Logout(ctx context.Context, refreshToken string) (*domain.Session, error) {
+	session, err := s.sessionRepo.GetByTokenHash(ctx, auth.HashToken(refreshToken))
+	if err != nil {
+		if errors.Is(err, postgres.ErrNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	if err := s.sessionRepo.RevokeByFamily(ctx, session.TokenFamily); err != nil {
+		return nil, err
+	}
+	if s.revocationCache != nil {
+		s.revocationCache.MarkRevoked(ctx, session.UserID)
+	}
+	return session, nil
+}
+
 func (s *AuthService) ForgotPassword(ctx context.Context, input domain.ForgotPasswordInput) error {
 	input.Email = strings.ToLower(strings.TrimSpace(input.Email))
 	user, err := s.userRepo.GetByEmail(ctx, input.Email)

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { api, setAccessToken, getAccessToken, ApiError } from "./api";
+import { api, setAccessToken, getAccessToken, setSessionHint, hasSession, ApiError } from "./api";
 
 type MockResp = { status?: number; ok?: boolean; json?: unknown };
 
@@ -20,6 +20,8 @@ function mockFetchSequence(responses: MockResp[]) {
 
 const authHeader = (call: unknown[]) =>
   ((call[1] as RequestInit).headers as Record<string, string>).Authorization;
+const bodyOf = (call: unknown[]) => JSON.parse((call[1] as RequestInit).body as string);
+const credentialsOf = (call: unknown[]) => (call[1] as RequestInit).credentials;
 
 describe("api request / token refresh", () => {
   beforeEach(() => {
@@ -38,29 +40,49 @@ describe("api request / token refresh", () => {
     expect(authHeader(fetchMock.mock.calls[0])).toBe("Bearer tok-123");
   });
 
-  it("refreshes and retries once on 401, carrying the new token", async () => {
+  it("refreshes via the httpOnly cookie and retries once on 401", async () => {
     setAccessToken("expired");
-    localStorage.setItem("refresh_token", "rt-1");
+    setSessionHint(true);
     const fetchMock = mockFetchSequence([
       { status: 401 }, // initial request rejected
-      { json: { access_token: "new-at", refresh_token: "rt-2" } }, // /auth/refresh
+      { json: { access_token: "new-at" } }, // /auth/refresh (cookie mode: no refresh_token in body)
       { json: { data: 42 } }, // retried request
     ]);
     const out = await api.get<{ data: number }>("/data");
     expect(out).toEqual({ data: 42 });
     expect(getAccessToken()).toBe("new-at");
-    expect(localStorage.getItem("refresh_token")).toBe("rt-2");
     expect(fetchMock).toHaveBeenCalledTimes(3);
+    // The refresh call must carry the cookie and ask for cookie mode.
+    const refreshCall = fetchMock.mock.calls[1];
+    expect(refreshCall[0]).toContain("/auth/refresh");
+    expect(credentialsOf(refreshCall)).toBe("include");
+    expect(bodyOf(refreshCall)).toEqual({ use_cookie: true });
     expect(authHeader(fetchMock.mock.calls[2])).toBe("Bearer new-at");
   });
 
-  it("bootstraps from refresh_token on reload (no in-memory token)", async () => {
-    // Hard refresh: access token is gone but the refresh_token persists.
+  it("migrates a legacy localStorage refresh token into cookie mode", async () => {
+    setAccessToken("expired");
+    localStorage.setItem("refresh_token", "rt-legacy"); // pre-cookie deploy
+    const fetchMock = mockFetchSequence([
+      { status: 401 },
+      { json: { access_token: "new-at" } },
+      { json: { ok: true } },
+    ]);
+    await api.get("/data");
+    // The stored token is handed in once, with the cookie opt-in…
+    expect(bodyOf(fetchMock.mock.calls[1])).toEqual({ refresh_token: "rt-legacy", use_cookie: true });
+    // …and never persists again: the rotated token lives in the cookie now.
+    expect(localStorage.getItem("refresh_token")).toBeNull();
+    expect(hasSession()).toBe(true);
+  });
+
+  it("bootstraps from the session hint on reload (no in-memory token)", async () => {
+    // Hard refresh: the access token is gone, the cookie + hint persist.
     setAccessToken(null);
-    localStorage.setItem("refresh_token", "rt-boot");
+    setSessionHint(true);
     mockFetchSequence([
       { status: 401 },
-      { json: { access_token: "boot-at", refresh_token: "rt-boot2" } },
+      { json: { access_token: "boot-at" } },
       { json: { user: "x" } },
     ]);
     const out = await api.get<{ user: string }>("/auth/me");
@@ -68,13 +90,29 @@ describe("api request / token refresh", () => {
     expect(getAccessToken()).toBe("boot-at");
   });
 
-  it("clears the session and throws on 401 with no refresh token", async () => {
-    setAccessToken("expired"); // no refresh_token in localStorage
+  it("does not attempt a refresh without any session signal", async () => {
+    setAccessToken("expired"); // no hint, no legacy token
     window.history.pushState({}, "", "/login"); // public path -> no navigation attempt
-    mockFetchSequence([{ status: 401 }]);
+    const fetchMock = mockFetchSequence([{ status: 401 }]);
+    await expect(api.get("/data")).rejects.toBeInstanceOf(ApiError);
+    expect(fetchMock).toHaveBeenCalledTimes(1); // no network refresh fired
+    expect(getAccessToken()).toBeNull();
+    expect(hasSession()).toBe(false);
+  });
+
+  it("clears all session state when the cookie refresh fails", async () => {
+    setAccessToken("expired");
+    setSessionHint(true);
+    localStorage.setItem("refresh_token", "rt-dead");
+    window.history.pushState({}, "", "/login"); // public path -> no navigation attempt
+    mockFetchSequence([
+      { status: 401 }, // initial request
+      { status: 401 }, // refresh rejected (session revoked server-side)
+    ]);
     await expect(api.get("/data")).rejects.toBeInstanceOf(ApiError);
     expect(getAccessToken()).toBeNull();
     expect(localStorage.getItem("refresh_token")).toBeNull();
+    expect(hasSession()).toBe(false);
   });
 
   it("surfaces non-401 errors as ApiError without refreshing", async () => {
@@ -82,5 +120,14 @@ describe("api request / token refresh", () => {
     const fetchMock = mockFetchSequence([{ status: 400, json: { error: "bad input" } }]);
     await expect(api.get("/data")).rejects.toMatchObject({ status: 400, message: "bad input" });
     expect(fetchMock).toHaveBeenCalledTimes(1); // no refresh attempt
+  });
+
+  it("attaches credentials only to auth and setup endpoints", async () => {
+    setAccessToken("tok");
+    const fetchMock = mockFetchSequence([{ json: {} }, { json: {} }]);
+    await api.get("/inboxes");
+    await api.get("/auth/sessions");
+    expect(credentialsOf(fetchMock.mock.calls[0])).toBeUndefined();
+    expect(credentialsOf(fetchMock.mock.calls[1])).toBe("include");
   });
 });
