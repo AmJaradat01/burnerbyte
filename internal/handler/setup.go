@@ -87,6 +87,10 @@ func (h *SetupHandler) Routes(r chi.Router) {
 }
 
 type SetupInput struct {
+	// UseCookie opts into the httpOnly refresh-token cookie (browser clients);
+	// the refresh token is then omitted from the JSON response.
+	UseCookie bool `json:"use_cookie"`
+
 	// Step 1: Admin (required)
 	Admin struct {
 		Email       string `json:"email"`
@@ -444,14 +448,19 @@ func (h *SetupHandler) Complete(w http.ResponseWriter, r *http.Request) {
 		}()
 	}
 
+	respTokens := domain.TokenPair{
+		AccessToken:  accessToken,
+		RefreshToken: rawRefresh,
+		ExpiresIn:    int64(h.tokens.AccessTTL().Seconds()),
+	}
+	if input.UseCookie {
+		setRefreshCookie(w, r, h.cfg, rawRefresh)
+		respTokens.RefreshToken = ""
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"user": adminUser,
-		"org":  org,
-		"tokens": domain.TokenPair{
-			AccessToken:  accessToken,
-			RefreshToken: rawRefresh,
-			ExpiresIn:    int64(h.tokens.AccessTTL().Seconds()),
-		},
+		"user":   adminUser,
+		"org":    org,
+		"tokens": respTokens,
 	})
 }
 

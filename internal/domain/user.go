@@ -40,8 +40,10 @@ type LoginInput struct {
 }
 
 type TokenPair struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
+	AccessToken string `json:"access_token"`
+	// RefreshToken is omitted in cookie-mode responses, where it travels only
+	// via the httpOnly Set-Cookie header.
+	RefreshToken string `json:"refresh_token,omitempty"`
 	ExpiresIn    int64  `json:"expires_in"`
 }
 

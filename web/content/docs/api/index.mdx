@@ -17,7 +17,9 @@ Most endpoints require authentication via one of:
 Authorization: Bearer <access_token>
 ```
 
-Obtain tokens via `POST /auth/login` or `POST /auth/register`. Access tokens expire after 15 minutes (configurable). Use `POST /auth/refresh` with the refresh token to get new tokens. `GET /auth/sso-status` returns SSO configuration and `password_policy` settings.
+Obtain tokens via `POST /auth/login` or `POST /auth/register`. Access tokens expire after 15 minutes (configurable). Use `POST /auth/refresh` with the refresh token to get new tokens, and `POST /auth/logout` to revoke the current session. `GET /auth/sso-status` returns SSO configuration and `password_policy` settings.
+
+Browser clients can pass `use_cookie: true` on `login`, `register`, `login/resolve`, `refresh`, and `sso/exchange`: the refresh token is then delivered as an httpOnly cookie (scoped to `/api/v1/auth`) and omitted from the JSON response, keeping it out of script-readable storage. `refresh` and `logout` fall back to that cookie when the body carries no token. API clients that never send the flag keep receiving both tokens in the body.
 
 ### Session Limit Enforcement
 
@@ -119,7 +121,7 @@ X-RateLimit-Reset: 1709251200
 | Group | Endpoints |
 |---|---|
 | Setup | `GET /setup/status`, `POST /setup/complete` |
-| Auth | `POST /auth/register`, `POST /auth/login`, `POST /auth/login/resolve`, `POST /auth/refresh`, `GET /auth/me`, `PATCH /auth/me`, `PUT /auth/me/password`, `DELETE /auth/me`, `POST /auth/forgot-password`, `POST /auth/reset-password`, `GET /auth/verify-email/:token`, `GET /auth/sso-status`, `GET /auth/datetime-settings`, `GET /auth/login/pending-sessions`, `POST /auth/sso/exchange` |
+| Auth | `POST /auth/register`, `POST /auth/login`, `POST /auth/login/resolve`, `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me`, `PATCH /auth/me`, `PUT /auth/me/password`, `DELETE /auth/me`, `POST /auth/forgot-password`, `POST /auth/reset-password`, `GET /auth/verify-email/:token`, `GET /auth/sso-status`, `GET /auth/datetime-settings`, `GET /auth/login/pending-sessions`, `POST /auth/sso/exchange` |
 | Sessions | `GET /auth/sessions`, `DELETE /auth/sessions/:id`, `DELETE /auth/sessions` |
 | SSO | `GET /auth/sso/:provider`, `GET /auth/sso/:provider/callback` |
 | SSO Identities | `GET /auth/me/sso`, `DELETE /auth/me/sso/:provider` |

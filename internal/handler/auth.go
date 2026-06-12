@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -37,6 +38,7 @@ func (h *AuthHandler) PublicRoutes(r chi.Router, rl *middleware.RateLimiter) {
 	r.With(rl.LoginLimiter).Post("/auth/login/resolve", h.ResolveLogin)
 	r.With(rl.LoginLimiter).Get("/auth/login/pending-sessions", h.GetPendingSessions)
 	r.With(rl.LoginLimiter).Post("/auth/refresh", h.Refresh)
+	r.With(rl.LoginLimiter).Post("/auth/logout", h.Logout)
 	r.With(rl.ForgotPasswordLimiter).Post("/auth/forgot-password", h.ForgotPassword)
 	r.With(rl.LoginLimiter).Post("/auth/reset-password", h.ResetPassword)
 	r.With(rl.LoginLimiter).Get("/auth/verify-email/{token}", h.VerifyEmail)
@@ -60,7 +62,10 @@ func (h *AuthHandler) AuthenticatedRoutes(r chi.Router) {
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
-	var input domain.CreateUserInput
+	var input struct {
+		domain.CreateUserInput
+		UseCookie bool `json:"use_cookie"`
+	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
@@ -76,7 +81,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, tokens, err := h.svc.Register(r.Context(), input)
+	user, tokens, err := h.svc.Register(r.Context(), input.CreateUserInput)
 	if err != nil {
 		if strings.Contains(err.Error(), "already registered") {
 			writeError(w, http.StatusBadRequest, "unable to complete registration")
@@ -86,6 +91,10 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if input.UseCookie && tokens != nil {
+		setRefreshCookie(w, r, h.cfg, tokens.RefreshToken)
+		tokens = stripRefreshToken(tokens)
+	}
 	auditRecordEnhanced(r, uuid.Nil, "user.registered", "user", user.ID, user.Email, map[string]any{"email": user.Email, "display_name": user.DisplayName, "ip_address": r.RemoteAddr})
 	writeJSON(w, http.StatusCreated, map[string]any{
 		"user":   user,
@@ -94,7 +103,10 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
-	var input domain.LoginInput
+	var input struct {
+		domain.LoginInput
+		UseCookie bool `json:"use_cookie"`
+	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
@@ -105,7 +117,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, tokens, err := h.svc.Login(r.Context(), input, r.RemoteAddr, r.UserAgent())
+	user, tokens, err := h.svc.Login(r.Context(), input.LoginInput, r.RemoteAddr, r.UserAgent())
 	if err != nil {
 		var lockedErr *service.LockedError
 		if errors.As(err, &lockedErr) {
@@ -140,6 +152,10 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if input.UseCookie && tokens != nil {
+		setRefreshCookie(w, r, h.cfg, tokens.RefreshToken)
+		tokens = stripRefreshToken(tokens)
+	}
 	auditRecordEnhanced(r, uuid.Nil, "user.login", "user", user.ID, user.Email, map[string]any{"email": user.Email, "user_agent": r.Header.Get("User-Agent"), "ip_address": r.RemoteAddr, "login_method": "password"})
 	writeJSON(w, http.StatusOK, map[string]any{
 		"user":   user,
@@ -148,7 +164,10 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) ResolveLogin(w http.ResponseWriter, r *http.Request) {
-	var input domain.ResolveLoginInput
+	var input struct {
+		domain.ResolveLoginInput
+		UseCookie bool `json:"use_cookie"`
+	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
@@ -159,7 +178,7 @@ func (h *AuthHandler) ResolveLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, tokens, err := h.svc.ResolveLogin(r.Context(), input, r.RemoteAddr, r.UserAgent())
+	user, tokens, err := h.svc.ResolveLogin(r.Context(), input.ResolveLoginInput, r.RemoteAddr, r.UserAgent())
 	if err != nil {
 		var limitErr *service.SessionLimitError
 		if errors.As(err, &limitErr) {
@@ -176,6 +195,10 @@ func (h *AuthHandler) ResolveLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if input.UseCookie && tokens != nil {
+		setRefreshCookie(w, r, h.cfg, tokens.RefreshToken)
+		tokens = stripRefreshToken(tokens)
+	}
 	auditRecordEnhanced(r, uuid.Nil, "user.login", "user", user.ID, user.Email, map[string]any{
 		"email":             user.Email,
 		"login_method":      "password",
@@ -188,19 +211,66 @@ func (h *AuthHandler) ResolveLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
-	var input domain.RefreshInput
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+	var input struct {
+		domain.RefreshInput
+		UseCookie bool `json:"use_cookie"`
+	}
+	// An empty body is valid in cookie mode, so only reject malformed JSON.
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil && !errors.Is(err, io.EOF) {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
-	tokens, err := h.svc.Refresh(r.Context(), input.RefreshToken, r.RemoteAddr, r.UserAgent())
+	refreshToken, cookieMode := refreshRequestToken(r, input.RefreshToken, input.UseCookie)
+	if refreshToken == "" {
+		writeError(w, http.StatusUnauthorized, "missing refresh token")
+		return
+	}
+
+	tokens, err := h.svc.Refresh(r.Context(), refreshToken, r.RemoteAddr, r.UserAgent())
 	if err != nil {
+		if cookieMode {
+			// The cookie is dead (expired, revoked, or reused); expire it so
+			// the browser stops replaying it.
+			clearRefreshCookie(w, r, h.cfg)
+		}
 		writeError(w, http.StatusUnauthorized, err.Error())
 		return
 	}
 
+	if cookieMode {
+		setRefreshCookie(w, r, h.cfg, tokens.RefreshToken)
+		tokens = stripRefreshToken(tokens)
+	}
 	writeJSON(w, http.StatusOK, tokens)
+}
+
+// Logout revokes the session chain identified by the refresh token (body or
+// cookie) and expires the cookie. It is deliberately public and idempotent:
+// signing out must work even when the access token is long gone, and an
+// unknown token reveals nothing.
+func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil && !errors.Is(err, io.EOF) {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	refreshToken, _ := refreshRequestToken(r, input.RefreshToken, false)
+	if refreshToken != "" {
+		if session, err := h.svc.Logout(r.Context(), refreshToken); err == nil && session != nil {
+			email := ""
+			if u, err := h.svc.GetMe(r.Context(), session.UserID); err == nil && u != nil {
+				email = u.Email
+			}
+			auditRecordEnhanced(r, uuid.Nil, "user.logout", "user", session.UserID, email, map[string]any{"email": email, "session_id": session.ID.String(), "ip_address": r.RemoteAddr})
+		}
+	}
+
+	clearRefreshCookie(w, r, h.cfg)
+	writeJSON(w, http.StatusOK, map[string]string{"message": "logged out"})
 }
 
 func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
@@ -429,6 +499,8 @@ func (h *AuthHandler) RevokeAllSessions(w http.ResponseWriter, r *http.Request) 
 	}
 
 	auditRecordEnhanced(r, uuid.Nil, "session.revoked_all", "session", uc.UserID, uc.Email, map[string]any{"email": uc.Email, "revoked_count": count})
+	// The caller's own session is among the revoked, so its cookie is dead too.
+	clearRefreshCookie(w, r, h.cfg)
 	writeJSON(w, http.StatusOK, map[string]string{"message": "all sessions revoked"})
 }
 
@@ -728,7 +800,8 @@ func (h *AuthHandler) GetPendingSessions(w http.ResponseWriter, r *http.Request)
 
 func (h *AuthHandler) SSOExchange(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		Code string `json:"code"`
+		Code      string `json:"code"`
+		UseCookie bool   `json:"use_cookie"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Code == "" {
 		writeError(w, http.StatusBadRequest, "code is required")
@@ -739,11 +812,16 @@ func (h *AuthHandler) SSOExchange(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnauthorized, "invalid or expired code")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]string{
-		"access_token":  data.AccessToken,
-		"refresh_token": data.RefreshToken,
-		"user_id":       data.UserID,
-	})
+	resp := map[string]string{
+		"access_token": data.AccessToken,
+		"user_id":      data.UserID,
+	}
+	if body.UseCookie {
+		setRefreshCookie(w, r, h.cfg, data.RefreshToken)
+	} else {
+		resp["refresh_token"] = data.RefreshToken
+	}
+	writeJSON(w, http.StatusOK, resp)
 }
 
 func (h *AuthHandler) ListSSOIdentities(w http.ResponseWriter, r *http.Request) {
