@@ -230,3 +230,11 @@
   - Verify preservation test (Property 2) passes — live entity counts and existing counters unchanged
   - Ensure all new counter methods are exercised by the test suite
   - Ask the user if questions arise
+
+## Test Coverage Status (pragmatic backfill)
+
+The remaining test tasks (bug-condition + preservation/verification) are
+database/handler integration tests — they insert rows, mutate state, and
+re-query through real SQL (or invoke handlers with a captured audit recorder).
+They cannot be exercised with the unit-level mock harness and are deferred
+pending a test-database fixture. The underlying fix is implemented and shipped.
