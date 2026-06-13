@@ -16,8 +16,8 @@ import Link from "next/link";
 import { timeAgo } from "@/lib/time";
 import {
   Activity, ArrowDownRight, ArrowUpRight, BarChart3, Clock, Globe, HardDrive,
-  Inbox as InboxIcon, Key, Mail, Plus, RefreshCw, Settings, Shield,
-  TrendingUp, Users, Webhook, Zap,
+  Inbox as InboxIcon, Key, Mail, Plus, RefreshCw, Shield,
+  TrendingUp, Users, Webhook,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { LastUpdated } from "@/components/last-updated";
@@ -106,19 +106,15 @@ function MemberDashboard({ org, user, greeting }: { org: { id: string; name: str
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardContent className="pt-5 pb-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-bold tracking-tight">{greeting}, {user?.display_name?.split(" ")[0] || "there"}</h1>
-              <p className="text-muted-foreground text-sm mt-0.5">Welcome to {org.name}</p>
-            </div>
-            <Button asChild>
-              <Link href="/"><Plus className="h-4 w-4 mr-2" />Create Inbox</Link>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-headline">{greeting}, {user?.display_name?.split(" ")[0] || "there"}</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Welcome to {org.name}</p>
+        </div>
+        <Button asChild>
+          <Link href="/"><Plus className="h-4 w-4 mr-2" />Create Inbox</Link>
+        </Button>
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>
@@ -134,21 +130,6 @@ function MemberDashboard({ org, user, greeting }: { org: { id: string; name: str
             ) : (
               <p className="text-2xl font-bold tabular-nums">{inboxes?.total ?? 0}</p>
             )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-5 pb-4">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-medium text-muted-foreground">Quick Actions</span>
-              <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-muted text-muted-foreground">
-                <Zap className="h-4 w-4" />
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button asChild size="sm" variant="outline"><Link href="/" className="gap-1.5"><Plus className="h-3.5 w-3.5" /> New Inbox</Link></Button>
-              <Button asChild size="sm" variant="outline"><Link href="/profile" className="gap-1.5"><Settings className="h-3.5 w-3.5" /> Profile</Link></Button>
-            </div>
           </CardContent>
         </Card>
       </div>
@@ -306,47 +287,43 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card>
-        <CardContent className="pt-5 pb-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h1 className="text-xl font-bold tracking-tight">
-                {greeting}, {user?.display_name?.split(" ")[0] || "there"}
-              </h1>
-              <p className="text-muted-foreground text-sm mt-0.5">
-                Here&apos;s what&apos;s happening with {org.name}
-                {dataUpdatedAt ? <> · <LastUpdated dataUpdatedAt={dataUpdatedAt} /></> : null}
-                {autoRefresh && (
-                  <span className="inline-flex items-center gap-1.5 ml-2 text-success">
-                    <span className="h-1.5 w-1.5 rounded-full bg-success" />
-                    Live
-                  </span>
-                )}
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none">
-                <Switch
-                  checked={autoRefresh}
-                  onCheckedChange={(checked) => {
-                    setAutoRefresh(checked);
-                    localStorage.setItem("auto-refresh-enabled", String(checked));
-                  }}
-                  size="sm"
-                />
-                <span className="hidden sm:inline">Auto-refresh</span>
-              </label>
-              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { refetch(); qc.invalidateQueries({ queryKey: ["org-emails-per-day"] }); qc.invalidateQueries({ queryKey: ["org-emails-week"] }); qc.invalidateQueries({ queryKey: ["org-insights-dashboard"] }); qc.invalidateQueries({ queryKey: ["dashboard-audit"] }); }}>
-                <RefreshCw className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Refresh</span>
-              </Button>
-              <Button asChild size="sm" className="gap-1.5">
-                <Link href="/"><Plus className="h-3.5 w-3.5" /> New Inbox</Link>
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-headline">
+            {greeting}, {user?.display_name?.split(" ")[0] || "there"}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Here&apos;s what&apos;s happening with {org.name}
+            {dataUpdatedAt ? <> · <LastUpdated dataUpdatedAt={dataUpdatedAt} /></> : null}
+            {autoRefresh && (
+              <span className="inline-flex items-center gap-1.5 ml-2 text-success">
+                <span className="h-1.5 w-1.5 rounded-full bg-success" />
+                Live
+              </span>
+            )}
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none">
+            <Switch
+              checked={autoRefresh}
+              onCheckedChange={(checked) => {
+                setAutoRefresh(checked);
+                localStorage.setItem("auto-refresh-enabled", String(checked));
+              }}
+              size="sm"
+            />
+            <span className="hidden sm:inline">Auto-refresh</span>
+          </label>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { refetch(); qc.invalidateQueries({ queryKey: ["org-emails-per-day"] }); qc.invalidateQueries({ queryKey: ["org-emails-week"] }); qc.invalidateQueries({ queryKey: ["org-insights-dashboard"] }); qc.invalidateQueries({ queryKey: ["dashboard-audit"] }); }}>
+            <RefreshCw className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Refresh</span>
+          </Button>
+          <Button asChild size="sm" className="gap-1.5">
+            <Link href="/"><Plus className="h-3.5 w-3.5" /> New Inbox</Link>
+          </Button>
+        </div>
+      </div>
 
       {/* Primary stats — 4 cards, uniform height */}
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
@@ -362,7 +339,7 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
         <div className="lg:col-span-2 space-y-4">
           {/* 30-day volume chart */}
           <Card className="overflow-hidden">
-            <CardHeader className="pb-2 bg-muted/20">
+            <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
@@ -399,7 +376,7 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
           {/* Peak hours */}
           {insights?.peak_hours && insights.peak_hours.length > 0 && (
             <Card className="overflow-hidden">
-              <CardHeader className="pb-2 bg-muted/20">
+              <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
@@ -431,7 +408,7 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
           <div className="grid gap-4 sm:grid-cols-2">
             {topSenders && topSenders.length > 0 && (
               <Card className="overflow-hidden">
-                <CardHeader className="pb-2 bg-muted/20">
+                <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
@@ -466,7 +443,7 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
 
             {insights?.domain_breakdown && insights.domain_breakdown.length > 0 && (
               <Card className="overflow-hidden">
-                <CardHeader className="pb-2 bg-muted/20">
+                <CardHeader className="pb-2">
                   <div className="flex items-center gap-2">
                     <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
                       <Globe className="h-3.5 w-3.5 text-muted-foreground" />
@@ -500,7 +477,7 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
         <div className="space-y-4">
           {/* Weekly summary */}
           <Card className="overflow-hidden">
-            <CardHeader className="pb-2 bg-muted/20">
+            <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
@@ -557,7 +534,7 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
 
           {/* Recent Activity */}
           <Card className="overflow-hidden">
-            <CardHeader className="pb-2 bg-muted/20">
+            <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
@@ -605,37 +582,25 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
       </div>
 
       {/* Quick links */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Quick Links</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            {[
-              { href: "/", icon: InboxIcon, label: "Inboxes", desc: "Create & manage" },
-              { href: "/domains", icon: Globe, label: "Domains", desc: "DNS & verification" },
-              { href: "/teams", icon: Users, label: "Teams", desc: "Members & access" },
-              { href: "/webhooks", icon: Webhook, label: "Webhooks", desc: "Event callbacks" },
-              { href: "/api-keys", icon: Key, label: "API Keys", desc: "Programmatic access" },
-              { href: "/analytics", icon: BarChart3, label: "Analytics", desc: "Usage & trends" },
-            ].map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="flex flex-col items-center gap-2 rounded-xl border p-4 hover:bg-muted/50 transition-colors group text-center"
-              >
-                <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-muted text-muted-foreground">
-                  <item.icon className="h-5 w-5" />
-                </div>
-                <div>
-                  <span className="text-sm font-semibold group-hover:text-primary transition-colors block">{item.label}</span>
-                  <span className="text-[10px] text-muted-foreground hidden sm:block">{item.desc}</span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex flex-wrap gap-2">
+        {[
+          { href: "/", icon: InboxIcon, label: "Inboxes" },
+          { href: "/domains", icon: Globe, label: "Domains" },
+          { href: "/teams", icon: Users, label: "Teams" },
+          { href: "/webhooks", icon: Webhook, label: "Webhooks" },
+          { href: "/api-keys", icon: Key, label: "API Keys" },
+          { href: "/analytics", icon: BarChart3, label: "Analytics" },
+        ].map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className="flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/80 hover:border-primary/20 transition-all"
+          >
+            <item.icon className="h-3.5 w-3.5 shrink-0" />
+            {item.label}
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }
