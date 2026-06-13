@@ -140,7 +140,7 @@ func main() {
 		attachmentSvc = service.NewAttachmentService(attachmentRepo, emailRepo, inboxRepo, s3Client, cfg.MinIO, cfg.Defaults.MaxAttachmentSizeMB, cfg.Defaults.PresignedURLTTL)
 	} else {
 		// Fallback to local filesystem storage for development/testing
-		localFS, fsErr := storage.NewLocalFS("./data/attachments", cfg.Server.FrontendURL+"/api/v1/files")
+		localFS, fsErr := storage.NewLocalFS("./data/attachments", cfg.Server.BaseURL+"/api/v1/files")
 		if fsErr != nil {
 			slog.Error("failed to create local storage", "error", fsErr)
 		} else {
