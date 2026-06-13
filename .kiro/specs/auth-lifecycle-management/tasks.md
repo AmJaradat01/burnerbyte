@@ -6,7 +6,7 @@ Add per-user auth method locking, admin-driven auth method migration, session bi
 
 ## Tasks
 
-- [ ] 1. Add `auth_method_lock` to domain model and database layer
+- [x] 1. Add `auth_method_lock` to domain model and database layer
   - [x] 1.1 Add `AuthMethodLock *string` field to `domain.User` struct in `internal/domain/user.go`
     - Add the field with JSON tag `json:"auth_method_lock,omitempty"`
     - _Requirements: 1.4_
@@ -19,7 +19,7 @@ Add per-user auth method locking, admin-driven auth method migration, session bi
     - Update `scanOne` to scan `auth_method_lock` into `User.AuthMethodLock`
     - _Requirements: 1.4_
 
-- [ ] 2. Implement auth method lock enforcement in AuthService
+- [x] 2. Implement auth method lock enforcement in AuthService
   - [x] 2.1 Add `checkAuthMethodLock` helper in `internal/service/auth_service.go`
     - Returns error if `user.AuthMethodLock` is non-nil and doesn't match the attempted method
     - Returns nil if lock is nil (any method allowed)
@@ -33,12 +33,12 @@ Add per-user auth method locking, admin-driven auth method migration, session bi
     - For existing users (not new), check `if user.AuthMethodLock == "password"` → reject
     - _Requirements: 1.2, 1.3_
 
-  - [ ]* 2.4 Write property test for lock enforcement (Property 1)
+  - [x]* 2.4 Write property test for lock enforcement (Property 1)
     - **Property 1: Lock enforcement is total**
     - For any user with `auth_method_lock = "sso"`, password login always fails; for `"password"`, SSO login always fails; for nil, both succeed
     - **Validates: Requirements 1.1, 1.2, 1.3**
 
-- [ ] 3. Implement session binding to auth method on refresh
+- [x] 3. Implement session binding to auth method on refresh
   - [x] 3.1 Add `checkSessionAuthMethodLock` helper in `internal/service/auth_service.go`
     - Compares `user.AuthMethodLock` against `session.SSOProviderName`
     - Lock "sso" requires `session.SSOProviderName != nil`; lock "password" requires `session.SSOProviderName == nil`
@@ -49,15 +49,15 @@ Add per-user auth method locking, admin-driven auth method migration, session bi
     - If mismatch, revoke session and return error
     - _Requirements: 3.1, 3.2, 3.3_
 
-  - [ ]* 3.3 Write property test for session binding (Property 2)
+  - [x]* 3.3 Write property test for session binding (Property 2)
     - **Property 2: Session binding is consistent**
     - Refresh succeeds iff session auth method matches user lock (or lock is nil)
     - **Validates: Requirements 3.1, 3.2, 3.3**
 
-- [ ] 4. Checkpoint - Ensure all tests pass
+- [x] 4. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 5. Implement auth method migration
+- [x] 5. Implement auth method migration
   - [x] 5.1 Add `MigrateToSSO` method to `AuthService`
     - Verify user has linked SSO identity, clear password hash, set `auth_method_lock = "sso"`, revoke all sessions
     - _Requirements: 2.1, 2.2_
@@ -71,17 +71,17 @@ Add per-user auth method locking, admin-driven auth method migration, session bi
     - Validate value is nil, "sso", or "password"
     - _Requirements: 1.4_
 
-  - [ ]* 5.4 Write property test for migration atomicity (Property 3)
+  - [x]* 5.4 Write property test for migration atomicity (Property 3)
     - **Property 3: Migration atomicity**
     - After MigrateToSSO: password_hash = nil, lock = "sso", sessions revoked. After MigrateToPassword: password_hash != nil, lock = "password", sessions revoked.
     - **Validates: Requirements 2.1, 2.3**
 
-  - [ ]* 5.5 Write property test for migration preconditions (Property 4)
+  - [x]* 5.5 Write property test for migration preconditions (Property 4)
     - **Property 4: Migration preconditions**
     - MigrateToSSO fails if no SSO identity. MigrateToPassword fails if password doesn't meet policy.
     - **Validates: Requirements 2.2, 2.4**
 
-- [ ] 6. Add admin handler endpoints for migration and lock
+- [x] 6. Add admin handler endpoints for migration and lock
   - [x] 6.1 Add `POST /admin/users/{userId}/migrate-auth` endpoint in `internal/handler/admin.go`
     - Parse `{"target": "sso"}` or `{"target": "password", "new_password": "..."}` from body
     - Call `MigrateToSSO` or `MigrateToPassword` on AuthService
@@ -95,7 +95,7 @@ Add per-user auth method locking, admin-driven auth method migration, session bi
     - Record audit log with before/after diff
     - _Requirements: 1.4_
 
-- [ ] 7. Implement invite expiry notifications
+- [x] 7. Implement invite expiry notifications
   - [x] 7.1 Add `FindExpiringInvites` method to `OrgRepo` in `internal/repository/postgres/org_repo.go`
     - Query: `SELECT ... FROM invites WHERE accepted_at IS NULL AND expires_at BETWEEN NOW() AND NOW() + $1`
     - Return list of `domain.Invite` with `InvitedBy` populated
@@ -112,20 +112,20 @@ Add per-user auth method locking, admin-driven auth method migration, session bi
     - Follow existing template pattern (inline styles, simple HTML)
     - _Requirements: 4.2_
 
-  - [ ]* 7.4 Write property test for expiry notification bounds (Property 5)
+  - [x]* 7.4 Write property test for expiry notification bounds (Property 5)
     - **Property 5: Expiry notifications are bounded**
     - At most one email per expiring invite per run, sent only to inviter, skips invites with no inviter
     - **Validates: Requirements 4.1, 4.2, 4.3**
 
-  - [ ]* 7.5 Write property test for expiry worker error resilience (Property 6)
+  - [x]* 7.5 Write property test for expiry worker error resilience (Property 6)
     - **Property 6: Expiry worker error resilience**
     - Worker continues processing all invites even when some email sends fail
     - **Validates: Requirement 4.4**
 
-- [ ] 8. Checkpoint - Ensure all tests pass
+- [x] 8. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 9. Wire everything together and add frontend UI
+- [x] 9. Wire everything together and add frontend UI
   - [x] 9.1 Register invite expiry worker in `cmd/api/main.go`
     - Add `wm.Add("invite_expiry", 24*time.Hour, worker.InviteExpiryJob(orgRepo, userRepo, ml, cfg.Server.FrontendURL))`
     - _Requirements: 4.1_

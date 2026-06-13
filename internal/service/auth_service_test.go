@@ -962,17 +962,17 @@ func newLogoutTestService(db *mockDBTX) *AuthService {
 func logoutSessionRow(sessionID, userID, family uuid.UUID, revoked bool) *mockRow {
 	now := time.Now()
 	return &mockRow{values: []any{
-		sessionID,            // id
-		userID,               // user_id
-		"hash",               // refresh_token_hash
-		family,               // token_family
-		nil,                  // ip_address
-		nil,                  // user_agent
-		now,                  // last_used_at
-		now.Add(time.Hour),   // expires_at
-		revoked,              // revoked
-		now,                  // created_at
-		nil,                  // sso_provider_name
+		sessionID,          // id
+		userID,             // user_id
+		"hash",             // refresh_token_hash
+		family,             // token_family
+		nil,                // ip_address
+		nil,                // user_agent
+		now,                // last_used_at
+		now.Add(time.Hour), // expires_at
+		revoked,            // revoked
+		now,                // created_at
+		nil,                // sso_provider_name
 	}}
 }
 
@@ -1066,4 +1066,361 @@ func TestLogout_RevokedSessionStillRevokesFamily(t *testing.T) {
 	if revokeCalls != 1 {
 		t.Errorf("expected the family revocation even for an already-revoked row, got %d calls", revokeCalls)
 	}
+}
+
+// ===========================================================================
+// Feature: auth-lifecycle-management — Auth method lock, session binding,
+// and admin-driven migration property tests.
+// ===========================================================================
+
+// ---------------------------------------------------------------------------
+// Multi-row mock for Query (the single-row mockRow above only covers QueryRow).
+// ---------------------------------------------------------------------------
+
+// mockRows adapts a slice of pre-built value rows to pgx.Rows, reusing
+// mockRow.Scan for the per-row decoding so the supported dest types stay in
+// one place.
+type mockRows struct {
+	rows [][]any
+	idx  int
+	err  error
+}
+
+func (m *mockRows) Close()                                       {}
+func (m *mockRows) Err() error                                   { return m.err }
+func (m *mockRows) CommandTag() pgconn.CommandTag                { return pgconn.CommandTag{} }
+func (m *mockRows) FieldDescriptions() []pgconn.FieldDescription { return nil }
+func (m *mockRows) RawValues() [][]byte                          { return nil }
+func (m *mockRows) Conn() *pgx.Conn                              { return nil }
+
+func (m *mockRows) Next() bool {
+	if m.idx >= len(m.rows) {
+		return false
+	}
+	m.idx++
+	return true
+}
+
+func (m *mockRows) Scan(dest ...any) error {
+	return (&mockRow{values: m.rows[m.idx-1]}).Scan(dest...)
+}
+
+func (m *mockRows) Values() ([]any, error) { return m.rows[m.idx-1], nil }
+
+// userScanRow builds a mockRow matching UserRepo.scanOne's 17-column SELECT
+// (GetByID / GetByEmail) with the given identity-relevant fields and inert
+// defaults for the rest.
+func userScanRow(id uuid.UUID, email string, passwordHash, lock *string) *mockRow {
+	now := time.Now()
+	var nilStr *string
+	var nilTime *time.Time
+	var nilInt *int
+	return &mockRow{values: []any{
+		id,           // id
+		email,        // email
+		"Test User",  // display_name
+		nilStr,       // avatar_url
+		passwordHash, // password_hash
+		nilStr,       // sso_provider
+		nilStr,       // sso_subject
+		false,        // is_system_admin
+		true,         // email_verified
+		nilTime,      // password_changed_at
+		nilStr,       // timezone
+		nilStr,       // date_format
+		nilStr,       // time_format
+		lock,         // auth_method_lock
+		nilInt,       // max_sessions
+		now,          // created_at
+		now,          // updated_at
+	}}
+}
+
+// ssoIdentityRows builds mock Query rows matching SSOIdentityRepo.ListByUser's
+// 9-column SELECT, with n identities linked to userID.
+func ssoIdentityRows(userID uuid.UUID, n int) *mockRows {
+	now := time.Now()
+	rows := make([][]any, 0, n)
+	for i := 0; i < n; i++ {
+		rows = append(rows, []any{
+			uuid.New(),   // id
+			userID,       // user_id
+			"okta",       // provider
+			"subject",    // subject
+			"u@corp.com", // email
+			"User",       // display_name
+			any(nil),     // metadata
+			now,          // linked_at
+			now,          // last_used_at
+		})
+	}
+	return &mockRows{rows: rows}
+}
+
+// lockPtr returns a pointer to the lock value, or nil for the "any" choice.
+func lockPtr(choice string) *string {
+	if choice == "" {
+		return nil
+	}
+	return &choice
+}
+
+// Property 1: Lock enforcement is total.
+//
+// For any user U and attempted method m ∈ {"password","sso"}:
+//   - U.AuthMethodLock == nil  → checkAuthMethodLock succeeds for either method
+//   - U.AuthMethodLock == "sso" → succeeds iff m == "sso"
+//   - U.AuthMethodLock == "password" → succeeds iff m == "password"
+//
+// Validates: Requirements 1.1, 1.2, 1.3
+func TestProperty_AuthMethodLock_Enforcement(t *testing.T) {
+	rapid.Check(t, func(rt *rapid.T) {
+		lock := rapid.SampledFrom([]string{"", "sso", "password"}).Draw(rt, "lock")
+		method := rapid.SampledFrom([]string{"sso", "password"}).Draw(rt, "method")
+
+		user := &domain.User{AuthMethodLock: lockPtr(lock)}
+		err := checkAuthMethodLock(user, method)
+
+		shouldPass := lock == "" || lock == method
+		if shouldPass && err != nil {
+			rt.Fatalf("lock=%q method=%q: expected login to be allowed, got error: %v", lock, method, err)
+		}
+		if !shouldPass && err == nil {
+			rt.Fatalf("lock=%q method=%q: expected login to be rejected, got nil error", lock, method)
+		}
+	})
+}
+
+// Property 2: Session binding is consistent.
+//
+// For any user U and session S, with sessionIsSSO := (S.SSOProviderName != nil):
+//   - U.AuthMethodLock == nil  → refresh always allowed
+//   - U.AuthMethodLock == "sso" → allowed iff sessionIsSSO
+//   - U.AuthMethodLock == "password" → allowed iff !sessionIsSSO
+//
+// Validates: Requirements 3.1, 3.2, 3.3
+func TestProperty_SessionAuthMethodLock_Binding(t *testing.T) {
+	rapid.Check(t, func(rt *rapid.T) {
+		lock := rapid.SampledFrom([]string{"", "sso", "password"}).Draw(rt, "lock")
+		sessionIsSSO := rapid.Bool().Draw(rt, "sessionIsSSO")
+
+		user := &domain.User{AuthMethodLock: lockPtr(lock)}
+		session := &domain.Session{}
+		if sessionIsSSO {
+			p := "okta"
+			session.SSOProviderName = &p
+		}
+
+		err := checkSessionAuthMethodLock(user, session)
+
+		shouldPass := lock == "" ||
+			(lock == "sso" && sessionIsSSO) ||
+			(lock == "password" && !sessionIsSSO)
+		if shouldPass && err != nil {
+			rt.Fatalf("lock=%q sessionIsSSO=%v: expected refresh to be allowed, got error: %v", lock, sessionIsSSO, err)
+		}
+		if !shouldPass && err == nil {
+			rt.Fatalf("lock=%q sessionIsSSO=%v: expected refresh to be rejected, got nil error", lock, sessionIsSSO)
+		}
+	})
+}
+
+// newMigrationTestService wires an AuthService backed by the given mock DBTX
+// with the repos the migration paths touch (user, session, sso identity).
+func newMigrationTestService(db *mockDBTX, cfg *config.Config) *AuthService {
+	return NewAuthService(
+		nil,                             // pool
+		postgres.NewUserRepo(db),        // userRepo
+		postgres.NewSessionRepo(db),     // sessionRepo
+		nil,                             // resetRepo
+		nil,                             // emailVerifyRepo
+		nil,                             // orgRepo
+		postgres.NewSSOIdentityRepo(db), // ssoIdentityRepo
+		nil,                             // ssoProviderRepo
+		nil,                             // teamRepo
+		nil,                             // domainMappingRepo
+		nil,                             // tokens
+		nil,                             // lockout
+		nil,                             // mailer
+		cfg,
+		nil, // revocationCache
+		nil, // pendingLoginStore
+		nil, // ssoCodeStore
+	)
+}
+
+// Property 3: Migration atomicity.
+//
+// After MigrateToSSO (user has a linked identity): password_hash = nil,
+// auth_method_lock = "sso", all sessions revoked. After MigrateToPassword
+// (valid password): password_hash != nil, auth_method_lock = "password",
+// all sessions revoked.
+//
+// Validates: Requirements 2.1, 2.3
+func TestProperty_Migration_Atomicity(t *testing.T) {
+	rapid.Check(t, func(rt *rapid.T) {
+		target := rapid.SampledFrom([]string{"sso", "password"}).Draw(rt, "target")
+		userID := uuid.New()
+		email := rapid.StringMatching(`[a-z]{3,8}@[a-z]{3,8}\.[a-z]{2,4}`).Draw(rt, "email")
+
+		updateCalled := false
+		revokeAllCalled := false
+		var updatedHash *string
+		var updatedLock *string
+
+		oldHash := "old-bcrypt-hash"
+		db := &mockDBTX{
+			queryRowHandler: func(sql string, args ...any) pgx.Row {
+				if strings.Contains(sql, "FROM users") {
+					return userScanRow(userID, email, &oldHash, nil)
+				}
+				return &mockRow{err: pgx.ErrNoRows}
+			},
+			queryHandler: func(sql string, args ...any) (pgx.Rows, error) {
+				if strings.Contains(sql, "user_sso_identities") {
+					return ssoIdentityRows(userID, 1), nil // one linked identity
+				}
+				return &mockRows{}, nil
+			},
+			execHandler: func(sql string, args ...any) (pgconn.CommandTag, error) {
+				switch {
+				case strings.Contains(sql, "UPDATE users"):
+					updateCalled = true
+					if hp, ok := args[3].(*string); ok { // password_hash = $4
+						updatedHash = hp
+					}
+					if lk, ok := args[12].(*string); ok { // auth_method_lock = $13
+						updatedLock = lk
+					}
+				case strings.Contains(sql, "UPDATE sessions"):
+					revokeAllCalled = true
+				}
+				return pgconn.NewCommandTag("OK"), nil
+			},
+		}
+
+		cfg := &config.Config{}
+		cfg.Password.BcryptCost = 4 // fast hashing under rapid
+
+		svc := newMigrationTestService(db, cfg)
+
+		var user *domain.User
+		var err error
+		if target == "sso" {
+			user, err = svc.MigrateToSSO(context.Background(), userID)
+		} else {
+			user, err = svc.MigrateToPassword(context.Background(), userID, "Str0ng-Passw0rd!")
+		}
+		if err != nil {
+			rt.Fatalf("target=%q: migration failed: %v", target, err)
+		}
+
+		if !updateCalled {
+			rt.Fatalf("target=%q: expected userRepo.Update to be called", target)
+		}
+		if !revokeAllCalled {
+			rt.Fatalf("target=%q: expected all sessions to be revoked", target)
+		}
+
+		switch target {
+		case "sso":
+			if user.PasswordHash != nil {
+				rt.Fatalf("MigrateToSSO: expected returned password_hash=nil, got %v", *user.PasswordHash)
+			}
+			if updatedHash != nil {
+				rt.Fatalf("MigrateToSSO: expected persisted password_hash=nil, got %v", *updatedHash)
+			}
+			if user.AuthMethodLock == nil || *user.AuthMethodLock != "sso" {
+				rt.Fatalf("MigrateToSSO: expected lock=sso, got %v", user.AuthMethodLock)
+			}
+			if updatedLock == nil || *updatedLock != "sso" {
+				rt.Fatalf("MigrateToSSO: expected persisted lock=sso, got %v", updatedLock)
+			}
+		case "password":
+			if user.PasswordHash == nil {
+				rt.Fatal("MigrateToPassword: expected non-nil password_hash")
+			}
+			if updatedHash == nil {
+				rt.Fatal("MigrateToPassword: expected persisted non-nil password_hash")
+			}
+			if user.AuthMethodLock == nil || *user.AuthMethodLock != "password" {
+				rt.Fatalf("MigrateToPassword: expected lock=password, got %v", user.AuthMethodLock)
+			}
+			if updatedLock == nil || *updatedLock != "password" {
+				rt.Fatalf("MigrateToPassword: expected persisted lock=password, got %v", updatedLock)
+			}
+		}
+	})
+}
+
+// Property 4: Migration preconditions.
+//
+// MigrateToSSO fails (and persists nothing) when the user has no linked SSO
+// identity. MigrateToPassword fails (and persists nothing) when the new
+// password does not satisfy the configured policy.
+//
+// Validates: Requirements 2.2, 2.4
+func TestProperty_Migration_Preconditions(t *testing.T) {
+	rapid.Check(t, func(rt *rapid.T) {
+		which := rapid.SampledFrom([]string{"sso-no-identity", "password-weak"}).Draw(rt, "which")
+		userID := uuid.New()
+
+		updateCalled := false
+		revokeAllCalled := false
+
+		existingHash := "existing-hash"
+		db := &mockDBTX{
+			queryRowHandler: func(sql string, args ...any) pgx.Row {
+				if strings.Contains(sql, "FROM users") {
+					return userScanRow(userID, "u@corp.com", &existingHash, nil)
+				}
+				return &mockRow{err: pgx.ErrNoRows}
+			},
+			queryHandler: func(sql string, args ...any) (pgx.Rows, error) {
+				// No linked identities.
+				return &mockRows{}, nil
+			},
+			execHandler: func(sql string, args ...any) (pgconn.CommandTag, error) {
+				switch {
+				case strings.Contains(sql, "UPDATE users"):
+					updateCalled = true
+				case strings.Contains(sql, "UPDATE sessions"):
+					revokeAllCalled = true
+				}
+				return pgconn.NewCommandTag("OK"), nil
+			},
+		}
+
+		// A strict policy so any short, all-lowercase password is rejected.
+		cfg := &config.Config{}
+		cfg.Password = config.PasswordConfig{
+			MinLength:        12,
+			RequireUppercase: true,
+			RequireLowercase: true,
+			RequireNumber:    true,
+			RequireSpecial:   true,
+			BcryptCost:       4,
+		}
+
+		svc := newMigrationTestService(db, cfg)
+
+		var err error
+		switch which {
+		case "sso-no-identity":
+			_, err = svc.MigrateToSSO(context.Background(), userID)
+		case "password-weak":
+			weak := rapid.StringMatching(`[a-z]{1,8}`).Draw(rt, "weakPassword")
+			_, err = svc.MigrateToPassword(context.Background(), userID, weak)
+		}
+
+		if err == nil {
+			rt.Fatalf("which=%q: expected migration to be rejected, got nil error", which)
+		}
+		if updateCalled {
+			rt.Fatalf("which=%q: a rejected migration must not persist a user update", which)
+		}
+		if revokeAllCalled {
+			rt.Fatalf("which=%q: a rejected migration must not revoke sessions", which)
+		}
+	})
 }
