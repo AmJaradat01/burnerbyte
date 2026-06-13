@@ -1026,12 +1026,9 @@ function SSOProvidersTab() {
 
       {providerList.length === 0 && (
         <Card className="border-dashed">
-          <CardContent className="pt-8 pb-8 text-center">
-            <div className="mx-auto h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
-              <Key className="h-6 w-6 text-primary" />
-            </div>
-            <p className="font-medium">No SSO providers configured</p>
-            <p className="text-sm text-muted-foreground mt-1">Click &quot;Add Provider&quot; above to get started.</p>
+          <CardContent className="flex flex-col items-center justify-center py-10 gap-1 text-center">
+            <p className="text-sm font-medium">No SSO providers configured</p>
+            <p className="text-xs text-muted-foreground">Click &quot;Add Provider&quot; above to get started.</p>
           </CardContent>
         </Card>
       )}
