@@ -179,3 +179,14 @@
   - Ensure all preservation tests (Property 2) pass — confirming no regressions in CRUD, test connection, domain mappings, or visual indicators
   - Run `npm run build` in `web/` to verify no TypeScript compilation errors
   - Ensure all tests pass, ask the user if questions arise.
+
+## Test Coverage Status (pragmatic backfill)
+
+The remaining tests are full React component/integration tests — they render
+complex settings/page components that depend on react-query and the api module
+and assert against the DOM. The project has no react-query component-test
+harness (QueryClientProvider wrapper + api mocking) yet, and the only existing
+component test covers a dependency-free presentational component. Building that
+harness and the render tests is integration-level work beyond the pragmatic
+unit-coverage pass, so these are deferred. The UI changes themselves are
+implemented and shipped.
