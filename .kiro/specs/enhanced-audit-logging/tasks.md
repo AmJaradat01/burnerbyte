@@ -36,25 +36,25 @@ This plan implements comprehensive audit logging enhancements across the BurnerB
     - Keep existing `Record` and `RecordFromRequest` methods unchanged for backward compatibility
     - _Requirements: 3.1, 3.2, 3.3, 3.4_
 
-  - [ ]* 3.3 Write property tests for severity classification (Property 1)
+  - [x]* 3.3 Write property tests for severity classification (Property 1)
     - **Property 1: Severity classification is complete and correct**
     - Generate random action strings from the known set plus unknown strings; verify `GetSeverity` always returns one of `info`, `warning`, `critical`; verify critical/warning actions return their expected values; verify unknown actions return `info`
     - Use `pgregory.net/rapid` with minimum 100 iterations
     - **Validates: Requirements 1.4, 12.1, 12.2, 12.3**
 
-  - [ ]* 3.4 Write property tests for category classification (Property 2)
+  - [x]* 3.4 Write property tests for category classification (Property 2)
     - **Property 2: Category classification is complete and correct**
     - Generate random action strings from the known set plus unknown strings; verify `GetCategory` always returns a value from the defined set or empty string; verify each known action maps to its expected category
     - Use `pgregory.net/rapid` with minimum 100 iterations
     - **Validates: Requirements 1.5, 13.1, 13.2, 13.3, 13.4, 13.5, 13.6, 13.7, 13.8, 13.9, 13.10**
 
-  - [ ]* 3.5 Write property test for AuditEntry JSON round-trip (Property 3)
+  - [x]* 3.5 Write property test for AuditEntry JSON round-trip (Property 3)
     - **Property 3: AuditEntry JSON serialization round-trip**
     - Generate random AuditEntry structs with all fields populated (including new fields), marshal to JSON, unmarshal back, verify all field values are preserved
     - Use `pgregory.net/rapid` with minimum 100 iterations
     - **Validates: Requirements 2.3**
 
-- [ ] 4. Checkpoint — Ensure all tests pass
+- [x] 4. Checkpoint — Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [x] 5. Add auditRecordEnhanced helper in rbac.go
@@ -102,7 +102,7 @@ This plan implements comprehensive audit logging enhancements across the BurnerB
     - Return 400 if `format` is missing or invalid
     - _Requirements: 15.1, 15.2, 15.3, 15.4, 15.5_
 
-  - [ ]* 8.3 Write property test for invalid filter rejection (Property 9)
+  - [x]* 8.3 Write property test for invalid filter rejection (Property 9)
     - **Property 9: Invalid filter values are rejected**
     - Generate random strings that are NOT valid severity/category values; verify the validation logic rejects them
     - Use `pgregory.net/rapid` with minimum 100 iterations
@@ -113,7 +113,7 @@ This plan implements comprehensive audit logging enhancements across the BurnerB
     - Add `r.Get("/orgs/{orgId}/audit/export", auditHandler.Export)` in the authenticated routes section of `cmd/api/main.go`, adjacent to the existing audit list route
     - _Requirements: 15.1_
 
-- [ ] 10. Checkpoint — Ensure all tests pass
+- [x] 10. Checkpoint — Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [x] 11. Auth handler updates — enrich existing events and add new events
@@ -161,7 +161,7 @@ This plan implements comprehensive audit logging enhancements across the BurnerB
     - `VerifyDomain`: Switch to `auditRecordEnhanced`, pass domain name as `resourceName`
     - _Requirements: 6.3, 10.1_
 
-- [ ] 15. Checkpoint — Ensure all tests pass
+- [x] 15. Checkpoint — Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [x] 16. Domain assignment handler updates — new domain_assignment.updated event, human-readable names

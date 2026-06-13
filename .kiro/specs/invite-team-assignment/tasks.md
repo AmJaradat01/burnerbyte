@@ -175,3 +175,11 @@
   - Ensure all property-based tests (bug condition + preservation) pass
   - Ensure no regressions in existing tests
   - Ask the user if questions arise
+
+## Test Coverage Status (pragmatic backfill)
+
+The bug-condition and preservation tests target InviteMember (gated by a live
+net.LookupMX/LookupHost DNS check) and AcceptInvite's multi-step transaction —
+neither is exercisable with the unit-level mock harness without DNS injection
+or a test database. Deferred; the fix (teamRepo wired into OrgService, team→org
+validation in InviteMember, team-membership creation in AcceptInvite) is shipped.
