@@ -6,13 +6,20 @@ import (
 	"log/slog"
 	"time"
 
-	"gitlab.com/burnerbyte/burnerbyte/internal/mailer"
 	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
 )
 
+// emailSender is the subset of *mailer.Mailer that the expiry worker depends
+// on. Accepting an interface (rather than the concrete mailer) lets tests
+// substitute a fake and exercise the send-failure path. *mailer.Mailer
+// satisfies this interface, so production wiring is unchanged.
+type emailSender interface {
+	Send(to, subject, templateName string, data any) error
+}
+
 // InviteExpiryJob returns a worker function that finds invites expiring within
 // 24 hours and sends reminder emails to the inviters, then cleans up already-expired invites.
-func InviteExpiryJob(orgRepo *postgres.OrgRepo, userRepo *postgres.UserRepo, ml *mailer.Mailer, baseURL string) func(ctx context.Context) error {
+func InviteExpiryJob(orgRepo *postgres.OrgRepo, userRepo *postgres.UserRepo, ml emailSender, baseURL string) func(ctx context.Context) error {
 	return func(ctx context.Context) error {
 		// Phase 1: Send reminders for invites expiring soon
 		invites, err := orgRepo.FindExpiringInvites(ctx, 24*time.Hour)
