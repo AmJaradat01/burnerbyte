@@ -175,7 +175,7 @@ func (h *TeamHandler) DeleteTeam(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	auditRecordEnhanced(r, orgID, "team.deleted", "team", id, teamName, map[string]any{"team_id": id.String(), "name": teamName})
-	writeJSON(w, http.StatusOK, map[string]string{"message": "team deleted"})
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *TeamHandler) AddMember(w http.ResponseWriter, r *http.Request) {
@@ -311,7 +311,7 @@ func (h *TeamHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 		"target_user_id": userID.String(),
 		"team_name":      teamName,
 	})
-	writeJSON(w, http.StatusOK, map[string]string{"message": "member removed"})
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // ── New endpoints ──
@@ -423,7 +423,7 @@ func (h *TeamHandler) LeaveTeam(w http.ResponseWriter, r *http.Request) {
 		"user_id":   uc.UserID.String(),
 		"team_name": teamName,
 	})
-	writeJSON(w, http.StatusOK, map[string]string{"message": "you have left the team"})
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *TeamHandler) BulkAddMembers(w http.ResponseWriter, r *http.Request) {

@@ -158,7 +158,10 @@ func (h *InboxHandler) ExtendTTL(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Duration string `json:"duration"`
 	}
-	_ = json.NewDecoder(r.Body).Decode(&body)
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil && r.ContentLength > 0 {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
 	inbox, err := h.svc.ExtendTTL(r.Context(), id, uc.UserID, body.Duration)
 	if err != nil {
 		if strings.Contains(err.Error(), "forbidden") {
@@ -203,5 +206,5 @@ func (h *InboxHandler) DeleteInbox(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	auditRecordEnhanced(r, inbox.OrgID, "inbox.deleted", "inbox", id, inbox.FullAddress, map[string]any{"address": inbox.FullAddress, "email_count": inbox.EmailCount})
-	writeJSON(w, http.StatusOK, map[string]string{"message": "inbox deleted"})
+	w.WriteHeader(http.StatusNoContent)
 }

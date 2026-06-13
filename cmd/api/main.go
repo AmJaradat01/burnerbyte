@@ -459,8 +459,7 @@ func main() {
 				// Mark revocation for immediate access token invalidation
 				sessionRevCache.MarkRevoked(r.Context(), userID)
 				handler.Audit.RecordEnhanced(r, uuid.Nil, "admin.sessions_revoked", "user", userID, targetEmail, map[string]any{"target_user_id": userID.String(), "email": targetEmail, "display_name": targetDisplayName})
-				w.Header().Set("Content-Type", "application/json")
-				json.NewEncoder(w).Encode(map[string]string{"message": "all sessions revoked"})
+				w.WriteHeader(http.StatusNoContent)
 			})
 
 			// Role management (admin only)
@@ -592,8 +591,7 @@ func main() {
 				handler.Audit.RecordEnhanced(r, uuid.Nil, "admin.role_deleted", "role", roleID, roleID.String(), map[string]any{
 					"role_id": roleID.String(),
 				})
-				w.Header().Set("Content-Type", "application/json")
-				json.NewEncoder(w).Encode(map[string]string{"message": "role deleted"})
+				w.WriteHeader(http.StatusNoContent)
 			})
 
 			// Notifications
@@ -646,8 +644,7 @@ func main() {
 					return
 				}
 				handler.Audit.RecordEnhanced(r, uuid.Nil, "notification.all_deleted", "notification", uuid.Nil, "", map[string]any{})
-				w.Header().Set("Content-Type", "application/json")
-				json.NewEncoder(w).Encode(map[string]string{"message": "ok"})
+				w.WriteHeader(http.StatusNoContent)
 			})
 
 			r.Delete("/notifications/{notifId}", func(w http.ResponseWriter, r *http.Request) {
@@ -664,8 +661,7 @@ func main() {
 					return
 				}
 				handler.Audit.RecordEnhanced(r, uuid.Nil, "notification.deleted", "notification", id, "", map[string]any{"notification_id": id.String()})
-				w.Header().Set("Content-Type", "application/json")
-				json.NewEncoder(w).Encode(map[string]string{"message": "ok"})
+				w.WriteHeader(http.StatusNoContent)
 			})
 
 			// File serving for local attachment storage.
