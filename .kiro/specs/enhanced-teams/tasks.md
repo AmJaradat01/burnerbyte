@@ -44,8 +44,13 @@ This plan implements 13 requirements for the enhanced teams feature in the Burne
     - Create `CreateTeamResult` with `Team *Team` and `FailedMembers []BulkMemberFailed`
     - _Requirements: 1.3, 1.4, 5.1, 5.2, 7.1, 7.4, 7.8, 8.1, 8.3, 12.1, 12.4_
 
-- [ ] 3. Update RBAC to support viewer role
-  - [ ] 3.1 Add `TeamViewer` constant and update rank map in `internal/auth/rbac/rbac.go`
+- [~] 3. Update RBAC to support viewer role — OBSOLETE / SUPERSEDED
+  - NOTE: The viewer team role was implemented and later deliberately removed
+    by migration `000038_remove_viewer_role.up.sql` (deletes the team `viewer`
+    role and its `role_permissions`). No `viewer` references remain in code.
+    Re-adding it would revert that decision, so this task is intentionally NOT
+    implemented.
+  - [~] 3.1 Add `TeamViewer` constant and update rank map in `internal/auth/rbac/rbac.go` — OBSOLETE (see migration 000038)
     - Add `TeamViewer = "viewer"` constant
     - Update `teamRank` map to include `TeamViewer: 0`
     - Update `TeamRoles()` to include viewer role info with rank 0

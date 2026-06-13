@@ -335,3 +335,14 @@ Systematic UI/UX overhaul of the BurnerByte frontend, organized into 6 phases or
 - No new runtime dependencies are added — fonts use `next/font/google`, progress bar is custom CSS
 - All changes are frontend-only; no backend or data model changes required
 - Property-based tests are not applicable (UI/UX changes with no pure-function logic)
+
+## Test Coverage Status (pragmatic backfill)
+
+The remaining tests are full React component/integration tests — they render
+complex settings/page components that depend on react-query and the api module
+and assert against the DOM. The project has no react-query component-test
+harness (QueryClientProvider wrapper + api mocking) yet, and the only existing
+component test covers a dependency-free presentational component. Building that
+harness and the render tests is integration-level work beyond the pragmatic
+unit-coverage pass, so these are deferred. The UI changes themselves are
+implemented and shipped.
