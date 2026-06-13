@@ -76,7 +76,7 @@ func main() {
 	if s3Client != nil {
 		attachmentSvc = service.NewAttachmentService(attachmentRepo, emailRepo, inboxRepoPG, s3Client, cfg.MinIO, cfg.Defaults.MaxAttachmentSizeMB, cfg.Defaults.PresignedURLTTL)
 	} else {
-		localFS, fsErr := storage.NewLocalFS("./data/attachments", "http://localhost:8080/api/v1/files")
+		localFS, fsErr := storage.NewLocalFS("./data/attachments", cfg.Server.BaseURL+"/api/v1/files")
 		if fsErr == nil {
 			attachmentSvc = service.NewAttachmentService(attachmentRepo, emailRepo, inboxRepoPG, localFS, cfg.MinIO, cfg.Defaults.MaxAttachmentSizeMB, cfg.Defaults.PresignedURLTTL)
 			slog.Info("attachments enabled via local filesystem")
