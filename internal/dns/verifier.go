@@ -6,6 +6,10 @@ import (
 	"strings"
 )
 
+// lookupTXT resolves a domain's TXT records. It is a package variable so tests
+// can substitute a fake resolver; production code uses net.LookupTXT.
+var lookupTXT = net.LookupTXT
+
 // VerifyMX checks if the domain has an MX record pointing to the expected hostname.
 func VerifyMX(domainName, expectedHost string) (bool, error) {
 	records, err := net.LookupMX(domainName)
@@ -23,7 +27,7 @@ func VerifyMX(domainName, expectedHost string) (bool, error) {
 
 // VerifyTXT checks if the domain has a TXT record containing the expected value.
 func VerifyTXT(domainName, expectedValue string) (bool, error) {
-	records, err := net.LookupTXT(domainName)
+	records, err := lookupTXT(domainName)
 	if err != nil {
 		return false, fmt.Errorf("txt lookup: %w", err)
 	}
@@ -43,7 +47,7 @@ func GenerateVerificationRecord(domainID string) string {
 // VerifySPF checks if the domain has a TXT record starting with "v=spf1"
 // that includes the expected hostname.
 func VerifySPF(domainName, expectedHost string) (bool, error) {
-	records, err := net.LookupTXT(domainName)
+	records, err := lookupTXT(domainName)
 	if err != nil {
 		return false, fmt.Errorf("spf lookup: %w", err)
 	}

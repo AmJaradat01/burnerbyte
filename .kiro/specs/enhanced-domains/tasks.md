@@ -44,7 +44,7 @@ This plan implements the enhanced domains feature across all layers: database mi
     - Implement `VerifySPF(domainName, expectedHost string) (bool, error)` that looks up TXT records, finds one starting with `v=spf1`, and checks if it contains the expected hostname
     - _Requirements: 9.1_
 
-  - [ ]* 3.2 Write unit tests for VerifySPF
+  - [x]* 3.2 Write unit tests for VerifySPF
     - Test valid SPF record containing expected host
     - Test SPF record without expected host
     - Test domain with no SPF record
@@ -84,7 +84,7 @@ This plan implements the enhanced domains feature across all layers: database mi
     - Implement `ComputeStatus(d *domain.Domain) string` that returns `"verified"`, `"pending_verification"`, `"partially_verified"`, or `"failed"` based on `mx_verified`, `txt_verified`, and `dns_last_checked_at` (ignoring `spf_verified`)
     - _Requirements: 3.1, 3.2, 3.3, 3.4_
 
-  - [ ]* 7.2 Write property test for ComputeStatus (Property 1)
+  - [x]* 7.2 Write property test for ComputeStatus (Property 1)
     - **Property 1: Domain status computation is deterministic and correct**
     - Use `pgregory.net/rapid` to generate random booleans for `mx_verified`, `txt_verified`, `spf_verified` and random `*time.Time` for `dns_last_checked_at`
     - Assert the four status rules hold and that `spf_verified` does not affect the result
@@ -156,19 +156,19 @@ This plan implements the enhanced domains feature across all layers: database mi
     - Delegate to `VerificationHistoryRepo.ListByDomain`
     - _Requirements: 10.2, 10.3, 10.4_
 
-  - [ ]* 7.12 Write property test for description length validation (Property 8)
+  - [x]* 7.12 Write property test for description length validation (Property 8)
     - **Property 8: Description length validation**
     - Use `rapid` to generate strings of varying lengths
     - Assert strings > 1000 chars are rejected, strings ≤ 1000 chars are accepted
     - **Validates: Requirements 4.5**
 
-  - [ ]* 7.13 Write property test for duration validation (Property 5)
+  - [x]* 7.13 Write property test for duration validation (Property 5)
     - **Property 5: Duration string validation matches Go's time.ParseDuration**
     - Use `rapid` to generate random strings
     - Assert the service validation accepts a string iff `time.ParseDuration` succeeds
     - **Validates: Requirements 2.4, 2.5**
 
-  - [ ]* 7.14 Write property test for default TTL not exceeding max TTL (Property 6)
+  - [x]* 7.14 Write property test for default TTL not exceeding max TTL (Property 6)
     - **Property 6: Default TTL cannot exceed max TTL**
     - Use `rapid` to generate pairs of valid duration strings
     - Assert that when parsed default > parsed max, validation fails; otherwise succeeds
@@ -182,7 +182,7 @@ This plan implements the enhanced domains feature across all layers: database mi
     - Add `ResolveMaxInboxesPerDomain(ctx, assignmentID uuid.UUID) int` with cascade: assignment → domain → org → system default
     - _Requirements: 2.8, 2.9, 2.10_
 
-  - [ ]* 8.2 Write property test for settings cascade (Property 7)
+  - [x]* 8.2 Write property test for settings cascade (Property 7)
     - **Property 7: Settings cascade returns first non-nil value in priority order**
     - Use `rapid` to generate random cascade configurations with nil/non-nil values at each level
     - Assert the resolver returns the highest-priority non-nil value, or system default if all nil
