@@ -146,7 +146,7 @@ func (h *OrgHandler) DeleteOrg(w http.ResponseWriter, r *http.Request) {
 	}
 
 	auditRecordEnhanced(r, orgID, "org.deleted", "org", orgID, orgName, map[string]any{"org_id": orgID.String(), "name": orgName})
-	writeJSON(w, http.StatusOK, map[string]string{"message": "org deleted"})
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *OrgHandler) GetSettings(w http.ResponseWriter, r *http.Request) {
@@ -482,7 +482,7 @@ func (h *OrgHandler) RevokeInvite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	auditRecordEnhanced(r, orgID, "invite.revoked", "invite", inviteID, inviteEmail, map[string]any{"invite_id": inviteID.String(), "invite_email": inviteEmail})
-	writeJSON(w, http.StatusOK, map[string]string{"message": "invite revoked"})
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *OrgHandler) AcceptInvite(w http.ResponseWriter, r *http.Request) {

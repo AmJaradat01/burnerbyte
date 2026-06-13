@@ -206,7 +206,7 @@ func (h *DomainHandler) DeleteDomain(w http.ResponseWriter, r *http.Request) {
 	}
 
 	auditRecordEnhanced(r, orgID, "domain.deleted", "domain", id, domainName, map[string]any{"domain_id": id.String(), "domain_name": domainName, "force": len(activeInboxes) > 0, "active_inboxes_deleted": len(activeInboxes)})
-	writeJSON(w, http.StatusOK, map[string]string{"message": "domain deleted"})
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *DomainHandler) VerifyDomain(w http.ResponseWriter, r *http.Request) {

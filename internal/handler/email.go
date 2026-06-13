@@ -195,7 +195,7 @@ func (h *EmailHandler) DeleteEmail(w http.ResponseWriter, r *http.Request) {
 		"inbox_address": email.ToAddress,
 		"from_address":  email.FromAddress,
 	})
-	writeJSON(w, http.StatusOK, map[string]string{"message": "email deleted"})
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *EmailHandler) DownloadAttachment(w http.ResponseWriter, r *http.Request) {
