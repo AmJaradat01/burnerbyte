@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/error-state";
 import { Pagination } from "@/components/pagination";
-import { Mail, Paperclip, RefreshCw, Search } from "lucide-react";
+import { Paperclip, RefreshCw, Search } from "lucide-react";
 import type { EmailSummary } from "@/types";
 
 function senderName(email: string) {
@@ -199,23 +199,20 @@ function EmailRow({ email, selected, onClick }: { email: EmailSummary; selected:
 
 function EmptyList({ hasSearch }: { hasSearch: boolean }) {
   return (
-    <div className="flex flex-col items-center justify-center h-full text-center p-6">
-      <div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center mb-3">
-        <Mail className="h-7 w-7 text-muted-foreground" />
-      </div>
+    <div className="flex flex-col items-center justify-center h-full text-center gap-1 p-6">
       {hasSearch ? (
         <>
           <p className="text-sm font-medium">No results</p>
-          <p className="text-xs text-muted-foreground mt-1">Try a different search term</p>
+          <p className="text-xs text-muted-foreground">Try a different search term</p>
         </>
       ) : (
         <>
           <p className="text-sm font-medium">No emails yet</p>
-          <p className="text-xs text-muted-foreground mt-1">Waiting for incoming mail…</p>
-          <div className="flex items-center gap-1.5 mt-3 text-xs text-muted-foreground">
-            <RefreshCw className="h-3 w-3 motion-safe:animate-spin" />
-            Listening for new emails
-          </div>
+          <p className="text-xs text-muted-foreground">Waiting for incoming mail</p>
+          <span className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground/60">
+            <RefreshCw className="h-3 w-3 motion-safe:animate-spin" aria-hidden="true" />
+            Listening
+          </span>
         </>
       )}
     </div>

@@ -5,7 +5,7 @@ import { timeAgo } from "@/lib/time";
 import { buildSandboxedHtml, hasRemoteContent } from "@/lib/email-html";
 import { extractVerificationCode } from "@/lib/verification-code";
 import { copyToClipboard } from "@/lib/clipboard";
-import { api } from "@/lib/api";
+import { api, getAccessToken } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
@@ -225,14 +225,31 @@ function AttachmentChip({ attachment, emailId }: { attachment: Attachment; email
         toast.error('Invalid download URL');
         return;
       }
-      // Use a temporary anchor to avoid popup blockers
-      const a = document.createElement("a");
-      a.href = res.url;
-      a.download = attachment.filename;
-      a.rel = "noopener";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      // Local-FS URLs (/api/v1/files) require the JWT — browser anchor navigation
+      // can't carry the Authorization header, so we fetch+blob instead. MinIO
+      // presigned URLs are self-contained credentials; direct anchor is fine.
+      if (res.url.includes('/api/v1/files')) {
+        const token = getAccessToken();
+        const resp = await fetch(res.url, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!resp.ok) { toast.error("Failed to download"); return; }
+        const blob = await resp.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = attachment.filename;
+        a.click();
+        URL.revokeObjectURL(blobUrl);
+      } else {
+        const a = document.createElement("a");
+        a.href = res.url;
+        a.download = attachment.filename;
+        a.rel = "noopener";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
     } catch {
       toast.error("Failed to download");
     } finally {
