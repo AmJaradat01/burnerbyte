@@ -338,10 +338,9 @@ export function NotificationCenter() {
         {/* Notification list */}
         <div className="max-h-80 overflow-auto">
           {grouped.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-              <Bell className="h-8 w-8 mb-2 opacity-30" />
-              <p className="text-sm">No notifications yet</p>
-              <p className="text-xs mt-1">You&apos;ll see new emails and events here</p>
+            <div className="flex flex-col items-center justify-center py-10 gap-1 text-muted-foreground">
+              <p className="text-sm font-medium">No notifications yet</p>
+              <p className="text-xs">New emails and events will appear here</p>
             </div>
           ) : (
             grouped.map((item) => {

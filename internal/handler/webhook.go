@@ -125,7 +125,7 @@ func (h *WebhookHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed"); return
 	}
 	auditRecordEnhanced(r, orgID, "webhook.deleted", "webhook", id, resourceName, map[string]any{"webhook_id": id.String(), "webhook_url": webhookURL})
-	writeJSON(w, http.StatusOK, map[string]string{"message": "webhook deleted"})
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *WebhookHandler) ListDeliveryLogs(w http.ResponseWriter, r *http.Request) {
