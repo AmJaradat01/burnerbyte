@@ -173,5 +173,5 @@ func (h *DomainAssignmentHandler) Unassign(w http.ResponseWriter, r *http.Reques
 	}
 	domainName := assignment.DomainName
 	auditRecordEnhanced(r, orgID, "domain.unassigned", "domain_assignment", domainID, domainName, map[string]any{"domain_id": domainID.String(), "team_id": teamID.String(), "domain_name": domainName, "force": activeCount > 0, "active_inboxes_deleted": activeCount})
-	writeJSON(w, http.StatusOK, map[string]string{"message": "domain unassigned"})
+	w.WriteHeader(http.StatusNoContent)
 }

@@ -281,7 +281,9 @@ func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Always return 200 to not reveal email existence
-	_ = h.svc.ForgotPassword(r.Context(), input)
+	if err := h.svc.ForgotPassword(r.Context(), input); err != nil {
+		slog.Warn("forgot password failed", "email", input.Email, "error", err)
+	}
 	auditRecordEnhanced(r, uuid.Nil, "user.forgot_password", "user", uuid.Nil, input.Email, map[string]any{"email": input.Email})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "if the email exists, a reset link has been sent"})
 }
@@ -442,7 +444,7 @@ func (h *AuthHandler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	}
 
 	auditRecordEnhanced(r, uuid.Nil, "user.account_deleted", "user", uc.UserID, uc.Email, map[string]any{"email": uc.Email, "display_name": displayName})
-	writeJSON(w, http.StatusOK, map[string]string{"message": "account deleted"})
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *AuthHandler) ListSessions(w http.ResponseWriter, r *http.Request) {
@@ -484,7 +486,7 @@ func (h *AuthHandler) RevokeSession(w http.ResponseWriter, r *http.Request) {
 	}
 
 	auditRecordEnhanced(r, uuid.Nil, "session.revoked", "session", sessionID, uc.Email, map[string]any{"session_id": sessionID.String(), "session_ip": sessionIP, "session_user_agent": sessionUA})
-	writeJSON(w, http.StatusOK, map[string]string{"message": "session revoked"})
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *AuthHandler) RevokeAllSessions(w http.ResponseWriter, r *http.Request) {
@@ -501,7 +503,7 @@ func (h *AuthHandler) RevokeAllSessions(w http.ResponseWriter, r *http.Request) 
 	auditRecordEnhanced(r, uuid.Nil, "session.revoked_all", "session", uc.UserID, uc.Email, map[string]any{"email": uc.Email, "revoked_count": count})
 	// The caller's own session is among the revoked, so its cookie is dead too.
 	clearRefreshCookie(w, r, h.cfg)
-	writeJSON(w, http.StatusOK, map[string]string{"message": "all sessions revoked"})
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *AuthHandler) SSOStatus(w http.ResponseWriter, r *http.Request) {
@@ -856,7 +858,7 @@ func (h *AuthHandler) UnlinkSSO(w http.ResponseWriter, r *http.Request) {
 	auditRecordEnhanced(r, uuid.Nil, "user.sso_unlinked", "user", uc.UserID, uc.Email, map[string]any{
 		"provider": provider,
 	})
-	writeJSON(w, http.StatusOK, map[string]string{"message": "SSO identity unlinked"})
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // Shared JSON helpers

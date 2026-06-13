@@ -150,7 +150,7 @@ func (h *APIKeyHandler) Revoke(w http.ResponseWriter, r *http.Request) {
 		resourceName = id.String()
 	}
 	auditRecordEnhanced(r, orgID, "apikey.revoked", "api_key", id, resourceName, map[string]any{"key_id": id.String(), "key_name": keyName})
-	writeJSON(w, http.StatusOK, map[string]string{"message": "key revoked"})
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *APIKeyHandler) Rotate(w http.ResponseWriter, r *http.Request) {

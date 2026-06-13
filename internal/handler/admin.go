@@ -96,7 +96,7 @@ func (h *AdminHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	auditRecordEnhanced(r, uuid.Nil, "admin.user_deleted", "user", userID, targetEmail, map[string]any{"target_user_id": userID.String(), "email": targetEmail, "display_name": targetDisplayName})
-	writeJSON(w, http.StatusOK, map[string]string{"message": "user deleted"})
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *AdminHandler) Health(w http.ResponseWriter, r *http.Request) {
@@ -658,11 +658,7 @@ func (h *AdminHandler) DeleteSSOProvider(w http.ResponseWriter, r *http.Request)
 	auditRecordEnhanced(r, uuid.Nil, "admin.sso_provider_deleted", "sso_provider", providerID, provider.Name, map[string]any{
 		"name": provider.Name, "linked_user_count": linkedCount,
 	})
-
-	writeJSON(w, http.StatusOK, map[string]any{
-		"message":           "SSO provider deleted",
-		"linked_user_count": linkedCount,
-	})
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *AdminHandler) TestSSOConnection(w http.ResponseWriter, r *http.Request) {
@@ -905,7 +901,7 @@ func (h *AdminHandler) DeleteDomainMapping(w http.ResponseWriter, r *http.Reques
 		"provider_id": providerID.String(), "domain": existing.Domain, "team_id": existing.TeamID.String(),
 		"team_name": existing.TeamName, "org_role": existing.OrgRole, "team_role": existing.TeamRole,
 	})
-	writeJSON(w, http.StatusOK, map[string]string{"message": "domain mapping deleted"})
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // ── Domain Mapping Preview/Dry-Run ──
