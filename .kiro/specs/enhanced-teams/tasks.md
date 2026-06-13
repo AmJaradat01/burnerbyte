@@ -311,12 +311,12 @@ This plan implements 13 requirements for the enhanced teams feature in the Burne
   - Ensure the entire project compiles with `go build ./...`. Verify all new routes are registered, all service methods are wired, and all handler methods exist. Ask the user if questions arise.
 
 - [ ]* 14. Write unit tests for service layer
-  - [ ]* 14.1 Write tests for `validateAvatarURL` in `internal/service/team_service_test.go`
+  - [x]* 14.1 Write tests for `validateAvatarURL` in `internal/service/team_service_test.go`
     - Test valid http and https URLs pass validation
     - Test invalid schemes (ftp, empty, no scheme) return errors
     - Test malformed URLs return errors
     - _Requirements: 1.6, 1.7_
-  - [ ]* 14.2 Write tests for `validateDefaultInboxTTL` and `validateMaxInboxesPerDomain`
+  - [x]* 14.2 Write tests for `validateDefaultInboxTTL` and `validateMaxInboxesPerDomain`
     - Test valid Go duration strings pass
     - Test invalid duration strings return errors
     - Test TTL exceeding max returns error
@@ -373,3 +373,11 @@ This plan implements 13 requirements for the enhanced teams feature in the Burne
 - The design has no Correctness Properties section, so property-based tests are not included
 - Checkpoints ensure incremental validation at key integration points
 - Migration 000033 is the next available migration number (after 000032_enhanced_api_keys)
+
+## Test Coverage Status (pragmatic backfill)
+
+Added pure-validator unit/property tests (14.1 validateAvatarURL, 14.2
+validateDefaultInboxTTL/validateMaxInboxesPerDomain). The remaining service
+tests (14.3-14.7) and handler tests (15) require transaction/handler mocking
+and are deferred. NOTE: task 3 (TeamViewer RBAC role) is the one genuinely
+unbuilt item — tracked separately for implementation.

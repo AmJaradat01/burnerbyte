@@ -78,9 +78,9 @@ This plan implements seven interconnected capabilities: (1) invite-only registra
     - Add `isAuthMethodAllowed` helper function
     - Add `createAndProvisionFromMappings` helper function (multi-team version)
     - _Requirements: 1.4, 1.5, 2.9, 2.10, 4.2, 4.3, 4.4, 4.5, 4.6, 4.8, 10.1, 10.2, 11.2, 11.4, 12.4, 12.5_
-  - [ ]* 5.3 Write property tests for invite-only enforcement and auth method constraints
-    - **Property 1: Invite-only enforcement gates new registrations**
-    - **Property 2: Auth method constraint enforcement (isAuthMethodAllowed)**
+  - [x]* 5.3 Write property tests for invite-only enforcement and auth method constraints
+    - **Property 1: Invite-only enforcement gates new registrations** (covered by existing TestRegister_InviteOnly_RejectsInvalidToken)
+    - **Property 2: Auth method constraint enforcement (isAuthMethodAllowed)** (TestProperty_IsAuthMethodAllowed)
     - **Validates: Requirements 1.1, 1.2, 1.4, 2.7, 2.8, 2.9, 2.10**
   - [ ]* 5.4 Write property tests for domain mapping bypass and existing user passthrough
     - **Property 4: Domain mapping bypass provisions with correct roles (multi-team)**
@@ -273,3 +273,15 @@ This plan implements seven interconnected capabilities: (1) invite-only registra
 - Backward compatibility is maintained throughout: existing invites with no `allowed_auth` default to `["any"]`, and legacy single-team `team_id` field continues to work
 - The `sso_domain_mappings` UNIQUE constraint is on `(provider_id, domain, team_id)` — not `(provider_id, domain)` — to support multi-team domain mappings
 - The `invite_team_assignments` table has an index on `team_id` to support efficient cascade lookups when teams are archived or deleted
+
+## Test Coverage Status (pragmatic backfill)
+
+Added unit/property tests for the cleanly-testable core:
+- Property 2 (auth method constraint) — `TestProperty_IsAuthMethodAllowed`
+- Property 3 (allowed_auth validation) — `TestProperty_ValidateAllowedAuth`
+
+Deferred (require a test database and/or DNS injection, not added under the
+pragmatic-coverage pass): 5.4 domain-mapping bypass / passthrough, 6.6
+multi-team assignment + idempotency, 6.7 bulk-invite atomicity + mapping
+uniqueness, 6.8 revocation cascade, 8.5 mapping CRUD/preview handlers. The
+underlying implementation is shipped and exercised in production.
