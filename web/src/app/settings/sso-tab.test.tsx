@@ -35,16 +35,24 @@ function provider(over: Record<string, unknown> = {}) {
 describe("SSOProvidersTab", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("renders the provider list with header summary stats (Bug 1.9)", async () => {
-    vi.mocked(api.get).mockResolvedValue([provider()]);
+  it("renders the provider list with header summary stats and card info (Bugs 1.9, 1.4)", async () => {
+    // Path-aware mock: provider list for the providers query, empty for the
+    // per-card domain-mappings query.
+    vi.mocked(api.get).mockImplementation(async (path: string) => {
+      if (path.includes("domain-mappings")) return [] as never;
+      return [provider()] as never;
+    });
     const { container } = renderWithClient(<SSOProvidersTab />);
 
     // Wait for the query to resolve and the provider card to render.
     expect(await screen.findByText("Okta")).toBeInTheDocument();
 
-    // Summary stats are present in the header.
+    // Summary stats are present in the header (Bug 1.9).
     expect(container.textContent).toContain("enabled provider");
     expect(container.textContent).toContain("linked user");
+
+    // Card surfaces at-a-glance info: the redirect URL (Bug 1.4).
+    expect(container.textContent).toContain("app.example.com/sso/callback");
   });
 
   it("renders the empty state when no providers are configured", async () => {
