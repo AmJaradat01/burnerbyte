@@ -145,6 +145,9 @@ export default function AuditPage() {
   const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(1);
   const [exporting, setExporting] = useState(false);
+  // System admins can switch between this org's audit and platform-level events
+  // (registration, login, password reset, session revocation) that have no org.
+  const [scope, setScope] = useState<"org" | "platform">("org");
 
   const params: Record<string, string> = { page: String(page), per_page: "50" };
   if (action) params.action = action;
@@ -154,10 +157,11 @@ export default function AuditPage() {
   if (dateFrom) params.date_from = new Date(dateFrom).toISOString();
   if (dateTo) params.date_to = new Date(dateTo + "T23:59:59").toISOString();
 
+  const auditPath = scope === "platform" ? "/admin/audit" : `/orgs/${currentOrg?.id ?? ""}/audit`;
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["audit", currentOrg?.id, action, actorEmail, resource, resourceName, dateFrom, dateTo, page],
-    queryFn: () => api.get<PaginatedResponse<AuditEntry>>(`/orgs/${currentOrg!.id}/audit`, params),
-    enabled: !!currentOrg,
+    queryKey: ["audit", scope, currentOrg?.id, action, actorEmail, resource, resourceName, dateFrom, dateTo, page],
+    queryFn: () => api.get<PaginatedResponse<AuditEntry>>(auditPath, params),
+    enabled: scope === "platform" || !!currentOrg,
   });
 
   const clearFilters = () => { setAction(""); setActorEmail(""); setResource(""); setResourceName(""); setDateFrom(""); setDateTo(""); setPage(1); };
@@ -223,21 +227,47 @@ export default function AuditPage() {
             <p className="text-sm text-muted-foreground tabular-nums">
               {(data?.total ?? 0) > 0
                 ? `${data?.total} ${data?.total === 1 ? "entry" : "entries"}${hasFilters ? " (filtered)" : ""} · ${uniqueActions} ${uniqueActions === 1 ? "action" : "actions"}, ${uniqueActors} ${uniqueActors === 1 ? "actor" : "actors"} on this page`
-                : "Track all actions across your organization."}
+                : scope === "platform"
+                  ? "Platform-level events (sign-ups, logins, sessions) with no owning organization."
+                  : "Track all actions across your organization."}
             </p>
           </div>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-1.5"
-          onClick={exportAll}
-          disabled={!data?.data?.length || exporting}
-        >
-          <Download className="h-3.5 w-3.5" aria-hidden="true" />
-          {exporting ? "Exporting…" : "Export CSV"}
-        </Button>
+        {scope === "org" && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={exportAll}
+            disabled={!data?.data?.length || exporting}
+          >
+            <Download className="h-3.5 w-3.5" aria-hidden="true" />
+            {exporting ? "Exporting…" : "Export CSV"}
+          </Button>
+        )}
       </header>
+
+      {user?.is_system_admin && (
+        <div
+          className="inline-flex items-center gap-0.5 rounded-lg border border-border bg-muted/40 p-0.5 text-xs font-medium"
+          role="tablist"
+          aria-label="Audit scope"
+        >
+          {(["org", "platform"] as const).map((s) => (
+            <button
+              key={s}
+              role="tab"
+              aria-selected={scope === s}
+              onClick={() => { setScope(s); setPage(1); }}
+              className={`rounded-md px-3 py-1 transition-colors ${
+                scope === s ? "bg-background text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {s === "org" ? "Organization" : "Platform"}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Filters */}
       <div className="space-y-3">
