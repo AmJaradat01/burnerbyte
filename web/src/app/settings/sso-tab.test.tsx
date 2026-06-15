@@ -53,6 +53,9 @@ describe("SSOProvidersTab", () => {
 
     // Card surfaces at-a-glance info: the redirect URL (Bug 1.4).
     expect(container.textContent).toContain("app.example.com/sso/callback");
+
+    // Status is shown as a labelled badge (enabled provider).
+    expect(screen.getByText("Enabled")).toBeInTheDocument();
   });
 
   it("renders the empty state when no providers are configured", async () => {

@@ -1285,10 +1285,13 @@ function ProviderCard({
             <div>
               <div className="flex items-center gap-2">
                 <p className="font-medium">{p.name}</p>
-                <Badge variant={p.enabled ? "default" : "secondary"} className="text-xs">{p.enabled ? "Enabled" : "Disabled"}</Badge>
+                <Badge variant={p.enabled ? "success" : "secondary"} className="text-xs gap-1">
+                  {p.enabled && <CheckCircle2 className="h-3 w-3" aria-hidden="true" />}
+                  {p.enabled ? "Enabled" : "Disabled"}
+                </Badge>
                 <Badge variant="outline" className="text-xs capitalize">{providerTypeLabel(p.provider_type)}</Badge>
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground tabular-nums">
                 {p.linked_user_count ?? 0} linked users · Created {new Date(p.created_at).toLocaleDateString()}
                 {domainMappingsCount > 0 && <> · {domainMappingsCount} domain mapping{domainMappingsCount !== 1 ? "s" : ""}</>}
               </p>
