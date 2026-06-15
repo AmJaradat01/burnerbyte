@@ -3,7 +3,7 @@
   "info": {
     "title": "BurnerByte API",
     "description": "Self-hosted temporary email platform API",
-    "version": "0.7.8",
+    "version": "1.0.0",
     "license": {
       "name": "Apache 2.0",
       "url": "https://www.apache.org/licenses/LICENSE-2.0"
@@ -2150,6 +2150,31 @@
         }
       }
     },
+    "/admin/audit": {
+      "get": {
+        "tags": [
+          "Audit"
+        ],
+        "summary": "List platform-level audit events (system admin)",
+        "description": "Audit events that have no owning organization — registration, login, password reset, account deletion, and session revocation. Requires a system administrator.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/perPage"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Platform audit log entries"
+          },
+          "403": {
+            "description": "Not a system administrator"
+          }
+        }
+      }
+    },
     "/inboxes": {
       "post": {
         "tags": [
@@ -2173,6 +2198,24 @@
           },
           {
             "$ref": "#/components/parameters/perPage"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Filter by inbox status",
+            "schema": {
+              "type": "string",
+              "enum": ["active", "expired", "all"],
+              "default": "active"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Filter by inbox address (case-insensitive substring match)",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
