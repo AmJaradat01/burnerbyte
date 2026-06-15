@@ -201,3 +201,12 @@ The SSO tab's form validation and header summary computation were extracted to
 Render-dependent bug-conditions (header gradient/icon, card info density, delete
 confirmation dialog, claim-mapping layout) still need the react-query component
 render harness and remain open.
+
+## Update — react-query render harness + render tests added
+
+`web/src/test/query.tsx` provides `renderWithClient` (QueryClientProvider with
+test-tuned options). `web/src/app/settings/sso-tab.test.tsx` exports and renders
+SSOProvidersTab with a mocked `@/lib/api`, verifying the provider-list render
+with header summary stats (Bug 1.9) and the empty-state. The harness is reusable
+for the remaining render-dependent assertions (header icon badge, card density,
+delete-confirmation dialog in ProviderCard).

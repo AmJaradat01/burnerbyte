@@ -865,7 +865,7 @@ const emptyProvider: Partial<SSOProviderData> = {
   default_team_role: "member", default_team_id: "", allowed_domains: "", claim_mappings: [], custom_claims: [], enabled: true,
 };
 
-function SSOProvidersTab() {
+export function SSOProvidersTab() {
   const qc = useQueryClient();
   const { data: providers, isLoading } = useQuery({
     queryKey: ["admin-sso-providers"],
