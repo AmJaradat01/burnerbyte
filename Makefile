@@ -4,12 +4,15 @@ DATABASE_URL ?= postgres://postgres:password@localhost:5432/burnerbyte?sslmode=d
 MIGRATE := migrate -database "$(DATABASE_URL)" -path migrations
 
 # ── Run ──
+# Load .env (if present) into the environment for local `go run`. The binary
+# reads config via viper env bindings (JWT_SECRET, DATABASE_URL, BB_*); nothing
+# auto-loads .env, so source it here to make `cp .env.example .env` work.
 
 run-api:
-	go run ./cmd/api
+	@set -a; [ -f .env ] && . ./.env; set +a; go run ./cmd/api
 
 run-smtp:
-	go run ./cmd/smtpd
+	@set -a; [ -f .env ] && . ./.env; set +a; go run ./cmd/smtpd
 
 # ── Build ──
 
