@@ -22,6 +22,14 @@ import (
 	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
 )
 
+// DNS resolution hooks for invite email-domain validation. They are package
+// variables so tests can substitute deterministic resolvers; production uses
+// the net package.
+var (
+	lookupMX   = net.LookupMX
+	lookupHost = net.LookupHost
+)
+
 type OrgService struct {
 	pool            *pgxpool.Pool
 	orgRepo         *postgres.OrgRepo
@@ -339,9 +347,9 @@ func (s *OrgService) InviteMember(ctx context.Context, orgID uuid.UUID, input do
 	}
 	// DNS check: verify the domain has MX or A records (catches completely fake domains)
 	emailDomain := parts[1]
-	if _, err := net.LookupMX(emailDomain); err != nil {
+	if _, err := lookupMX(emailDomain); err != nil {
 		// No MX records — try A record as fallback (some domains deliver mail via A)
-		if _, err := net.LookupHost(emailDomain); err != nil {
+		if _, err := lookupHost(emailDomain); err != nil {
 			return nil, fmt.Errorf("email domain %q does not exist or has no mail server", emailDomain)
 		}
 	}
@@ -794,8 +802,8 @@ func (s *OrgService) BulkInviteMembers(ctx context.Context, orgID uuid.UUID, inp
 
 		// DNS check
 		emailDomain := parts[1]
-		if _, err := net.LookupMX(emailDomain); err != nil {
-			if _, err := net.LookupHost(emailDomain); err != nil {
+		if _, err := lookupMX(emailDomain); err != nil {
+			if _, err := lookupHost(emailDomain); err != nil {
 				result.Failed = append(result.Failed, domain.BulkInviteFailed{Email: email, Reason: fmt.Sprintf("email domain %q does not exist or has no mail server", emailDomain)})
 				continue
 			}
