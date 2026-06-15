@@ -204,8 +204,12 @@ func (s *InboxService) GetInbox(ctx context.Context, id, userID uuid.UUID) (*dom
 }
 
 func (s *InboxService) ListByTeamWithStatus(ctx context.Context, teamID, userID uuid.UUID, status string, page, perPage int) ([]domain.Inbox, int, error) {
-	if page < 1 { page = 1 }
-	if perPage < 1 || perPage > 100 { perPage = 20 }
+	if page < 1 {
+		page = 1
+	}
+	if perPage < 1 || perPage > 100 {
+		perPage = 20
+	}
 	return s.inboxRepo.ListByTeamWithStatus(ctx, teamID, userID, status, page, perPage)
 }
 
@@ -270,10 +274,14 @@ func (s *InboxService) DeleteInbox(ctx context.Context, id, userID uuid.UUID) er
 	return nil
 }
 
-func (s *InboxService) ListByUserWithStatus(ctx context.Context, userID uuid.UUID, status string, page, perPage int) ([]domain.Inbox, int, error) {
-	if page < 1 { page = 1 }
-	if perPage < 1 || perPage > 100 { perPage = 20 }
-	return s.inboxRepo.ListByUserWithStatus(ctx, userID, status, page, perPage)
+func (s *InboxService) ListByUserWithStatus(ctx context.Context, userID uuid.UUID, status, search string, page, perPage int) ([]domain.Inbox, int, error) {
+	if page < 1 {
+		page = 1
+	}
+	if perPage < 1 || perPage > 100 {
+		perPage = 20
+	}
+	return s.inboxRepo.ListByUserWithStatus(ctx, userID, status, search, page, perPage)
 }
 
 func (s *InboxService) CreateInboxByAssignment(ctx context.Context, assignmentID, userID uuid.UUID, input domain.CreateInboxInput) (*domain.Inbox, error) {

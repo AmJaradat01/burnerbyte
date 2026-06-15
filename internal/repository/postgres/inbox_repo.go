@@ -74,29 +74,34 @@ func (r *InboxRepo) GetByFullAddress(ctx context.Context, addr string) (*domain.
 	return &i, nil
 }
 
-func (r *InboxRepo) ListByUserWithStatus(ctx context.Context, userID uuid.UUID, status string, page, perPage int) ([]domain.Inbox, int, error) {
-	return r.listByUser(ctx, userID, status, page, perPage)
+func (r *InboxRepo) ListByUserWithStatus(ctx context.Context, userID uuid.UUID, status, search string, page, perPage int) ([]domain.Inbox, int, error) {
+	return r.listByUser(ctx, userID, status, search, page, perPage)
 }
 
-func (r *InboxRepo) listByUser(ctx context.Context, userID uuid.UUID, status string, page, perPage int) ([]domain.Inbox, int, error) {
-	statusFilter := statusClause(status)
+func (r *InboxRepo) listByUser(ctx context.Context, userID uuid.UUID, status, search string, page, perPage int) ([]domain.Inbox, int, error) {
+	where := `WHERE i.created_by = $1` + statusClause(status)
+	args := []any{userID}
+	if search != "" {
+		args = append(args, "%"+search+"%")
+		where += fmt.Sprintf(` AND i.full_address ILIKE $%d`, len(args))
+	}
 
 	var total int
-	err := r.db.QueryRow(ctx,
-		`SELECT COUNT(*) FROM inboxes i JOIN domains d ON i.domain_id = d.id WHERE i.created_by = $1`+statusFilter, userID).Scan(&total)
-	if err != nil {
+	if err := r.db.QueryRow(ctx,
+		`SELECT COUNT(*) FROM inboxes i JOIN domains d ON i.domain_id = d.id `+where, args...).Scan(&total); err != nil {
 		return nil, 0, err
 	}
 
 	offset := (page - 1) * perPage
+	limitIdx, offsetIdx := len(args)+1, len(args)+2
+	args = append(args, perPage, offset)
 	rows, err := r.db.Query(ctx,
 		`SELECT i.id, i.domain_assignment_id, i.domain_id, i.created_by, i.address, i.full_address,
 		        (i.is_active AND i.expires_at > NOW()), i.expires_at, i.created_at, d.domain_name,
 		        (SELECT COUNT(*) FROM emails e WHERE e.inbox_id = i.id),
 		        (SELECT COUNT(*) FROM emails e WHERE e.inbox_id = i.id AND e.is_read = FALSE)
-		 FROM inboxes i JOIN domains d ON i.domain_id = d.id
-		 WHERE i.created_by = $1`+statusFilter+`
-		 ORDER BY i.created_at DESC LIMIT $2 OFFSET $3`, userID, perPage, offset)
+		 FROM inboxes i JOIN domains d ON i.domain_id = d.id `+where+
+			fmt.Sprintf(` ORDER BY i.created_at DESC LIMIT $%d OFFSET $%d`, limitIdx, offsetIdx), args...)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -223,7 +228,9 @@ func (r *InboxRepo) ListActiveAddressesByDomain(ctx context.Context, domainID uu
 	var addresses []string
 	for rows.Next() {
 		var addr string
-		if err := rows.Scan(&addr); err != nil { return nil, err }
+		if err := rows.Scan(&addr); err != nil {
+			return nil, err
+		}
 		addresses = append(addresses, addr)
 	}
 	if err := rows.Err(); err != nil {
