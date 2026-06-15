@@ -70,6 +70,7 @@ function HomePage() {
   });
 
   const [page, setPage] = useState(1);
+  const [status, setStatus] = useState<"active" | "expired" | "all">("active");
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   // Debounce the search box so we don't query on every keystroke.
@@ -78,11 +79,11 @@ function HomePage() {
     return () => clearTimeout(id);
   }, [searchInput]);
 
-  // All active inboxes with pagination (optionally filtered by address search)
-  const inboxParams: Record<string, string> = { page: String(page), per_page: "12", status: "active" };
+  // Inboxes with pagination, filtered by status and (optionally) address search.
+  const inboxParams: Record<string, string> = { page: String(page), per_page: "12", status };
   if (search) inboxParams.search = search;
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["home-inboxes", page, search],
+    queryKey: ["home-inboxes", page, status, search],
     queryFn: () => api.get<PaginatedResponse<Inbox>>(`/inboxes`, inboxParams),
     refetchOnWindowFocus: true,
   });
@@ -117,31 +118,56 @@ function HomePage() {
       <QuickCreateCard />
 
       {/* Your Inboxes — shown once you have some; the create card above is the empty action */}
-      {(isLoading || isError || search !== "" || (data?.data?.length ?? 0) > 0) && (
+      {(isLoading || isError || search !== "" || status !== "active" || (data?.data?.length ?? 0) > 0) && (
         <div>
-          <div className="flex items-center justify-between gap-3 mb-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <div className="flex items-baseline gap-2 min-w-0">
               <h2 className="text-lg font-semibold shrink-0">{t("recentInboxes")}</h2>
               {data && data.total > 0 && !search && (
-                <span className="text-sm font-medium text-muted-foreground tabular-nums">{data.total} active</span>
+                <span className="text-sm font-medium text-muted-foreground tabular-nums">
+                  {data.total} {status === "expired" ? "expired" : status === "all" ? "total" : "active"}
+                </span>
               )}
             </div>
-            <div className="relative w-40 sm:w-56 shrink-0">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" aria-hidden="true" />
-              <Input
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Search inboxes…"
-                className="h-9 pl-8"
-                aria-label="Search inboxes by address"
-              />
+            <div className="flex items-center gap-2">
+              <div
+                className="inline-flex items-center gap-0.5 rounded-lg border border-border bg-muted/40 p-0.5 text-xs font-medium"
+                role="tablist"
+                aria-label="Inbox status filter"
+              >
+                {(["active", "expired", "all"] as const).map((s) => (
+                  <button
+                    key={s}
+                    role="tab"
+                    aria-selected={status === s}
+                    onClick={() => { setStatus(s); setPage(1); }}
+                    className={`rounded-md px-2.5 py-1 capitalize transition-colors ${
+                      status === s ? "bg-background text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+              <div className="relative w-36 sm:w-52 shrink-0">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" aria-hidden="true" />
+                <Input
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  placeholder="Search inboxes…"
+                  className="h-9 pl-8"
+                  aria-label="Search inboxes by address"
+                />
+              </div>
             </div>
           </div>
 
           {isError ? <ErrorState message="Failed to load inboxes" onRetry={() => refetch()} /> :
            isLoading ? <InboxGridSkeleton /> :
            (data?.data?.length ?? 0) === 0 ? (
-            <p className="text-sm text-muted-foreground py-8 text-center">No inboxes match “{search}”.</p>
+            <p className="text-sm text-muted-foreground py-8 text-center">
+              {search ? `No inboxes match “${search}”.` : status === "expired" ? "No expired inboxes." : "No inboxes yet."}
+            </p>
            ) : (
             <>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

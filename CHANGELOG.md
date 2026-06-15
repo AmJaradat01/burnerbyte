@@ -1,5 +1,27 @@
 # Changelog
 
+## v1.0.0 (June 2026) — First stable release
+
+BurnerByte reaches 1.0: a self-hosted, multi-team temporary email platform that an enterprise security team can adopt and defend. This release consolidates the platform and hardens the core.
+
+### Platform
+- Multi-org, multi-team, multi-domain with dynamic RBAC (org owner/admin/member, team lead/member) and per-assignment, per-domain, per-team settings cascades.
+- SSO (OIDC/OAuth) with domain-mapping auto-provisioning, invite-only mode with per-invite allowed auth methods, and bulk invites with multi-team assignment.
+- Auth lifecycle: per-user auth-method lock, admin-driven migration between password and SSO, and session binding that revokes mismatched sessions on refresh.
+- Disposable inboxes with a TTL cascade, real-time delivery, attachments, plus webhooks and API keys for integration.
+- Audit logging, analytics that survive email deletion, and a compliance posture built on accountability.
+
+### Highlights in this release
+- Inbox search and a status filter (active / expired / all) on the dashboard.
+- System-admin platform audit view (`GET /admin/audit`) for org-less events: registration, login, password reset, account deletion, session revocation.
+- Reliability: domain DNS rechecks no longer downgrade a verified domain on a transient lookup error; platform-level audit events now persist (they were previously dropped by a NOT NULL `org_id` constraint).
+- UI: design-system-aligned SSO provider cards (semantic status badge, copyable redirect URL), consistent empty states across surfaces, and tabular figures on the analytics page.
+- Testing: property-based tests for auth lock/migration, domain status/validation, and audit classification; DB-integration tests for analytics persistence, invite flows, and platform audit; a reusable react-query frontend test harness.
+
+### Notes
+- Database migrations through `000044` — run `migrate up` on deploy.
+- API surface documented in `internal/handler/docs/openapi.json` (now v1.0.0).
+
 ## v0.48.3 (May 2026)
 - Fix: session revocation race condition — RevokeOldestExceeding uses FOR UPDATE SKIP LOCKED
 - Validation: platform settings upper bounds for all numeric fields
