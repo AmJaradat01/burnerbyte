@@ -126,18 +126,18 @@ This plan implements seven interconnected capabilities: (1) invite-only registra
     - Also handle legacy invites using old `team_id` column via `RevokePendingInvitesByLegacyTeamID`
     - Do not affect already-accepted invites
     - _Requirements: 15.1, 15.2, 15.3, 15.4, 15.5, 15.6, 15.7, 15.8, 11.6, 11.7_
-  - [ ]* 6.6 Write property tests for multi-team assignment completeness, idempotency, and allowed_auth validation
+  - [x]* 6.6 Write property tests for multi-team assignment completeness, idempotency, and allowed_auth validation
     - **Property 3: Allowed auth validation rejects invalid values**
     - **Property 6: Multi-team assignment completeness**
     - **Property 7: Idempotent team assignment on acceptance**
     - **Property 9: Preview consistency round-trip**
     - **Validates: Requirements 2.3, 2.4, 2.5, 3.8, 3.9, 3.10, 6.1, 6.2**
-  - [ ]* 6.7 Write property tests for bulk invite atomicity and domain mapping uniqueness
+  - [x]* 6.7 Write property tests for bulk invite atomicity and domain mapping uniqueness
     - **Property 10: Domain mapping uniqueness enforcement (multi-team)**
     - **Property 11: Bulk invite atomicity and completeness**
     - **Property 12: Bulk invite skip correctness**
     - **Validates: Requirements 4.1, 5.7, 12.1, 12.2, 13.4, 13.5, 13.6, 13.7, 13.8, 13.10**
-  - [ ]* 6.8 Write property tests for invite revocation cascade
+  - [x]* 6.8 Write property tests for invite revocation cascade
     - **Property 15: Invite revocation cascade correctness**
     - **Property 16: Invite revocation cascade preserves multi-team invites**
     - **Validates: Requirements 15.1, 15.2, 15.3, 15.4, 15.6, 15.7, 15.8**
@@ -285,3 +285,14 @@ pragmatic-coverage pass): 5.4 domain-mapping bypass / passthrough, 6.6
 multi-team assignment + idempotency, 6.7 bulk-invite atomicity + mapping
 uniqueness, 6.8 revocation cascade, 8.5 mapping CRUD/preview handlers. The
 underlying implementation is shipped and exercised in production.
+
+## Update — transaction flows now covered via DB integration tests
+
+internal/service/org_integration_test.go (runs against burnerbyte_test):
+- 6.6 multi-team assignment completeness — AcceptInvite creates memberships for
+  non-archived assigned teams and skips archived ones.
+- 6.7 bulk invite completeness/skip — Created+Skipped+Failed == N non-blank,
+  dedups within a request, skips existing members.
+- 6.8 revocation cascade — solo-team invites revoked, multi-team invites pruned.
+Still open: 5.4 (SSO domain-mapping bypass — needs the SSO callback flow) and
+8.5 (domain-mapping CRUD/preview handlers — needs an HTTP handler harness).
