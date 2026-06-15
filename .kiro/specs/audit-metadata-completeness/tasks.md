@@ -534,3 +534,11 @@ This establishes the harness pattern (capturing recorder + test-DB-backed
 services + httptest request) for the remaining handler metadata behaviors, which
 each need handler-specific setup (some require an authenticated user context and
 org/team seeding) and can be added incrementally on this foundation.
+
+## Update — more handler behaviors verified
+
+Added on the harness: user.password_changed (sessions_revoked), user.account_deleted
+(display_name), session.revoked_all (revoked_count) — all driven through the real
+handlers with an injected authenticated user context against the test DB.
+Verified behaviors: registered, login, password_changed, account_deleted,
+session.revoked_all.

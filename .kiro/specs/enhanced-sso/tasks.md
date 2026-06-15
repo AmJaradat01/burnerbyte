@@ -210,3 +210,9 @@ SSOProvidersTab with a mocked `@/lib/api`, verifying the provider-list render
 with header summary stats (Bug 1.9) and the empty-state. The harness is reusable
 for the remaining render-dependent assertions (header icon badge, card density,
 delete-confirmation dialog in ProviderCard).
+
+## Update — card info density covered
+
+The SSO render test now also asserts a provider card surfaces its redirect URL
+at a glance (Bug 1.4), with a path-aware api mock (providers vs per-card
+domain-mappings query).
