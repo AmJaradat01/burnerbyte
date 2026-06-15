@@ -61,6 +61,31 @@ func TestVerifySPF_NoSPFRecord(t *testing.T) {
 	}
 }
 
+// ResolveStatus must adopt a successful lookup result but preserve the previous
+// value when the lookup errored, so a transient DNS failure never downgrades a
+// verified domain (the recheck worker and manual/bulk verify all rely on this).
+func TestResolveStatus(t *testing.T) {
+	boom := errors.New("dns: server misbehaving")
+	cases := []struct {
+		name         string
+		prev, result bool
+		err          error
+		want         bool
+	}{
+		{"success adopts true", false, true, nil, true},
+		{"success adopts false", true, false, nil, false},
+		{"error preserves a verified record", true, false, boom, true},
+		{"error preserves an unverified record", false, false, boom, false},
+		{"error preserves even a would-be-true result", false, true, boom, false},
+	}
+	for _, c := range cases {
+		if got := ResolveStatus(c.prev, c.result, c.err); got != c.want {
+			t.Errorf("%s: ResolveStatus(prev=%v, result=%v, err=%v) = %v, want %v",
+				c.name, c.prev, c.result, c.err, got, c.want)
+		}
+	}
+}
+
 func TestVerifySPF_LookupError(t *testing.T) {
 	withLookupTXT(t, func(string) ([]string, error) {
 		return nil, errors.New("dns timeout")
