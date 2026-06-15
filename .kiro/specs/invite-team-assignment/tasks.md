@@ -1,6 +1,6 @@
 # Implementation Plan
 
-- [ ] 1. Write bug condition exploration test
+- [x] 1. Write bug condition exploration test
   - **Property 1: Bug Condition** - Invite Team Assignment Ignored
   - **CRITICAL**: This test MUST FAIL on unfixed code - failure confirms the bug exists
   - **DO NOT attempt to fix the test or the code when it fails**
@@ -42,7 +42,7 @@
   - Mark task complete when tests are written, run, and failures are documented
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.8_
 
-- [ ] 2. Write preservation property tests (BEFORE implementing fix)
+- [x] 2. Write preservation property tests (BEFORE implementing fix)
   - **Property 2: Preservation** - Org-Only Invite Behavior Unchanged
   - **IMPORTANT**: Follow observation-first methodology
   - Create a test file `internal/service/org_service_invite_preservation_test.go`
@@ -61,9 +61,9 @@
   - Mark task complete when tests are written, run, and passing on unfixed code
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8_
 
-- [ ] 3. Fix invite team assignment
+- [x] 3. Fix invite team assignment
 
-  - [ ] 3.1 Add `teamRepo` dependency to `OrgService`
+  - [x] 3.1 Add `teamRepo` dependency to `OrgService`
     - In `internal/service/org_service.go`, add `teamRepo *postgres.TeamRepo` field to the `OrgService` struct
     - Update `NewOrgService` constructor signature to accept `teamRepo *postgres.TeamRepo` parameter and store it
     - _Bug_Condition: isBugCondition(invite) where invite.TeamID IS NOT NULL — OrgService cannot access team data without teamRepo_
@@ -71,7 +71,7 @@
     - _Preservation: All existing OrgService methods continue to work unchanged since teamRepo is only used in new code paths_
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.9_
 
-  - [ ] 3.2 Update `NewOrgService` call site in `cmd/api/main.go`
+  - [x] 3.2 Update `NewOrgService` call site in `cmd/api/main.go`
     - In `cmd/api/main.go`, update the `service.NewOrgService(...)` call to pass `teamRepo` as the new parameter
     - The `teamRepo` variable is already instantiated in main.go (`teamRepo := postgres.NewTeamRepo(pool)`)
     - Change: `service.NewOrgService(pool, orgRepo, ml, cfg.Server.FrontendURL, cfg.Defaults.InviteExpiryTTL)`
@@ -81,7 +81,7 @@
     - _Preservation: No behavioral change — only wiring a new dependency_
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.9_
 
-  - [ ] 3.3 Fix `InviteMember` — validate team belongs to org and default `team_role`
+  - [x] 3.3 Fix `InviteMember` — validate team belongs to org and default `team_role`
     - In `internal/service/org_service.go`, `InviteMember` method
     - After parsing `team_id` into `teamID`, look up the team via `s.teamRepo.GetByID(ctx, id)`
     - Verify `team.OrgID == orgID`; if not, return error `"team does not belong to this organization"`
@@ -92,7 +92,7 @@
     - _Preservation: Invites without team_id skip all team validation (unchanged)_
     - _Requirements: 2.2, 2.3_
 
-  - [ ] 3.4 Fix `AcceptInvite` — create team membership in same transaction
+  - [x] 3.4 Fix `AcceptInvite` — create team membership in same transaction
     - In `internal/service/org_service.go`, `AcceptInvite` method
     - After creating org membership (or handling the already-member case) and before committing the transaction, check if `invite.TeamID != nil`
     - If team_id is present:
@@ -109,7 +109,7 @@
     - _Preservation: Invites without team_id follow the exact same code path as before (unchanged)_
     - _Requirements: 2.1, 2.5, 2.6, 2.7_
 
-  - [ ] 3.5 Fix `PreviewInvite` — include team name and team_role
+  - [x] 3.5 Fix `PreviewInvite` — include team name and team_role
     - In `internal/service/org_service.go`, `PreviewInvite` method
     - After building the base response map, check if `invite.TeamID != nil`
     - If team_id is present, look up the team via `s.teamRepo.GetByID(ctx, *invite.TeamID)`
@@ -120,7 +120,7 @@
     - _Preservation: Org-only invites return exactly the same response as before (unchanged)_
     - _Requirements: 2.4_
 
-  - [ ] 3.6 Fix `ListPendingInvites` — enrich with team names
+  - [x] 3.6 Fix `ListPendingInvites` — enrich with team names
     - In `internal/service/org_service.go`, `ListPendingInvites` method (or in the handler)
     - After fetching pending invites, collect unique non-nil `team_id` values
     - Batch-look up teams by ID using `s.teamRepo.GetByID` for each unique team_id
@@ -132,7 +132,7 @@
     - _Preservation: Org-only invites are unaffected — TeamName remains empty/omitted_
     - _Requirements: 2.9_
 
-  - [ ] 3.7 Fix `AcceptInvite` handler — include team metadata in audit
+  - [x] 3.7 Fix `AcceptInvite` handler — include team metadata in audit
     - In `internal/handler/org.go`, `AcceptInvite` method
     - Update the handler to use the new return values from `OrgService.AcceptInvite` (which now returns team info)
     - If team info is present (teamID is non-nil), add `"team_id"`, `"team_name"`, and `"team_role"` to the audit metadata map
@@ -143,7 +143,7 @@
     - _Preservation: Org-only invite acceptance audit metadata unchanged_
     - _Requirements: 2.8_
 
-  - [ ] 3.8 Fix `InviteMember` handler — include team info in audit
+  - [x] 3.8 Fix `InviteMember` handler — include team info in audit
     - In `internal/handler/org.go`, `InviteMember` method
     - After creating the invite, if `input.TeamID` is non-nil, add `"team_id"` and `"team_role"` to the audit metadata map
     - Current: `map[string]any{"email": input.Email, "role": input.OrgRole, "org_name": orgName}`
@@ -153,7 +153,7 @@
     - _Preservation: Org-only invite creation audit metadata unchanged_
     - _Requirements: 2.8_
 
-  - [ ] 3.9 Verify bug condition exploration test now passes
+  - [x] 3.9 Verify bug condition exploration test now passes
     - **Property 1: Expected Behavior** - Invite Team Assignment Works
     - **IMPORTANT**: Re-run the SAME test from task 1 - do NOT write a new test
     - The test from task 1 encodes the expected behavior
@@ -162,14 +162,14 @@
     - **EXPECTED OUTCOME**: Test PASSES (confirms bug is fixed)
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.8_
 
-  - [ ] 3.10 Verify preservation tests still pass
+  - [x] 3.10 Verify preservation tests still pass
     - **Property 2: Preservation** - Org-Only Invite Behavior Unchanged
     - **IMPORTANT**: Re-run the SAME tests from task 2 - do NOT write new tests
     - Run preservation property tests from step 2
     - **EXPECTED OUTCOME**: Tests PASS (confirms no regressions)
     - Confirm all tests still pass after fix (no regressions)
 
-- [ ] 4. Checkpoint - Ensure all tests pass
+- [x] 4. Checkpoint - Ensure all tests pass
   - Run `go build ./...` to verify the project compiles
   - Run `go test ./internal/service/... ./internal/handler/... ./internal/worker/... ./internal/auth/...` to verify all tests pass
   - Ensure all property-based tests (bug condition + preservation) pass
