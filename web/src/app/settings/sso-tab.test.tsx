@@ -56,6 +56,9 @@ describe("SSOProvidersTab", () => {
 
     // Status is shown as a labelled badge (enabled provider).
     expect(screen.getByText("Enabled")).toBeInTheDocument();
+
+    // The redirect URL has a copy affordance (admins paste it into their IdP).
+    expect(screen.getByLabelText("Copy redirect URL")).toBeInTheDocument();
   });
 
   it("renders the empty state when no providers are configured", async () => {
