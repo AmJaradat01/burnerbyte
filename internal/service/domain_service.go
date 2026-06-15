@@ -20,12 +20,12 @@ import (
 var domainNameRe = regexp.MustCompile(`^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$`)
 
 type DomainService struct {
-	domainRepo      *postgres.DomainRepo
-	orgRepo         *postgres.OrgRepo
-	inboxRepo       *postgres.InboxRepo
-	redisInboxRepo  RedisInboxDeleter
-	verHistoryRepo  *postgres.VerificationHistoryRepo
-	cfg             *config.Config
+	domainRepo     *postgres.DomainRepo
+	orgRepo        *postgres.OrgRepo
+	inboxRepo      *postgres.InboxRepo
+	redisInboxRepo RedisInboxDeleter
+	verHistoryRepo *postgres.VerificationHistoryRepo
+	cfg            *config.Config
 }
 
 // RedisInboxDeleter is the minimal interface for cleaning up Redis inbox keys.
@@ -301,6 +301,11 @@ func (s *DomainService) TriggerVerify(ctx context.Context, orgID, id uuid.UUID) 
 	mx, mxErr := dnspkg.VerifyMX(d.DomainName, s.cfg.SMTP.Hostname)
 	txt, txtErr := dnspkg.VerifyTXT(d.DomainName, expectedTXT)
 	spf, spfErr := dnspkg.VerifySPF(d.DomainName, s.cfg.SMTP.Hostname)
+	// A failed lookup (transient DNS/network error) must not downgrade a
+	// previously-verified record; preserve the last known status on error.
+	mx = dnspkg.ResolveStatus(d.MXVerified, mx, mxErr)
+	txt = dnspkg.ResolveStatus(d.TXTVerified, txt, txtErr)
+	spf = dnspkg.ResolveStatus(d.SPFVerified, spf, spfErr)
 
 	if err := s.domainRepo.UpdateDNSStatus(ctx, id, mx, txt, spf); err != nil {
 		return nil, err
@@ -370,6 +375,11 @@ func (s *DomainService) BulkVerify(ctx context.Context, orgID uuid.UUID, domainI
 		mx, mxErr := dnspkg.VerifyMX(d.DomainName, s.cfg.SMTP.Hostname)
 		txt, txtErr := dnspkg.VerifyTXT(d.DomainName, expectedTXT)
 		spf, spfErr := dnspkg.VerifySPF(d.DomainName, s.cfg.SMTP.Hostname)
+		// Preserve last-known status on a lookup error (transient failures must
+		// not downgrade a verified domain).
+		mx = dnspkg.ResolveStatus(d.MXVerified, mx, mxErr)
+		txt = dnspkg.ResolveStatus(d.TXTVerified, txt, txtErr)
+		spf = dnspkg.ResolveStatus(d.SPFVerified, spf, spfErr)
 
 		if err := s.domainRepo.UpdateDNSStatus(ctx, did, mx, txt, spf); err != nil {
 			result.Failed = append(result.Failed, domain.BulkFailItem{DomainID: did, Reason: "failed to update DNS status"})
