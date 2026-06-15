@@ -119,7 +119,7 @@
       "expiresIn": "expires in",
       "expired": "Inbox expired",
       "caption": "A real inbox, start to finish: create, receive, expire.",
-      "liveCaption": "Real inbox — send an email to the address above to watch it arrive.",
+      "liveCaption": "Real inbox: send an email to the address above to watch it arrive.",
       "emptyHint": "Send an email to this address and it appears here, instantly.",
       "copy": "Copy address",
       "copied": "Copied",
