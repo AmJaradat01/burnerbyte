@@ -32,6 +32,13 @@ func DNSRecheckJob(domainRepo *postgres.DomainRepo, verHistoryRepo *postgres.Ver
 				txt, txtErr := dns.VerifyTXT(d.DomainName, dns.GenerateVerificationRecord(d.ID.String()))
 				spf, spfErr := dns.VerifySPF(d.DomainName, expectedMXHost)
 
+				// A failed lookup (transient DNS/network error) returns false; it must
+				// not downgrade a previously-verified record. Preserve the last known
+				// status for any check whose lookup errored.
+				mx = dns.ResolveStatus(d.MXVerified, mx, mxErr)
+				txt = dns.ResolveStatus(d.TXTVerified, txt, txtErr)
+				spf = dns.ResolveStatus(d.SPFVerified, spf, spfErr)
+
 				if mx != d.MXVerified || txt != d.TXTVerified || spf != d.SPFVerified {
 					if err := domainRepo.UpdateDNSStatus(ctx, d.ID, mx, txt, spf); err != nil {
 						slog.Error("dns recheck update failed", "domain", d.DomainName, "error", err)
