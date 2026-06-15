@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import { validateSSOProviderForm, ssoSummaryStats } from "@/lib/sso";
+import { EmptyState } from "@/components/empty-state";
 import { useOrgStore } from "@/stores/org-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { Button } from "@/components/ui/button";
@@ -1012,12 +1013,11 @@ export function SSOProvidersTab() {
       ))}
 
       {providerList.length === 0 && (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-10 gap-1 text-center">
-            <p className="text-sm font-medium">No SSO providers configured</p>
-            <p className="text-xs text-muted-foreground">Click &quot;Add Provider&quot; above to get started.</p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          title="No SSO providers configured"
+          description="Add a provider to let your team sign in with single sign-on."
+          action={{ label: "Add Provider", onClick: () => setEditing({ ...emptyProvider }) }}
+        />
       )}
 
       {/* Edit/Create dialog - inline card */}
