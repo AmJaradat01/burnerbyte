@@ -346,3 +346,11 @@ component test covers a dependency-free presentational component. Building that
 harness and the render tests is integration-level work beyond the pragmatic
 unit-coverage pass, so these are deferred. The UI changes themselves are
 implemented and shipped.
+
+## Update — shared component tests added
+
+`web/src/components/ui/badge.test.tsx` covers the shared Badge (task 2.10):
+base render, default primary variant, and the overhaul's semantic token variants
+(success/warning/info), plus className merge. The remaining shell/page-level/
+mobile/data-freshness unit tests need the react-query render harness and remain
+open.
