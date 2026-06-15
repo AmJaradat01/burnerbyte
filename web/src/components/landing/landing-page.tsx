@@ -78,7 +78,7 @@ export function LandingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-[100dvh] bg-background">
       {/* ── Header ── */}
       <header className="sticky top-0 z-50 border-b border-border bg-background">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6 sm:px-8">
@@ -132,6 +132,9 @@ export function LandingPage() {
             <p className="mt-6 max-w-xl text-pretty text-lg leading-relaxed text-muted-foreground">
               {t("hero.subtitle")}
             </p>
+            {/* One primary + one secondary CTA. The live demo (when enabled) is
+                the strongest secondary for a technical audience; otherwise Docs.
+                Docs remains reachable from the nav and footer. */}
             <div className="mt-9 flex flex-wrap items-center gap-3">
               <Link
                 href={allowRegistration ? "/register" : "/login"}
@@ -141,19 +144,11 @@ export function LandingPage() {
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
-                href="/docs"
+                href={demoEnabled ? "/try" : "/docs"}
                 className="inline-flex h-11 items-center rounded-md border border-border bg-background px-6 text-sm font-medium transition-colors hover:bg-muted"
               >
-                {t("hero.docs")}
+                {demoEnabled ? t("hero.tryIt") : t("hero.docs")}
               </Link>
-              {demoEnabled && (
-              <Link
-                href="/try"
-                className="inline-flex h-11 items-center gap-2 rounded-md border border-border bg-background px-6 text-sm font-medium transition-colors hover:bg-muted"
-              >
-                {t("hero.tryIt")}
-              </Link>
-              )}
             </div>
             <ul className="mt-8 flex flex-wrap items-center gap-x-3 gap-y-2 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
               {t("hero.spec").split("·").map((item, i) => (
