@@ -395,6 +395,8 @@ func main() {
 			// Audit
 			r.Get("/orgs/{orgId}/audit", auditHandler.List)
 			r.Get("/orgs/{orgId}/audit/export", auditHandler.Export)
+			// Platform-level audit events (no owning org): system-admin only
+			r.With(auth.RequireSystemAdmin).Get("/admin/audit", auditHandler.ListPlatform)
 
 			// User-scoped inboxes
 			r.Get("/inboxes", inboxHandler.ListMyInboxes)

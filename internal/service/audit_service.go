@@ -23,11 +23,27 @@ func (s *AuditService) Record(ctx context.Context, entry *domain.AuditEntry) err
 }
 
 func (s *AuditService) List(ctx context.Context, orgID uuid.UUID, filter domain.AuditFilter, page, perPage int) ([]domain.AuditEntry, int, error) {
-	if page < 1 { page = 1 }
-	if perPage < 1 || perPage > 100 { perPage = 20 }
+	if page < 1 {
+		page = 1
+	}
+	if perPage < 1 || perPage > 100 {
+		perPage = 20
+	}
 	return s.repo.List(ctx, orgID, filter, page, perPage)
 }
 
 func (s *AuditService) ListAll(ctx context.Context, orgID uuid.UUID, filter domain.AuditFilter) ([]domain.AuditEntry, error) {
 	return s.repo.ListAll(ctx, orgID, filter)
+}
+
+// ListPlatform returns paginated platform-level audit events (org_id IS NULL):
+// registration, login, password reset, account deletion, session revocation.
+func (s *AuditService) ListPlatform(ctx context.Context, filter domain.AuditFilter, page, perPage int) ([]domain.AuditEntry, int, error) {
+	if page < 1 {
+		page = 1
+	}
+	if perPage < 1 || perPage > 100 {
+		perPage = 20
+	}
+	return s.repo.ListPlatform(ctx, filter, page, perPage)
 }
