@@ -120,6 +120,23 @@ func (h *AuditHandler) List(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, paginatedResponse(entries, total, page, perPage))
 }
 
+// ListPlatform returns platform-level audit events (no owning org) such as
+// registration, login, password reset, and session revocation. System-admin
+// only; the route is guarded by auth.RequireSystemAdmin.
+func (h *AuditHandler) ListPlatform(w http.ResponseWriter, r *http.Request) {
+	page, perPage := parsePagination(r)
+	filter, ok := parseAuditFilter(w, r)
+	if !ok {
+		return
+	}
+	entries, total, err := h.svc.ListPlatform(r.Context(), filter, page, perPage)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, paginatedResponse(entries, total, page, perPage))
+}
+
 func (h *AuditHandler) Export(w http.ResponseWriter, r *http.Request) {
 	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
 	if err != nil {
