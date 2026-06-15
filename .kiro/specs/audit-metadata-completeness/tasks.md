@@ -520,3 +520,17 @@ database/handler integration tests — they insert rows, mutate state, and
 re-query through real SQL (or invoke handlers with a captured audit recorder).
 They cannot be exercised with the unit-level mock harness and are deferred
 pending a test-database fixture. The underlying fix is implemented and shipped.
+
+## Update — handler-invocation harness built; representative behaviors verified
+
+`Audit` (package handler) is now an `AuditRecorder` interface (production wiring
+unchanged — `*audit.Recorder` satisfies it). `internal/handler/audit_metadata_test.go`
+installs a capturing fake and drives real handlers against the local test DB
+(+ Redis-backed lockout), asserting the metadata maps they emit:
+- Bug 1.1 — `user.registered` includes `display_name` + `ip_address`, resource_id = new user id
+- Bug 1.2 — `user.login` includes `ip_address` + `login_method`
+
+This establishes the harness pattern (capturing recorder + test-DB-backed
+services + httptest request) for the remaining handler metadata behaviors, which
+each need handler-specific setup (some require an authenticated user context and
+org/team seeding) and can be added incrementally on this foundation.
