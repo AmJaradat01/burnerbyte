@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import { validateSSOProviderForm, ssoSummaryStats } from "@/lib/sso";
 import { EmptyState } from "@/components/empty-state";
+import { copyToClipboard } from "@/lib/clipboard";
 import { useOrgStore } from "@/stores/org-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,7 @@ import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ErrorState } from "@/components/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Activity, AlertTriangle, CheckCircle2, Clock, Database, HardDrive, Info, Key, Loader2, Lock, Mail, Monitor, Paperclip, Pencil, Play, Plus, Save, Search, Settings, Shield, Trash2, Users, XCircle } from "lucide-react";
+import { Activity, AlertTriangle, Check, CheckCircle2, Clock, Copy, Database, HardDrive, Info, Key, Loader2, Lock, Mail, Monitor, Paperclip, Pencil, Play, Plus, Save, Search, Settings, Shield, Trash2, Users, XCircle } from "lucide-react";
 import Link from "next/link";
 import { UnifiedUsersTab } from "@/components/settings/unified-users-tab";
 import { RolesTab } from "@/components/settings/roles-tab";
@@ -1264,10 +1265,14 @@ function ProviderCard({
   });
   const domainMappingsCount = domainMappings?.length ?? 0;
 
-  // Truncate URL for display
-  const truncatedUrl = p.redirect_url && p.redirect_url.length > 50
-    ? p.redirect_url.slice(0, 50) + "…"
-    : p.redirect_url;
+  const [copiedUrl, setCopiedUrl] = useState(false);
+  const handleCopyUrl = () => {
+    if (!p.redirect_url) return;
+    copyToClipboard(p.redirect_url);
+    setCopiedUrl(true);
+    toast.success("Redirect URL copied");
+    setTimeout(() => setCopiedUrl(false), 2000);
+  };
 
   // Parse allowed domains
   const allowedDomainsList = p.allowed_domains
@@ -1321,17 +1326,25 @@ function ProviderCard({
 
         {/* Provider details */}
         <div className="mt-3 pt-3 border-t space-y-2">
-          {truncatedUrl && (
-            <div className="flex items-center gap-2 text-xs">
+          {p.redirect_url && (
+            <div className="flex items-center gap-2 text-xs min-w-0">
               <span className="text-muted-foreground shrink-0">Redirect URL:</span>
-              <span className="font-mono text-[11px] truncate">{truncatedUrl}</span>
+              <span className="font-mono text-[11px] truncate min-w-0" title={p.redirect_url}>{p.redirect_url}</span>
+              <button
+                type="button"
+                onClick={handleCopyUrl}
+                className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Copy redirect URL"
+              >
+                {copiedUrl ? <Check className="h-3.5 w-3.5 text-success" aria-hidden="true" /> : <Copy className="h-3.5 w-3.5" aria-hidden="true" />}
+              </button>
             </div>
           )}
           <div className="flex items-center gap-2 flex-wrap">
             {allowedDomainsList.length > 0 && allowedDomainsList.map((d) => (
               <Badge key={d} variant="outline" className="text-[10px] font-mono">@{d}</Badge>
             ))}
-            <Badge variant={p.auto_provision ? "default" : "secondary"} className="text-[10px]">
+            <Badge variant={p.auto_provision ? "secondary" : "outline"} className="text-[10px]">
               {p.auto_provision ? "Auto-provision on" : "Auto-provision off"}
             </Badge>
             {domainMappingsCount > 0 && (
