@@ -78,8 +78,11 @@ func (h *InboxHandler) ListMyInboxes(w http.ResponseWriter, r *http.Request) {
 	}
 	page, perPage := parsePagination(r)
 	status := r.URL.Query().Get("status")
-	if status == "" { status = "active" }
-	inboxes, total, err := h.svc.ListByUserWithStatus(r.Context(), uc.UserID, status, page, perPage)
+	if status == "" {
+		status = "active"
+	}
+	search := strings.TrimSpace(r.URL.Query().Get("search"))
+	inboxes, total, err := h.svc.ListByUserWithStatus(r.Context(), uc.UserID, status, search, page, perPage)
 	if err != nil {
 		if strings.Contains(err.Error(), "forbidden") {
 			writeError(w, http.StatusForbidden, err.Error())
@@ -108,7 +111,9 @@ func (h *InboxHandler) ListInboxes(w http.ResponseWriter, r *http.Request) {
 	}
 	page, perPage := parsePagination(r)
 	status := r.URL.Query().Get("status")
-	if status == "" { status = "active" }
+	if status == "" {
+		status = "active"
+	}
 	inboxes, total, err := h.svc.ListByTeamWithStatus(r.Context(), teamID, uc.UserID, status, page, perPage)
 	if err != nil {
 		if strings.Contains(err.Error(), "forbidden") {

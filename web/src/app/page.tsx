@@ -19,7 +19,7 @@ import { ErrorState } from "@/components/error-state";
 import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
 import { PullToRefreshIndicator } from "@/components/pull-to-refresh-indicator";
 import { Pagination } from "@/components/pagination";
-import { Check, ChevronDown, Clock, Copy, ExternalLink, Mail, RefreshCw, Timer, Trash2, Zap } from "lucide-react";
+import { Check, ChevronDown, Clock, Copy, ExternalLink, Mail, RefreshCw, Search, Timer, Trash2, Zap } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { copyToClipboard } from "@/lib/clipboard";
 import { LandingPage } from "@/components/landing/landing-page";
@@ -70,11 +70,20 @@ function HomePage() {
   });
 
   const [page, setPage] = useState(1);
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+  // Debounce the search box so we don't query on every keystroke.
+  useEffect(() => {
+    const id = setTimeout(() => { setSearch(searchInput.trim()); setPage(1); }, 300);
+    return () => clearTimeout(id);
+  }, [searchInput]);
 
-  // All active inboxes with pagination
+  // All active inboxes with pagination (optionally filtered by address search)
+  const inboxParams: Record<string, string> = { page: String(page), per_page: "12", status: "active" };
+  if (search) inboxParams.search = search;
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["home-inboxes", page],
-    queryFn: () => api.get<PaginatedResponse<Inbox>>(`/inboxes`, { page: String(page), per_page: "12", status: "active" }),
+    queryKey: ["home-inboxes", page, search],
+    queryFn: () => api.get<PaginatedResponse<Inbox>>(`/inboxes`, inboxParams),
     refetchOnWindowFocus: true,
   });
 
@@ -108,17 +117,32 @@ function HomePage() {
       <QuickCreateCard />
 
       {/* Your Inboxes — shown once you have some; the create card above is the empty action */}
-      {(isLoading || isError || (data?.data?.length ?? 0) > 0) && (
+      {(isLoading || isError || search !== "" || (data?.data?.length ?? 0) > 0) && (
         <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">{t("recentInboxes")}</h2>
-            {data && data.total > 0 && (
-              <p className="text-sm font-medium text-muted-foreground tabular-nums">{data.total} active</p>
-            )}
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div className="flex items-baseline gap-2 min-w-0">
+              <h2 className="text-lg font-semibold shrink-0">{t("recentInboxes")}</h2>
+              {data && data.total > 0 && !search && (
+                <span className="text-sm font-medium text-muted-foreground tabular-nums">{data.total} active</span>
+              )}
+            </div>
+            <div className="relative w-40 sm:w-56 shrink-0">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" aria-hidden="true" />
+              <Input
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Search inboxes…"
+                className="h-9 pl-8"
+                aria-label="Search inboxes by address"
+              />
+            </div>
           </div>
 
           {isError ? <ErrorState message="Failed to load inboxes" onRetry={() => refetch()} /> :
-           isLoading ? <InboxGridSkeleton /> : (
+           isLoading ? <InboxGridSkeleton /> :
+           (data?.data?.length ?? 0) === 0 ? (
+            <p className="text-sm text-muted-foreground py-8 text-center">No inboxes match “{search}”.</p>
+           ) : (
             <>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {data?.data?.map((inbox) => (
