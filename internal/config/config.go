@@ -9,26 +9,26 @@ import (
 )
 
 type Config struct {
-	Server   ServerConfig   `mapstructure:"server"`
-	Database DatabaseConfig `mapstructure:"database"`
-	Redis    RedisConfig    `mapstructure:"redis"`
-	MinIO    MinIOConfig    `mapstructure:"minio"`
-	JWT      JWTConfig      `mapstructure:"jwt"`
-	SMTP     SMTPConfig     `mapstructure:"smtp"`
-	Mailer   MailerConfig   `mapstructure:"mailer"`
-	SSO      SSOConfig      `mapstructure:"sso"`
-	CORS     CORSConfig     `mapstructure:"cors"`
-	RateLimit RateLimitConfig `mapstructure:"rate_limit"`
-	Lockout  LockoutConfig  `mapstructure:"lockout"`
-	Password PasswordConfig `mapstructure:"password_policy"`
-	Defaults DefaultsConfig `mapstructure:"defaults"`
+	Server            ServerConfig            `mapstructure:"server"`
+	Database          DatabaseConfig          `mapstructure:"database"`
+	Redis             RedisConfig             `mapstructure:"redis"`
+	MinIO             MinIOConfig             `mapstructure:"minio"`
+	JWT               JWTConfig               `mapstructure:"jwt"`
+	SMTP              SMTPConfig              `mapstructure:"smtp"`
+	Mailer            MailerConfig            `mapstructure:"mailer"`
+	SSO               SSOConfig               `mapstructure:"sso"`
+	CORS              CORSConfig              `mapstructure:"cors"`
+	RateLimit         RateLimitConfig         `mapstructure:"rate_limit"`
+	Lockout           LockoutConfig           `mapstructure:"lockout"`
+	Password          PasswordConfig          `mapstructure:"password_policy"`
+	Defaults          DefaultsConfig          `mapstructure:"defaults"`
 	EmailVerification EmailVerificationConfig `mapstructure:"email_verification"`
-	Logging  LoggingConfig  `mapstructure:"logging"`
-	Metrics  MetricsConfig  `mapstructure:"metrics"`
-	Workers  WorkersConfig  `mapstructure:"workers"`
-	Encryption EncryptionConfig `mapstructure:"encryption"`
-	Demo     DemoConfig     `mapstructure:"demo"`
-	AuthCookie CookieConfig `mapstructure:"auth_cookie"`
+	Logging           LoggingConfig           `mapstructure:"logging"`
+	Metrics           MetricsConfig           `mapstructure:"metrics"`
+	Workers           WorkersConfig           `mapstructure:"workers"`
+	Encryption        EncryptionConfig        `mapstructure:"encryption"`
+	Demo              DemoConfig              `mapstructure:"demo"`
+	AuthCookie        CookieConfig            `mapstructure:"auth_cookie"`
 
 	// mu guards the runtime-mutable settings groups (Password, Lockout,
 	// Defaults, EmailVerification) that PUT /admin/platform updates while
@@ -216,22 +216,22 @@ type PasswordConfig struct {
 }
 
 type DefaultsConfig struct {
-	AttachmentsEnabled  bool          `mapstructure:"attachments_enabled"`
-	AllowRegistration   bool          `mapstructure:"allow_registration"`
-	DefaultInboxTTL     time.Duration `mapstructure:"default_inbox_ttl"`
-	MaxInboxTTL         time.Duration `mapstructure:"max_inbox_ttl"`
-	MaxAttachmentSizeMB int           `mapstructure:"max_attachment_size_mb"`
-	MaxDomains          int           `mapstructure:"max_domains"`
-	MaxTeams            int           `mapstructure:"max_teams"`
-	MaxInboxesPerDomain int           `mapstructure:"max_inboxes_per_domain"`
-	EnforceSSO          bool          `mapstructure:"enforce_sso"`
-	PasswordResetTTL    time.Duration `mapstructure:"password_reset_ttl"`
-	InviteExpiryTTL     time.Duration `mapstructure:"invite_expiry_ttl"`
-	PresignedURLTTL     time.Duration `mapstructure:"presigned_url_ttl"`
-	WebhookTimeout      time.Duration `mapstructure:"webhook_timeout"`
-	WebhookMaxRetries   int           `mapstructure:"webhook_max_retries"`
-	AnalyticsCacheTTL   time.Duration `mapstructure:"analytics_cache_ttl"`
-	AnalyticsDefaultDays int          `mapstructure:"analytics_default_days"`
+	AttachmentsEnabled   bool          `mapstructure:"attachments_enabled"`
+	AllowRegistration    bool          `mapstructure:"allow_registration"`
+	DefaultInboxTTL      time.Duration `mapstructure:"default_inbox_ttl"`
+	MaxInboxTTL          time.Duration `mapstructure:"max_inbox_ttl"`
+	MaxAttachmentSizeMB  int           `mapstructure:"max_attachment_size_mb"`
+	MaxDomains           int           `mapstructure:"max_domains"`
+	MaxTeams             int           `mapstructure:"max_teams"`
+	MaxInboxesPerDomain  int           `mapstructure:"max_inboxes_per_domain"`
+	EnforceSSO           bool          `mapstructure:"enforce_sso"`
+	PasswordResetTTL     time.Duration `mapstructure:"password_reset_ttl"`
+	InviteExpiryTTL      time.Duration `mapstructure:"invite_expiry_ttl"`
+	PresignedURLTTL      time.Duration `mapstructure:"presigned_url_ttl"`
+	WebhookTimeout       time.Duration `mapstructure:"webhook_timeout"`
+	WebhookMaxRetries    int           `mapstructure:"webhook_max_retries"`
+	AnalyticsCacheTTL    time.Duration `mapstructure:"analytics_cache_ttl"`
+	AnalyticsDefaultDays int           `mapstructure:"analytics_default_days"`
 	Timezone             string        `mapstructure:"timezone"`
 	DateFormat           string        `mapstructure:"date_format"`
 	TimeFormat           string        `mapstructure:"time_format"`
@@ -276,6 +276,19 @@ func Load() (*Config, error) {
 	// Defaults
 	v.SetDefault("defaults.max_sessions_per_user", 5)
 	v.SetDefault("auth_cookie.same_site", "lax")
+	// Connection-pool defaults so an env-only deployment (DATABASE_URL set, no
+	// config file) boots with a usable pool instead of failing on MaxSize=0.
+	v.SetDefault("database.max_open_conns", 25)
+	v.SetDefault("database.max_idle_conns", 5)
+	v.SetDefault("database.conn_max_lifetime", "5m")
+	// Background-worker interval defaults. Without these (and without a config
+	// file) the nested workers.* keys are unregistered, so viper's AutomaticEnv
+	// can't unmarshal BB_WORKERS_* overrides and the workers skip on a 0 interval.
+	v.SetDefault("workers.dns_recheck_interval", "1h")
+	v.SetDefault("workers.cleanup_interval", "5m")
+	v.SetDefault("workers.webhook_retry_interval", "1m")
+	v.SetDefault("workers.reconciler_interval", "1m")
+	v.SetDefault("workers.analytics_interval", "5m")
 
 	// Map specific env vars to config keys
 	v.BindEnv("database.url", "DATABASE_URL")
