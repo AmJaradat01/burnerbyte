@@ -354,3 +354,9 @@ base render, default primary variant, and the overhaul's semantic token variants
 (success/warning/info), plus className merge. The remaining shell/page-level/
 mobile/data-freshness unit tests need the react-query render harness and remain
 open.
+
+## Update — render harness available
+
+`web/src/test/query.tsx` (renderWithClient) now exists, so the remaining
+page-level/shell/mobile unit tests can render react-query-driven components with
+a mocked api. Shared-component coverage started with the Badge tests.
