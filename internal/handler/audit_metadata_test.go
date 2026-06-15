@@ -102,6 +102,109 @@ func installCapture(t *testing.T) *capturingRecorder {
 	return cap
 }
 
+// registerUser registers a fresh user via the handler and returns its id,
+// email, and password.
+func registerUser(t *testing.T, h *AuthHandler) (uuid.UUID, string, string) {
+	t.Helper()
+	email := "u-" + uuid.New().String()[:8] + "@corp.com"
+	password := "Str0ng-Passw0rd!"
+	body, _ := json.Marshal(map[string]any{"email": email, "password": password, "display_name": "Test Person"})
+	req := httptest.NewRequest(http.MethodPost, "/auth/register", bytes.NewReader(body))
+	req.RemoteAddr = "203.0.113.1:1000"
+	w := httptest.NewRecorder()
+	h.Register(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("register precondition: status %d, body %s", w.Code, w.Body.String())
+	}
+	var resp struct {
+		User struct {
+			ID uuid.UUID `json:"id"`
+		} `json:"user"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("parse register response: %v", err)
+	}
+	return resp.User.ID, email, password
+}
+
+// authReq builds a request carrying an authenticated user context.
+func authReq(method, target string, body []byte, userID uuid.UUID, email string) *http.Request {
+	req := httptest.NewRequest(method, target, bytes.NewReader(body))
+	req.RemoteAddr = "198.51.100.1:2000"
+	ctx := context.WithValue(req.Context(), auth.UserContextKey,
+		&auth.UserContext{UserID: userID, Email: email, DisplayName: "Test Person"})
+	return req.WithContext(ctx)
+}
+
+// Bug: user.password_changed metadata must include sessions_revoked.
+func TestAuditMetadata_PasswordChanged(t *testing.T) {
+	pool := handlerTestPool(t)
+	h, _ := newAuthTestHandler(t, pool)
+	uid, email, password := registerUser(t, h)
+	cap := installCapture(t)
+
+	body, _ := json.Marshal(map[string]any{"current_password": password, "new_password": "NewStr0ng-Pass1!"})
+	w := httptest.NewRecorder()
+	h.ChangePassword(w, authReq(http.MethodPost, "/auth/change-password", body, uid, email))
+	if w.Code != http.StatusOK {
+		t.Fatalf("change password: status %d, body %s", w.Code, w.Body.String())
+	}
+
+	ca := cap.find("user.password_changed")
+	if ca == nil {
+		t.Fatal("expected a user.password_changed audit entry")
+	}
+	if ca.meta["sessions_revoked"] != true {
+		t.Errorf("metadata.sessions_revoked = %v, want true", ca.meta["sessions_revoked"])
+	}
+}
+
+// Bug: session.revoked_all metadata must include revoked_count.
+func TestAuditMetadata_SessionRevokedAll(t *testing.T) {
+	pool := handlerTestPool(t)
+	h, _ := newAuthTestHandler(t, pool)
+	uid, email, _ := registerUser(t, h) // registration creates one session
+	cap := installCapture(t)
+
+	w := httptest.NewRecorder()
+	h.RevokeAllSessions(w, authReq(http.MethodPost, "/auth/sessions/revoke-all", nil, uid, email))
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("revoke all: status %d, body %s", w.Code, w.Body.String())
+	}
+
+	ca := cap.find("session.revoked_all")
+	if ca == nil {
+		t.Fatal("expected a session.revoked_all audit entry")
+	}
+	c, ok := ca.meta["revoked_count"].(int)
+	if !ok || c < 1 {
+		t.Errorf("metadata.revoked_count = %v, want >= 1", ca.meta["revoked_count"])
+	}
+}
+
+// Bug: user.account_deleted metadata must include display_name.
+func TestAuditMetadata_AccountDeleted(t *testing.T) {
+	pool := handlerTestPool(t)
+	h, _ := newAuthTestHandler(t, pool)
+	uid, email, password := registerUser(t, h)
+	cap := installCapture(t)
+
+	body, _ := json.Marshal(map[string]any{"password": password})
+	w := httptest.NewRecorder()
+	h.DeleteAccount(w, authReq(http.MethodDelete, "/auth/account", body, uid, email))
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("delete account: status %d, body %s", w.Code, w.Body.String())
+	}
+
+	ca := cap.find("user.account_deleted")
+	if ca == nil {
+		t.Fatal("expected a user.account_deleted audit entry")
+	}
+	if ca.meta["display_name"] != "Test Person" {
+		t.Errorf("metadata.display_name = %v, want \"Test Person\"", ca.meta["display_name"])
+	}
+}
+
 // Bug 1.1: user.registered metadata must include display_name AND ip_address,
 // and resource_id must be the new user's id (not uuid.Nil).
 func TestAuditMetadata_UserRegistered(t *testing.T) {
