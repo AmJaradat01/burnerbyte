@@ -21,10 +21,17 @@ func NewAuditRepo(db database.DBTX) *AuditRepo {
 
 func (r *AuditRepo) Create(ctx context.Context, e *domain.AuditEntry) error {
 	metadata, _ := json.Marshal(e.Metadata)
+	// Platform-level events (registration, login, password reset, …) have no
+	// owning org; store NULL rather than the zero UUID so they satisfy the FK
+	// and actually persist.
+	var orgID *uuid.UUID
+	if e.OrgID != uuid.Nil {
+		orgID = &e.OrgID
+	}
 	_, err := r.db.Exec(ctx,
 		`INSERT INTO audit_logs (id, org_id, actor_id, action, resource_type, resource_id, metadata, ip_address, user_agent, resource_name, actor_display_name, severity, category)
 		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8::inet,$9,$10,$11,$12,$13)`,
-		e.ID, e.OrgID, e.ActorID, e.Action, e.ResourceType, e.ResourceID, metadata, e.IPAddress,
+		e.ID, orgID, e.ActorID, e.Action, e.ResourceType, e.ResourceID, metadata, e.IPAddress,
 		e.UserAgent, e.ResourceName, e.ActorDisplayName, e.Severity, e.Category)
 	if err != nil {
 		return fmt.Errorf("create audit: %w", err)
