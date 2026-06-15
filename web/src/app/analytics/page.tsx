@@ -108,7 +108,7 @@ function OrgAnalytics({ orgId }: { orgId: string }) {
   return (
     <div className="space-y-6">
       {stats && (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground tabular-nums">
           {stats.total_emails.toLocaleString()} emails · {stats.active_inboxes.toLocaleString()} inboxes · {stats.total_domains.toLocaleString()} domains this period
         </p>
       )}
@@ -204,7 +204,7 @@ function OrgAnalytics({ orgId }: { orgId: string }) {
                         <div key={d.domain} className="space-y-1">
                           <div className="flex items-center justify-between text-sm">
                             <span className="font-mono truncate">{d.domain}</span>
-                            <span className="text-muted-foreground ml-2">{d.count.toLocaleString()} ({pct.toFixed(1)}%)</span>
+                            <span className="text-muted-foreground ml-2 tabular-nums">{d.count.toLocaleString()} ({pct.toFixed(1)}%)</span>
                           </div>
                           <div className="h-2 rounded-full bg-muted overflow-hidden">
                             <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: "var(--chart-4)" }} />
@@ -235,7 +235,7 @@ function OrgAnalytics({ orgId }: { orgId: string }) {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between mb-1">
                               <span className="text-sm font-mono truncate">{sd.domain}</span>
-                              <span className="text-sm text-muted-foreground ml-2 whitespace-nowrap">
+                              <span className="text-sm text-muted-foreground ml-2 whitespace-nowrap tabular-nums">
                                 {sd.count.toLocaleString()} ({totalPct.toFixed(1)}%)
                               </span>
                             </div>
@@ -274,7 +274,7 @@ function TeamAnalytics({ orgId, teamId }: { orgId: string; teamId: string }) {
   return (
     <div className="space-y-6">
       {stats && (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground tabular-nums">
           {stats.total_emails.toLocaleString()} emails · {stats.active_inboxes.toLocaleString()} inboxes · {stats.total_members.toLocaleString()} members this period
         </p>
       )}
