@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
+import { validateSSOProviderForm, ssoSummaryStats } from "@/lib/sso";
 import { useOrgStore } from "@/stores/org-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { Button } from "@/components/ui/button";
@@ -880,20 +881,7 @@ function SSOProvidersTab() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const teams = useOrgStore((s) => s.teams);
 
-  const validateUrl = (value: string): boolean => {
-    if (!value) return false;
-    try { new URL(value); return true; } catch { return false; }
-  };
-
-  const validateForm = (form: Partial<SSOProviderData>): Record<string, string> => {
-    const errs: Record<string, string> = {};
-    if (!form.name?.trim()) errs.name = "Name is required";
-    if (!form.client_id?.trim()) errs.client_id = "Client ID is required";
-    if (!form.client_secret?.trim()) errs.client_secret = "Client Secret is required";
-    if (!form.redirect_url?.trim()) errs.redirect_url = "Redirect URL is required";
-    else if (!validateUrl(form.redirect_url)) errs.redirect_url = "Invalid URL format";
-    return errs;
-  };
+  const validateForm = validateSSOProviderForm;
 
   const handleFieldChange = (key: string, val: unknown) => {
     setEditing((prev) => {
@@ -976,8 +964,7 @@ function SSOProvidersTab() {
 
   // Compute summary stats
   const providerList = providers ?? [];
-  const enabledCount = providerList.filter((p) => p.enabled).length;
-  const totalLinkedUsers = providerList.reduce((sum, p) => sum + (p.linked_user_count ?? 0), 0);
+  const { enabledCount, totalLinkedUsers } = ssoSummaryStats(providerList);
 
   return (
     <div className="space-y-4">

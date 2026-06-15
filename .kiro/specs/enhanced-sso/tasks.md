@@ -190,3 +190,14 @@ component test covers a dependency-free presentational component. Building that
 harness and the render tests is integration-level work beyond the pragmatic
 unit-coverage pass, so these are deferred. The UI changes themselves are
 implemented and shipped.
+
+## Update — pure logic extracted and tested
+
+The SSO tab's form validation and header summary computation were extracted to
+`web/src/lib/sso.ts` (the tab now imports them) and unit-tested in
+`web/src/lib/sso.test.ts`:
+- inline required-field + redirect-URL validation (Bug 1.3)
+- enabled-provider count + total-linked-users summary (Bug 1.9)
+Render-dependent bug-conditions (header gradient/icon, card info density, delete
+confirmation dialog, claim-mapping layout) still need the react-query component
+render harness and remain open.
