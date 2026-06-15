@@ -7,7 +7,6 @@ import (
 
 	"github.com/google/uuid"
 
-	"gitlab.com/burnerbyte/burnerbyte/internal/audit"
 	"gitlab.com/burnerbyte/burnerbyte/internal/auth"
 	"gitlab.com/burnerbyte/burnerbyte/internal/auth/rbac"
 )
@@ -17,10 +16,18 @@ var RBAC *rbac.Checker
 
 func InitRBAC(c *rbac.Checker) { RBAC = c }
 
-// Audit is the shared audit recorder for all handlers.
-var Audit *audit.Recorder
+// AuditRecorder is the subset of *audit.Recorder that handlers use. It is an
+// interface so tests can substitute a fake that captures the recorded metadata.
+// *audit.Recorder satisfies it, so production wiring is unchanged.
+type AuditRecorder interface {
+	RecordFromRequest(r *http.Request, orgID uuid.UUID, action, resourceType string, resourceID uuid.UUID, metadata any)
+	RecordEnhanced(r *http.Request, orgID uuid.UUID, action, resourceType string, resourceID uuid.UUID, resourceName string, metadata map[string]any)
+}
 
-func InitAudit(rec *audit.Recorder) { Audit = rec }
+// Audit is the shared audit recorder for all handlers.
+var Audit AuditRecorder
+
+func InitAudit(rec AuditRecorder) { Audit = rec }
 
 // WebhookDispatch is the shared webhook dispatcher for all handlers.
 var WebhookDispatch webhookDispatcher
