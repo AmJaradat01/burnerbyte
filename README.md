@@ -42,16 +42,17 @@ Two separate binaries scale independently:
 - Configurable attachment policies with inheritance cascade
 - Webhooks with HMAC-SHA256 signing, retry, and delivery logs
 - Scoped API keys
-- Audit logging with filtering
+- Audit logging with filtering, plus a system-admin platform audit view
 - Analytics dashboard with time-series charts
 - SSO via OIDC
 - Private inboxes — only the creator can access
+- Inbox search and status filtering (active / expired / all)
 - Built-in documentation site at `/docs`
 - Command palette with keyboard shortcuts and recent actions
 - Persistent notifications with real-time delivery via Redis pub/sub
 - Timezone and date-format user preferences
 - Single-org enforcement (4-layer protection)
-- Dark mode with system detection (light default)
+- Light-only interface by design (a dark theme is intentionally not shipped)
 - OKLCH semantic color tokens with WCAG AA accessibility
 - Reduced-motion support and screen reader accessibility
 - Pull-to-refresh on mobile
@@ -115,7 +116,7 @@ On first launch, navigate to `http://localhost:3000` — the setup wizard will g
 | Emails | `GET /inboxes/:id/emails`, `GET /emails/:id`, `PATCH /emails/:id`, `DELETE /emails/:id`, `GET /emails/:id/attachments/:aid` |
 | Webhooks | `POST /orgs/:id/teams/:tid/webhooks`, `GET .../webhooks`, `PATCH .../webhooks/:wid`, `DELETE .../webhooks/:wid`, `GET .../webhooks/:wid/deliveries` |
 | API Keys | `POST /orgs/:id/teams/:tid/api-keys`, `GET .../api-keys`, `DELETE .../api-keys/:kid` |
-| Audit | `GET /orgs/:id/audit` |
+| Audit | `GET /orgs/:id/audit`, `GET /orgs/:id/audit/export`, `GET /admin/audit` (system admin) |
 | Analytics | `GET /orgs/:id/analytics`, `GET /orgs/:id/analytics/emails-per-day`, `GET /orgs/:id/teams/:tid/analytics`, `GET .../emails-per-day` |
 | Admin | `GET /admin/stats`, `GET /admin/orgs`, `GET /admin/health` |
 | WebSocket | `GET /ws/inboxes/:id`, `GET /ws/notifications` |
