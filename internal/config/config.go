@@ -130,11 +130,16 @@ type RedisConfig struct {
 }
 
 type MinIOConfig struct {
-	Endpoint  string `mapstructure:"endpoint"`
-	AccessKey string `mapstructure:"access_key"`
-	SecretKey string `mapstructure:"secret_key"`
-	Bucket    string `mapstructure:"bucket"`
-	UseSSL    bool   `mapstructure:"use_ssl"`
+	// json tags must match the keys persisted in system_config ("storage"), set
+	// by the setup wizard and the admin storage editor. Without them, LoadFromDB's
+	// json.Unmarshal silently drops AccessKey/SecretKey/UseSSL (the underscore keys
+	// do not case-fold to the Go field names), so DB-stored storage credentials
+	// would load empty at boot.
+	Endpoint  string `mapstructure:"endpoint" json:"endpoint"`
+	AccessKey string `mapstructure:"access_key" json:"access_key"`
+	SecretKey string `mapstructure:"secret_key" json:"secret_key"`
+	Bucket    string `mapstructure:"bucket" json:"bucket"`
+	UseSSL    bool   `mapstructure:"use_ssl" json:"use_ssl"`
 }
 
 type JWTConfig struct {
