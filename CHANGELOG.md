@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.0.9 (June 2026) — Runtime storage editor with cross-process hot-reload
+
+Object storage (S3/MinIO) can now be edited from the admin UI after setup, and the change is applied live in every process.
+
+### Added
+- **`GET` / `PUT /admin/config/storage` and `POST /admin/infra/test-storage` (system admin).** Edit the endpoint, access key, secret key, and TLS at runtime. On save the new config is **verified (connect + bucket) before it is persisted**, so bad credentials are rejected without disturbing the running backend.
+- **Cross-process hot-reload.** A new hot-swappable `storage.Manager` wraps the object-storage backend; on save, a reload is broadcast over Redis (`internal/cfgsync`) and **both the API and the SMTP ingest server rebuild their clients live**, so incoming-mail attachments keep landing where the API serves them from. No restart needed.
+- An **Object storage (S3/MinIO)** editor in Settings → System, beside the mailer editor and health panel.
+
+### Fixed
+- **Storage credentials saved during setup now load at boot.** `config.MinIOConfig` had no JSON tags, so `LoadFromDB`'s unmarshal silently dropped `access_key` / `secret_key` / `use_ssl` (the underscore keys did not case-fold to the Go field names). DB-stored storage configured via the setup wizard loaded with empty credentials, breaking S3 auth. Added the matching JSON tags.
+- **The stored `storage` config is now encrypted at rest.** `storage` was missing from the `system_config` encrypted-key set, so the S3 secret key was stored in plaintext; it is now encrypted (backward-compatible with existing plaintext rows).
+
+### Notes
+- The bucket is read-only at runtime (changing it would strand existing attachments); set it via `BB_MINIO_BUCKET` at deploy time. DB and Redis connection settings remain env/config-only. Remaining from the infrastructure-setup plan: the guarded first-run web installer.
+
 ## v1.0.8 (June 2026) — Runtime mailer editor with hot-reload
 
 Outbound SMTP can now be changed after setup, from the admin UI, and the change takes effect immediately.

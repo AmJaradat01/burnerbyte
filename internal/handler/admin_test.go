@@ -208,3 +208,20 @@ func TestAdminMailerConfig(t *testing.T) {
 		}
 	})
 }
+
+// TestAdminUpdateStorageConfigValidation checks the required-field guards, which
+// run before any database or storage access (so no backend is needed here).
+func TestAdminUpdateStorageConfigValidation(t *testing.T) {
+	h := &AdminHandler{}
+	cases := []string{
+		`{"endpoint":"","access_key":"k"}`, // missing endpoint
+		`{"endpoint":"e","access_key":""}`, // missing access key
+	}
+	for _, body := range cases {
+		rec := httptest.NewRecorder()
+		h.UpdateStorageConfig(rec, httptest.NewRequest(http.MethodPut, "/admin/config/storage", strings.NewReader(body)))
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("body %s: status = %d, want 400", body, rec.Code)
+		}
+	}
+}

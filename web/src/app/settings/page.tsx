@@ -407,6 +407,7 @@ function OverviewTab() {
       </Card>
       <HealthSection />
       <MailerConfigSection />
+      <StorageConfigSection />
     </div>
   );
 }
@@ -917,6 +918,132 @@ function MailerConfigSection() {
               <div className="flex items-center gap-2">
                 <Switch checked={form.tls} onCheckedChange={(v) => setForm({ ...form, tls: v })} />
                 <Label className="text-sm font-normal">Use TLS</Label>
+              </div>
+              {result && (
+                <div className="flex items-center gap-2 text-sm">
+                  {result.success ? <CheckCircle2 className="h-4 w-4 shrink-0 text-success" /> : <XCircle className="h-4 w-4 shrink-0 text-destructive" />}
+                  <span className={result.success ? "" : "text-destructive"}>{result.message}</span>
+                  {result.success && result.response_time && (
+                    <span className="font-mono text-xs text-muted-foreground tabular-nums">{result.response_time}</span>
+                  )}
+                </div>
+              )}
+              <div className="flex items-center justify-end gap-2 border-t pt-4">
+                <Button variant="outline" size="sm" onClick={test} disabled={testing || saving} className="gap-1.5">
+                  {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+                  {testing ? "Testing" : "Test connection"}
+                </Button>
+                <Button size="sm" onClick={save} disabled={saving} className="gap-1.5">
+                  {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                  Save
+                </Button>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+interface StorageConfig {
+  endpoint: string;
+  access_key: string;
+  bucket: string;
+  use_ssl: boolean;
+  has_secret_key: boolean;
+}
+
+// StorageConfigSection edits the S3/MinIO object-storage settings at runtime.
+// Saving verifies the connection, persists (secret key encrypted), and broadcasts
+// a reload so the API and SMTP ingest server both rebuild their clients live. The
+// bucket is read-only here: changing it would strand existing attachments. The
+// secret key is never returned; leave it blank to keep the stored value.
+function StorageConfigSection() {
+  const qc = useQueryClient();
+  const { data, isLoading } = useQuery({
+    queryKey: ["storage-config"],
+    queryFn: () => api.get<StorageConfig>("/admin/config/storage"),
+  });
+
+  const [form, setForm] = useState<{ endpoint: string; accessKey: string; secretKey: string; useSSL: boolean } | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [result, setResult] = useState<SmtpTestResult | null>(null);
+
+  useEffect(() => {
+    if (data) setForm({ endpoint: data.endpoint, accessKey: data.access_key, secretKey: "", useSSL: data.use_ssl });
+  }, [data]);
+
+  const save = async () => {
+    if (!form) return;
+    setSaving(true);
+    try {
+      await api.put("/admin/config/storage", {
+        endpoint: form.endpoint.trim(),
+        access_key: form.accessKey.trim(),
+        secret_key: form.secretKey,
+        use_ssl: form.useSSL,
+      });
+      toast.success("Storage settings saved");
+      setForm({ ...form, secretKey: "" });
+      qc.invalidateQueries({ queryKey: ["storage-config"] });
+      qc.invalidateQueries({ queryKey: ["admin-health"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const test = async () => {
+    setTesting(true);
+    setResult(null);
+    try {
+      setResult(await api.post<SmtpTestResult>("/admin/infra/test-storage", {}));
+    } catch (e) {
+      setResult({ success: false, message: e instanceof Error ? e.message : "Test failed" });
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 pt-2">
+        <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
+          <HardDrive className="h-3.5 w-3.5 text-muted-foreground" />
+        </div>
+        <p className="text-sm font-semibold">Object storage (S3 / MinIO)</p>
+        <p className="text-xs text-muted-foreground">· Where email attachments are stored</p>
+      </div>
+      <Card>
+        <CardContent className="space-y-4 py-5">
+          {isLoading || !form ? (
+            <Skeleton className="h-48 w-full" />
+          ) : (
+            <>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>Endpoint</Label>
+                  <Input value={form.endpoint} onChange={(e) => setForm({ ...form, endpoint: e.target.value })} placeholder="s3.amazonaws.com or minio:9000" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Bucket</Label>
+                  <Input value={data?.bucket ?? ""} disabled className="bg-muted font-mono" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Access key</Label>
+                  <Input value={form.accessKey} onChange={(e) => setForm({ ...form, accessKey: e.target.value })} placeholder="access key id" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Secret key</Label>
+                  <Input type="password" value={form.secretKey} onChange={(e) => setForm({ ...form, secretKey: e.target.value })} placeholder={data?.has_secret_key ? "•••••••• (unchanged)" : "secret access key"} />
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch checked={form.useSSL} onCheckedChange={(v) => setForm({ ...form, useSSL: v })} />
+                <Label className="text-sm font-normal">Use TLS (HTTPS)</Label>
               </div>
               {result && (
                 <div className="flex items-center gap-2 text-sm">

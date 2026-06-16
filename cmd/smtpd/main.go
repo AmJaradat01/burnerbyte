@@ -7,6 +7,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"gitlab.com/burnerbyte/burnerbyte/internal/audit"
+	"gitlab.com/burnerbyte/burnerbyte/internal/cfgsync"
 	"gitlab.com/burnerbyte/burnerbyte/internal/config"
 	"gitlab.com/burnerbyte/burnerbyte/internal/database"
 	"gitlab.com/burnerbyte/burnerbyte/internal/realtime"
@@ -16,7 +18,6 @@ import (
 	"gitlab.com/burnerbyte/burnerbyte/internal/smtp"
 	"gitlab.com/burnerbyte/burnerbyte/internal/storage"
 	"gitlab.com/burnerbyte/burnerbyte/internal/webhook"
-	"gitlab.com/burnerbyte/burnerbyte/internal/audit"
 )
 
 func main() {
@@ -67,20 +68,42 @@ func main() {
 	sysConfigRepo := postgres.NewSystemConfigRepo(pool)
 	cfg.LoadFromDB(ctx, sysConfigRepo)
 
-	// MinIO (optional — attachments disabled when unavailable)
+	// Object storage with a hot-swappable backend (Manager). The admin storage
+	// editor (in the api process) broadcasts a reload over Redis; this process
+	// subscribes and rebuilds its client live, so incoming-mail attachments keep
+	// going to the same place the api serves them from. Optional: attachments are
+	// disabled when no backend is available.
+	var storageBackend storage.Backend
 	s3Client, err := storage.NewS3(ctx, cfg.MinIO)
 	if err != nil {
 		slog.Warn("minio unavailable, using local filesystem for attachments", "error", err)
-	}
-	var attachmentSvc *service.AttachmentService
-	if s3Client != nil {
-		attachmentSvc = service.NewAttachmentService(attachmentRepo, emailRepo, inboxRepoPG, s3Client, cfg.MinIO, cfg.Defaults.MaxAttachmentSizeMB, cfg.Defaults.PresignedURLTTL)
-	} else {
 		localFS, fsErr := storage.NewLocalFS("./data/attachments", cfg.Server.BaseURL+"/api/v1/files")
 		if fsErr == nil {
-			attachmentSvc = service.NewAttachmentService(attachmentRepo, emailRepo, inboxRepoPG, localFS, cfg.MinIO, cfg.Defaults.MaxAttachmentSizeMB, cfg.Defaults.PresignedURLTTL)
+			storageBackend = localFS
 			slog.Info("attachments enabled via local filesystem")
 		}
+	} else {
+		storageBackend = s3Client
+	}
+	var attachmentSvc *service.AttachmentService
+	if storageBackend != nil {
+		storageMgr := storage.NewManager(storageBackend)
+		attachmentSvc = service.NewAttachmentService(attachmentRepo, emailRepo, inboxRepoPG, storageMgr, cfg.MinIO, cfg.Defaults.MaxAttachmentSizeMB, cfg.Defaults.PresignedURLTTL)
+		cfgsync.Subscribe(ctx, rdb, func(key string) {
+			if key != "storage" {
+				return
+			}
+			var sc config.MinIOConfig
+			if err := sysConfigRepo.Get(ctx, "storage", &sc); err != nil {
+				slog.Error("storage reload: failed to load config", "error", err)
+				return
+			}
+			if err := storageMgr.Reload(ctx, sc); err != nil {
+				slog.Error("storage reload failed", "error", err)
+				return
+			}
+			slog.Info("storage backend reloaded", "endpoint", sc.Endpoint, "bucket", sc.Bucket)
+		})
 	}
 	settingsResolver := service.NewSettingsResolver(assignmentRepo, domainRepo, orgRepo, cfg.Defaults)
 

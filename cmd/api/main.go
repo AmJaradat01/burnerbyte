@@ -25,6 +25,7 @@ import (
 	"gitlab.com/burnerbyte/burnerbyte/internal/audit"
 	"gitlab.com/burnerbyte/burnerbyte/internal/auth"
 	"gitlab.com/burnerbyte/burnerbyte/internal/auth/rbac"
+	"gitlab.com/burnerbyte/burnerbyte/internal/cfgsync"
 	"gitlab.com/burnerbyte/burnerbyte/internal/config"
 	appcrypto "gitlab.com/burnerbyte/burnerbyte/internal/crypto"
 	"gitlab.com/burnerbyte/burnerbyte/internal/database"
@@ -131,22 +132,46 @@ func main() {
 	ml.Reconfigure(cfg.Mailer)
 
 	// Services
+	// Object storage with a hot-swappable backend (Manager) so the admin storage
+	// editor can reload S3 credentials at runtime. Falls back to the local
+	// filesystem when MinIO is unavailable at boot.
+	var storageBackend storage.Backend
 	s3Client, err := storage.NewS3(ctx, cfg.MinIO)
 	if err != nil {
 		slog.Warn("minio unavailable, using local filesystem for attachments", "error", err)
-	}
-	var attachmentSvc *service.AttachmentService
-	if s3Client != nil {
-		attachmentSvc = service.NewAttachmentService(attachmentRepo, emailRepo, inboxRepo, s3Client, cfg.MinIO, cfg.Defaults.MaxAttachmentSizeMB, cfg.Defaults.PresignedURLTTL)
-	} else {
-		// Fallback to local filesystem storage for development/testing
 		localFS, fsErr := storage.NewLocalFS("./data/attachments", cfg.Server.BaseURL+"/api/v1/files")
 		if fsErr != nil {
 			slog.Error("failed to create local storage", "error", fsErr)
 		} else {
-			attachmentSvc = service.NewAttachmentService(attachmentRepo, emailRepo, inboxRepo, localFS, cfg.MinIO, cfg.Defaults.MaxAttachmentSizeMB, cfg.Defaults.PresignedURLTTL)
+			storageBackend = localFS
 			slog.Info("attachments enabled via local filesystem", "path", "./data/attachments")
 		}
+	} else {
+		storageBackend = s3Client
+	}
+	var attachmentSvc *service.AttachmentService
+	var storageMgr *storage.Manager
+	if storageBackend != nil {
+		storageMgr = storage.NewManager(storageBackend)
+		attachmentSvc = service.NewAttachmentService(attachmentRepo, emailRepo, inboxRepo, storageMgr, cfg.MinIO, cfg.Defaults.MaxAttachmentSizeMB, cfg.Defaults.PresignedURLTTL)
+		// Apply runtime storage-config changes (published by the admin editor in
+		// this or another process) without a restart. Idempotent: the publisher
+		// receives its own message too.
+		cfgsync.Subscribe(ctx, rdb, func(key string) {
+			if key != "storage" {
+				return
+			}
+			var sc config.MinIOConfig
+			if err := sysConfigRepo.Get(ctx, "storage", &sc); err != nil {
+				slog.Error("storage reload: failed to load config", "error", err)
+				return
+			}
+			if err := storageMgr.Reload(ctx, sc); err != nil {
+				slog.Error("storage reload failed", "error", err)
+				return
+			}
+			slog.Info("storage backend reloaded", "endpoint", sc.Endpoint, "bucket", sc.Bucket)
+		})
 	}
 	sessionRevCache := auth.NewSessionRevocationCache(rdb, cfg.JWT.AccessTTL)
 	authSvc := service.NewAuthService(pool, userRepo, sessionRepo, resetRepo, postgres.NewEmailVerificationRepo(pool), orgRepo, ssoIdentityRepo, ssoProviderRepo, teamRepo, ssoDomainMappingRepo, tokenMgr, lockout, ml, cfg, sessionRevCache, auth.NewPendingLoginStore(rdb, 5*time.Minute), auth.NewSSOCodeStore(rdb, 60*time.Second))
@@ -214,7 +239,7 @@ func main() {
 	apikeyHandler := handler.NewAPIKeyHandler(apikeySvc)
 	auditHandler := handler.NewAuditHandler(auditSvc)
 	analyticsHandler := handler.NewAnalyticsHandler(analyticsSvc, cfg.Defaults.AnalyticsDefaultDays)
-	adminHandler := handler.NewAdminHandler(analyticsSvc, orgSvc, authSvc, sysConfigRepo, ssoProviderRepo, ssoDomainMappingRepo, teamRepo, ssoMgr, enc, cfg, pool, rdb, s3Client, cfg.MinIO.Bucket, ml)
+	adminHandler := handler.NewAdminHandler(analyticsSvc, orgSvc, authSvc, sysConfigRepo, ssoProviderRepo, ssoDomainMappingRepo, teamRepo, ssoMgr, enc, cfg, pool, rdb, storageMgr, cfg.MinIO.Bucket, ml)
 	setupHandler := handler.NewSetupHandler(pool, userRepo, orgRepo, domainRepo, teamRepo, sessionRepo, sysConfigRepo, tokenMgr, ml, cfg)
 	wsHandler := handler.NewWSHandler(hub, inboxRepo, cfg.CORS.AllowedOrigins)
 	notifWSHandler := handler.NewNotifWSHandler(notifHub, cfg.CORS.AllowedOrigins)
@@ -422,8 +447,11 @@ func main() {
 			r.With(auth.RequireSystemAdmin).Post("/admin/users/{userId}/migrate-auth", adminHandler.MigrateAuth)
 			r.With(auth.RequireSystemAdmin).Get("/admin/health", adminHandler.Health)
 			r.With(auth.RequireSystemAdmin).Post("/admin/infra/test-smtp", adminHandler.TestSMTP)
+			r.With(auth.RequireSystemAdmin).Post("/admin/infra/test-storage", adminHandler.TestStorage)
 			r.With(auth.RequireSystemAdmin).Get("/admin/config/mailer", adminHandler.GetMailerConfig)
 			r.With(auth.RequireSystemAdmin).Put("/admin/config/mailer", adminHandler.UpdateMailerConfig)
+			r.With(auth.RequireSystemAdmin).Get("/admin/config/storage", adminHandler.GetStorageConfig)
+			r.With(auth.RequireSystemAdmin).Put("/admin/config/storage", adminHandler.UpdateStorageConfig)
 			r.With(auth.RequireSystemAdmin).Get("/admin/platform", adminHandler.GetPlatformSettings)
 			r.With(auth.RequireSystemAdmin).Put("/admin/platform", adminHandler.UpdatePlatformSettings)
 			r.With(auth.RequireSystemAdmin).Get("/admin/sso/providers", adminHandler.ListSSOProviders)
