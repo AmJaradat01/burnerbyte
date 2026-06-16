@@ -1,4 +1,4 @@
-.PHONY: run-api run-smtp build lint docker-up docker-down migrate-up migrate-down migrate-create migrate-test
+.PHONY: run-api run-smtp build lint docker-up docker-infra docker-down migrate-up migrate-down migrate-create migrate-test
 
 DATABASE_URL ?= postgres://postgres:password@localhost:5432/burnerbyte?sslmode=disable
 MIGRATE := migrate -database "$(DATABASE_URL)" -path migrations
@@ -25,8 +25,13 @@ lint:
 
 # ── Docker ──
 
+# Full stack (postgres, redis, minio, migrate, api, smtpd, frontend).
 docker-up:
 	docker compose up -d
+
+# Infra only — for local development where the app runs via `make run-api`.
+docker-infra:
+	docker compose up -d postgres redis minio
 
 docker-down:
 	docker compose down
