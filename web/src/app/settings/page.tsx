@@ -406,7 +406,7 @@ function OverviewTab() {
         </CardContent>
       </Card>
       <HealthSection />
-      <SmtpTestSection />
+      <MailerConfigSection />
     </div>
   );
 }
@@ -813,15 +813,59 @@ interface SmtpTestResult {
   response_time?: string;
 }
 
-// SmtpTestSection lets a system admin verify the configured outbound mailer
-// after setup (the setup wizard's test is unavailable once setup completes).
-// The auto-refreshing health panel above only pings the datastores; SMTP is a
-// deliberate, on-demand check so it does not dial the relay every 15s.
-function SmtpTestSection() {
+interface MailerConfig {
+  host: string;
+  port: number;
+  username: string;
+  from: string;
+  tls: boolean;
+  has_password: boolean;
+}
+
+// MailerConfigSection edits the outbound SMTP settings at runtime. Saving
+// persists to the database (password encrypted) and hot-reloads the live mailer,
+// so changes take effect without a restart. "Test connection" dials the
+// currently saved config; save before testing edits. The password is never
+// returned by the API: leave it blank to keep the stored secret.
+function MailerConfigSection() {
+  const qc = useQueryClient();
+  const { data, isLoading } = useQuery({
+    queryKey: ["mailer-config"],
+    queryFn: () => api.get<MailerConfig>("/admin/config/mailer"),
+  });
+
+  const [form, setForm] = useState<{ host: string; port: string; username: string; password: string; from: string; tls: boolean } | null>(null);
+  const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [result, setResult] = useState<SmtpTestResult | null>(null);
 
-  const runTest = async () => {
+  useEffect(() => {
+    if (data) setForm({ host: data.host, port: data.port ? String(data.port) : "", username: data.username, password: "", from: data.from, tls: data.tls });
+  }, [data]);
+
+  const save = async () => {
+    if (!form) return;
+    setSaving(true);
+    try {
+      await api.put("/admin/config/mailer", {
+        host: form.host.trim(),
+        port: Number(form.port),
+        username: form.username.trim(),
+        password: form.password,
+        from: form.from.trim(),
+        tls: form.tls,
+      });
+      toast.success("SMTP settings saved");
+      setForm({ ...form, password: "" });
+      qc.invalidateQueries({ queryKey: ["mailer-config"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const test = async () => {
     setTesting(true);
     setResult(null);
     try {
@@ -839,30 +883,62 @@ function SmtpTestSection() {
         <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
           <Mail className="h-3.5 w-3.5 text-muted-foreground" />
         </div>
-        <p className="text-sm font-semibold">Email delivery</p>
-        <p className="text-xs text-muted-foreground">· Verify the configured outbound SMTP</p>
+        <p className="text-sm font-semibold">Email (SMTP)</p>
+        <p className="text-xs text-muted-foreground">· Outbound mail for verification, resets, and invites</p>
       </div>
       <Card>
-        <CardContent className="flex items-center justify-between gap-4 py-4">
-          <div className="min-w-0">
-            {result ? (
-              <div className="flex items-center gap-2">
-                {result.success
-                  ? <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
-                  : <XCircle className="h-4 w-4 shrink-0 text-destructive" />}
-                <p className={`truncate text-sm ${result.success ? "" : "text-destructive"}`}>{result.message}</p>
-                {result.success && result.response_time && (
-                  <span className="shrink-0 font-mono text-xs text-muted-foreground tabular-nums">{result.response_time}</span>
-                )}
+        <CardContent className="space-y-4 py-5">
+          {isLoading || !form ? (
+            <Skeleton className="h-48 w-full" />
+          ) : (
+            <>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>Host</Label>
+                  <Input value={form.host} onChange={(e) => setForm({ ...form, host: e.target.value })} placeholder="smtp.example.com" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Port</Label>
+                  <Input value={form.port} inputMode="numeric" onChange={(e) => setForm({ ...form, port: e.target.value.replace(/[^0-9]/g, "") })} placeholder="587" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Username</Label>
+                  <Input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} placeholder="optional" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Password</Label>
+                  <Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder={data?.has_password ? "•••••••• (unchanged)" : "optional"} />
+                </div>
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label>From address</Label>
+                  <Input value={form.from} onChange={(e) => setForm({ ...form, from: e.target.value })} placeholder="no-reply@example.com" />
+                </div>
               </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">Open a connection to the outbound mail server to confirm it is reachable.</p>
-            )}
-          </div>
-          <Button onClick={runTest} disabled={testing} variant="outline" size="sm" className="shrink-0 gap-1.5">
-            {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
-            {testing ? "Testing" : "Test connection"}
-          </Button>
+              <div className="flex items-center gap-2">
+                <Switch checked={form.tls} onCheckedChange={(v) => setForm({ ...form, tls: v })} />
+                <Label className="text-sm font-normal">Use TLS</Label>
+              </div>
+              {result && (
+                <div className="flex items-center gap-2 text-sm">
+                  {result.success ? <CheckCircle2 className="h-4 w-4 shrink-0 text-success" /> : <XCircle className="h-4 w-4 shrink-0 text-destructive" />}
+                  <span className={result.success ? "" : "text-destructive"}>{result.message}</span>
+                  {result.success && result.response_time && (
+                    <span className="font-mono text-xs text-muted-foreground tabular-nums">{result.response_time}</span>
+                  )}
+                </div>
+              )}
+              <div className="flex items-center justify-end gap-2 border-t pt-4">
+                <Button variant="outline" size="sm" onClick={test} disabled={testing || saving} className="gap-1.5">
+                  {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+                  {testing ? "Testing" : "Test connection"}
+                </Button>
+                <Button size="sm" onClick={save} disabled={saving} className="gap-1.5">
+                  {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                  Save
+                </Button>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
     </div>
