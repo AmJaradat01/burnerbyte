@@ -1,5 +1,33 @@
 # Changelog
 
+## v1.0.3 (June 2026) — Env-only configuration defaults
+
+Completes the 12-factor boot story started in v1.0.2. Every operational config key now has a sane default registered in code, so the binary runs correctly with secrets in the environment and **no `config.yaml`**, and every `BB_*` override actually applies.
+
+### Fixed
+- **JWT lifetimes default to sane values.** Without a config file, `jwt.access_ttl` / `jwt.refresh_ttl` unmarshalled to `0`: login returned `200` with `expires_in: 0` and an access token whose `exp` equalled `iat`, so every subsequent authenticated request was rejected as expired, and the refresh cookie was a session cookie with no `Max-Age`. They now default to `15m` / `168h`.
+- **Inbox limits and TTLs default correctly.** `defaults.*` keys (`default_inbox_ttl`, `max_inbox_ttl`, `max_inboxes_per_domain`, `max_domains`, `max_teams`, attachment size, reset/invite/presigned/webhook/analytics TTLs) were `0` in env-only mode, where `0` means "block all inbox creation," not "use the documented value." They now mirror `config.example.yaml`.
+- **Security policies on by default.** `password_policy.*`, `lockout.*`, and `rate_limit.*` now default to the documented hardened values (8-char policy with all character classes, 5-attempt lockout for 15m, rate limiting enabled) instead of permissive zero values.
+- **Server timeouts, CORS, logging, and metrics** all carry their documented defaults rather than zero/empty.
+
+### Why
+viper's `AutomaticEnv` + `Unmarshal` only populates a nested key it already knows about (via `SetDefault`, a config file, or `BindEnv`). An unregistered nested key is silently left at its zero value and its `BB_*` override is ignored. Registering the full default set fixes both the zero-value behavior and env-override pickup.
+
+### Tests
+- `TestEnvOnlyDefaults` guards the env-only path: asserts JWT TTLs are non-zero with refresh outlasting access, inbox limits are usable, and policy/server/worker defaults are populated.
+
+## v1.0.2 (June 2026) — Env-only boot
+
+### Fixed
+- Boot from an env-only configuration: registered defaults for the database connection pool (`max_open_conns`/`max_idle_conns`/`conn_max_lifetime`) so the pool no longer fails to build at `MaxSize=0`, and for the background-worker intervals so workers no longer log "invalid interval, skipping" and stop.
+- `make run-api` / `make run-smtp` now source a local `.env` before `go run`, so `cp .env.example .env` is enough to run the stack locally (the binary itself never auto-loads `.env`).
+
+## v1.0.1 (June 2026) — Landing polish
+
+### Changed
+- Reworked the public landing page against an anti-slop design audit: full-height hero on `100dvh`, a focused two-action hero (instead of three), and copy with no em dashes across the rendered UI and i18n catalog.
+- Vendored the design-audit skill into the repo (`.agents/skills/taste-skill/`, tracked in `skills-lock.json`) so the landing/marketing surfaces have a repeatable review pass.
+
 ## v1.0.0 (June 2026) — First stable release
 
 BurnerByte reaches 1.0: a self-hosted, multi-team temporary email platform that an enterprise security team can adopt and defend. This release consolidates the platform and hardens the core.
