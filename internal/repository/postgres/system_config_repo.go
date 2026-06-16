@@ -8,10 +8,13 @@ import (
 	"gitlab.com/burnerbyte/burnerbyte/internal/database"
 )
 
-// sensitiveKeys are system_config keys that contain credentials and should be encrypted.
+// sensitiveKeys are system_config keys that contain credentials and should be
+// encrypted. Adding a key is backward-compatible: Get falls back to plaintext
+// when a stored value is not the encrypted wrapper, and the next Set re-encrypts.
 var sensitiveKeys = map[string]bool{
-	"sso":    true,
-	"mailer": true,
+	"sso":     true,
+	"mailer":  true,
+	"storage": true, // S3/MinIO secret key
 }
 
 type SystemConfigRepo struct {
