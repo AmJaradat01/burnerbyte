@@ -12,10 +12,13 @@ RUN CGO_ENABLED=0 go build -o /bin/api ./cmd/api
 RUN CGO_ENABLED=0 go build -o /bin/smtpd ./cmd/smtpd
 
 # ── API image ──
+# No config.yaml is baked in: the binary boots fully from environment variables
+# (every operational key has a registered default since v1.0.3), and config.yaml
+# is gitignored/per-deployment, so copying it would break the build on a clean
+# checkout. Mount one at /etc/burnerbyte/config.yaml to override via file instead.
 FROM alpine:3.20 AS api
 RUN apk add --no-cache ca-certificates tzdata && adduser -D -H appuser
 COPY --from=builder /bin/api /usr/local/bin/api
-COPY config.yaml /etc/burnerbyte/config.yaml
 COPY migrations /migrations
 RUN mkdir -p /data/attachments && chown appuser:appuser /data/attachments
 USER appuser
@@ -26,7 +29,6 @@ ENTRYPOINT ["api"]
 FROM alpine:3.20 AS smtpd
 RUN apk add --no-cache ca-certificates tzdata && adduser -D -H appuser
 COPY --from=builder /bin/smtpd /usr/local/bin/smtpd
-COPY config.yaml /etc/burnerbyte/config.yaml
 USER appuser
 EXPOSE 2525
 ENTRYPOINT ["smtpd"]

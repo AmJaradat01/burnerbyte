@@ -1,5 +1,23 @@
 # Changelog
 
+## v1.0.6 (June 2026) — Docker stack made runnable
+
+Audited the container setup end to end and fixed the issues that prevented `docker compose up` from working on a clean checkout. The Jenkins (binary + systemd) deploy path is unaffected.
+
+### Fixed
+- **Image build no longer fails on `COPY config.yaml`.** That file is gitignored and absent on a clean checkout, so every image build broke. Removed from the API, SMTP, and `Dockerfile.smtpd` images; the binaries boot from environment variables (every key has had a registered default since v1.0.3). Mount a file at `/etc/burnerbyte/config.yaml` to override via file instead.
+- **API boots under compose.** The compose `JWT_SECRET` default was 23 characters; the API refuses to start below 32, so a clean `docker compose up` crash-looped. The dev default is now a clearly-insecure 46-character placeholder.
+- **Schema is now migrated.** Compose had no migration step, so the API ran against an empty database. Added a one-shot `migrate` service (pinned `migrate/migrate:v4.18.3`, the version the deploy scripts use); the API and SMTP server wait for it via `service_completed_successfully`. `up` is idempotent, so re-running the stack is safe.
+
+### Changed
+- **API healthcheck** on `/healthz`; the frontend now waits for the API to be healthy before starting.
+- **`ENCRYPTION_KEY` is passed through** to the API and SMTP services (previously absent, so SSO/SMTP/storage secrets were always stored in plaintext under Docker). Unified on the unprefixed `ENCRYPTION_KEY` var in `.env.example`.
+- **`NEXT_PUBLIC_*` are now frontend build args.** They are inlined into the client bundle at build time, so the previous runtime `environment:` entry had no effect; `API_BASE_URL` / `WS_BASE_URL` / `FRONTEND_URL` now flow through `build.args`.
+- **Docs and tooling.** README split into "full stack in Docker" and "local development" paths; added a `make docker-infra` target (infra only); documented `REDIS_PASSWORD`, `SMTP_HOSTNAME`, `WS_BASE_URL`, and `SMTPD_PORT=25` (real inbound mail) in `.env.example`.
+
+### Notes
+- The MinIO bucket is auto-created by the app on first boot; the MinIO healthcheck (`mc ready local`) is MinIO's official probe. Base image tags, the `migrate/migrate` tag, and `CGO_ENABLED=0` builds were all verified. Custom-domain deployments still need CORS/WS origins and TLS configured manually.
+
 ## v1.0.5 (June 2026) — Onboarding team step fix
 
 ### Fixed
