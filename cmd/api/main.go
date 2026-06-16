@@ -421,6 +421,7 @@ func main() {
 			r.With(auth.RequireSystemAdmin).Patch("/admin/users/{userId}", adminHandler.UpdateUser)
 			r.With(auth.RequireSystemAdmin).Post("/admin/users/{userId}/migrate-auth", adminHandler.MigrateAuth)
 			r.With(auth.RequireSystemAdmin).Get("/admin/health", adminHandler.Health)
+			r.With(auth.RequireSystemAdmin).Post("/admin/infra/test-smtp", adminHandler.TestSMTP)
 			r.With(auth.RequireSystemAdmin).Get("/admin/platform", adminHandler.GetPlatformSettings)
 			r.With(auth.RequireSystemAdmin).Put("/admin/platform", adminHandler.UpdatePlatformSettings)
 			r.With(auth.RequireSystemAdmin).Get("/admin/sso/providers", adminHandler.ListSSOProviders)

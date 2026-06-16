@@ -406,6 +406,7 @@ function OverviewTab() {
         </CardContent>
       </Card>
       <HealthSection />
+      <SmtpTestSection />
     </div>
   );
 }
@@ -802,6 +803,68 @@ function HealthSection() {
           })
         )}
       </div>
+    </div>
+  );
+}
+
+interface SmtpTestResult {
+  success: boolean;
+  message: string;
+  response_time?: string;
+}
+
+// SmtpTestSection lets a system admin verify the configured outbound mailer
+// after setup (the setup wizard's test is unavailable once setup completes).
+// The auto-refreshing health panel above only pings the datastores; SMTP is a
+// deliberate, on-demand check so it does not dial the relay every 15s.
+function SmtpTestSection() {
+  const [testing, setTesting] = useState(false);
+  const [result, setResult] = useState<SmtpTestResult | null>(null);
+
+  const runTest = async () => {
+    setTesting(true);
+    setResult(null);
+    try {
+      setResult(await api.post<SmtpTestResult>("/admin/infra/test-smtp", {}));
+    } catch (e) {
+      setResult({ success: false, message: e instanceof Error ? e.message : "Test failed" });
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 pt-2">
+        <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
+          <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+        </div>
+        <p className="text-sm font-semibold">Email delivery</p>
+        <p className="text-xs text-muted-foreground">· Verify the configured outbound SMTP</p>
+      </div>
+      <Card>
+        <CardContent className="flex items-center justify-between gap-4 py-4">
+          <div className="min-w-0">
+            {result ? (
+              <div className="flex items-center gap-2">
+                {result.success
+                  ? <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
+                  : <XCircle className="h-4 w-4 shrink-0 text-destructive" />}
+                <p className={`truncate text-sm ${result.success ? "" : "text-destructive"}`}>{result.message}</p>
+                {result.success && result.response_time && (
+                  <span className="shrink-0 font-mono text-xs text-muted-foreground tabular-nums">{result.response_time}</span>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Open a connection to the outbound mail server to confirm it is reachable.</p>
+            )}
+          </div>
+          <Button onClick={runTest} disabled={testing} variant="outline" size="sm" className="shrink-0 gap-1.5">
+            {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+            {testing ? "Testing" : "Test connection"}
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }

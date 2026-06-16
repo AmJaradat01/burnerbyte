@@ -44,17 +44,57 @@ var (
 	}
 )
 
+// smtpDialTest opens an SMTP connection (authenticating if a username is given),
+// closes it, and reports the round-trip time. It performs NO SSRF validation:
+// callers that accept untrusted input (the unauthenticated setup endpoint) must
+// validate the host first. Authenticated callers testing an operator-configured
+// relay (which may legitimately sit on a private network) call it directly.
+func smtpDialTest(host string, port int, username, password string, useTLS bool) (time.Duration, error) {
+	start := time.Now()
+	addr := fmt.Sprintf("%s:%d", host, port)
+	if useTLS {
+		conn, err := smtpTLSDial(addr, host)
+		if err != nil {
+			return time.Since(start), err
+		}
+		client, err := smtpNewClient(conn, host)
+		if err != nil {
+			return time.Since(start), err
+		}
+		defer client.Close()
+		if username != "" {
+			if err := client.Auth(smtpPlainAuth("", username, password, host)); err != nil {
+				return time.Since(start), fmt.Errorf("authentication failed: %w", err)
+			}
+		}
+		client.Quit()
+		return time.Since(start), nil
+	}
+	conn, err := smtpDial(addr)
+	if err != nil {
+		return time.Since(start), err
+	}
+	defer conn.Close()
+	if username != "" {
+		if err := conn.Auth(smtpPlainAuth("", username, password, host)); err != nil {
+			return time.Since(start), fmt.Errorf("authentication failed: %w", err)
+		}
+	}
+	conn.Quit()
+	return time.Since(start), nil
+}
+
 type SetupHandler struct {
-	pool            *pgxpool.Pool
-	userRepo        *postgres.UserRepo
-	orgRepo         *postgres.OrgRepo
-	domainRepo      *postgres.DomainRepo
-	teamRepo        *postgres.TeamRepo
-	sessionRepo     *postgres.SessionRepo
-	sysConfigRepo   *postgres.SystemConfigRepo
-	tokens          *auth.TokenManager
-	mailer          *mailer.Mailer
-	cfg             *config.Config
+	pool          *pgxpool.Pool
+	userRepo      *postgres.UserRepo
+	orgRepo       *postgres.OrgRepo
+	domainRepo    *postgres.DomainRepo
+	teamRepo      *postgres.TeamRepo
+	sessionRepo   *postgres.SessionRepo
+	sysConfigRepo *postgres.SystemConfigRepo
+	tokens        *auth.TokenManager
+	mailer        *mailer.Mailer
+	cfg           *config.Config
 }
 
 func NewSetupHandler(
@@ -400,7 +440,10 @@ func (h *SetupHandler) Complete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rawRefresh, refreshHash, err := h.tokens.GenerateRefreshToken()
-	if err != nil { writeError(w, http.StatusInternalServerError, "failed to generate token"); return }
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to generate token")
+		return
+	}
 	session := &domain.Session{
 		ID:               uuid.New(),
 		UserID:           adminUser.ID,
@@ -529,44 +572,7 @@ func (h *SetupHandler) TestSMTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	start := time.Now()
-	addr := fmt.Sprintf("%s:%d", input.Host, input.Port)
-
-	var testErr error
-	if input.TLS {
-		conn, err := smtpTLSDial(addr, input.Host)
-		if err != nil {
-			testErr = err
-		} else {
-			client, err := smtpNewClient(conn, input.Host)
-			if err != nil {
-				testErr = err
-			} else {
-				if input.Username != "" {
-					if err := client.Auth(smtpPlainAuth("", input.Username, input.Password, input.Host)); err != nil {
-						testErr = fmt.Errorf("authentication failed: %w", err)
-					}
-				}
-				client.Quit()
-				client.Close()
-			}
-		}
-	} else {
-		conn, err := smtpDial(addr)
-		if err != nil {
-			testErr = err
-		} else {
-			if input.Username != "" {
-				if err := conn.Auth(smtpPlainAuth("", input.Username, input.Password, input.Host)); err != nil {
-					testErr = fmt.Errorf("authentication failed: %w", err)
-				}
-			}
-			conn.Quit()
-			conn.Close()
-		}
-	}
-
-	elapsed := time.Since(start)
+	elapsed, testErr := smtpDialTest(input.Host, input.Port, input.Username, input.Password, input.TLS)
 	if testErr != nil {
 		writeJSON(w, http.StatusOK, map[string]any{
 			"success":       false,
@@ -578,7 +584,7 @@ func (h *SetupHandler) TestSMTP(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, http.StatusOK, map[string]any{
 		"success":       true,
-		"message":       fmt.Sprintf("Connected to %s successfully", addr),
+		"message":       fmt.Sprintf("Connected to %s:%d successfully", input.Host, input.Port),
 		"response_time": elapsed.String(),
 	})
 }
