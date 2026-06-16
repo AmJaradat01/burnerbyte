@@ -3,7 +3,7 @@
   "info": {
     "title": "BurnerByte API",
     "description": "Self-hosted temporary email platform API",
-    "version": "1.0.6",
+    "version": "1.0.7",
     "license": {
       "name": "Apache 2.0",
       "url": "https://www.apache.org/licenses/LICENSE-2.0"
@@ -2415,6 +2415,20 @@
         "responses": {
           "200": {
             "description": "Health status"
+          }
+        }
+      }
+    },
+    "/admin/infra/test-smtp": {
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Test the configured outbound SMTP connection (system admin)",
+        "description": "Opens a connection to the currently configured mailer (and authenticates if credentials are set), then closes it. Returns success/false with a message and round-trip time; does not send an email.",
+        "responses": {
+          "200": {
+            "description": "Test result: { success, message, response_time }"
           }
         }
       }
