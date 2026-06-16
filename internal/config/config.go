@@ -273,17 +273,99 @@ func Load() (*Config, error) {
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.AutomaticEnv()
 
-	// Defaults
-	v.SetDefault("defaults.max_sessions_per_user", 5)
-	v.SetDefault("auth_cookie.same_site", "lax")
-	// Connection-pool defaults so an env-only deployment (DATABASE_URL set, no
-	// config file) boots with a usable pool instead of failing on MaxSize=0.
+	// Defaults — mirror config.example.yaml so the binary is fully usable in an
+	// env-only / 12-factor deployment (secrets + DATABASE_URL in the environment,
+	// no config.yaml). This is also why every operational key is registered here:
+	// viper's AutomaticEnv + Unmarshal only populate a nested key that is already
+	// known to viper (via SetDefault, a config file, or BindEnv). An unregistered
+	// nested key is silently left at its zero value, and any BB_* override for it
+	// is ignored. A missing default is therefore not "use the documented value" —
+	// it is 0/"" (e.g. a JWT TTL of 0 mints tokens that expire the instant they
+	// are issued, and a max_inboxes_per_domain of 0 blocks all inbox creation).
+	// DATABASE_URL / REDIS_URL / JWT_SECRET / ENCRYPTION_KEY are intentionally not
+	// defaulted: they are deployment secrets bound to env and validated on boot.
+
+	// Server
+	v.SetDefault("server.port", 8080)
+	v.SetDefault("server.base_url", "http://localhost:8080")
+	v.SetDefault("server.frontend_url", "http://localhost:3000")
+	v.SetDefault("server.read_timeout", "30s")
+	v.SetDefault("server.write_timeout", "30s")
+	v.SetDefault("server.idle_timeout", "120s")
+	v.SetDefault("server.shutdown_timeout", "15s")
+	v.SetDefault("server.max_body_size", 1048576) // 1 MB
+
+	// Connection pool — without these an env-only deployment fails on MaxSize=0.
 	v.SetDefault("database.max_open_conns", 25)
 	v.SetDefault("database.max_idle_conns", 5)
 	v.SetDefault("database.conn_max_lifetime", "5m")
-	// Background-worker interval defaults. Without these (and without a config
-	// file) the nested workers.* keys are unregistered, so viper's AutomaticEnv
-	// can't unmarshal BB_WORKERS_* overrides and the workers skip on a 0 interval.
+	v.SetDefault("redis.max_retries", 3)
+
+	// JWT lifetimes — without these tokens carry exp == iat (expires_in: 0) and
+	// every authenticated request is rejected the moment the token is minted.
+	v.SetDefault("jwt.access_ttl", "15m")
+	v.SetDefault("jwt.refresh_ttl", "168h")
+	v.SetDefault("auth_cookie.same_site", "lax")
+
+	// SMTP ingest (cmd/smtpd)
+	v.SetDefault("smtp.listen", "0.0.0.0:2525")
+	v.SetDefault("smtp.max_size", 26214400) // 25 MB
+	v.SetDefault("smtp.queue_size", 1000)
+	v.SetDefault("smtp.workers", 4)
+	v.SetDefault("mailer.port", 587)
+	v.SetDefault("mailer.tls", true)
+
+	// CORS
+	v.SetDefault("cors.allowed_origins", []string{"http://localhost:3000"})
+	v.SetDefault("cors.allowed_methods", []string{"GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"})
+	v.SetDefault("cors.allowed_headers", []string{"Authorization", "Content-Type", "X-Request-ID"})
+	v.SetDefault("cors.max_age", 86400)
+
+	// Rate limiting (per minute)
+	v.SetDefault("rate_limit.enabled", true)
+	v.SetDefault("rate_limit.authenticated", 300)
+	v.SetDefault("rate_limit.unauthenticated", 60)
+	v.SetDefault("rate_limit.login", 10)
+	v.SetDefault("rate_limit.forgot_password", 3)
+
+	// Account lockout
+	v.SetDefault("lockout.max_attempts", 5)
+	v.SetDefault("lockout.duration", "15m")
+
+	// Password policy
+	v.SetDefault("password_policy.min_length", 8)
+	v.SetDefault("password_policy.require_uppercase", true)
+	v.SetDefault("password_policy.require_lowercase", true)
+	v.SetDefault("password_policy.require_number", true)
+	v.SetDefault("password_policy.require_special", true)
+
+	// Platform defaults / limits
+	v.SetDefault("defaults.attachments_enabled", true)
+	v.SetDefault("defaults.allow_registration", true)
+	v.SetDefault("defaults.default_inbox_ttl", "10m")
+	v.SetDefault("defaults.max_inbox_ttl", "24h")
+	v.SetDefault("defaults.max_attachment_size_mb", 25)
+	v.SetDefault("defaults.max_domains", 10)
+	v.SetDefault("defaults.max_teams", 50)
+	v.SetDefault("defaults.max_inboxes_per_domain", 100)
+	v.SetDefault("defaults.enforce_sso", false)
+	v.SetDefault("defaults.max_sessions_per_user", 5)
+	v.SetDefault("defaults.password_reset_ttl", "1h")
+	v.SetDefault("defaults.invite_expiry_ttl", "48h")
+	v.SetDefault("defaults.presigned_url_ttl", "15m")
+	v.SetDefault("defaults.webhook_timeout", "10s")
+	v.SetDefault("defaults.analytics_cache_ttl", "2h")
+
+	v.SetDefault("email_verification.enabled", true)
+
+	// Logging / metrics
+	v.SetDefault("logging.level", "info")
+	v.SetDefault("logging.format", "json")
+	v.SetDefault("metrics.enabled", true)
+	v.SetDefault("metrics.path", "/metrics")
+
+	// Background-worker intervals — unregistered they unmarshal to 0 and the
+	// worker logs "invalid interval, skipping" instead of running.
 	v.SetDefault("workers.dns_recheck_interval", "1h")
 	v.SetDefault("workers.cleanup_interval", "5m")
 	v.SetDefault("workers.webhook_retry_interval", "1m")
