@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.0.7 (June 2026) — Post-setup SMTP connection test
+
+First slice of the infrastructure-setup work. The admin System tab already shows live Postgres/Redis/MinIO health; this adds the one missing piece, verifying outbound email after setup.
+
+### Added
+- **`POST /admin/infra/test-smtp` (system admin).** Opens a connection to the currently configured mailer (authenticating if credentials are set) and reports success, a message, and the round-trip time. It does not send an email. Surfaced as an "Email delivery → Test connection" action in Settings → System, alongside the existing service-health panel.
+- Unlike the setup wizard's test (which is unauthenticated and refuses private IPs to prevent SSRF), the admin test dials directly: a system admin is trusted and may legitimately point the mailer at an internal relay. The shared `smtpDialTest` helper is now used by both paths.
+
+### Notes
+- This is the read-only / verification half of the infrastructure-setup discussion. Still planned: a runtime editor + hot-reload for storage and SMTP config (today they are set once during setup and loaded at boot), and a guarded first-run web installer for the DB/Redis bootstrap. DB and Redis connection settings remain env/config-only by design (they are required before the app, and the wizard's own state, can exist).
+
 ## v1.0.6 (June 2026) — Docker stack made runnable
 
 Audited the container setup end to end and fixed the issues that prevented `docker compose up` from working on a clean checkout. The Jenkins (binary + systemd) deploy path is unaffected.
