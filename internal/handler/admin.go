@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/mail"
 	"strings"
 	"time"
 
@@ -20,6 +21,7 @@ import (
 	"gitlab.com/burnerbyte/burnerbyte/internal/config"
 	appcrypto "gitlab.com/burnerbyte/burnerbyte/internal/crypto"
 	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
+	"gitlab.com/burnerbyte/burnerbyte/internal/mailer"
 	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
 	"gitlab.com/burnerbyte/burnerbyte/internal/service"
 )
@@ -41,10 +43,11 @@ type AdminHandler struct {
 	rdb               *redis.Client
 	s3                *minio.Client
 	bucket            string
+	mailer            *mailer.Mailer
 }
 
-func NewAdminHandler(analyticsSvc *service.AnalyticsService, orgSvc *service.OrgService, authSvc *service.AuthService, sysConfig *postgres.SystemConfigRepo, ssoProviderRepo *postgres.SSOProviderRepo, domainMappingRepo *postgres.SSODomainMappingRepo, teamRepo *postgres.TeamRepo, ssoMgr *auth.SSOManager, encryptor *appcrypto.Encryptor, cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, s3 *minio.Client, bucket string) *AdminHandler {
-	return &AdminHandler{analyticsSvc: analyticsSvc, orgSvc: orgSvc, authSvc: authSvc, sysConfig: sysConfig, ssoProviderRepo: ssoProviderRepo, domainMappingRepo: domainMappingRepo, teamRepo: teamRepo, ssoMgr: ssoMgr, encryptor: encryptor, cfg: cfg, pool: pool, rdb: rdb, s3: s3, bucket: bucket}
+func NewAdminHandler(analyticsSvc *service.AnalyticsService, orgSvc *service.OrgService, authSvc *service.AuthService, sysConfig *postgres.SystemConfigRepo, ssoProviderRepo *postgres.SSOProviderRepo, domainMappingRepo *postgres.SSODomainMappingRepo, teamRepo *postgres.TeamRepo, ssoMgr *auth.SSOManager, encryptor *appcrypto.Encryptor, cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, s3 *minio.Client, bucket string, ml *mailer.Mailer) *AdminHandler {
+	return &AdminHandler{analyticsSvc: analyticsSvc, orgSvc: orgSvc, authSvc: authSvc, sysConfig: sysConfig, ssoProviderRepo: ssoProviderRepo, domainMappingRepo: domainMappingRepo, teamRepo: teamRepo, ssoMgr: ssoMgr, encryptor: encryptor, cfg: cfg, pool: pool, rdb: rdb, s3: s3, bucket: bucket, mailer: ml}
 }
 
 func (h *AdminHandler) Stats(w http.ResponseWriter, r *http.Request) {
@@ -152,10 +155,10 @@ func (h *AdminHandler) Health(w http.ResponseWriter, r *http.Request) {
 // connection (and authenticating, if credentials are set). It is system-admin
 // only and, unlike the unauthenticated setup endpoint, skips the private-IP
 // guard: the operator is trusted and may legitimately point the mailer at an
-// internal relay. cfg.Mailer is set once at boot (LoadFromDB), so reading it
-// here needs no lock.
+// internal relay. It reads the live mailer config (h.mailer.Config()), so it
+// reflects runtime edits made via UpdateMailerConfig, not just the boot value.
 func (h *AdminHandler) TestSMTP(w http.ResponseWriter, r *http.Request) {
-	m := h.cfg.Mailer
+	m := h.mailer.Config()
 	if m.Host == "" || m.Port == 0 {
 		writeJSON(w, http.StatusOK, map[string]any{
 			"success": false,
@@ -178,6 +181,74 @@ func (h *AdminHandler) TestSMTP(w http.ResponseWriter, r *http.Request) {
 		"message":       fmt.Sprintf("Connected to %s:%d successfully", m.Host, m.Port),
 		"response_time": elapsed.String(),
 	})
+}
+
+// GetMailerConfig returns the current outbound mailer config with the password
+// masked. has_password tells the UI whether a secret is stored so it can leave
+// the field blank and only send a new one on change.
+func (h *AdminHandler) GetMailerConfig(w http.ResponseWriter, r *http.Request) {
+	m := h.mailer.Config()
+	writeJSON(w, http.StatusOK, map[string]any{
+		"host":         m.Host,
+		"port":         m.Port,
+		"username":     m.Username,
+		"from":         m.From,
+		"tls":          m.TLS,
+		"has_password": m.Password != "",
+	})
+}
+
+// UpdateMailerConfig persists new outbound-mailer settings and hot-reloads the
+// live mailer so the change takes effect without a restart (no other process
+// sends mail, so no cross-process reload is needed). An empty password is
+// treated as "unchanged" and the existing secret is preserved.
+func (h *AdminHandler) UpdateMailerConfig(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Host     string `json:"host"`
+		Port     int    `json:"port"`
+		Username string `json:"username"`
+		Password string `json:"password"`
+		From     string `json:"from"`
+		TLS      bool   `json:"tls"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if in.Host == "" {
+		writeError(w, http.StatusBadRequest, "host is required")
+		return
+	}
+	if in.Port <= 0 || in.Port > 65535 {
+		writeError(w, http.StatusBadRequest, "port must be between 1 and 65535")
+		return
+	}
+	if _, err := mail.ParseAddress(in.From); err != nil {
+		writeError(w, http.StatusBadRequest, "a valid from address is required")
+		return
+	}
+
+	cur := h.mailer.Config()
+	password := in.Password
+	if password == "" {
+		password = cur.Password // unchanged
+	}
+	newCfg := config.MailerConfig{
+		Host:     in.Host,
+		Port:     in.Port,
+		Username: in.Username,
+		Password: password,
+		From:     in.From,
+		TLS:      in.TLS,
+	}
+	if err := h.sysConfig.Set(r.Context(), "mailer", newCfg); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to save mailer config")
+		return
+	}
+	h.mailer.Reconfigure(newCfg)
+	auditRecordEnhanced(r, uuid.Nil, "admin.mailer_config_updated", "config", uuid.Nil, "mailer",
+		map[string]any{"host": newCfg.Host, "port": newCfg.Port, "tls": newCfg.TLS})
+	writeJSON(w, http.StatusOK, map[string]any{"success": true})
 }
 
 func (h *AdminHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {

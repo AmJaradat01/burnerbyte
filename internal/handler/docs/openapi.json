@@ -3,7 +3,7 @@
   "info": {
     "title": "BurnerByte API",
     "description": "Self-hosted temporary email platform API",
-    "version": "1.0.7",
+    "version": "1.0.8",
     "license": {
       "name": "Apache 2.0",
       "url": "https://www.apache.org/licenses/LICENSE-2.0"
@@ -2429,6 +2429,35 @@
         "responses": {
           "200": {
             "description": "Test result: { success, message, response_time }"
+          }
+        }
+      }
+    },
+    "/admin/config/mailer": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Get outbound mailer config (system admin)",
+        "description": "Returns the current mailer settings with the password masked (has_password indicates whether a secret is stored).",
+        "responses": {
+          "200": {
+            "description": "{ host, port, username, from, tls, has_password }"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Update outbound mailer config (system admin)",
+        "description": "Persists mailer settings (password encrypted at rest) and hot-reloads the live mailer; no restart needed. An empty password preserves the stored secret.",
+        "responses": {
+          "200": {
+            "description": "Saved"
+          },
+          "400": {
+            "description": "Validation error"
           }
         }
       }

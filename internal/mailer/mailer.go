@@ -152,3 +152,10 @@ func (m *Mailer) Reconfigure(cfg config.MailerConfig) {
 	defer m.mu.Unlock()
 	m.cfg = cfg
 }
+
+// Config returns a snapshot of the mailer's current configuration (including the
+// password). It is the live source of truth after any Reconfigure, so callers
+// should read it rather than the boot-time cfg.Mailer.
+func (m *Mailer) Config() config.MailerConfig {
+	return m.getConfig()
+}
