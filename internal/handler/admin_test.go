@@ -13,7 +13,18 @@ import (
 	"testing"
 
 	"gitlab.com/burnerbyte/burnerbyte/internal/config"
+	"gitlab.com/burnerbyte/burnerbyte/internal/mailer"
 )
+
+// mustMailer builds a Mailer for tests (templates parse from the embedded FS).
+func mustMailer(t *testing.T, cfg config.MailerConfig) *mailer.Mailer {
+	t.Helper()
+	m, err := mailer.New(cfg)
+	if err != nil {
+		t.Fatalf("mailer.New: %v", err)
+	}
+	return m
+}
 
 // isValidDomainFormat guards SSO domain-mapping input; it expects an already
 // lowercased domain and enforces label, hyphen, and TLD-length rules.
@@ -112,7 +123,7 @@ func decodeSMTPResult(t *testing.T, body io.Reader) (bool, string) {
 // uses, but without the private-IP guard (this caller is authenticated).
 func TestAdminTestSMTP(t *testing.T) {
 	t.Run("not configured", func(t *testing.T) {
-		h := &AdminHandler{cfg: &config.Config{}}
+		h := &AdminHandler{mailer: mustMailer(t, config.MailerConfig{})}
 		rec := httptest.NewRecorder()
 		h.TestSMTP(rec, httptest.NewRequest(http.MethodPost, "/admin/infra/test-smtp", nil))
 		ok, msg := decodeSMTPResult(t, rec.Body)
@@ -129,7 +140,7 @@ func TestAdminTestSMTP(t *testing.T) {
 		smtpDial = func(string) (*smtp.Client, error) { return nil, fmt.Errorf("connection refused") }
 		defer func() { smtpDial = orig }()
 
-		h := &AdminHandler{cfg: &config.Config{Mailer: config.MailerConfig{Host: "mail.example.com", Port: 587}}}
+		h := &AdminHandler{mailer: mustMailer(t, config.MailerConfig{Host: "mail.example.com", Port: 587})}
 		rec := httptest.NewRecorder()
 		h.TestSMTP(rec, httptest.NewRequest(http.MethodPost, "/admin/infra/test-smtp", nil))
 		ok, msg := decodeSMTPResult(t, rec.Body)
@@ -145,12 +156,55 @@ func TestAdminTestSMTP(t *testing.T) {
 		host, port, stop := fakeSMTPServer(t)
 		defer stop()
 
-		h := &AdminHandler{cfg: &config.Config{Mailer: config.MailerConfig{Host: host, Port: port}}}
+		h := &AdminHandler{mailer: mustMailer(t, config.MailerConfig{Host: host, Port: port})}
 		rec := httptest.NewRecorder()
 		h.TestSMTP(rec, httptest.NewRequest(http.MethodPost, "/admin/infra/test-smtp", nil))
 		ok, msg := decodeSMTPResult(t, rec.Body)
 		if !ok {
 			t.Fatalf("expected success, got %q", msg)
+		}
+	})
+}
+
+// TestAdminMailerConfig covers the runtime mailer editor: GET masks the password
+// (exposing only has_password), and PUT rejects invalid input before persisting.
+func TestAdminMailerConfig(t *testing.T) {
+	t.Run("get masks password", func(t *testing.T) {
+		h := &AdminHandler{mailer: mustMailer(t, config.MailerConfig{
+			Host: "mail.example.com", Port: 587, Username: "u", Password: "secret", From: "no-reply@example.com", TLS: true,
+		})}
+		rec := httptest.NewRecorder()
+		h.GetMailerConfig(rec, httptest.NewRequest(http.MethodGet, "/admin/config/mailer", nil))
+		var resp map[string]any
+		if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		if _, leaked := resp["password"]; leaked {
+			t.Error("password must not be returned")
+		}
+		if resp["has_password"] != true {
+			t.Errorf("has_password = %v, want true", resp["has_password"])
+		}
+		if resp["host"] != "mail.example.com" {
+			t.Errorf("host = %v", resp["host"])
+		}
+	})
+
+	t.Run("put validation", func(t *testing.T) {
+		h := &AdminHandler{mailer: mustMailer(t, config.MailerConfig{})}
+		cases := []string{
+			`{"host":"","port":587,"from":"a@b.com"}`,            // missing host
+			`{"host":"mail.x","port":0,"from":"a@b.com"}`,        // bad port
+			`{"host":"mail.x","port":70000,"from":"a@b.com"}`,    // port too high
+			`{"host":"mail.x","port":587,"from":"not-an-email"}`, // bad from
+		}
+		for _, body := range cases {
+			rec := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPut, "/admin/config/mailer", strings.NewReader(body))
+			h.UpdateMailerConfig(rec, req)
+			if rec.Code != http.StatusBadRequest {
+				t.Errorf("body %s: status = %d, want 400", body, rec.Code)
+			}
 		}
 	})
 }
