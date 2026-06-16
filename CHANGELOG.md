@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.0.8 (June 2026) — Runtime mailer editor with hot-reload
+
+Outbound SMTP can now be changed after setup, from the admin UI, and the change takes effect immediately.
+
+### Added
+- **`GET` / `PUT /admin/config/mailer` (system admin).** Edit host, port, username, password, from-address, and TLS at runtime. Saving persists to the database (password encrypted at rest via the existing `system_config` encryptor) and **hot-reloads the live mailer through `Mailer.Reconfigure`, so no restart is needed**. The mailer is the only sender in the system (the SMTP ingest server receives, it does not send), so there is no cross-process reload to coordinate.
+- An **Email (SMTP)** editor in Settings → System: load, edit, save, and test in one place, beside the existing service-health panel.
+
+### Changed
+- The password is never returned by the API; `GET` exposes only `has_password`, and an empty password on `PUT` preserves the stored secret.
+- `POST /admin/infra/test-smtp` now tests the live mailer config (`Mailer.Config()`), so it reflects unsaved-then-saved edits rather than only the boot-time value.
+
+### Notes
+- Storage (S3/MinIO) is next: it is written by both the API and the SMTP ingest server, so its runtime editor needs a cross-process reload signal (and `storage` should be added to the encrypted-config key set, which it is not yet). DB and Redis remain env/config-only by design. See the infrastructure-setup plan.
+
 ## v1.0.7 (June 2026) — Post-setup SMTP connection test
 
 First slice of the infrastructure-setup work. The admin System tab already shows live Postgres/Redis/MinIO health; this adds the one missing piece, verifying outbound email after setup.
