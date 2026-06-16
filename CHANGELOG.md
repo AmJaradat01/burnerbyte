@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.0.5 (June 2026) — Onboarding team step fix
+
+### Fixed
+- **Onboarding wizard: team creation + domain assignment.** The `POST /orgs/:id/teams` response is wrapped as `{ "team": ... }`, but the wizard read the team ID off the wrapper. The ID came back `undefined`, so the follow-up domain assignment called `/teams/undefined/domains` and failed with a 400, breaking the team step of first-run setup. The client now reads `res.team`. The sibling steps (organization, domain, inbox) return flat objects and were already correct.
+
 ## v1.0.4 (June 2026) — Landing motion layer
 
 A restrained, token-based motion pass over the public landing and `/try` surfaces (the marketing surfaces governed by the vendored design-audit skill). The product app UI is unchanged.

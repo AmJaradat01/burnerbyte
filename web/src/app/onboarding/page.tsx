@@ -75,10 +75,10 @@ export default function OnboardingPage() {
   const createTeam = async () => {
     setBusy(true);
     try {
-      const res = await api.post<Team>(`/orgs/${org!.id}/teams`, { name: teamName });
-      setTeam(res);
+      const res = await api.post<{ team: Team }>(`/orgs/${org!.id}/teams`, { name: teamName });
+      setTeam(res.team);
       if (domainId) {
-        const assignment = await api.post<{ id: string }>(`/orgs/${org!.id}/teams/${res.id}/domains`, { domain_id: domainId, access_level: "full" });
+        const assignment = await api.post<{ id: string }>(`/orgs/${org!.id}/teams/${res.team.id}/domains`, { domain_id: domainId, access_level: "full" });
         setAssignmentId(assignment.id);
       }
       setStep(3);
