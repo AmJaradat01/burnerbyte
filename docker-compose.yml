@@ -45,6 +45,25 @@ services:
       timeout: 5s
       retries: 5
 
+  # One-shot schema migration. Runs golang-migrate against postgres and exits;
+  # api and smtpd wait for it to complete successfully. "up" is idempotent (a
+  # no-op when already current), so re-running the stack is safe. Pinned to the
+  # same migrate version the deploy scripts install.
+  migrate:
+    image: migrate/migrate:v4.18.3
+    volumes:
+      - ./migrations:/migrations:ro
+    command:
+      - "-path"
+      - "/migrations"
+      - "-database"
+      - "postgres://${POSTGRES_USER:-burnerbyte}:${POSTGRES_PASSWORD:-burnerbyte}@postgres:5432/${POSTGRES_DB:-burnerbyte}?sslmode=disable"
+      - "up"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: on-failure
+
   api:
     build:
       context: .
@@ -56,7 +75,13 @@ services:
       # For production, change sslmode=disable to sslmode=require or sslmode=verify-full
       DATABASE_URL: postgres://${POSTGRES_USER:-burnerbyte}:${POSTGRES_PASSWORD:-burnerbyte}@postgres:5432/${POSTGRES_DB:-burnerbyte}?sslmode=disable
       REDIS_URL: redis://:${REDIS_PASSWORD:-burnerbyte-redis}@redis:6379
-      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      # Must be >= 32 chars or the API refuses to start. This default is for a
+      # local stack only: generate a real one (openssl rand -hex 32) and set
+      # JWT_SECRET in .env before exposing this anywhere.
+      JWT_SECRET: ${JWT_SECRET:-dev-insecure-jwt-secret-change-me-min-32-chars}
+      # Optional but strongly recommended: encrypts SSO/SMTP/storage secrets at
+      # rest. When empty they are stored in plaintext. Generate: openssl rand -hex 32
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       API_BASE_URL: ${API_BASE_URL:-http://localhost:8080}
       BB_MINIO_ENDPOINT: minio:9000
@@ -71,6 +96,14 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/healthz >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     restart: unless-stopped
 
   smtpd:
@@ -79,11 +112,16 @@ services:
       dockerfile: Dockerfile
       target: smtpd
     ports:
+      # To receive real inbound mail from the internet, set SMTPD_PORT=25 (binding
+      # the privileged port 25 on the host may require root). 2525 is fine for
+      # local testing and behind an MTA/relay that forwards to it.
       - "${SMTPD_PORT:-2525}:2525"
     environment:
       # For production, change sslmode=disable to sslmode=require or sslmode=verify-full
       DATABASE_URL: postgres://${POSTGRES_USER:-burnerbyte}:${POSTGRES_PASSWORD:-burnerbyte}@postgres:5432/${POSTGRES_DB:-burnerbyte}?sslmode=disable
       REDIS_URL: redis://:${REDIS_PASSWORD:-burnerbyte-redis}@redis:6379
+      # Share the same key as the api so encrypted-at-rest values round-trip.
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
       BB_SMTP_LISTEN: ":2525"
       BB_SMTP_HOSTNAME: ${SMTP_HOSTNAME:-mail.burnerbyte.local}
       BB_MINIO_ENDPOINT: minio:9000
@@ -98,18 +136,26 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     restart: unless-stopped
 
   frontend:
     build:
       context: .
       dockerfile: Dockerfile.frontend
+      # NEXT_PUBLIC_* are baked into the client bundle at build time, so they are
+      # passed as build args (a runtime `environment:` entry would have no effect).
+      # Rebuild the frontend image after changing these.
+      args:
+        NEXT_PUBLIC_API_URL: ${API_BASE_URL:-http://localhost:8080}/api/v1
+        NEXT_PUBLIC_WS_URL: ${WS_BASE_URL:-ws://localhost:8080}/api/v1/ws
+        NEXT_PUBLIC_SITE_URL: ${FRONTEND_URL:-http://localhost:3000}
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
-    environment:
-      NEXT_PUBLIC_API_URL: ${API_BASE_URL:-http://localhost:8080}/api/v1
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:

@@ -67,27 +67,44 @@ Two separate binaries scale independently:
 - PostgreSQL 16 (or use Docker)
 - Redis 7 (or use Docker)
 
-### Setup
+### Option A — Full stack in Docker (simplest)
+
+Brings up Postgres, Redis, MinIO, the API, the SMTP ingest server, and the
+frontend. Schema migrations run automatically (the `migrate` service) and the
+MinIO bucket is created on first boot.
 
 ```bash
-# Clone
 git clone git@gitlab.com:burnerbyte/burnerbyte.git
 cd burnerbyte
 
-# Start infrastructure (Redis + MinIO; skip if using local PG)
-make docker-up
-
-# Copy env
+# Optional but recommended: set real secrets (otherwise insecure dev defaults
+# are used). At minimum set JWT_SECRET (>= 32 chars) and ENCRYPTION_KEY.
 cp .env.example .env
+#   JWT_SECRET=$(openssl rand -hex 32)
+#   ENCRYPTION_KEY=$(openssl rand -hex 32)
 
-# Run migrations
-make migrate-up
+docker compose up -d        # or: make docker-up
+```
 
-# Start API server
-make run-api
+Then open `http://localhost:3000`. To receive real inbound mail, set
+`SMTPD_PORT=25` in `.env` (binding port 25 on the host may require root).
 
-# Start frontend (separate terminal)
-cd web && pnpm install && pnpm dev
+### Option B — Local development (hot reload)
+
+Runs only the infrastructure in Docker; the API, SMTP server, and frontend run
+on the host.
+
+```bash
+git clone git@gitlab.com:burnerbyte/burnerbyte.git
+cd burnerbyte
+
+make docker-infra           # postgres + redis + minio only
+cp .env.example .env
+make migrate-up             # apply schema
+
+make run-api                # API on :8080
+make run-smtp               # SMTP ingest (separate terminal)
+cd web && pnpm install && pnpm dev   # frontend on :3000 (separate terminal)
 ```
 
 On first launch, navigate to `http://localhost:3000` — the setup wizard will guide you through:
