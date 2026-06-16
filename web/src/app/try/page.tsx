@@ -37,13 +37,13 @@ export default function TryPage() {
       <main className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center px-4 py-12">
         {isLoading ? null : enabled ? (
           <>
-            <h1 className="mb-2 text-center text-2xl font-bold tracking-tight">
+            <h1 className="anim-rise mb-2 text-center text-2xl font-bold tracking-tight">
               Try it now
             </h1>
-            <p className="mb-8 text-center text-sm text-muted-foreground">
+            <p className="anim-rise mb-8 text-center text-sm text-muted-foreground" style={{ animationDelay: "70ms" }}>
               {t("demo.emptyHint")}
             </p>
-            <div className="w-full">
+            <div className="anim-rise w-full" style={{ animationDelay: "140ms" }}>
               <TryInbox
                 labels={{
                   inboxLabel: t("demo.inbox"),
