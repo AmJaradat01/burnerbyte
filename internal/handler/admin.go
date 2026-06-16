@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -26,20 +27,20 @@ import (
 var startTime = time.Now()
 
 type AdminHandler struct {
-	analyticsSvc       *service.AnalyticsService
-	orgSvc             *service.OrgService
-	authSvc            *service.AuthService
-	sysConfig          *postgres.SystemConfigRepo
-	ssoProviderRepo    *postgres.SSOProviderRepo
-	domainMappingRepo  *postgres.SSODomainMappingRepo
-	teamRepo           *postgres.TeamRepo
-	ssoMgr             *auth.SSOManager
-	encryptor          *appcrypto.Encryptor
-	cfg                *config.Config
-	pool               *pgxpool.Pool
-	rdb                *redis.Client
-	s3                 *minio.Client
-	bucket             string
+	analyticsSvc      *service.AnalyticsService
+	orgSvc            *service.OrgService
+	authSvc           *service.AuthService
+	sysConfig         *postgres.SystemConfigRepo
+	ssoProviderRepo   *postgres.SSOProviderRepo
+	domainMappingRepo *postgres.SSODomainMappingRepo
+	teamRepo          *postgres.TeamRepo
+	ssoMgr            *auth.SSOManager
+	encryptor         *appcrypto.Encryptor
+	cfg               *config.Config
+	pool              *pgxpool.Pool
+	rdb               *redis.Client
+	s3                *minio.Client
+	bucket            string
 }
 
 func NewAdminHandler(analyticsSvc *service.AnalyticsService, orgSvc *service.OrgService, authSvc *service.AuthService, sysConfig *postgres.SystemConfigRepo, ssoProviderRepo *postgres.SSOProviderRepo, domainMappingRepo *postgres.SSODomainMappingRepo, teamRepo *postgres.TeamRepo, ssoMgr *auth.SSOManager, encryptor *appcrypto.Encryptor, cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, s3 *minio.Client, bucket string) *AdminHandler {
@@ -48,14 +49,20 @@ func NewAdminHandler(analyticsSvc *service.AnalyticsService, orgSvc *service.Org
 
 func (h *AdminHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	stats, err := h.analyticsSvc.GetSystemStats(r.Context())
-	if err != nil { writeError(w, http.StatusInternalServerError, "failed"); return }
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed")
+		return
+	}
 	writeJSON(w, http.StatusOK, stats)
 }
 
 func (h *AdminHandler) ListOrgs(w http.ResponseWriter, r *http.Request) {
 	page, perPage := parsePagination(r)
 	orgs, total, err := h.orgSvc.ListAll(r.Context(), page, perPage)
-	if err != nil { writeError(w, http.StatusInternalServerError, "failed"); return }
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed")
+		return
+	}
 	writeJSON(w, http.StatusOK, paginatedResponse(orgs, total, page, perPage))
 }
 
@@ -138,6 +145,38 @@ func (h *AdminHandler) Health(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, status, map[string]any{
 		"services": services,
 		"uptime":   time.Since(startTime).Round(time.Second).String(),
+	})
+}
+
+// TestSMTP verifies the currently-configured outbound mailer by opening a
+// connection (and authenticating, if credentials are set). It is system-admin
+// only and, unlike the unauthenticated setup endpoint, skips the private-IP
+// guard: the operator is trusted and may legitimately point the mailer at an
+// internal relay. cfg.Mailer is set once at boot (LoadFromDB), so reading it
+// here needs no lock.
+func (h *AdminHandler) TestSMTP(w http.ResponseWriter, r *http.Request) {
+	m := h.cfg.Mailer
+	if m.Host == "" || m.Port == 0 {
+		writeJSON(w, http.StatusOK, map[string]any{
+			"success": false,
+			"message": "no outbound SMTP is configured",
+		})
+		return
+	}
+
+	elapsed, err := smtpDialTest(m.Host, m.Port, m.Username, m.Password, m.TLS)
+	if err != nil {
+		writeJSON(w, http.StatusOK, map[string]any{
+			"success":       false,
+			"message":       err.Error(),
+			"response_time": elapsed.String(),
+		})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"success":       true,
+		"message":       fmt.Sprintf("Connected to %s:%d successfully", m.Host, m.Port),
+		"response_time": elapsed.String(),
 	})
 }
 
@@ -307,11 +346,21 @@ func (h *AdminHandler) GetPlatformSettings(w http.ResponseWriter, r *http.Reques
 		DemoEnabled:          h.cfg.DemoEnabled(),
 		DemoConfigured:       h.cfg.DemoConfigured(),
 	}
-	if tz == "" { tz = "UTC" }
-	if df == "" { df = "YYYY-MM-DD" }
-	if tf == "" { tf = "24h" }
-	if ps.DefaultInboxTTL == "0s" { ps.DefaultInboxTTL = "" }
-	if ps.MaxInboxTTL == "0s" { ps.MaxInboxTTL = "" }
+	if tz == "" {
+		tz = "UTC"
+	}
+	if df == "" {
+		df = "YYYY-MM-DD"
+	}
+	if tf == "" {
+		tf = "24h"
+	}
+	if ps.DefaultInboxTTL == "0s" {
+		ps.DefaultInboxTTL = ""
+	}
+	if ps.MaxInboxTTL == "0s" {
+		ps.MaxInboxTTL = ""
+	}
 	ps.Timezone = tz
 	ps.DateFormat = df
 	ps.TimeFormat = tf
@@ -373,16 +422,16 @@ func (h *AdminHandler) UpdatePlatformSettings(w http.ResponseWriter, r *http.Req
 	lkBefore := h.cfg.LockoutPolicy()
 	dBefore := h.cfg.RuntimeDefaults()
 	before := map[string]any{
-		"allow_registration":    dBefore.AllowRegistration,
-		"email_verification":    h.cfg.EmailVerificationEnabled(),
-		"password_min_length":   pwBefore.MinLength,
-		"password_require_upper": pwBefore.RequireUppercase,
-		"password_require_lower": pwBefore.RequireLowercase,
-		"password_require_number": pwBefore.RequireNumber,
+		"allow_registration":       dBefore.AllowRegistration,
+		"email_verification":       h.cfg.EmailVerificationEnabled(),
+		"password_min_length":      pwBefore.MinLength,
+		"password_require_upper":   pwBefore.RequireUppercase,
+		"password_require_lower":   pwBefore.RequireLowercase,
+		"password_require_number":  pwBefore.RequireNumber,
 		"password_require_special": pwBefore.RequireSpecial,
-		"lockout_max_attempts":  lkBefore.MaxAttempts,
-		"lockout_duration_mins": int(lkBefore.Duration.Minutes()),
-		"max_sessions_per_user": dBefore.MaxSessionsPerUser,
+		"lockout_max_attempts":     lkBefore.MaxAttempts,
+		"lockout_duration_mins":    int(lkBefore.Duration.Minutes()),
+		"max_sessions_per_user":    dBefore.MaxSessionsPerUser,
 	}
 
 	// Validate duration fields before any mutation
@@ -443,16 +492,16 @@ func (h *AdminHandler) UpdatePlatformSettings(w http.ResponseWriter, r *http.Req
 	})
 
 	after := map[string]any{
-		"allow_registration":    input.AllowRegistration,
-		"email_verification":    input.EmailVerification,
-		"password_min_length":   input.PasswordMinLength,
-		"password_require_upper": input.PasswordRequireUpper,
-		"password_require_lower": input.PasswordRequireLower,
-		"password_require_number": input.PasswordRequireNum,
+		"allow_registration":       input.AllowRegistration,
+		"email_verification":       input.EmailVerification,
+		"password_min_length":      input.PasswordMinLength,
+		"password_require_upper":   input.PasswordRequireUpper,
+		"password_require_lower":   input.PasswordRequireLower,
+		"password_require_number":  input.PasswordRequireNum,
 		"password_require_special": input.PasswordRequireSpec,
-		"lockout_max_attempts":  input.LockoutMaxAttempts,
-		"lockout_duration_mins": input.LockoutDurationMins,
-		"max_sessions_per_user": input.MaxSessionsPerUser,
+		"lockout_max_attempts":     input.LockoutMaxAttempts,
+		"lockout_duration_mins":    input.LockoutDurationMins,
+		"max_sessions_per_user":    input.MaxSessionsPerUser,
 	}
 
 	auditRecordEnhanced(r, uuid.Nil, "admin.platform_settings_updated", "platform", uuid.Nil, "platform", map[string]any{
