@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.0.4 (June 2026) — Landing motion layer
+
+A restrained, token-based motion pass over the public landing and `/try` surfaces (the marketing surfaces governed by the vendored design-audit skill). The product app UI is unchanged.
+
+### Changed
+- **Entrance and scroll-reveal motion.** Above-the-fold hero content now rises in on load with a short stagger; the lifecycle, capabilities, ownership, and closing-CTA sections reveal as they scroll into view. Implemented purely in CSS (an on-load keyframe plus `animation-timeline: view()` for the scroll reveals), so there is no JavaScript scroll listener, no added dependency, no flash of hidden content, and unsupported browsers simply render the static layout.
+- **Tactile interaction states.** Primary CTAs press down on `:active` and their arrow nudges right on hover; lifecycle cells and capability rows tint on hover, with capability icons lighting to the brand accent. The deploy terminal in the ownership section gains a blinking cursor.
+- **Depth.** A faint dotted datasheet backdrop behind the hero (tinted to the foreground token and masked to fade out) and a subtle brand-tinted veil behind the closing CTA, both well under the accent budget.
+- **Accessibility.** Every animation is gated on `prefers-reduced-motion: no-preference` and collapses to the static, fully visible layout under reduced motion. Colors stay on the OKLCH design tokens; no hardcoded values were introduced.
+
 ## v1.0.3 (June 2026) — Env-only configuration defaults
 
 Completes the 12-factor boot story started in v1.0.2. Every operational config key now has a sane default registered in code, so the binary runs correctly with secrets in the environment and **no `config.yaml`**, and every `BB_*` override actually applies.
