@@ -3,7 +3,7 @@
   "info": {
     "title": "BurnerByte API",
     "description": "Self-hosted temporary email platform API",
-    "version": "1.0.8",
+    "version": "1.0.9",
     "license": {
       "name": "Apache 2.0",
       "url": "https://www.apache.org/licenses/LICENSE-2.0"
@@ -2458,6 +2458,49 @@
           },
           "400": {
             "description": "Validation error"
+          }
+        }
+      }
+    },
+    "/admin/infra/test-storage": {
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Test the configured object storage (system admin)",
+        "description": "Checks that the live S3/MinIO backend is reachable and the configured bucket exists. Returns success/false with a message and round-trip time.",
+        "responses": {
+          "200": {
+            "description": "Test result: { success, message, response_time }"
+          }
+        }
+      }
+    },
+    "/admin/config/storage": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Get object-storage config (system admin)",
+        "description": "Returns the current S3/MinIO settings with the secret key masked (has_secret_key indicates whether a secret is stored). The bucket is read-only at runtime.",
+        "responses": {
+          "200": {
+            "description": "{ endpoint, access_key, bucket, use_ssl, has_secret_key }"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Update object-storage config (system admin)",
+        "description": "Verifies the connection, persists the settings (secret key encrypted at rest), and broadcasts a reload so the API and SMTP ingest server rebuild their storage clients live; no restart needed. The bucket is preserved; an empty secret key keeps the stored one.",
+        "responses": {
+          "200": {
+            "description": "Saved"
+          },
+          "400": {
+            "description": "Validation error or connection failure"
           }
         }
       }

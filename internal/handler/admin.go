@@ -14,16 +14,17 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/minio/minio-go/v7"
 	"github.com/redis/go-redis/v9"
 
 	"gitlab.com/burnerbyte/burnerbyte/internal/auth"
+	"gitlab.com/burnerbyte/burnerbyte/internal/cfgsync"
 	"gitlab.com/burnerbyte/burnerbyte/internal/config"
 	appcrypto "gitlab.com/burnerbyte/burnerbyte/internal/crypto"
 	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
 	"gitlab.com/burnerbyte/burnerbyte/internal/mailer"
 	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
 	"gitlab.com/burnerbyte/burnerbyte/internal/service"
+	"gitlab.com/burnerbyte/burnerbyte/internal/storage"
 )
 
 var startTime = time.Now()
@@ -41,13 +42,13 @@ type AdminHandler struct {
 	cfg               *config.Config
 	pool              *pgxpool.Pool
 	rdb               *redis.Client
-	s3                *minio.Client
+	storageMgr        *storage.Manager
 	bucket            string
 	mailer            *mailer.Mailer
 }
 
-func NewAdminHandler(analyticsSvc *service.AnalyticsService, orgSvc *service.OrgService, authSvc *service.AuthService, sysConfig *postgres.SystemConfigRepo, ssoProviderRepo *postgres.SSOProviderRepo, domainMappingRepo *postgres.SSODomainMappingRepo, teamRepo *postgres.TeamRepo, ssoMgr *auth.SSOManager, encryptor *appcrypto.Encryptor, cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, s3 *minio.Client, bucket string, ml *mailer.Mailer) *AdminHandler {
-	return &AdminHandler{analyticsSvc: analyticsSvc, orgSvc: orgSvc, authSvc: authSvc, sysConfig: sysConfig, ssoProviderRepo: ssoProviderRepo, domainMappingRepo: domainMappingRepo, teamRepo: teamRepo, ssoMgr: ssoMgr, encryptor: encryptor, cfg: cfg, pool: pool, rdb: rdb, s3: s3, bucket: bucket, mailer: ml}
+func NewAdminHandler(analyticsSvc *service.AnalyticsService, orgSvc *service.OrgService, authSvc *service.AuthService, sysConfig *postgres.SystemConfigRepo, ssoProviderRepo *postgres.SSOProviderRepo, domainMappingRepo *postgres.SSODomainMappingRepo, teamRepo *postgres.TeamRepo, ssoMgr *auth.SSOManager, encryptor *appcrypto.Encryptor, cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, storageMgr *storage.Manager, bucket string, ml *mailer.Mailer) *AdminHandler {
+	return &AdminHandler{analyticsSvc: analyticsSvc, orgSvc: orgSvc, authSvc: authSvc, sysConfig: sysConfig, ssoProviderRepo: ssoProviderRepo, domainMappingRepo: domainMappingRepo, teamRepo: teamRepo, ssoMgr: ssoMgr, encryptor: encryptor, cfg: cfg, pool: pool, rdb: rdb, storageMgr: storageMgr, bucket: bucket, mailer: ml}
 }
 
 func (h *AdminHandler) Stats(w http.ResponseWriter, r *http.Request) {
@@ -131,9 +132,9 @@ func (h *AdminHandler) Health(w http.ResponseWriter, r *http.Request) {
 
 	check("postgres", func() error { return h.pool.Ping(ctx) })
 	check("redis", func() error { return h.rdb.Ping(ctx).Err() })
-	if h.s3 != nil {
-		check("minio", func() error {
-			_, err := h.s3.BucketExists(ctx, h.bucket)
+	if h.storageMgr != nil && h.storageMgr.IsS3() {
+		check("storage", func() error {
+			_, err := h.storageMgr.BucketExists(ctx, h.bucket)
 			return err
 		})
 	}
@@ -248,6 +249,119 @@ func (h *AdminHandler) UpdateMailerConfig(w http.ResponseWriter, r *http.Request
 	h.mailer.Reconfigure(newCfg)
 	auditRecordEnhanced(r, uuid.Nil, "admin.mailer_config_updated", "config", uuid.Nil, "mailer",
 		map[string]any{"host": newCfg.Host, "port": newCfg.Port, "tls": newCfg.TLS})
+	writeJSON(w, http.StatusOK, map[string]any{"success": true})
+}
+
+// currentStorageConfig returns the persisted storage config, falling back to the
+// boot-time (env/config-file) value when no row has been saved.
+func (h *AdminHandler) currentStorageConfig(ctx context.Context) config.MinIOConfig {
+	var sc config.MinIOConfig
+	if err := h.sysConfig.Get(ctx, "storage", &sc); err != nil {
+		return h.cfg.MinIO
+	}
+	return sc
+}
+
+// TestStorage verifies connectivity to the live object storage by checking the
+// configured bucket exists. System-admin only.
+func (h *AdminHandler) TestStorage(w http.ResponseWriter, r *http.Request) {
+	if h.storageMgr == nil || !h.storageMgr.IsS3() {
+		writeJSON(w, http.StatusOK, map[string]any{
+			"success": false,
+			"message": "object storage is not configured (using local filesystem)",
+		})
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+	start := time.Now()
+	exists, err := h.storageMgr.BucketExists(ctx, h.bucket)
+	elapsed := time.Since(start)
+	if err != nil {
+		writeJSON(w, http.StatusOK, map[string]any{"success": false, "message": err.Error(), "response_time": elapsed.String()})
+		return
+	}
+	if !exists {
+		writeJSON(w, http.StatusOK, map[string]any{"success": false, "message": fmt.Sprintf("connected, but bucket %q does not exist", h.bucket), "response_time": elapsed.String()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"success": true, "message": fmt.Sprintf("Connected; bucket %q is reachable", h.bucket), "response_time": elapsed.String()})
+}
+
+// GetStorageConfig returns the current object-storage settings with the secret
+// key masked. The bucket is read-only at runtime (changing it would strand
+// existing attachments), so the editor shows it but does not send changes.
+func (h *AdminHandler) GetStorageConfig(w http.ResponseWriter, r *http.Request) {
+	sc := h.currentStorageConfig(r.Context())
+	writeJSON(w, http.StatusOK, map[string]any{
+		"endpoint":       sc.Endpoint,
+		"access_key":     sc.AccessKey,
+		"bucket":         sc.Bucket,
+		"use_ssl":        sc.UseSSL,
+		"has_secret_key": sc.SecretKey != "",
+	})
+}
+
+// UpdateStorageConfig persists new object-storage settings and broadcasts a
+// reload so every process (api + smtpd) rebuilds its storage client live. The
+// new config is verified (connect + bucket) before it is saved, so bad
+// credentials are rejected without disturbing the running backend. The bucket is
+// preserved from the current config; an empty secret key keeps the stored one.
+func (h *AdminHandler) UpdateStorageConfig(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Endpoint  string `json:"endpoint"`
+		AccessKey string `json:"access_key"`
+		SecretKey string `json:"secret_key"`
+		UseSSL    bool   `json:"use_ssl"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if in.Endpoint == "" {
+		writeError(w, http.StatusBadRequest, "endpoint is required")
+		return
+	}
+	if in.AccessKey == "" {
+		writeError(w, http.StatusBadRequest, "access key is required")
+		return
+	}
+
+	cur := h.currentStorageConfig(r.Context())
+	if cur.Bucket == "" {
+		writeError(w, http.StatusBadRequest, "no bucket configured; set BB_MINIO_BUCKET and restart before editing storage here")
+		return
+	}
+	secret := in.SecretKey
+	if secret == "" {
+		secret = cur.SecretKey // unchanged
+	}
+	newCfg := config.MinIOConfig{
+		Endpoint:  in.Endpoint,
+		AccessKey: in.AccessKey,
+		SecretKey: secret,
+		Bucket:    cur.Bucket, // immutable at runtime
+		UseSSL:    in.UseSSL,
+	}
+
+	// Verify before persisting: NewS3 connects and ensures the bucket. On
+	// failure nothing is saved and the running backend is untouched.
+	ctx, cancel := context.WithTimeout(r.Context(), 12*time.Second)
+	defer cancel()
+	if _, err := storage.NewS3(ctx, newCfg); err != nil {
+		writeError(w, http.StatusBadRequest, "could not connect to storage: "+err.Error())
+		return
+	}
+	if err := h.sysConfig.Set(r.Context(), "storage", newCfg); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to save storage config")
+		return
+	}
+	// Broadcast: every process (including this one) reloads its storage client.
+	if err := cfgsync.Publish(r.Context(), h.rdb, "storage"); err != nil {
+		slog.Error("failed to publish storage reload", "error", err)
+	}
+	auditRecordEnhanced(r, uuid.Nil, "admin.storage_config_updated", "config", uuid.Nil, "storage",
+		map[string]any{"endpoint": newCfg.Endpoint, "bucket": newCfg.Bucket, "use_ssl": newCfg.UseSSL})
 	writeJSON(w, http.StatusOK, map[string]any{"success": true})
 }
 
