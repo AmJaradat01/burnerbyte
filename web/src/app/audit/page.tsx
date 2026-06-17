@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { api } from "@/lib/api";
+import { NoOrgState } from "@/components/no-org-state";
 import { useOrgStore } from "@/stores/org-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { useQuery } from "@tanstack/react-query";
@@ -206,7 +207,7 @@ export default function AuditPage() {
     }
   };
 
-  if (!currentOrg) return <p className="text-muted-foreground">Select an organization first.</p>;
+  if (!currentOrg) return <NoOrgState />;
 
   const isAdmin = hasPermission("org.audit.view") || user?.is_system_admin;
   if (!isAdmin) return <div className="flex items-center justify-center min-h-[50vh]"><p className="text-muted-foreground">You don&apos;t have permission to access this page.</p></div>;
