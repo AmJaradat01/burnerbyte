@@ -429,7 +429,7 @@ function InboxCard({ inbox, onExtend, onDelete }: { inbox: Inbox; onExtend: () =
 
   return (
     <Card
-      className={`transition-colors hover:border-primary/30 cursor-pointer group ${!inbox.is_active ? "opacity-60" : ""} ${expiringSoon ? "border-dashed border-warning/20" : ""}`}
+      className={`transition-[color,box-shadow,border-color] hover:border-primary/30 hover:shadow-md cursor-pointer group ${!inbox.is_active ? "opacity-60" : ""} ${expiringSoon ? "border-warning/40" : ""}`}
       onClick={() => router.push(`/inboxes/${inbox.id}`)}
     >
       <CardContent className="pt-4 pb-3 space-y-2.5">
