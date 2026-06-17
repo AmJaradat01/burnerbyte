@@ -1,6 +1,8 @@
 package config
 
 import (
+	"errors"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -269,10 +271,17 @@ type WorkersConfig struct {
 func Load() (*Config, error) {
 	v := viper.New()
 
-	v.SetConfigName("config")
-	v.SetConfigType("yaml")
-	v.AddConfigPath(".")
-	v.AddConfigPath("/etc/burnerbyte")
+	// An explicit BB_CONFIG_PATH wins (this is also where the first-run installer
+	// writes, so write and read stay consistent); otherwise search the
+	// conventional locations.
+	if p := strings.TrimSpace(os.Getenv("BB_CONFIG_PATH")); p != "" {
+		v.SetConfigFile(p)
+	} else {
+		v.SetConfigName("config")
+		v.SetConfigType("yaml")
+		v.AddConfigPath(".")
+		v.AddConfigPath("/etc/burnerbyte")
+	}
 
 	v.SetEnvPrefix("BB")
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
@@ -396,7 +405,11 @@ func Load() (*Config, error) {
 	v.BindEnv("logging.format", "LOG_FORMAT")
 
 	if err := v.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+		// A missing config file is fine: env + defaults drive the config, and the
+		// first-run installer writes one. Tolerate both the search-path "not found"
+		// and an explicit BB_CONFIG_PATH that does not exist yet (first boot).
+		_, notFound := err.(viper.ConfigFileNotFoundError)
+		if !notFound && !errors.Is(err, os.ErrNotExist) {
 			return nil, err
 		}
 	}
