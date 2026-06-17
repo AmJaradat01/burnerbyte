@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { api } from "@/lib/api";
 import { NoOrgState } from "@/components/no-org-state";
 import { useOrgStore } from "@/stores/org-store";
@@ -165,6 +165,11 @@ export default function AuditPage() {
     enabled: scope === "platform" || !!currentOrg,
   });
 
+  // A system admin with no organization can only view platform-scope events.
+  useEffect(() => {
+    if (!currentOrg) setScope("platform");
+  }, [currentOrg]);
+
   const clearFilters = () => { setAction(""); setActorEmail(""); setResource(""); setResourceName(""); setDateFrom(""); setDateTo(""); setPage(1); };
   const hasFilters = action || actorEmail || resource || resourceName || dateFrom || dateTo;
 
@@ -207,7 +212,7 @@ export default function AuditPage() {
     }
   };
 
-  if (!currentOrg) return <NoOrgState />;
+  if (!currentOrg && !user?.is_system_admin) return <NoOrgState />;
 
   const isAdmin = hasPermission("org.audit.view") || user?.is_system_admin;
   if (!isAdmin) return <div className="flex items-center justify-center min-h-[50vh]"><p className="text-muted-foreground">You don&apos;t have permission to access this page.</p></div>;
@@ -248,7 +253,7 @@ export default function AuditPage() {
         )}
       </header>
 
-      {user?.is_system_admin && (
+      {user?.is_system_admin && currentOrg && (
         <div
           className="inline-flex items-center gap-0.5 rounded-lg border border-border bg-muted/40 p-0.5 text-xs font-medium"
           role="tablist"

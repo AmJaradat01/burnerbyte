@@ -35,9 +35,12 @@ export default function SettingsPage() {
   const user = useAuthStore((s) => s.user);
   const isAdmin = hasPermission("org.settings.manage") || user?.is_system_admin;
   if (!isAdmin) return <div className="flex items-center justify-center min-h-[50vh]"><p className="text-muted-foreground">You don&apos;t have permission to access settings.</p></div>;
-  if (!currentOrg) return <NoOrgState />;
 
   const isSysAdmin = user?.is_system_admin ?? false;
+  // Org-scoped settings (General, Users) need an organization; platform settings
+  // (Roles, SSO, System) do not, so a system admin can manage the platform with
+  // no org of their own.
+  if (!currentOrg && !isSysAdmin) return <NoOrgState />;
 
   return (
     <div className="space-y-6">
@@ -50,19 +53,19 @@ export default function SettingsPage() {
           <p className="text-sm text-muted-foreground">Manage your organization, members, and system configuration.</p>
         </div>
       </header>
-      <Tabs defaultValue="general">
+      <Tabs defaultValue={currentOrg ? "general" : "overview"}>
         <TabsList className="flex-wrap">
-          <TabsTrigger value="general" className="gap-1.5"><Settings className="h-3.5 w-3.5" /> General</TabsTrigger>
-          <TabsTrigger value="users" className="gap-1.5"><Users className="h-3.5 w-3.5" /> Users</TabsTrigger>
+          {currentOrg && <TabsTrigger value="general" className="gap-1.5"><Settings className="h-3.5 w-3.5" /> General</TabsTrigger>}
+          {currentOrg && <TabsTrigger value="users" className="gap-1.5"><Users className="h-3.5 w-3.5" /> Users</TabsTrigger>}
           {isSysAdmin && <>
-            <div className="mx-1 h-4 w-px bg-border self-center" />
+            {currentOrg && <div className="mx-1 h-4 w-px bg-border self-center" />}
             <TabsTrigger value="roles" className="gap-1.5"><Shield className="h-3.5 w-3.5" /> Roles</TabsTrigger>
             <TabsTrigger value="sso" className="gap-1.5"><Key className="h-3.5 w-3.5" /> SSO</TabsTrigger>
             <TabsTrigger value="overview" className="gap-1.5"><Activity className="h-3.5 w-3.5" /> System</TabsTrigger>
           </>}
         </TabsList>
-        <TabsContent value="general"><GeneralTab org={currentOrg} onSaved={fetchOrgs} /></TabsContent>
-        <TabsContent value="users"><UnifiedUsersTab orgId={currentOrg.id} /></TabsContent>
+        {currentOrg && <TabsContent value="general"><GeneralTab org={currentOrg} onSaved={fetchOrgs} /></TabsContent>}
+        {currentOrg && <TabsContent value="users"><UnifiedUsersTab orgId={currentOrg.id} /></TabsContent>}
         {isSysAdmin && <TabsContent value="roles"><RolesTab /></TabsContent>}
         {isSysAdmin && <TabsContent value="sso"><SSOProvidersTab /></TabsContent>}
         {isSysAdmin && <TabsContent value="overview"><OverviewTab /></TabsContent>}
