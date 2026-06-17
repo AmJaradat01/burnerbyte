@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
+import { NoOrgState } from "@/components/no-org-state";
 import { validateSSOProviderForm, ssoSummaryStats } from "@/lib/sso";
 import { EmptyState } from "@/components/empty-state";
 import { copyToClipboard } from "@/lib/clipboard";
@@ -34,7 +35,7 @@ export default function SettingsPage() {
   const user = useAuthStore((s) => s.user);
   const isAdmin = hasPermission("org.settings.manage") || user?.is_system_admin;
   if (!isAdmin) return <div className="flex items-center justify-center min-h-[50vh]"><p className="text-muted-foreground">You don&apos;t have permission to access settings.</p></div>;
-  if (!currentOrg) return <p className="text-muted-foreground">Select an organization first.</p>;
+  if (!currentOrg) return <NoOrgState />;
 
   const isSysAdmin = user?.is_system_admin ?? false;
 

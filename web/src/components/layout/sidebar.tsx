@@ -79,7 +79,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
-  const { currentOrg } = useOrgStore();
+  const { currentOrg, orgs } = useOrgStore();
   const t = useTranslations("nav");
   const tc = useTranslations("common");
 
@@ -198,23 +198,25 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           />
         ))}
 
-        {/* Manage section */}
-        <div className="pt-3 mt-3 border-t border-border/50">
-          {!collapsed && (
-            <p className="px-3 pb-2 text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-widest">
-              {t("manage")}
-            </p>
-          )}
-          {collapsed && <div className="h-2" />}
-          {manageItems.map((item) => (
-            <NavLink
-              key={item.href}
-              {...item}
-              collapsed={collapsed}
-              active={pathname.startsWith(item.href)}
-            />
-          ))}
-        </div>
+        {/* Manage section — org-scoped, hidden until the user has an organization */}
+        {orgs.length > 0 && (
+          <div className="pt-3 mt-3 border-t border-border/50">
+            {!collapsed && (
+              <p className="px-3 pb-2 text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-widest">
+                {t("manage")}
+              </p>
+            )}
+            {collapsed && <div className="h-2" />}
+            {manageItems.map((item) => (
+              <NavLink
+                key={item.href}
+                {...item}
+                collapsed={collapsed}
+                active={pathname.startsWith(item.href)}
+              />
+            ))}
+          </div>
+        )}
       </nav>
 
       {/* ── User section ── */}
