@@ -161,7 +161,7 @@ function TeamCard({ team, onSelect }: { team: Team; onSelect: () => void }) {
   const inboxes = team.active_inboxes ?? 0;
   return (
     <Card
-      className="cursor-pointer group hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] transition-shadow"
+      className="cursor-pointer group hover:shadow-md transition-shadow"
       onClick={onSelect}
       role="button"
       tabIndex={0}
