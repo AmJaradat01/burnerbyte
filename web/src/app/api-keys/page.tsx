@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import Link from "next/link";
 import { api } from "@/lib/api";
 import { copyToClipboard } from "@/lib/clipboard";
 import { useOrgStore } from "@/stores/org-store";
@@ -37,6 +36,7 @@ import { toast } from "sonner";
 import { Pagination } from "@/components/pagination";
 import { ErrorState } from "@/components/error-state";
 import { EmptyState } from "@/components/empty-state";
+import { NoTeamState } from "@/components/no-team-state";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import {
   AlertTriangle,
@@ -162,15 +162,7 @@ export default function ApiKeysPage() {
     onSuccess: () => toast.success("API key revoked"),
   });
 
-  if (!currentTeam)
-    return (
-      <div className="text-center py-12 space-y-3">
-        <p className="text-muted-foreground">Select a team to manage API keys.</p>
-        <Link href="/teams">
-          <Button variant="outline" size="sm">Go to Teams</Button>
-        </Link>
-      </div>
-    );
+  if (!currentTeam) return <NoTeamState resource="API keys" />;
 
   const isAdmin = hasPermission("org.settings.manage") || user?.is_system_admin;
   if (!isAdmin)
