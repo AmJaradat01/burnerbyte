@@ -88,6 +88,29 @@ func TestEncryptionKeyEnvBinding(t *testing.T) {
 	}
 }
 
+// TestCORSAllowedOriginsEnvSplit guards that a comma-separated
+// BB_CORS_ALLOWED_ORIGINS env value parses into the []string the CORS and
+// WebSocket origin checks consume. The docker-compose CORS passthrough relies on
+// this (viper's default decoder composes StringToSliceHookFunc(",")).
+func TestCORSAllowedOriginsEnvSplit(t *testing.T) {
+	t.Setenv("BB_CORS_ALLOWED_ORIGINS", "https://a.example.com,https://b.example.com")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() failed: %v", err)
+	}
+	got := cfg.CORS.AllowedOrigins
+	want := []string{"https://a.example.com", "https://b.example.com"}
+	if len(got) != len(want) {
+		t.Fatalf("AllowedOrigins = %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("AllowedOrigins[%d] = %q, want %q", i, got[i], want[i])
+		}
+	}
+}
+
 // TestEnvOnlyDefaults simulates a 12-factor deployment (secrets in env, no
 // config.yaml — the test's working directory has none) and asserts the
 // operational config loads with sane, non-zero defaults. Every key here is a
