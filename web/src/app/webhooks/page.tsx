@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { api } from "@/lib/api";
 import { copyToClipboard } from "@/lib/clipboard";
 import { useOrgStore } from "@/stores/org-store";
@@ -20,6 +19,7 @@ import { toast } from "sonner";
 import { Pagination } from "@/components/pagination";
 import { ErrorState } from "@/components/error-state";
 import { EmptyState } from "@/components/empty-state";
+import { NoTeamState } from "@/components/no-team-state";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { AlertCircle, AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Clock, Code2, Copy, ExternalLink, Globe, Inbox, Link2, Mail, Pencil, Plus, Trash2, XCircle } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -103,7 +103,7 @@ export default function WebhooksPage() {
     onSuccess: () => toast.success("Webhook deleted"),
   });
 
-  if (!currentTeam) return <div className="text-center py-12 space-y-3"><p className="text-muted-foreground">Select a team to manage webhooks.</p><Link href="/teams"><Button variant="outline" size="sm">Go to Teams</Button></Link></div>;
+  if (!currentTeam) return <NoTeamState resource="Webhooks" />;
 
   const isAdmin = hasPermission("org.settings.manage") || user?.is_system_admin;
   if (!isAdmin) return <div className="flex items-center justify-center min-h-[50vh]"><p className="text-muted-foreground">You don&apos;t have permission to access this page.</p></div>;

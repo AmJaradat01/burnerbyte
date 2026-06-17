@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.2.3 (June 2026) — Webhooks / API keys no-team empty state
+
+Completes the empty-state work on the two team-scoped pages.
+
+### Changed
+- **Webhooks and API keys now use a shared `NoTeamState`** empty state when the org has no team, replacing a bespoke inline message. Since the first team auto-selects, "no current team" means the org genuinely has no teams, so the copy now says to create one ("Webhooks/API keys belong to a team. Create your first team to get started.") with a "Go to Teams" action, matching the `NoOrgState` and `EmptyState` patterns.
+
 ## v1.2.2 (June 2026) — Force onboarding; no more org dead-ends
 
 Fixes a state where a signed-in user with no organization landed on org-scoped pages that just said "Select an organization first." with no way forward.
