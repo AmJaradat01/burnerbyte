@@ -1,5 +1,19 @@
 # Changelog
 
+## v1.1.0 (June 2026) — First-run web installer
+
+Completes the infrastructure-setup work. The database and Redis are hard bootstrap dependencies (the app, and its own setup state, cannot run without them), so they cannot be configured from the in-app setup wizard. This adds the missing piece: a guarded, two-phase boot that configures them from a browser.
+
+### Added
+- **First-run web installer (`internal/installer`).** When the API binary starts with no database configured (`DATABASE_URL` unset and no `config.yaml`), it boots into a token-gated installer instead of exiting. It collects the database URL, Redis URL, JWT secret, and optional encryption key; verifies the connections; writes `config.yaml` (0600, secrets included); and re-execs into normal boot (falling back to a clean exit so a restart-policy supervisor starts a fresh, configured process).
+- The installer serves a self-contained page (no framework, since nothing else is up yet) with connection testing and one-click secret generation. The write target is `./config.yaml`, overridable with `BB_CONFIG_PATH`.
+
+### Security
+- Every installer endpoint is gated by a 256-bit one-time token printed to the server logs (constant-time comparison). An already-configured instance never enters installer mode, so the installer can never repoint a live deployment's datastore. Docker and systemd deployments set `DATABASE_URL` in the environment and skip the installer entirely.
+
+### Notes
+- This closes the infrastructure-setup track: read-only health (v1.0.7), runtime mailer editor (v1.0.8), runtime storage editor with cross-process hot-reload (v1.0.9), and now the first-run installer. Database and Redis connection settings remain file/env-based by design; everything else is editable at runtime from the admin UI.
+
 ## v1.0.9 (June 2026) — Runtime storage editor with cross-process hot-reload
 
 Object storage (S3/MinIO) can now be edited from the admin UI after setup, and the change is applied live in every process.
