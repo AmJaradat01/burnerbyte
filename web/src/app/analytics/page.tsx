@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { api } from "@/lib/api";
+import { NoOrgState } from "@/components/no-org-state";
 import { useOrgStore } from "@/stores/org-store";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -39,7 +40,7 @@ function formatHour(hour: number): string {
 export default function AnalyticsPage() {
   const { currentOrg, teams } = useOrgStore();
   const [selectedTeamId, setSelectedTeamId] = useState<string>("");
-  if (!currentOrg) return <p className="text-muted-foreground">Select an organization first.</p>;
+  if (!currentOrg) return <NoOrgState />;
 
   const selectedTeam = teams.find((t) => t.id === selectedTeamId);
 

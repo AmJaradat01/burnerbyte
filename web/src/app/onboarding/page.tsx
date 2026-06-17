@@ -100,7 +100,6 @@ export default function OnboardingPage() {
   const finish = async () => {
     setBusy(true);
     try {
-      localStorage.setItem("bb_onboarding_done", "true");
       await fetchOrgs();
       if (org) setCurrentOrg(org);
       if (org) {
@@ -111,11 +110,6 @@ export default function OnboardingPage() {
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed");
     } finally { setBusy(false); }
-  };
-
-  const skip = () => {
-    localStorage.setItem("bb_onboarding_done", "true");
-    router.push("/dashboard");
   };
 
   const copyRecord = () => {
@@ -176,10 +170,7 @@ export default function OnboardingPage() {
                     <Label htmlFor="onb-org-name">Organization name</Label>
                     <Input id="onb-org-name" value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="My Company" autoFocus onKeyDown={(e) => e.key === "Enter" && orgName && createOrg()} />
                   </div>
-                  <div className="flex justify-between">
-                    <Button variant="ghost" size="sm" onClick={skip} disabled={busy} className="gap-1.5 text-muted-foreground">
-                      <SkipForward className="h-3.5 w-3.5" /> Skip setup
-                    </Button>
+                  <div className="flex justify-end">
                     <Button onClick={createOrg} disabled={!orgName || busy} className="gap-1.5">
                       {busy ? <><RefreshCw className="h-3.5 w-3.5 animate-spin" /> Creating…</> : <>Create org <ArrowRight className="h-3.5 w-3.5" /></>}
                     </Button>
