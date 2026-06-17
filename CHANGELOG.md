@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.2.4 (June 2026) — Platform administration without an organization
+
+A system admin can now operate the platform without belonging to an organization, instead of being forced into the org-creation wizard. Regular users are still routed through onboarding.
+
+### Changed
+- **System admins are exempt from the forced onboarding redirect.** A zero-org admin is guided by empty-state CTAs rather than trapped in `/onboarding`; non-admins are still redirected (they must create or join an org).
+- **The sidebar keeps platform surfaces reachable for a no-org admin** — Settings and Audit show even with no organization (the org-scoped items still appear only once an org exists).
+- **Settings is decoupled from the org for platform tabs.** Roles, SSO, and System are available to a system admin with no org; General and Users (org-scoped) appear only when an org is selected, and the default tab falls back to System.
+- **Audit serves platform scope without an org.** A no-org admin sees platform-level events directly (the org/platform scope toggle appears only when an org is selected).
+
+### Notes
+- The org-creation onboarding, invite acceptance, docs, and account pages remain reachable for everyone with no org; org-scoped pages still show the `NoOrgState` "Create organization" CTA.
+
 ## v1.2.3 (June 2026) — Webhooks / API keys no-team empty state
 
 Completes the empty-state work on the two team-scoped pages.

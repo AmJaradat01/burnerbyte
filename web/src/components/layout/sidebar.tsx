@@ -107,6 +107,12 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     { href: "/settings", label: t("settings"), icon: Settings },
   ];
 
+  // With an org, all manage items show. With none, a system admin still reaches
+  // the platform-level surfaces (settings → System/SSO/Roles, platform audit);
+  // everyone else has the section hidden (they are sent to onboarding).
+  const platformManageItems = manageItems.filter((i) => i.href === "/settings" || i.href === "/audit");
+  const visibleManageItems = orgs.length > 0 ? manageItems : (user?.is_system_admin ? platformManageItems : []);
+
   const version = versionData?.version;
   // Strip leading 'v' if present to avoid double-v display
   const displayVersion = version?.replace(/^v/, "");
@@ -198,8 +204,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           />
         ))}
 
-        {/* Manage section — org-scoped, hidden until the user has an organization */}
-        {orgs.length > 0 && (
+        {/* Manage section — full set with an org; platform-only for a no-org
+            system admin; hidden otherwise. */}
+        {visibleManageItems.length > 0 && (
           <div className="pt-3 mt-3 border-t border-border/50">
             {!collapsed && (
               <p className="px-3 pb-2 text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-widest">
@@ -207,7 +214,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               </p>
             )}
             {collapsed && <div className="h-2" />}
-            {manageItems.map((item) => (
+            {visibleManageItems.map((item) => (
               <NavLink
                 key={item.href}
                 {...item}
