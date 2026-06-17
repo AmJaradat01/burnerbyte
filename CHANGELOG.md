@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.2.1 (June 2026) — Design refresh: edge surfaces
+
+Aligns the two surfaces that intentionally live outside the token system to the refreshed palette, so the new look is consistent everywhere.
+
+### Changed
+- **Global error boundary** (`global-error.tsx`): its inline palette (it cannot use tokens, since it renders when the layout/CSS may have failed) now uses the cool near-white background, deeper indigo accent, and cool neutrals of the refreshed system, with the softer corner radius.
+- **Setup branding "Primary color" placeholder** updated to the new default indigo (`#2459e2`).
+
+### Notes
+- A full project sweep confirmed no other off-token shadows or colors remain (the only other literal hex values are Google's official SSO brand colors, which must stay exact). The v1.2.0 token refresh covers every other surface automatically.
+
 ## v1.2.0 (June 2026) — Design system refresh (Refined Workshop Bench)
 
 A project-wide visual refresh, done at the token layer so every surface updates cohesively. The "Workshop Bench" identity and all its rules are intact; this is the elevated, more premium execution of it.
