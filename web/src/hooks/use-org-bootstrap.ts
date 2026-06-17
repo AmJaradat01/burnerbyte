@@ -41,8 +41,12 @@ export function useOrgBootstrap() {
   // authoritative (based on the fetched org list, not a dismissable client
   // flag) so a zero-org user can never land on an unusable org-scoped page.
   // Account, invite, setup, docs, and onboarding itself are exempt.
+  //
+  // System admins are exempt: they operate the platform (SSO, roles, system
+  // audit, platform settings) which is not org-scoped, so they are guided by
+  // empty-state CTAs rather than trapped in the org-creation wizard.
   useEffect(() => {
-    if (!orgsLoaded || !user) return;
+    if (!orgsLoaded || !user || user.is_system_admin) return;
 
     const shouldSkip = ONBOARDING_SKIP_PATHS.some((p) => pathname.startsWith(p));
     if (shouldSkip) return;
