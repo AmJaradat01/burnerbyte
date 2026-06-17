@@ -153,6 +153,51 @@ func TestGate(t *testing.T) {
 	}
 }
 
+// TestWriteConfigLoadsBackThroughConfigLoad is the true round-trip: the installer
+// writes config.yaml at BB_CONFIG_PATH, and config.Load reads it back into the
+// running config (so the re-exec'd process boots configured, and Needed flips to
+// false). Ambient secret env vars are cleared so the file is the only source.
+func TestWriteConfigLoadsBackThroughConfigLoad(t *testing.T) {
+	for _, k := range []string{"DATABASE_URL", "REDIS_URL", "JWT_SECRET", "ENCRYPTION_KEY"} {
+		if v, ok := os.LookupEnv(k); ok {
+			os.Unsetenv(k)
+			defer os.Setenv(k, v)
+		}
+	}
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	t.Setenv("BB_CONFIG_PATH", path)
+
+	in := installInput{
+		DatabaseURL:   "postgres://u:p@db:5432/burnerbyte?sslmode=disable",
+		RedisURL:      "redis://:secret@redis:6379/0",
+		JWTSecret:     strings.Repeat("k", 40),
+		EncryptionKey: strings.Repeat("ab", 32),
+	}
+	if err := writeConfig(path, &config.Config{}, in); err != nil {
+		t.Fatalf("writeConfig: %v", err)
+	}
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("config.Load: %v", err)
+	}
+	if cfg.Database.URL != in.DatabaseURL {
+		t.Errorf("database.url = %q, want %q", cfg.Database.URL, in.DatabaseURL)
+	}
+	if cfg.Redis.URL != in.RedisURL {
+		t.Errorf("redis.url = %q, want %q", cfg.Redis.URL, in.RedisURL)
+	}
+	if cfg.JWT.Secret != in.JWTSecret {
+		t.Error("jwt.secret did not round-trip through config.Load")
+	}
+	if cfg.Encryption.Key != in.EncryptionKey {
+		t.Error("encryption.key did not round-trip through config.Load")
+	}
+	if Needed(cfg) {
+		t.Error("Needed should be false after the installer writes a database URL")
+	}
+}
+
 // handleComplete must reject invalid input before attempting any connection.
 func TestHandleCompleteValidation(t *testing.T) {
 	s := &server{cfg: &config.Config{}, done: make(chan struct{})}

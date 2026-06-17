@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.1.1 (June 2026) — Honor BB_CONFIG_PATH on load
+
+### Fixed
+- **`config.Load` now reads `BB_CONFIG_PATH`.** The first-run installer writes its `config.yaml` to `BB_CONFIG_PATH` (default `./config.yaml`), but `Load` only searched `.` and `/etc/burnerbyte`, so a custom `BB_CONFIG_PATH` produced a file the next boot never read, leaving the database unconfigured and looping back into the installer. `Load` now uses the explicit file when `BB_CONFIG_PATH` is set (and tolerates it not existing yet on first boot). This also lets operators point at a config file in any location. A round-trip test (installer write to `BB_CONFIG_PATH`, then `config.Load`) guards it.
+
 ## v1.1.0 (June 2026) — First-run web installer
 
 Completes the infrastructure-setup work. The database and Redis are hard bootstrap dependencies (the app, and its own setup state, cannot run without them), so they cannot be configured from the in-app setup wizard. This adds the missing piece: a guarded, two-phase boot that configures them from a browser.
