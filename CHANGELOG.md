@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.1.2 (June 2026) — CORS for custom-domain Docker deployments
+
+### Fixed
+- **docker-compose now passes CORS origins to the API.** The compose API service never set `BB_CORS_ALLOWED_ORIGINS`, so a deployment on a real domain was stuck at the `http://localhost:3000` default and the browser was blocked by CORS (and WebSocket origin checks) until the operator hand-edited the compose file. It now defaults to `FRONTEND_URL` (so setting your frontend URL is enough) and accepts a comma-separated `CORS_ALLOWED_ORIGINS` override for multiple origins. A test guards that the comma-separated env value parses into the origin list.
+
 ## v1.1.1 (June 2026) — Honor BB_CONFIG_PATH on load
 
 ### Fixed
