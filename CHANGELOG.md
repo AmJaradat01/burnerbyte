@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.2.0 (June 2026) — Design system refresh (Refined Workshop Bench)
+
+A project-wide visual refresh, done at the token layer so every surface updates cohesively. The "Workshop Bench" identity and all its rules are intact; this is the elevated, more premium execution of it.
+
+### Changed
+- **Cohesive cool-neutral ramp.** Surfaces, text, and lines are now all tinted toward the indigo axis (hue 265) at very low chroma, instead of mixing a warm paper (hue 75) with cool text. Cleaner, more deliberate, more premium, and it finally matches what DESIGN.md always described.
+- **Real, soft, layered elevation.** Tailwind's `shadow-*` scale is overridden to soft, two-layer shadows tinted to the indigo axis (never flat black), so cards have genuine depth and floating elements separate clearly. Every hardcoded black shadow in the codebase was migrated onto the scale; clickable cards now lift on hover.
+- **A deeper, more confident accent.** Primary indigo moves from `oklch(0.55 0.20 260)` to `oklch(0.52 0.215 264)` (also improves white-on-primary contrast). Borders soften (`0.86` → `0.90`) so cards lean on elevation rather than heavy lines.
+- **Sharper type hierarchy.** The headline step grows (`1.5rem` → `1.75rem`, tighter tracking) for clearer page presence; the corner radius softens slightly (`0.625rem` → `0.7rem`).
+
+### Notes
+- Light-only is preserved; the amber reservation (sidebar active + chart-1), the five-series chart palette, and the semantic colors are unchanged. Token-driven, so no component rewrites were needed beyond migrating shadows and adding hover lifts. DESIGN.md updated to document the refined system.
+
 ## v1.1.3 (June 2026) — Settings → System tab cohesion
 
 A product-UI polish pass on the admin System tab, aligning it to the "Workshop Bench" design system so the whole surface reads as one governance panel.

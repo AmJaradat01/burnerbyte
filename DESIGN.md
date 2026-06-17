@@ -2,20 +2,20 @@
 name: BurnerByte
 description: Self-hosted temporary email platform for technical teams
 colors:
-  background: "oklch(0.985 0.003 75)"
-  foreground: "oklch(0.14 0.02 260)"
-  card: "oklch(0.995 0.002 75)"
-  card-foreground: "oklch(0.14 0.02 260)"
-  popover: "oklch(0.995 0.002 75)"
-  popover-foreground: "oklch(0.14 0.02 260)"
-  primary: "oklch(0.55 0.20 260)"
-  primary-foreground: "oklch(0.985 0 0)"
-  secondary: "oklch(0.955 0.005 260)"
-  secondary-foreground: "oklch(0.25 0.015 260)"
-  muted: "oklch(0.955 0.005 260)"
-  muted-foreground: "oklch(0.46 0.015 260)"
-  accent: "oklch(0.94 0.015 260)"
-  accent-foreground: "oklch(0.25 0.015 260)"
+  background: "oklch(0.984 0.004 265)"
+  foreground: "oklch(0.16 0.028 265)"
+  card: "oklch(0.998 0.0015 265)"
+  card-foreground: "oklch(0.16 0.028 265)"
+  popover: "oklch(0.998 0.0015 265)"
+  popover-foreground: "oklch(0.16 0.028 265)"
+  primary: "oklch(0.52 0.215 264)"
+  primary-foreground: "oklch(0.99 0.002 265)"
+  secondary: "oklch(0.965 0.006 265)"
+  secondary-foreground: "oklch(0.30 0.02 265)"
+  muted: "oklch(0.965 0.006 265)"
+  muted-foreground: "oklch(0.46 0.018 265)"
+  accent: "oklch(0.945 0.012 265)"
+  accent-foreground: "oklch(0.30 0.02 265)"
   destructive: "oklch(0.577 0.245 27)"
   destructive-foreground: "oklch(0.985 0 0)"
   success: "oklch(0.60 0.17 155)"
@@ -24,15 +24,15 @@ colors:
   warning-foreground: "oklch(0.25 0.04 70)"
   info: "oklch(0.60 0.15 245)"
   info-foreground: "oklch(0.985 0 0)"
-  border: "oklch(0.86 0.008 260)"
-  ring: "oklch(0.55 0.20 260)"
-  sidebar: "oklch(0.965 0.008 260)"
-  sidebar-foreground: "oklch(0.14 0.02 260)"
+  border: "oklch(0.90 0.006 265)"
+  ring: "oklch(0.52 0.215 264)"
+  sidebar: "oklch(0.972 0.006 265)"
+  sidebar-foreground: "oklch(0.16 0.028 265)"
   sidebar-primary: "oklch(0.65 0.19 45)"
   sidebar-primary-foreground: "oklch(0.985 0 0)"
-  sidebar-accent: "oklch(0.94 0.008 260)"
-  sidebar-accent-foreground: "oklch(0.25 0.015 260)"
-  sidebar-border: "oklch(0.90 0.005 260)"
+  sidebar-accent: "oklch(0.945 0.01 265)"
+  sidebar-accent-foreground: "oklch(0.30 0.02 265)"
+  sidebar-border: "oklch(0.92 0.005 265)"
   chart-1: "oklch(0.65 0.19 45)"
   chart-2: "oklch(0.55 0.18 250)"
   chart-3: "oklch(0.60 0.15 165)"
@@ -55,23 +55,24 @@ typography:
     fontSize: "1.125rem"
     fontWeight: 600
     lineHeight: 1.3
+    letterSpacing: "-0.01em"
   headline:
     fontFamily: "Geist Sans, system-ui, -apple-system, sans-serif"
-    fontSize: "1.5rem"
+    fontSize: "1.75rem"
     fontWeight: 700
-    lineHeight: 1.2
-    letterSpacing: "-0.02em"
+    lineHeight: 1.15
+    letterSpacing: "-0.025em"
   mono:
     fontFamily: "Geist Mono, ui-monospace, monospace"
     fontSize: "0.8125rem"
     fontWeight: 400
     lineHeight: 1.5
 rounded:
-  sm: "6px"
-  md: "8px"
-  lg: "10px"
-  xl: "14px"
-  "2xl": "18px"
+  sm: "7px"
+  md: "9px"
+  lg: "11px"
+  xl: "15px"
+  "2xl": "19px"
 spacing:
   xs: "4px"
   sm: "8px"
@@ -167,19 +168,19 @@ The system is light only: the app is locked to the light theme via the theme pro
 A cool-tinted neutral palette built on a single indigo accent, with a warm amber reserved for one purpose and one purpose only. Every color is defined in OKLCH for perceptual uniformity across the lightness range; chroma is reduced as lightness approaches the extremes to avoid garish edges. The app currently ships only the light token set below; a dark theme is not implemented (the theme provider forces light).
 
 ### Primary
-- **Indigo Accent** (`oklch(0.55 0.20 260)`, light / `oklch(0.65 0.20 260)`, dark). Primary actions, focus rings, active selection indicators, links. The single dominant accent. Used on ≤10% of any given screen; its rarity is the point.
+- **Indigo Accent** (`oklch(0.52 0.215 264)`). Primary actions, focus rings, active selection indicators, links. The single dominant accent, deep and confident. Used on ≤10% of any given screen; its rarity is the point.
 
 ### Secondary
 - **Sidebar Amber** (`oklch(0.65 0.19 45)`, light / `oklch(0.70 0.17 45)`, dark). Sidebar active background tint, chart-1 series only. Reserved. Never competes with indigo on the same surface; never used for buttons, badges, links, or general accent.
 
 ### Neutral
-- **Ink** (`oklch(0.14 0.02 260)`). Primary text. Indigo-tinted near-black, never pure black.
-- **Subdued** (`oklch(0.46 0.015 260)`). Secondary text, labels, placeholders, metadata.
-- **Whisper** (`oklch(0.955 0.005 260)`). Muted and secondary surfaces, hover fills, table stripe.
-- **Accent Field** (`oklch(0.94 0.015 260)`). Selected list rows, active filter chips, ghost-button hover.
-- **Paper** (`oklch(0.985 0.003 75)`). Page background. Warm-tinted, never pure white.
-- **Porcelain** (`oklch(0.995 0.002 75)`). Card and popover surfaces. Cooler than paper for subtle separation without a border.
-- **Wire** (`oklch(0.86 0.008 260)`). Borders, dividers, input strokes.
+- **Ink** (`oklch(0.16 0.028 265)`). Primary text. Indigo-tinted near-black, never pure black.
+- **Subdued** (`oklch(0.46 0.018 265)`). Secondary text, labels, placeholders, metadata.
+- **Whisper** (`oklch(0.965 0.006 265)`). Muted and secondary surfaces, hover fills, table stripe.
+- **Accent Field** (`oklch(0.945 0.012 265)`). Selected list rows, active filter chips, ghost-button hover.
+- **Paper** (`oklch(0.984 0.004 265)`). Page background. Cool indigo-tinted, never pure white.
+- **Porcelain** (`oklch(0.998 0.0015 265)`). Card and popover surfaces. Slightly brighter than paper; separation is reinforced by soft layered elevation, not a heavy border.
+- **Wire** (`oklch(0.90 0.006 265)`). Borders, dividers, input strokes. Deliberately soft: cards lean on elevation, not heavy lines.
 
 ### Semantic
 - **Destructive** (`oklch(0.577 0.245 27)`). Errors, delete actions, critical alerts.
@@ -207,7 +208,7 @@ Five series, deliberately not in a single hue family. Used in `recharts` visuali
 **Character:** A single sans-serif family carries every role, hierarchy emerging from weight and size contrast rather than family switching. Geist Sans's even rhythm and tabular figures keep it comfortable in dense data tables and spacious headings. The mono face appears only where character width carries meaning: email addresses, inbox IDs, countdowns, code.
 
 ### Hierarchy
-- **Headline** (700, 1.5rem / 1.2, `-0.02em` tracking). Page titles. One per view. Used via the `text-headline` utility.
+- **Headline** (700, 1.75rem / 1.15, `-0.025em` tracking). Page titles. One per view. Used via the `text-headline` utility.
 - **Title** (600, 1.125rem / 1.3). Section headings, card titles, dialog headers. `text-title` utility.
 - **Body** (400, 0.875rem / 1.5). All running text. Cap line length at 65–75ch for prose; tables and dense UI may run wider.
 - **Label** (500, 0.75rem / 1.4, `0.01em` tracking). Form labels, metadata, timestamps, badge text. `text-label` utility.
@@ -215,7 +216,7 @@ Five series, deliberately not in a single hue family. Used in `recharts` visuali
 
 ### Named Rules
 
-**The One Family Rule.** Geist Sans carries everything. No display font, no decorative pairing, no display-only weight. Hierarchy is achieved through weight (400→700) and size (0.75rem→1.5rem), never through family switching.
+**The One Family Rule.** Geist Sans carries everything. No display font, no decorative pairing, no display-only weight. Hierarchy is achieved through weight (400→700) and size (0.75rem→1.75rem), never through family switching.
 
 **The Tabular Figures Rule.** All numeric displays (countdowns, statistics, table columns, IDs) use `font-variant-numeric: tabular-nums` via the `tabular-nums` utility so digits do not shift width during updates.
 
@@ -223,19 +224,19 @@ Five series, deliberately not in a single hue family. Used in `recharts` visuali
 
 ## 4. Elevation
 
-Flat by default. Surfaces are distinguished by background tint (Paper, Porcelain, Whisper, Accent Field), not by shadow. Shadows appear in three roles only: ambient definition on resting cards, recessed feel on inputs, and clear separation for elements semantically above the page (popovers, dropdowns, command palette).
+Restrained but real. Surfaces are distinguished primarily by background tint (Paper, Porcelain, Whisper, Accent Field) and reinforced by soft, layered shadows tinted to the indigo axis, never flat black. Depth reads as the same material as the rest of the system. The scale is defined as Tailwind's `shadow-*` tokens, overridden to the tinted, two-layer values below, so every elevated element is cohesive.
 
 ### Shadow Vocabulary
-- **Ambient** (`0 1px 3px rgba(0,0,0,0.04)`). Cards at rest. Barely perceptible; defines a surface without lifting it.
-- **Inset** (`inset 0 1px 2px rgba(0,0,0,0.04)`). Input fields. Recessed feel without heavier borders.
-- **Hover** (`0 4px 12px rgba(0,0,0,0.06)`). Interactive cards on hover. Subtle lift confirming clickability. Applied only to genuinely clickable cards.
-- **Elevated** (Tailwind `shadow-xs` / `shadow-sm` family). Popovers, dropdowns, command palette, dialogs. Clear separation from the page beneath.
+- **Ambient** (`shadow-xs`). Cards at rest. A soft two-layer indigo-tinted lift (about 5-8% alpha) that defines the surface without shouting.
+- **Inset** (`inset 0 1px 2px rgb(30 27 75 / 0.05)`). Input fields. Recessed feel without heavier borders.
+- **Hover** (`shadow-md`). Genuinely clickable cards on hover. A clear lift confirming the affordance.
+- **Elevated** (`shadow-lg` / `shadow-xl`). Popovers, dropdowns, command palette, dialogs. Clear separation from the page beneath.
 
 ### Named Rules
 
-**The Flat-By-Default Rule.** A surface earns its shadow through interaction (hover, focus) or semantic elevation (above-page floating element). Decorative shadows are prohibited. If removing the shadow changes nothing about comprehension, remove it.
+**The Restrained-Elevation Rule.** Resting cards carry the ambient shadow and nothing more. Deeper shadow is earned through interaction (hover on a clickable card) or semantic elevation (a floating element). Shadows outside the defined scale, or used decoratively, are prohibited.
 
-**The No Stacked Lift Rule.** A card already at ambient elevation does not get a hover lift unless the entire card is interactive. Cards that contain interactive children but are not themselves clickable stay flat.
+**The No Stacked Lift Rule.** A card already at ambient elevation does not get a hover lift unless the entire card is interactive. Cards that contain interactive children but are not themselves clickable keep only the ambient shadow.
 
 ## 5. Components
 
@@ -243,7 +244,7 @@ Flat by default. Surfaces are distinguished by background tint (Paper, Porcelain
 
 A consistent shape across all variants; differentiation through fill and border, never through radius or shadow.
 
-- **Shape:** Rounded-md (8px radius) across every variant. Default height 40px (h-10); sm 32px (h-8); xs 24px (h-6); icon variants use matching square sizes.
+- **Shape:** Rounded-md (9px radius) across every variant. Default height 40px (h-10); sm 32px (h-8); xs 24px (h-6); icon variants use matching square sizes.
 - **Primary (default):** Indigo background, white text. Padding 8px 16px. Hover drops opacity to 90%. No scale transform.
 - **Destructive:** Destructive red background, white text. Same geometry as primary. Focus ring uses `destructive/20`.
 - **Outline:** Transparent background, 1px border in Wire color, foreground text. Hover fills with Accent Field background.
@@ -255,16 +256,16 @@ A consistent shape across all variants; differentiation through fill and border,
 
 ### Inputs
 
-- **Shape:** Rounded-md (8px), 1px border in Wire color, transparent background.
+- **Shape:** Rounded-md (9px), 1px border in Wire color, transparent background.
 - **Height:** 36px (h-9). Compact for dense forms and aligned with the platform's information-density posture.
-- **Inset shadow:** Subtle (`inset 0 1px 2px rgba(0,0,0,0.04)`) for recessed feel without heavier borders.
+- **Inset shadow:** Subtle (`inset 0 1px 2px rgb(30 27 75 / 0.05)`) for recessed feel without heavier borders.
 - **Focus:** Border shifts to primary, 3px ring in `primary/50`. Transition limited to color and box-shadow (never layout).
 - **Error:** Border shifts to destructive, ring in `destructive/20`. Triggered by `aria-invalid`.
 
 ### Cards
 
-- **Shape:** Rounded-xl (14px radius), 1px border, Porcelain background.
-- **Shadow:** Ambient at rest (`0 1px 3px rgba(0,0,0,0.04)`). No hover shadow unless the card is itself the click target.
+- **Shape:** Rounded-xl (15px radius), 1px border, Porcelain background.
+- **Shadow:** Ambient at rest (`shadow-xs`, soft two-layer indigo-tinted). No hover lift unless the card is itself the click target, in which case `hover:shadow-md`.
 - **Internal layout:** Gap-6 (24px) between header, content, and footer regions. Internal padding `py-6 px-6`.
 - **Header accent (optional):** A 2px top border at `primary/15` (`card-header-accent` utility) for cards that need a quiet semantic header marker. Never used decoratively.
 - **No nested cards.** Ever. If you need hierarchy inside a card, use background tint (Accent Field over Porcelain) or spacing.
@@ -280,7 +281,7 @@ A consistent shape across all variants; differentiation through fill and border,
 ### Sidebar Navigation
 
 - **Width:** 240px expanded, 60px collapsed. Transition 200ms ease-out on width only (never on layout properties beyond width).
-- **Item shape:** Rounded-lg (10px), 6px / 8px internal padding.
+- **Item shape:** Rounded-lg (11px), 6px / 8px internal padding.
 - **Resting state:** `text-muted-foreground` over transparent. Hover fills `muted/80` and promotes text to foreground.
 - **Active state:** `bg-sidebar-primary/10 text-sidebar-primary` (the reserved amber) plus a 2px-wide, 20px-tall rounded indicator bar positioned absolutely at the left edge in sidebar amber. This indicator is rendered as a separate `<span>`, not via `border-left`, and is the single approved left-edge accent in the system. Amber lives here and in chart-1 only; because it must not compete with indigo on the same surface, the org and user avatars in the sidebar stay neutral (`bg-muted`).
 - **Section dividers:** `border-t` at 50% opacity, never full-width rules.
