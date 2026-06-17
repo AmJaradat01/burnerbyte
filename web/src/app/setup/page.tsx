@@ -479,7 +479,7 @@ export default function SetupPage() {
                 <div className="space-y-1.5">
                   <Label htmlFor="brand-color">Primary color</Label>
                   <div className="flex gap-2">
-                    <Input id="brand-color" value={data.branding?.primary_color ?? ""} onChange={(e) => setData({ ...data, branding: { ...data.branding ?? { primary_color: "", footer_text: "", logo_url: "" }, primary_color: e.target.value } })} placeholder="#4f46e5" className="font-mono text-sm" />
+                    <Input id="brand-color" value={data.branding?.primary_color ?? ""} onChange={(e) => setData({ ...data, branding: { ...data.branding ?? { primary_color: "", footer_text: "", logo_url: "" }, primary_color: e.target.value } })} placeholder="#2459e2" className="font-mono text-sm" />
                     {data.branding?.primary_color && (
                       <div className="h-10 w-10 rounded-lg border shrink-0" style={{ backgroundColor: data.branding.primary_color }} />
                     )}
