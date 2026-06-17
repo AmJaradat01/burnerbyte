@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.1.3 (June 2026) — Settings → System tab cohesion
+
+A product-UI polish pass on the admin System tab, aligning it to the "Workshop Bench" design system so the whole surface reads as one governance panel.
+
+### Changed
+- **One section-header vocabulary.** Every section (Platform overview, Platform Settings, About, Service health, Email, Object storage) now uses the same `CardHeader` + icon-chip title + description via a shared `SectionHeading`, replacing three ad-hoc header treatments (headerless, in-card chip, above-card chip). Card padding and rhythm are now consistent across the tab.
+- **Service health is one card, not a grid of cards.** The per-service cards became a single divided status list (icon, name, state, latency), removing the implicit nested-card layout; a degraded service now colors its status text, not just an icon.
+- **About no longer nests bordered boxes inside a card** (a design-system violation); it is a clean divided definition list. Removed a redundant summary line that restated the stats grid below it. Storage health now shows the correct disk icon.
+
+### Notes
+- Presentational only; no API or behavior changes. Tokens-only colors, tabular figures on numerics, status never carried by color alone.
+
 ## v1.1.2 (June 2026) — CORS for custom-domain Docker deployments
 
 ### Fixed

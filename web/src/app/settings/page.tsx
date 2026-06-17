@@ -312,6 +312,24 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
+// SectionHeading is the one section-header vocabulary for the System tab: an
+// icon chip, a title, and an optional description, rendered as the card's
+// CardHeader. Every section uses it so the tab reads as one governance surface
+// rather than a stack of differently-headed cards.
+function SectionHeading({ icon: Icon, title, description }: { icon: typeof Database; title: string; description?: string }) {
+  return (
+    <CardHeader>
+      <CardTitle className="flex items-center gap-2 text-base">
+        <span className="flex h-7 w-7 items-center justify-center rounded-md bg-muted">
+          <Icon className="h-4 w-4 text-muted-foreground" />
+        </span>
+        {title}
+      </CardTitle>
+      {description ? <CardDescription>{description}</CardDescription> : null}
+    </CardHeader>
+  );
+}
+
 function OverviewTab() {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["admin-stats"],
@@ -327,9 +345,8 @@ function OverviewTab() {
   if (isError) return <ErrorState message="Failed to load stats" onRetry={() => refetch()} />;
   if (isLoading) return (
     <div className="space-y-4">
-      <Skeleton className="h-4 w-80" />
       <Card>
-        <CardContent className="pt-5 pb-4">
+        <CardContent className="pt-6">
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-6 gap-y-3">
             {Array.from({ length: 10 }).map((_, i) => (
               <div key={i} className="flex items-baseline justify-between gap-2">
@@ -360,11 +377,9 @@ function OverviewTab() {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        {data.total_users.toLocaleString()} users · {data.total_emails.toLocaleString()} emails · {(data.active_inboxes ?? 0).toLocaleString()} active inboxes
-      </p>
       <Card>
-        <CardContent className="pt-5 pb-4">
+        <SectionHeading icon={Activity} title="Platform overview" />
+        <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-6 gap-y-3">
             {stats.map((s) => (
               <div key={s.label} className="flex items-baseline justify-between gap-2">
@@ -381,28 +396,22 @@ function OverviewTab() {
       </Card>
       <PlatformSettingsCard />
       <Card>
-        <CardContent className="pt-5 pb-4">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
-              <Info className="h-3.5 w-3.5 text-muted-foreground" />
+        <SectionHeading icon={Info} title="About" />
+        <CardContent>
+          <dl className="grid grid-cols-3 divide-x divide-border text-sm">
+            <div className="pr-4">
+              <dt className="text-xs text-muted-foreground">Version</dt>
+              <dd className="mt-1 font-mono font-medium tabular-nums">{versionData?.version ?? "—"}</dd>
             </div>
-            <span className="text-sm font-medium">About</span>
-          </div>
-          <div className="grid grid-cols-3 gap-4 text-sm">
-            <div className="rounded-lg border p-3">
-              <p className="text-muted-foreground text-xs mb-1">Version</p>
-              <p className="font-mono font-medium">{versionData?.version ?? "—"}</p>
+            <div className="px-4">
+              <dt className="text-xs text-muted-foreground">Platform</dt>
+              <dd className="mt-1 font-medium">BurnerByte</dd>
             </div>
-            <div className="rounded-lg border p-3">
-              <p className="text-muted-foreground text-xs mb-1">Platform</p>
-              <p className="font-medium">BurnerByte</p>
-              <p className="text-xs text-muted-foreground">Self-hosted temporary email</p>
+            <div className="pl-4">
+              <dt className="text-xs text-muted-foreground">License</dt>
+              <dd className="mt-1 font-medium">Apache 2.0</dd>
             </div>
-            <div className="rounded-lg border p-3">
-              <p className="text-muted-foreground text-xs mb-1">License</p>
-              <p className="font-medium">Apache 2.0</p>
-            </div>
-          </div>
+          </dl>
         </CardContent>
       </Card>
       <HealthSection />
@@ -465,15 +474,7 @@ function PlatformSettingsCard() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <div className="h-7 w-7 rounded-md bg-muted flex items-center justify-center">
-            <Settings className="h-4 w-4 text-muted-foreground" />
-          </div>
-          Platform Settings
-        </CardTitle>
-        <CardDescription>Control access, security, and authentication policies.</CardDescription>
-      </CardHeader>
+      <SectionHeading icon={Settings} title="Platform Settings" description="Control access, security, and authentication policies." />
       <CardContent className="space-y-6">
         {/* Access */}
         <div className="space-y-3">
@@ -702,6 +703,7 @@ function PlatformSettingsCard() {
 const SERVICE_ICONS: Record<string, typeof Database> = {
   postgres: Database,
   redis: Database,
+  storage: HardDrive,
   minio: HardDrive,
 };
 
@@ -737,74 +739,65 @@ function HealthSection() {
   const allHealthy = services.every(([, s]) => s.status === "ok");
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2 pt-2">
-        <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
-          <Monitor className="h-3.5 w-3.5 text-muted-foreground" />
-        </div>
-        <p className="text-sm font-semibold">Service Health</p>
-        <p className="text-xs text-muted-foreground">· Auto-refreshing every 15s</p>
-      </div>
-      {services.length > 0 && (
-        <Card>
-          <CardContent className="pt-4 pb-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${allHealthy ? "bg-success/10" : "bg-destructive/10"}`}>
-                  {allHealthy ? <CheckCircle2 className="h-4 w-4 text-success" /> : <AlertTriangle className="h-4 w-4 text-destructive" />}
-                </div>
-                <div>
-                  <p className="text-sm font-medium">{allHealthy ? "All systems operational" : "Service degradation detected"}</p>
-                  {uptime && <p className="text-xs text-muted-foreground">Uptime: {uptime}</p>}
+    <Card>
+      <SectionHeading icon={Monitor} title="Service health" description="Auto-refreshing every 15 seconds" />
+      <CardContent>
+        {services.length > 0 && (
+          <div className="flex items-center justify-between gap-3 border-b border-border pb-3">
+            <div className="flex items-center gap-2 text-sm">
+              {allHealthy
+                ? <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
+                : <AlertTriangle className="h-4 w-4 shrink-0 text-destructive" />}
+              <span className="font-medium">{allHealthy ? "All systems operational" : "Service degradation detected"}</span>
+              {uptime && <span className="text-xs text-muted-foreground">· up {uptime}</span>}
+            </div>
+            <Badge variant={allHealthy ? "success" : "destructive"} className="gap-1">
+              {allHealthy ? <CheckCircle2 className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
+              {services.filter(([, s]) => s.status === "ok").length}/{services.length} healthy
+            </Badge>
+          </div>
+        )}
+        <div className="divide-y divide-border">
+          {isLoading && services.length === 0 ? (
+            Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 py-3">
+                <Skeleton className="h-8 w-8 rounded-md" />
+                <div className="flex-1 space-y-1.5">
+                  <Skeleton className="h-3.5 w-24" />
+                  <Skeleton className="h-3 w-16" />
                 </div>
               </div>
-              <Badge variant={allHealthy ? "success" : "destructive"} className="gap-1">
-                {allHealthy ? <CheckCircle2 className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
-                {services.filter(([, s]) => s.status === "ok").length}/{services.length} healthy
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {isLoading ? (
-          Array.from({ length: 3 }).map((_, i) => <Card key={i}><CardContent className="pt-6"><Skeleton className="h-16 w-full" /></CardContent></Card>)
-        ) : services.length === 0 ? (
-          <p className="text-sm text-muted-foreground col-span-full py-8 text-center">No services detected</p>
-        ) : (
-          services.map(([name, svc]) => {
-            const ok = svc.status === "ok";
-            const Icon = SERVICE_ICONS[name] ?? Database;
-            return (
-              <Card key={name} className={`${ok ? "" : "border-destructive/50"}`}>
-                <CardContent className="pt-5">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${ok ? "bg-success/10" : "bg-destructive/10"}`}>
-                        <Icon className={`h-5 w-5 ${ok ? "text-success" : "text-destructive"}`} />
-                      </div>
-                      <div>
-                        <p className="font-medium capitalize">{name}</p>
-                        <p className="text-xs text-muted-foreground">{ok ? "Connected" : svc.status}</p>
-                      </div>
+            ))
+          ) : services.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">No services detected</p>
+          ) : (
+            services.map(([name, svc]) => {
+              const ok = svc.status === "ok";
+              const Icon = SERVICE_ICONS[name] ?? Database;
+              return (
+                <div key={name} className="flex items-center justify-between gap-3 py-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted">
+                      <Icon className="h-4 w-4 text-muted-foreground" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="font-medium capitalize">{name}</p>
+                      <p className={`truncate text-xs ${ok ? "text-muted-foreground" : "text-destructive"}`}>{ok ? "Connected" : svc.status}</p>
                     </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <span className="font-mono text-xs tabular-nums text-muted-foreground">{svc.latency}</span>
                     {ok
-                      ? <CheckCircle2 className="h-5 w-5 text-success" />
-                      : <XCircle className="h-5 w-5 text-destructive" />
-                    }
+                      ? <CheckCircle2 className="h-4 w-4 text-success" />
+                      : <XCircle className="h-4 w-4 text-destructive" />}
                   </div>
-                  <div className="mt-3 pt-3 border-t flex items-center justify-between text-xs text-muted-foreground">
-                    <span>Latency</span>
-                    <span className="font-mono">{svc.latency}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })
-        )}
-      </div>
-    </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -879,70 +872,62 @@ function MailerConfigSection() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2 pt-2">
-        <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
-          <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-        </div>
-        <p className="text-sm font-semibold">Email (SMTP)</p>
-        <p className="text-xs text-muted-foreground">· Outbound mail for verification, resets, and invites</p>
-      </div>
-      <Card>
-        <CardContent className="space-y-4 py-5">
-          {isLoading || !form ? (
-            <Skeleton className="h-48 w-full" />
-          ) : (
-            <>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label>Host</Label>
-                  <Input value={form.host} onChange={(e) => setForm({ ...form, host: e.target.value })} placeholder="smtp.example.com" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Port</Label>
-                  <Input value={form.port} inputMode="numeric" onChange={(e) => setForm({ ...form, port: e.target.value.replace(/[^0-9]/g, "") })} placeholder="587" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Username</Label>
-                  <Input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} placeholder="optional" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Password</Label>
-                  <Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder={data?.has_password ? "•••••••• (unchanged)" : "optional"} />
-                </div>
-                <div className="space-y-1.5 sm:col-span-2">
-                  <Label>From address</Label>
-                  <Input value={form.from} onChange={(e) => setForm({ ...form, from: e.target.value })} placeholder="no-reply@example.com" />
-                </div>
+    <Card>
+      <SectionHeading icon={Mail} title="Email (SMTP)" description="Outbound mail for verification, password resets, and invites" />
+      <CardContent className="space-y-4">
+        {isLoading || !form ? (
+          <Skeleton className="h-48 w-full" />
+        ) : (
+          <>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label>Host</Label>
+                <Input value={form.host} onChange={(e) => setForm({ ...form, host: e.target.value })} placeholder="smtp.example.com" />
               </div>
-              <div className="flex items-center gap-2">
-                <Switch checked={form.tls} onCheckedChange={(v) => setForm({ ...form, tls: v })} />
-                <Label className="text-sm font-normal">Use TLS</Label>
+              <div className="space-y-1.5">
+                <Label>Port</Label>
+                <Input value={form.port} inputMode="numeric" onChange={(e) => setForm({ ...form, port: e.target.value.replace(/[^0-9]/g, "") })} placeholder="587" />
               </div>
-              {result && (
-                <div className="flex items-center gap-2 text-sm">
-                  {result.success ? <CheckCircle2 className="h-4 w-4 shrink-0 text-success" /> : <XCircle className="h-4 w-4 shrink-0 text-destructive" />}
-                  <span className={result.success ? "" : "text-destructive"}>{result.message}</span>
-                  {result.success && result.response_time && (
-                    <span className="font-mono text-xs text-muted-foreground tabular-nums">{result.response_time}</span>
-                  )}
-                </div>
-              )}
-              <div className="flex items-center justify-end gap-2 border-t pt-4">
-                <Button variant="outline" size="sm" onClick={test} disabled={testing || saving} className="gap-1.5">
-                  {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
-                  {testing ? "Testing" : "Test connection"}
-                </Button>
-                <Button size="sm" onClick={save} disabled={saving} className="gap-1.5">
-                  {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                  Save
-                </Button>
+              <div className="space-y-1.5">
+                <Label>Username</Label>
+                <Input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} placeholder="optional" />
               </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+              <div className="space-y-1.5">
+                <Label>Password</Label>
+                <Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder={data?.has_password ? "•••••••• (unchanged)" : "optional"} />
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label>From address</Label>
+                <Input value={form.from} onChange={(e) => setForm({ ...form, from: e.target.value })} placeholder="no-reply@example.com" />
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch checked={form.tls} onCheckedChange={(v) => setForm({ ...form, tls: v })} />
+              <Label className="text-sm font-normal">Use TLS</Label>
+            </div>
+            {result && (
+              <div className="flex items-center gap-2 text-sm">
+                {result.success ? <CheckCircle2 className="h-4 w-4 shrink-0 text-success" /> : <XCircle className="h-4 w-4 shrink-0 text-destructive" />}
+                <span className={result.success ? "" : "text-destructive"}>{result.message}</span>
+                {result.success && result.response_time && (
+                  <span className="font-mono text-xs text-muted-foreground tabular-nums">{result.response_time}</span>
+                )}
+              </div>
+            )}
+            <div className="flex items-center justify-end gap-2 border-t pt-4">
+              <Button variant="outline" size="sm" onClick={test} disabled={testing || saving} className="gap-1.5">
+                {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+                {testing ? "Testing" : "Test connection"}
+              </Button>
+              <Button size="sm" onClick={save} disabled={saving} className="gap-1.5">
+                {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                Save
+              </Button>
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -1009,66 +994,58 @@ function StorageConfigSection() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2 pt-2">
-        <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
-          <HardDrive className="h-3.5 w-3.5 text-muted-foreground" />
-        </div>
-        <p className="text-sm font-semibold">Object storage (S3 / MinIO)</p>
-        <p className="text-xs text-muted-foreground">· Where email attachments are stored</p>
-      </div>
-      <Card>
-        <CardContent className="space-y-4 py-5">
-          {isLoading || !form ? (
-            <Skeleton className="h-48 w-full" />
-          ) : (
-            <>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label>Endpoint</Label>
-                  <Input value={form.endpoint} onChange={(e) => setForm({ ...form, endpoint: e.target.value })} placeholder="s3.amazonaws.com or minio:9000" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Bucket</Label>
-                  <Input value={data?.bucket ?? ""} disabled className="bg-muted font-mono" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Access key</Label>
-                  <Input value={form.accessKey} onChange={(e) => setForm({ ...form, accessKey: e.target.value })} placeholder="access key id" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Secret key</Label>
-                  <Input type="password" value={form.secretKey} onChange={(e) => setForm({ ...form, secretKey: e.target.value })} placeholder={data?.has_secret_key ? "•••••••• (unchanged)" : "secret access key"} />
-                </div>
+    <Card>
+      <SectionHeading icon={HardDrive} title="Object storage (S3 / MinIO)" description="Where email attachments are stored" />
+      <CardContent className="space-y-4">
+        {isLoading || !form ? (
+          <Skeleton className="h-48 w-full" />
+        ) : (
+          <>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label>Endpoint</Label>
+                <Input value={form.endpoint} onChange={(e) => setForm({ ...form, endpoint: e.target.value })} placeholder="s3.amazonaws.com or minio:9000" />
               </div>
-              <div className="flex items-center gap-2">
-                <Switch checked={form.useSSL} onCheckedChange={(v) => setForm({ ...form, useSSL: v })} />
-                <Label className="text-sm font-normal">Use TLS (HTTPS)</Label>
+              <div className="space-y-1.5">
+                <Label>Bucket</Label>
+                <Input value={data?.bucket ?? ""} disabled className="bg-muted font-mono" />
               </div>
-              {result && (
-                <div className="flex items-center gap-2 text-sm">
-                  {result.success ? <CheckCircle2 className="h-4 w-4 shrink-0 text-success" /> : <XCircle className="h-4 w-4 shrink-0 text-destructive" />}
-                  <span className={result.success ? "" : "text-destructive"}>{result.message}</span>
-                  {result.success && result.response_time && (
-                    <span className="font-mono text-xs text-muted-foreground tabular-nums">{result.response_time}</span>
-                  )}
-                </div>
-              )}
-              <div className="flex items-center justify-end gap-2 border-t pt-4">
-                <Button variant="outline" size="sm" onClick={test} disabled={testing || saving} className="gap-1.5">
-                  {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
-                  {testing ? "Testing" : "Test connection"}
-                </Button>
-                <Button size="sm" onClick={save} disabled={saving} className="gap-1.5">
-                  {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                  Save
-                </Button>
+              <div className="space-y-1.5">
+                <Label>Access key</Label>
+                <Input value={form.accessKey} onChange={(e) => setForm({ ...form, accessKey: e.target.value })} placeholder="access key id" />
               </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+              <div className="space-y-1.5">
+                <Label>Secret key</Label>
+                <Input type="password" value={form.secretKey} onChange={(e) => setForm({ ...form, secretKey: e.target.value })} placeholder={data?.has_secret_key ? "•••••••• (unchanged)" : "secret access key"} />
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch checked={form.useSSL} onCheckedChange={(v) => setForm({ ...form, useSSL: v })} />
+              <Label className="text-sm font-normal">Use TLS (HTTPS)</Label>
+            </div>
+            {result && (
+              <div className="flex items-center gap-2 text-sm">
+                {result.success ? <CheckCircle2 className="h-4 w-4 shrink-0 text-success" /> : <XCircle className="h-4 w-4 shrink-0 text-destructive" />}
+                <span className={result.success ? "" : "text-destructive"}>{result.message}</span>
+                {result.success && result.response_time && (
+                  <span className="font-mono text-xs text-muted-foreground tabular-nums">{result.response_time}</span>
+                )}
+              </div>
+            )}
+            <div className="flex items-center justify-end gap-2 border-t pt-4">
+              <Button variant="outline" size="sm" onClick={test} disabled={testing || saving} className="gap-1.5">
+                {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+                {testing ? "Testing" : "Test connection"}
+              </Button>
+              <Button size="sm" onClick={save} disabled={saving} className="gap-1.5">
+                {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                Save
+              </Button>
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
