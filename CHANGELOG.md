@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.2.2 (June 2026) — Force onboarding; no more org dead-ends
+
+Fixes a state where a signed-in user with no organization landed on org-scoped pages that just said "Select an organization first." with no way forward.
+
+### Fixed
+- **The onboarding gate is now server-authoritative.** It was gated on a dismissable `bb_onboarding_done` localStorage flag, which could desync from reality: a user with zero organizations but the flag set was never redirected and got stranded on dead-end pages. The redirect to `/onboarding` now fires purely on the real org count (with `/onboarding`, `/invite`, `/setup`, `/docs`, and `/profile` exempt so account, invite, and docs stay reachable).
+- **Removed the "Skip setup" button** on the onboarding org step. With the forced gate it only led to a redirect loop / dead-end (you cannot use an org-scoped app with no org).
+
+### Changed
+- **Org-scoped nav is hidden until you have an organization**, so the sidebar never advertises pages that cannot work yet.
+- **Every org-scoped page now shows a real empty state** (`NoOrgState`) instead of the bare one-liner: a "Create organization" call to action for admins, or guidance to request an invite for everyone else. Applied to domains, teams, audit, analytics, settings, the dashboard, and the domain detail page.
+
+### Notes
+- Platform-level admin surfaces are still coupled to having an organization in the UI; decoupling system-admin pages (so an admin can run the platform with no org of their own) is a separate follow-up if wanted.
+
 ## v1.2.1 (June 2026) — Design refresh: edge surfaces
 
 Aligns the two surfaces that intentionally live outside the token system to the refreshed palette, so the new look is consistent everywhere.

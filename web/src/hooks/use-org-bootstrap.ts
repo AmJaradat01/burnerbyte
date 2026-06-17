@@ -9,7 +9,7 @@ import { useOrgStore } from "@/stores/org-store";
  * Paths where the onboarding redirect should NOT fire.
  * These are flows the user may be in the middle of that should not be interrupted.
  */
-const ONBOARDING_SKIP_PATHS = ["/onboarding", "/invite", "/setup", "/docs"];
+const ONBOARDING_SKIP_PATHS = ["/onboarding", "/invite", "/setup", "/docs", "/profile"];
 
 export function useOrgBootstrap() {
   const user = useAuthStore((s) => s.user);
@@ -37,15 +37,17 @@ export function useOrgBootstrap() {
       .finally(() => { fetchingOrgs.current = false; setOrgsLoaded(true); });
   }, [user, fetchOrgs, pathname, orgsLoaded]);
 
-  // Redirect to onboarding if user has no orgs and hasn't dismissed it
+  // Force onboarding when the user has no organization. This is server-
+  // authoritative (based on the fetched org list, not a dismissable client
+  // flag) so a zero-org user can never land on an unusable org-scoped page.
+  // Account, invite, setup, docs, and onboarding itself are exempt.
   useEffect(() => {
     if (!orgsLoaded || !user) return;
 
-    // Don't redirect if on a path that should be left alone
     const shouldSkip = ONBOARDING_SKIP_PATHS.some((p) => pathname.startsWith(p));
     if (shouldSkip) return;
 
-    if (orgs.length === 0 && localStorage.getItem("bb_onboarding_done") !== "true") {
+    if (orgs.length === 0) {
       router.replace("/onboarding");
     }
   }, [orgs, orgsLoaded, user, pathname, router]);

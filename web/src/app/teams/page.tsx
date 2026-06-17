@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { NoOrgState } from "@/components/no-org-state";
 import { useOrgStore } from "@/stores/org-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -45,7 +46,7 @@ export default function TeamsPage() {
     enabled: !!currentOrg,
   });
 
-  if (!currentOrg) return <p className="text-muted-foreground">Select an organization first.</p>;
+  if (!currentOrg) return <NoOrgState />;
 
   const isOrgMember = !!currentRole;
   const isAdmin = hasPermission("org.teams.create") || user?.is_system_admin;

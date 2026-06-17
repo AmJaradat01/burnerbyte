@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, WS_BASE, getWsTicket } from "@/lib/api";
+import { NoOrgState } from "@/components/no-org-state";
 import { useAuthStore } from "@/stores/auth-store";
 import { useOrgStore } from "@/stores/org-store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -84,7 +85,7 @@ export default function DashboardPage() {
     return "Good evening";
   });
 
-  if (!org) return <p className="text-muted-foreground">Select an organization to view the dashboard.</p>;
+  if (!org) return <NoOrgState />;
 
   return isAdmin ? (
     <AdminDashboard org={org} user={user} greeting={greeting} />

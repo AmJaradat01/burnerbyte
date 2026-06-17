@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { NoOrgState } from "@/components/no-org-state";
 import { useOrgStore } from "@/stores/org-store";
 import { copyToClipboard } from "@/lib/clipboard";
 import { Button } from "@/components/ui/button";
@@ -135,7 +136,7 @@ export default function DomainDetailPage() {
     enabled: !!org && teams.length > 0,
   });
 
-  if (!org) return <p className="text-muted-foreground">Select an organization.</p>;
+  if (!org) return <NoOrgState />;
   if (isError) return <ErrorState message="Failed to load domain" onRetry={() => refetch()} />;
 
   const allVerified = domain?.mx_verified && domain?.txt_verified;
