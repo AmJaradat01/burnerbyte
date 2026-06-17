@@ -30,6 +30,7 @@ import (
 	appcrypto "gitlab.com/burnerbyte/burnerbyte/internal/crypto"
 	"gitlab.com/burnerbyte/burnerbyte/internal/database"
 	"gitlab.com/burnerbyte/burnerbyte/internal/handler"
+	"gitlab.com/burnerbyte/burnerbyte/internal/installer"
 	"gitlab.com/burnerbyte/burnerbyte/internal/mailer"
 	mw "gitlab.com/burnerbyte/burnerbyte/internal/middleware"
 	"gitlab.com/burnerbyte/burnerbyte/internal/realtime"
@@ -50,13 +51,24 @@ func main() {
 		os.Exit(1)
 	}
 
+	logger := setupLogger(cfg.Logging)
+	slog.SetDefault(logger)
+
+	// First-run web installer: when no database is configured, serve a token-
+	// gated installer that collects DB/Redis/secrets, writes config.yaml, and
+	// re-execs into normal boot. An already-configured instance skips this.
+	if installer.Needed(cfg) {
+		if err := installer.Run(cfg); err != nil {
+			slog.Error("installer failed", "error", err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	if len(cfg.JWT.Secret) < 32 {
 		slog.Error("JWT secret must be at least 32 characters", "current_length", len(cfg.JWT.Secret))
 		os.Exit(1)
 	}
-
-	logger := setupLogger(cfg.Logging)
-	slog.SetDefault(logger)
 
 	ctx := context.Background()
 

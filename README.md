@@ -107,6 +107,26 @@ make run-smtp               # SMTP ingest (separate terminal)
 cd web && pnpm install && pnpm dev   # frontend on :3000 (separate terminal)
 ```
 
+### Option C — First-run web installer (no env/config)
+
+If you start the API binary with **no database configured** (`DATABASE_URL`
+unset and no `config.yaml`), it boots into a token-gated web installer instead
+of exiting. It collects the database URL, Redis URL, JWT secret, and (optional)
+encryption key, verifies the connections, writes `config.yaml`, and restarts
+into normal operation.
+
+```bash
+./bin/api
+# logs print: open http://<host>:8080/install?token=<token>
+```
+
+Open that URL (the token is in the logs), fill in the form, and complete setup.
+The installer writes `./config.yaml` by default; set `BB_CONFIG_PATH` to change
+where. The database and Redis are the only settings that must be provided this
+way (everything else is configured later from inside the app); for Docker and
+systemd deployments, prefer setting `DATABASE_URL`/`REDIS_URL` in the
+environment, which skips the installer entirely.
+
 On first launch, navigate to `http://localhost:3000` — the setup wizard will guide you through:
 1. Creating the platform owner account
 2. Setting up your organization
