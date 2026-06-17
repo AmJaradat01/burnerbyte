@@ -144,7 +144,7 @@ export function LiveInboxDemo({ labels, staticPreview = false }: { labels: LiveI
     <div
       aria-hidden="true"
       className={cn(
-        "w-full overflow-hidden rounded-xl border bg-card text-card-foreground shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-opacity duration-300",
+        "w-full overflow-hidden rounded-xl border bg-card text-card-foreground shadow-xs transition-opacity duration-300",
         expired && "opacity-70",
       )}
     >
