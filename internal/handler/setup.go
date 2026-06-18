@@ -30,7 +30,22 @@ import (
 
 // Thin wrappers for testability
 var (
-	smtpDial      = func(addr string) (*smtp.Client, error) { return smtp.Dial(addr) }
+	smtpDial = func(addr string) (*smtp.Client, error) {
+		conn, err := net.DialTimeout("tcp", addr, 10*time.Second)
+		if err != nil {
+			return nil, err
+		}
+		conn.SetDeadline(time.Now().Add(10 * time.Second))
+		host, _, _ := net.SplitHostPort(addr)
+		client, err := smtp.NewClient(conn, host)
+		if err != nil {
+			conn.Close()
+			return nil, err
+		}
+		// Clear deadline — individual operations set their own via the smtp.Client
+		conn.SetDeadline(time.Time{})
+		return client, nil
+	}
 	smtpPlainAuth = smtp.PlainAuth
 	smtpTLSDial   = func(addr, host string) (net.Conn, error) {
 		return tls.DialWithDialer(&net.Dialer{Timeout: 10 * time.Second}, "tcp", addr, &tls.Config{ServerName: host})
@@ -75,6 +90,16 @@ func smtpDialTest(host string, port int, username, password string, useTLS bool)
 		return time.Since(start), err
 	}
 	defer conn.Close()
+	// Explicitly issue EHLO so extensions (like STARTTLS) are populated.
+	if err := conn.Hello("localhost"); err != nil {
+		return time.Since(start), fmt.Errorf("EHLO failed: %w", err)
+	}
+	// Port 587 (submission) typically requires STARTTLS before AUTH.
+	if ok, _ := conn.Extension("STARTTLS"); ok {
+		if err := conn.StartTLS(&tls.Config{ServerName: host}); err != nil {
+			return time.Since(start), fmt.Errorf("STARTTLS failed: %w", err)
+		}
+	}
 	if username != "" {
 		if err := conn.Auth(smtpPlainAuth("", username, password, host)); err != nil {
 			return time.Since(start), fmt.Errorf("authentication failed: %w", err)
