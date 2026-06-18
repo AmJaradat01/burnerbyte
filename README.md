@@ -36,6 +36,8 @@ Two separate binaries scale independently:
 ## Features
 
 - One-time setup wizard (admin, org, SMTP, domain, team, branding, invites)
+- Forced onboarding gate — users without an organization are server-authoritatively redirected to `/onboarding` (not dismissable)
+- Platform admin without an org — system admins can manage SSO, roles, system settings, and platform audit without belonging to an organization
 - Single-org architecture with multi-team, multi-domain hierarchy
 - Full RBAC with 6 roles across org and team levels
 - Real-time email delivery via WebSocket
@@ -52,6 +54,7 @@ Two separate binaries scale independently:
 - Persistent notifications with real-time delivery via Redis pub/sub
 - Timezone and date-format user preferences
 - Single-org enforcement (4-layer protection)
+- Contextual empty states (`NoOrgState`, `NoTeamState`) with actionable CTAs on all org/team-scoped pages
 - Light-only interface by design (a dark theme is intentionally not shipped)
 - OKLCH semantic color tokens with WCAG AA accessibility
 - Reduced-motion support and screen reader accessibility
@@ -134,6 +137,10 @@ On first launch, navigate to `http://localhost:3000` — the setup wizard will g
 4. Adding your first domain
 5. (Optional) Creating a team, branding, inviting users
 
+After setup completes, any user who registers but has no organization is
+automatically redirected to `/onboarding` to create or join one (system admins
+are exempt and can manage the platform without an org).
+
 ### API Endpoints
 
 | Group | Endpoints |
@@ -171,7 +178,7 @@ On first launch, navigate to `http://localhost:3000` — the setup wizard will g
 | `/reset-password` | Set new password via token |
 | `/verify-email` | Email verification |
 | `/invite` | Accept org invitation |
-| `/onboarding` | Post-registration guided setup |
+| `/onboarding` | Mandatory org-creation flow (forced redirect for users without an org) |
 | `/dashboard` | Org overview with analytics |
 | `/inboxes` | List & create inboxes |
 | `/inboxes/[id]` | Email reader with WebSocket |
@@ -194,7 +201,7 @@ On first launch, navigate to `http://localhost:3000` — the setup wizard will g
 
 - **Backend**: Go 1.25, Chi, pgxpool, go-redis, MinIO
 - **Frontend**: Next.js 16, shadcn/ui, Tailwind CSS 4, Zustand, TanStack Query, Recharts
-- **Design System**: OKLCH color tokens, semantic theming (light/dark), PRODUCT.md + DESIGN.md (Stitch format)
+- **Design System**: OKLCH color tokens, semantic theming (light-only), PRODUCT.md + DESIGN.md (Stitch format)
 - **Docs**: Fumadocs (MDX, full-text search)
 - **Infrastructure**: PostgreSQL 16 (28 migrations, 28 tables), Redis 7, MinIO, Docker
 - **CI/CD**: GitLab CI (lint, build, test, Docker registry)

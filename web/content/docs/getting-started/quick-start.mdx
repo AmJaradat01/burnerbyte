@@ -30,8 +30,12 @@ Navigate to [http://localhost:3000](http://localhost:3000). On first launch, you
 3. **Outbound SMTP** — Configure email sending (for invites, password resets). You can use services like Mailgun, SendGrid, or your own SMTP server
 4. **Domain** — Add your first domain (e.g., `test.example.com`). You'll need to configure DNS records for this domain
 5. **Team** *(optional)* — Create a team and assign the domain to it
-6. **Branding** *(optional)* — Set org logo and colors
+6. **Branding** *(optional)* — Set org logo and footer text
 7. **Invites** *(optional)* — Invite team members via email
+
+<Callout type="info">
+After setup, any user who registers but has no organization is automatically redirected to `/onboarding` to create or join one. This is server-authoritative and cannot be dismissed. System admins are exempt — they can manage the platform (roles, SSO, system settings) without belonging to an org.
+</Callout>
 
 ## Create Your First Inbox
 

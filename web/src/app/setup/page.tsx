@@ -37,7 +37,7 @@ interface SetupData {
   storage: { provider: string; endpoint: string; access_key: string; secret_key: string; bucket: string; region: string; use_ssl: boolean } | null;
   domain: { domain_name: string };
   team: { name: string } | null;
-  branding: { primary_color: string; footer_text: string; logo_url: string } | null;
+  branding: { footer_text: string; logo_url: string } | null;
   invites: { email: string; role: string }[];
 }
 
@@ -156,9 +156,8 @@ export default function SetupPage() {
       };
       if (data.team?.name) payload.team = data.team;
       if (data.storage && data.storage.endpoint) payload.storage = data.storage;
-      if (data.branding && (data.branding.primary_color || data.branding.footer_text || data.branding.logo_url)) {
+      if (data.branding && (data.branding.footer_text || data.branding.logo_url)) {
         payload.branding = {
-          primary_color: data.branding.primary_color || undefined,
           footer_text: data.branding.footer_text || undefined,
           logo_url: data.branding.logo_url || undefined,
         };
@@ -477,21 +476,12 @@ export default function SetupPage() {
             {currentStep.key === "branding" && (
               <>
                 <div className="space-y-1.5">
-                  <Label htmlFor="brand-color">Primary color</Label>
-                  <div className="flex gap-2">
-                    <Input id="brand-color" value={data.branding?.primary_color ?? ""} onChange={(e) => setData({ ...data, branding: { ...data.branding ?? { primary_color: "", footer_text: "", logo_url: "" }, primary_color: e.target.value } })} placeholder="#2459e2" className="font-mono text-sm" />
-                    {data.branding?.primary_color && (
-                      <div className="h-10 w-10 rounded-lg border shrink-0" style={{ backgroundColor: data.branding.primary_color }} />
-                    )}
-                  </div>
+                  <Label htmlFor="brand-logo">Logo URL</Label>
+                  <Input id="brand-logo" value={data.branding?.logo_url ?? ""} onChange={(e) => setData({ ...data, branding: { ...data.branding ?? { footer_text: "", logo_url: "" }, logo_url: e.target.value } })} placeholder="https://..." />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="brand-footer">Footer text</Label>
-                  <Input id="brand-footer" value={data.branding?.footer_text ?? ""} onChange={(e) => setData({ ...data, branding: { ...data.branding ?? { primary_color: "", footer_text: "", logo_url: "" }, footer_text: e.target.value } })} placeholder="Powered by BurnerByte" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="brand-logo">Logo URL</Label>
-                  <Input id="brand-logo" value={data.branding?.logo_url ?? ""} onChange={(e) => setData({ ...data, branding: { ...data.branding ?? { primary_color: "", footer_text: "", logo_url: "" }, logo_url: e.target.value } })} placeholder="https://..." />
+                  <Input id="brand-footer" value={data.branding?.footer_text ?? ""} onChange={(e) => setData({ ...data, branding: { ...data.branding ?? { footer_text: "", logo_url: "" }, footer_text: e.target.value } })} placeholder="Powered by BurnerByte" />
                 </div>
                 <p className="text-xs text-muted-foreground">All fields optional. Configurable later in Settings.</p>
               </>
@@ -534,7 +524,7 @@ export default function SetupPage() {
                   { icon: Globe, label: "Domain", value: data.domain.domain_name },
                   ...(data.storage?.endpoint ? [{ icon: HardDrive, label: "Storage", value: `${data.storage.provider.toUpperCase()} — ${data.storage.endpoint}` }] : []),
                   ...(data.team?.name ? [{ icon: Users, label: "Team", value: data.team.name }] : []),
-                  ...(data.branding?.primary_color ? [{ icon: Paintbrush, label: "Branding", value: data.branding.primary_color }] : []),
+                  ...(data.branding?.logo_url ? [{ icon: Paintbrush, label: "Branding", value: data.branding.logo_url }] : []),
                   ...(data.invites.filter(i => i.email).length > 0 ? [{ icon: UserPlus, label: "Invites", value: data.invites.filter(i => i.email).map(i => i.email).join(", ") }] : []),
                 ].map((item) => {
                   const Icon = item.icon;
