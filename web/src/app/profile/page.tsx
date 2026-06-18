@@ -208,10 +208,10 @@ function PasswordCard() {
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="newPw" className="text-label">New</Label>
-          <Input id="newPw" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} autoComplete="new-password" />
-          {newPassword.length > 0 && newPassword.length < 8 && <p className="text-xs text-destructive">Min 8 characters</p>}
+          <Input id="newPw" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} autoComplete="new-password" aria-describedby={newPassword.length > 0 && newPassword.length < 8 ? "pw-length-err" : newPassword.length >= 8 ? "pw-strength" : undefined} />
+          {newPassword.length > 0 && newPassword.length < 8 && <p id="pw-length-err" className="text-xs text-destructive">Min 8 characters</p>}
           {newPassword.length >= 8 && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2" role="progressbar" aria-valuenow={newPassword.length >= 12 ? 100 : newPassword.length >= 10 ? 66 : 33} aria-valuemin={0} aria-valuemax={100} aria-label="Password strength" id="pw-strength">
               <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden">
                 <div className={`h-full rounded-full transition-all duration-200 ${newPassword.length >= 12 ? "w-full bg-success" : newPassword.length >= 10 ? "w-2/3 bg-warning" : "w-1/3 bg-destructive/60"}`} />
               </div>
@@ -221,8 +221,8 @@ function PasswordCard() {
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="confirmPw" className="text-label">Confirm</Label>
-          <Input id="confirmPw" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" />
-          {mismatch && <p className="text-xs text-destructive">Does not match</p>}
+          <Input id="confirmPw" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" aria-describedby={mismatch ? "pw-mismatch-err" : undefined} />
+          {mismatch && <p id="pw-mismatch-err" className="text-xs text-destructive">Does not match</p>}
         </div>
         <Button onClick={handleChange} disabled={changing || !valid} size="sm"><KeyRound className="h-3.5 w-3.5 mr-1.5" />{changing ? "Changing…" : "Update Password"}</Button>
       </CardContent>
@@ -239,12 +239,14 @@ function DateTimeCard() {
   const { settings } = useDateFormat();
   const qc = useQueryClient();
   const [tz, setTz] = useState(""); const [dateFmt, setDateFmt] = useState(""); const [timeFmt, setTimeFmt] = useState("");
-  const [saving, setSaving] = useState(false); const [synced, setSynced] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  const key = settings ? `${settings.timezone}-${settings.date_format}-${settings.time_format}` : "";
-  if (key && key !== synced) { setTz(settings!.timezone); setDateFmt(settings!.date_format); setTimeFmt(settings!.time_format); setSynced(key); }
+  // Sync local state when server settings load/change
+  useEffect(() => {
+    if (settings) { setTz(settings.timezone); setDateFmt(settings.date_format); setTimeFmt(settings.time_format); }
+  }, [settings?.timezone, settings?.date_format, settings?.time_format]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const dirty = synced && (tz !== settings?.timezone || dateFmt !== settings?.date_format || timeFmt !== settings?.time_format);
+  const dirty = settings && (tz !== settings.timezone || dateFmt !== settings.date_format || timeFmt !== settings.time_format);
 
   const save = async () => {
     setSaving(true);
@@ -295,7 +297,6 @@ interface SSOStatusProvider { name: string; provider_type: string; label: string
 interface SSOStatusResponse { enabled: boolean; providers?: SSOStatusProvider[]; enforce_sso?: boolean; }
 
 function ConnectedAccountsCard() {
-  const { user } = useAuthStore();
   const qc = useQueryClient();
   const [unlinking, setUnlinking] = useState<string | null>(null);
 
@@ -306,7 +307,9 @@ function ConnectedAccountsCard() {
   const linkedProviders = new Set((identities ?? []).map((i) => i.provider));
   const unlinkedProviders = providers.filter((p) => !linkedProviders.has(p.name));
   const enforceSSO = ssoStatus?.enforce_sso ?? false;
-  const hasPassword = user?.sso_provider === undefined || user?.sso_provider === null;
+  // The backend validates whether unlinking is safe (rejects if no other auth method).
+  // Frontend only blocks when SSO is organizationally enforced.
+  const canUnlink = !enforceSSO;
 
   const handleUnlink = async (provider: string) => {
     setUnlinking(provider);
@@ -342,7 +345,7 @@ function ConnectedAccountsCard() {
                     </div>
                   </div>
                   <ConfirmDialog
-                    trigger={<Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive" disabled={unlinking === identity.provider || !hasPassword || enforceSSO} title={!hasPassword ? "Set a password first" : enforceSSO ? "SSO required" : "Unlink"}><Unlink className="h-3.5 w-3.5" /></Button>}
+                    trigger={<Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive" disabled={unlinking === identity.provider || !canUnlink} title={!canUnlink ? "SSO required by organization" : "Unlink account"} aria-label={`Unlink ${mp ? mp.label : identity.provider}`}><Unlink className="h-3.5 w-3.5" /></Button>}
                     title="Unlink account?"
                     description={`Disconnect ${identity.provider}. You can re-link later.`}
                     onConfirm={() => handleUnlink(identity.provider)}

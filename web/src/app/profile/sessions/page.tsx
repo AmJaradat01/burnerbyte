@@ -150,12 +150,12 @@ export default function SessionsPage() {
           ) : (!sessions || sessions.length === 0) ? (
             <EmptyState title="No active sessions" description="You don't have any active sessions on other devices." />
           ) : (
-            <Table className="table-striped">
+            <Table className="table-striped" aria-label="Active sessions">
               <TableHeader>
                 <TableRow>
-                  <TableHead>IP Address</TableHead>
-                  <TableHead className="hidden sm:table-cell">Device</TableHead>
-                  <TableHead className="hidden md:table-cell">Created</TableHead>
+                  <TableHead>Device</TableHead>
+                  <TableHead className="hidden sm:table-cell">IP</TableHead>
+                  <TableHead className="hidden md:table-cell">Last Active</TableHead>
                   <TableHead>Expires</TableHead>
                   <TableHead><span className="sr-only">Actions</span></TableHead>
                 </TableRow>
@@ -169,23 +169,24 @@ export default function SessionsPage() {
                   const parsed = parseUserAgent(s.user_agent);
                   return (
                   <TableRow key={s.id} className={isCurrent ? "bg-success/5" : ""}>
-                    <TableCell className="font-mono text-sm">
-                      <div className="flex items-center gap-2">
-                        {s.ip_address ?? "—"}
-                        {isCurrent && <Badge className="bg-success/10 text-success border-success/20 text-[10px] px-1">Current</Badge>}
-                      </div>
-                    </TableCell>
-                    <TableCell className="max-w-[200px] truncate text-sm hidden sm:table-cell">
+                    <TableCell>
                       <div className="flex items-center gap-2">
                         {getDeviceIcon(parsed.device)}
-                        <span>{parsed.browser} · {parsed.os}</span>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm font-medium truncate">{parsed.browser} · {parsed.os}</span>
+                            {isCurrent && <Badge className="bg-success/10 text-success border-success/20 text-[10px] px-1">Current</Badge>}
+                          </div>
+                          {s.sso_provider_name && <p className="text-xs text-muted-foreground">via {s.sso_provider_name}</p>}
+                        </div>
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm hidden md:table-cell">{new Date(s.created_at).toLocaleDateString()}</TableCell>
-                    <TableCell className="text-sm">{new Date(s.expires_at).toLocaleDateString()}</TableCell>
+                    <TableCell className="font-mono text-xs hidden sm:table-cell">{s.ip_address ?? "—"}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground hidden md:table-cell">{s.last_used_at ? new Date(s.last_used_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{new Date(s.expires_at).toLocaleDateString()}</TableCell>
                     <TableCell>
-                      {!isCurrent && <Button variant="ghost" size="sm" onClick={() => revoke.mutate(s.id)}>Revoke</Button>}
-                      {isCurrent && <span className="text-xs text-muted-foreground">Active</span>}
+                      {!isCurrent && <Button variant="ghost" size="sm" onClick={() => revoke.mutate(s.id)} aria-label={`Revoke session from ${parsed.browser} on ${parsed.os}`}>Revoke</Button>}
+                      {isCurrent && <span className="text-xs text-muted-foreground">This device</span>}
                     </TableCell>
                   </TableRow>
                   );
