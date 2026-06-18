@@ -20,7 +20,7 @@ import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ErrorState } from "@/components/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Activity, AlertTriangle, Check, CheckCircle2, Clock, Copy, Database, HardDrive, Info, Key, Loader2, Lock, Mail, Monitor, Paperclip, Pencil, Play, Plus, Save, Search, Settings, Shield, Trash2, Users, XCircle } from "lucide-react";
+import { Activity, AlertTriangle, Check, CheckCircle2, Clock, Copy, Database, HardDrive, Key, Loader2, Lock, Mail, Monitor, Paperclip, Pencil, Play, Plus, Save, Search, Settings, Shield, Trash2, Users, XCircle } from "lucide-react";
 import Link from "next/link";
 import { UnifiedUsersTab } from "@/components/settings/unified-users-tab";
 import { RolesTab } from "@/components/settings/roles-tab";
@@ -393,11 +393,6 @@ function OverviewTab() {
     staleTime: 60_000,
   });
 
-  const { data: versionData } = useQuery({
-    queryKey: ["admin-version"],
-    queryFn: () => api.get<{ version: string }>("/admin/version"),
-  });
-
   if (isError) return <ErrorState message="Failed to load stats" onRetry={() => refetch()} />;
   if (isLoading) return (
     <div className="space-y-4">
@@ -451,25 +446,6 @@ function OverviewTab() {
         </CardContent>
       </Card>
       <PlatformSettingsCard />
-      <Card>
-        <SectionHeading icon={Info} title="About" />
-        <CardContent>
-          <dl className="grid grid-cols-3 divide-x divide-border text-sm">
-            <div className="pr-4">
-              <dt className="text-xs text-muted-foreground">Version</dt>
-              <dd className="mt-1 font-mono font-medium tabular-nums">{versionData?.version ?? "—"}</dd>
-            </div>
-            <div className="px-4">
-              <dt className="text-xs text-muted-foreground">Platform</dt>
-              <dd className="mt-1 font-medium">BurnerByte</dd>
-            </div>
-            <div className="pl-4">
-              <dt className="text-xs text-muted-foreground">License</dt>
-              <dd className="mt-1 font-medium">Apache 2.0</dd>
-            </div>
-          </dl>
-        </CardContent>
-      </Card>
       <HealthSection />
       <MailerConfigSection />
       <StorageConfigSection />
@@ -1051,49 +1027,54 @@ function StorageConfigSection() {
 
   return (
     <Card>
-      <SectionHeading icon={HardDrive} title="Object storage (S3 / MinIO)" description="Where email attachments are stored" />
+      <SectionHeading icon={HardDrive} title="Object Storage" description="S3-compatible storage for email attachments. Supports AWS S3, MinIO, and any S3-compatible provider." />
       <CardContent className="space-y-4">
         {isLoading || !form ? (
           <Skeleton className="h-48 w-full" />
         ) : (
           <>
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label>Endpoint</Label>
-                <Input value={form.endpoint} onChange={(e) => setForm({ ...form, endpoint: e.target.value })} placeholder="s3.amazonaws.com or minio:9000" />
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="storage-endpoint">Endpoint</Label>
+                <Input id="storage-endpoint" value={form.endpoint} onChange={(e) => setForm({ ...form, endpoint: e.target.value })} placeholder="s3.amazonaws.com or minio.internal:9000" />
+                <p className="text-xs text-muted-foreground">For AWS use your region endpoint (e.g. s3.us-east-1.amazonaws.com). For self-hosted MinIO use host:port.</p>
               </div>
               <div className="space-y-1.5">
-                <Label>Bucket</Label>
-                <Input value={data?.bucket ?? ""} disabled className="bg-muted font-mono" />
+                <Label htmlFor="storage-bucket">Bucket</Label>
+                <Input id="storage-bucket" value={data?.bucket ?? ""} disabled className="bg-muted font-mono" />
+                <p className="text-xs text-muted-foreground">Set during initial setup. Cannot be changed without migrating data.</p>
               </div>
-              <div className="space-y-1.5">
-                <Label>Access key</Label>
-                <Input value={form.accessKey} onChange={(e) => setForm({ ...form, accessKey: e.target.value })} placeholder="access key id" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Secret key</Label>
-                <Input type="password" value={form.secretKey} onChange={(e) => setForm({ ...form, secretKey: e.target.value })} placeholder={data?.has_secret_key ? "•••••••• (unchanged)" : "secret access key"} />
+              <div className="flex items-center gap-3 self-end pb-0.5">
+                <Switch id="storage-ssl" checked={form.useSSL} onCheckedChange={(v) => setForm({ ...form, useSSL: v })} />
+                <Label htmlFor="storage-ssl" className="text-sm font-normal">Use TLS (HTTPS)</Label>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Switch checked={form.useSSL} onCheckedChange={(v) => setForm({ ...form, useSSL: v })} />
-              <Label className="text-sm font-normal">Use TLS (HTTPS)</Label>
+            <div className="grid gap-4 sm:grid-cols-2 pt-2 border-t">
+              <div className="space-y-1.5">
+                <Label htmlFor="storage-ak">Access Key ID</Label>
+                <Input id="storage-ak" value={form.accessKey} onChange={(e) => setForm({ ...form, accessKey: e.target.value })} placeholder="AKIA..." className="font-mono text-sm" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="storage-sk">Secret Access Key</Label>
+                <Input id="storage-sk" type="password" value={form.secretKey} onChange={(e) => setForm({ ...form, secretKey: e.target.value })} placeholder={data?.has_secret_key ? "•••••••• (leave blank to keep current)" : "Enter secret key"} />
+                {data?.has_secret_key && <p className="text-xs text-muted-foreground">Leave blank to keep the stored key unchanged.</p>}
+              </div>
             </div>
             {result && (
-              <div className="flex items-center gap-2 text-sm">
+              <div className="flex items-center gap-2 text-sm rounded-lg border px-3 py-2">
                 {result.success ? <CheckCircle2 className="h-4 w-4 shrink-0 text-success" /> : <XCircle className="h-4 w-4 shrink-0 text-destructive" />}
-                <span className={result.success ? "" : "text-destructive"}>{result.message}</span>
+                <span className={result.success ? "text-success" : "text-destructive"}>{result.message}</span>
                 {result.success && result.response_time && (
-                  <span className="font-mono text-xs text-muted-foreground tabular-nums">{result.response_time}</span>
+                  <span className="font-mono text-xs text-muted-foreground tabular-nums ml-auto">{result.response_time}</span>
                 )}
               </div>
             )}
             <div className="flex items-center justify-end gap-2 border-t pt-4">
-              <Button variant="outline" size="sm" onClick={test} disabled={testing || saving} className="gap-1.5">
+              <Button variant="outline" size="sm" onClick={test} disabled={testing || saving || !form.endpoint} className="gap-1.5">
                 {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
-                {testing ? "Testing" : "Test connection"}
+                {testing ? "Testing…" : "Test Connection"}
               </Button>
-              <Button size="sm" onClick={save} disabled={saving} className="gap-1.5">
+              <Button size="sm" onClick={save} disabled={saving || !form.endpoint || !form.accessKey} className="gap-1.5">
                 {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                 Save
               </Button>
