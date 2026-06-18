@@ -37,7 +37,7 @@ interface SetupData {
   storage: { provider: string; endpoint: string; access_key: string; secret_key: string; bucket: string; region: string; use_ssl: boolean } | null;
   domain: { domain_name: string };
   team: { name: string } | null;
-  branding: { footer_text: string; logo_url: string } | null;
+  branding: { logo_url: string } | null;
   invites: { email: string; role: string }[];
 }
 
@@ -156,9 +156,8 @@ export default function SetupPage() {
       };
       if (data.team?.name) payload.team = data.team;
       if (data.storage && data.storage.endpoint) payload.storage = data.storage;
-      if (data.branding && (data.branding.footer_text || data.branding.logo_url)) {
+      if (data.branding && data.branding.logo_url) {
         payload.branding = {
-          footer_text: data.branding.footer_text || undefined,
           logo_url: data.branding.logo_url || undefined,
         };
       }
@@ -477,13 +476,17 @@ export default function SetupPage() {
               <>
                 <div className="space-y-1.5">
                   <Label htmlFor="brand-logo">Logo URL</Label>
-                  <Input id="brand-logo" value={data.branding?.logo_url ?? ""} onChange={(e) => setData({ ...data, branding: { ...data.branding ?? { footer_text: "", logo_url: "" }, logo_url: e.target.value } })} placeholder="https://..." />
+                  <Input id="brand-logo" value={data.branding?.logo_url ?? ""} onChange={(e) => setData({ ...data, branding: { logo_url: e.target.value } })} placeholder="https://your-cdn.com/logo.png" />
+                  <p className="text-xs text-muted-foreground">A square image works best (displayed at 32×32 in the sidebar).</p>
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="brand-footer">Footer text</Label>
-                  <Input id="brand-footer" value={data.branding?.footer_text ?? ""} onChange={(e) => setData({ ...data, branding: { ...data.branding ?? { footer_text: "", logo_url: "" }, footer_text: e.target.value } })} placeholder="Powered by BurnerByte" />
-                </div>
-                <p className="text-xs text-muted-foreground">All fields optional. Configurable later in Settings.</p>
+                {data.branding?.logo_url && (
+                  <div className="flex items-center gap-3 rounded-lg border p-3 bg-muted/30">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={data.branding.logo_url} alt="" className="h-10 w-10 rounded-lg border object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                    <span className="text-sm text-muted-foreground">Preview</span>
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">Optional. You can change this later in Settings.</p>
               </>
             )}
 
@@ -516,30 +519,65 @@ export default function SetupPage() {
 
             {/* Review */}
             {currentStep.key === "review" && (
-              <div className="divide-y rounded-lg border overflow-hidden">
-                {[
-                  { icon: Shield, label: "Admin", value: `${data.admin.display_name} (${data.admin.email})` },
-                  { icon: Building2, label: "Organization", value: data.org.name },
-                  { icon: Mail, label: "SMTP", value: `${data.smtp.host}:${data.smtp.port} → ${data.smtp.from_address}` },
-                  { icon: Globe, label: "Domain", value: data.domain.domain_name },
-                  ...(data.storage?.endpoint ? [{ icon: HardDrive, label: "Storage", value: `${data.storage.provider.toUpperCase()} — ${data.storage.endpoint}` }] : []),
-                  ...(data.team?.name ? [{ icon: Users, label: "Team", value: data.team.name }] : []),
-                  ...(data.branding?.logo_url ? [{ icon: Paintbrush, label: "Branding", value: data.branding.logo_url }] : []),
-                  ...(data.invites.filter(i => i.email).length > 0 ? [{ icon: UserPlus, label: "Invites", value: data.invites.filter(i => i.email).map(i => i.email).join(", ") }] : []),
-                ].map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <div key={item.label} className="flex items-center gap-3 px-3 py-2.5">
-                      <div className="h-7 w-7 rounded-md bg-muted flex items-center justify-center shrink-0">
-                        <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <span className="text-xs text-muted-foreground font-mono">{item.label}</span>
-                        <p className="text-sm font-medium truncate">{item.value}</p>
-                      </div>
+              <div className="space-y-4">
+                {/* Required configuration */}
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Required</p>
+                  <div className="divide-y rounded-lg border overflow-hidden">
+                    {[
+                      { icon: Shield, label: "Admin", value: data.admin.display_name, detail: data.admin.email },
+                      { icon: Building2, label: "Organization", value: data.org.name, detail: data.org.slug || undefined },
+                      { icon: Mail, label: "Outbound SMTP", value: `${data.smtp.host}:${data.smtp.port}`, detail: `From: ${data.smtp.from_address}` },
+                      { icon: Globe, label: "Domain", value: data.domain.domain_name, detail: undefined },
+                    ].map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <div key={item.label} className="flex items-center gap-3 px-4 py-3">
+                          <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+                            <Icon className="h-4 w-4 text-primary" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium">{item.value}</p>
+                            {item.detail && <p className="text-xs text-muted-foreground truncate">{item.detail}</p>}
+                          </div>
+                          <Badge variant="secondary" className="text-[10px] shrink-0">{item.label}</Badge>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Optional configuration */}
+                {(data.storage?.endpoint || data.team?.name || data.branding?.logo_url || data.invites.filter(i => i.email).length > 0) && (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Optional</p>
+                    <div className="divide-y rounded-lg border overflow-hidden">
+                      {[
+                        ...(data.storage?.endpoint ? [{ icon: HardDrive, label: "Storage", value: `${data.storage.provider.toUpperCase()} — ${data.storage.endpoint}` }] : []),
+                        ...(data.team?.name ? [{ icon: Users, label: "Team", value: data.team.name }] : []),
+                        ...(data.branding?.logo_url ? [{ icon: Paintbrush, label: "Logo", value: data.branding.logo_url }] : []),
+                        ...(data.invites.filter(i => i.email).length > 0 ? [{ icon: UserPlus, label: "Invites", value: `${data.invites.filter(i => i.email).length} user${data.invites.filter(i => i.email).length > 1 ? "s" : ""}` }] : []),
+                      ].map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <div key={item.label} className="flex items-center gap-3 px-4 py-3">
+                            <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center shrink-0">
+                              <Icon className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium truncate">{item.value}</p>
+                            </div>
+                            <Badge variant="outline" className="text-[10px] shrink-0">{item.label}</Badge>
+                          </div>
+                        );
+                      })}
                     </div>
-                  );
-                })}
+                  </div>
+                )}
+
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+                  <p className="text-xs text-muted-foreground">Clicking <strong>Complete Setup</strong> will create your admin account, organization, and all configured resources. You&apos;ll be signed in automatically.</p>
+                </div>
               </div>
             )}
           </CardContent>

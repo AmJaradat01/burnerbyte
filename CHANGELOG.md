@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.2.6 (June 2026) — Setup wizard polish + SMTP timeout fix
+
+### Fixed
+- **SMTP test no longer hangs** — added 10-second connection timeout and proper STARTTLS negotiation to `test-smtp`. Previously port 587 connections could hang indefinitely waiting for the TLS upgrade response.
+
+### Changed
+- **Removed dead `footer_text` field from branding** — was never stored by the backend or displayed anywhere. Branding step now has only Logo URL with a live preview.
+- **Redesigned the review step** — Required/Optional groupings, primary-colored icons for required items, badge labels, admin name + email on separate lines, and an info note explaining what "Complete Setup" does.
+
 ## v1.2.5 (June 2026) — Org deletion hardening + branding cleanup
 
 ### Added
