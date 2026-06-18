@@ -142,26 +142,39 @@ func (h *OrgHandler) DeleteOrg(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	if input.Password == "" {
-		writeError(w, http.StatusBadRequest, "password is required to delete an organization")
-		return
-	}
 
-	// Verify the acting user's password
+	// Verify the acting user's identity
 	uc := auth.GetUser(r.Context())
 	user, err := h.userRepo.GetByID(r.Context(), uc.UserID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to verify identity")
 		return
 	}
-	if user.PasswordHash == nil {
-		writeError(w, http.StatusBadRequest, "SSO-only accounts cannot delete organizations via password; contact a platform admin")
-		return
+
+	// Password-based users must provide their password; SSO users (whether
+	// pure SSO-only or a password account that has linked SSO) are verified by
+	// their active authenticated session — they already passed through their
+	// identity provider to obtain the current token. The org name confirmation
+	// on the frontend provides the human gate for SSO users.
+	isSSOUser := user.SSOProvider != nil && *user.SSOProvider != ""
+	if !isSSOUser {
+		// Pure password user: password is mandatory
+		if input.Password == "" {
+			writeError(w, http.StatusBadRequest, "password is required to delete an organization")
+			return
+		}
+		if !auth.CheckPassword(*user.PasswordHash, input.Password) {
+			writeError(w, http.StatusForbidden, "incorrect password")
+			return
+		}
+	} else if input.Password != "" && user.PasswordHash != nil {
+		// SSO user who also has a password and chose to provide it — verify it
+		if !auth.CheckPassword(*user.PasswordHash, input.Password) {
+			writeError(w, http.StatusForbidden, "incorrect password")
+			return
+		}
 	}
-	if !auth.CheckPassword(*user.PasswordHash, input.Password) {
-		writeError(w, http.StatusForbidden, "incorrect password")
-		return
-	}
+	// SSO user with empty password: allowed (session-authenticated)
 
 	// Fetch org before delete for audit
 	beforeOrg, _ := h.svc.GetOrg(r.Context(), orgID)
