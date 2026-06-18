@@ -82,14 +82,11 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
   const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
 
   // Re-sync local state when org refreshes after save
-  const orgKey = `${org.id}-${org.updated_at}`;
-  const [syncKey, setSyncKey] = useState(orgKey);
-  if (orgKey !== syncKey) {
+  useEffect(() => {
     setName(org.name);
     setLogoUrl(org.logo_url ?? "");
     setSettings(org.settings || {});
-    setSyncKey(orgKey);
-  }
+  }, [org.id, org.updated_at]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const dirty = name !== org.name || logoUrl !== (org.logo_url ?? "") || JSON.stringify(settings) !== JSON.stringify(org.settings || {});
 
@@ -212,7 +209,10 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
                     <p className="text-xs text-muted-foreground">Require SSO for all members</p>
                   </div>
                 </div>
-                <Switch checked={settings.enforce_sso ?? false} onCheckedChange={(v) => set("enforce_sso", v)} />
+                <Switch checked={settings.enforce_sso ?? false} onCheckedChange={(v) => {
+                  if (v) { toast.warning("Make sure SSO is configured before enforcing — members won't be able to sign in with passwords.", { duration: 6000 }); }
+                  set("enforce_sso", v);
+                }} />
               </div>
               <div className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50">
                 <div className="flex items-center gap-3">
