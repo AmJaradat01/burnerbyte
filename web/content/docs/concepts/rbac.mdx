@@ -152,6 +152,10 @@ The `is_system_admin` flag on the user record bypasses all RBAC checks and grant
 
 This flag is set during the initial setup wizard for the platform owner.
 
+### Operating Without an Organization
+
+System admins are exempt from the forced onboarding redirect. A system admin with no organization can still access the platform-level surfaces — **Settings → Roles**, **Settings → SSO**, **Settings → System**, and the **platform audit log** — without creating or joining an org. Org-scoped tabs (General, Users) and org-scoped nav items (domains, teams, analytics) appear only once an org exists.
+
 ## Encryption at Rest
 
 Sensitive configuration values (SSO client secrets, SMTP passwords) are encrypted with AES-256-GCM before storage in the `system_configs` table. To enable, set `encryption.key` to a 64-character hex string (32 bytes). Generate with:

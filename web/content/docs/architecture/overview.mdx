@@ -60,3 +60,5 @@ The SMTP server accepts connections, validates the recipient domain against the 
 ## Frontend
 
 Next.js 16 with App Router, React 19, shadcn/ui components, Zustand for state, TanStack Query for server state, and Recharts for analytics visualization. 26 pages with consistent UX patterns (loading skeletons, error states, empty states, confirmation dialogs, optimistic updates).
+
+A server-authoritative onboarding gate redirects users without an organization to `/onboarding` (system admins are exempt). Org-scoped pages show a `NoOrgState` empty state with a create-org CTA, and team-scoped pages show a `NoTeamState` with a create-team CTA, ensuring there are no dead-end screens regardless of the user's provisioning state.
