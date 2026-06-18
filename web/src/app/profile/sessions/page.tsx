@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, setAccessToken, setSessionHint } from "@/lib/api";
+import { api } from "@/lib/api";
+import { useAuthStore } from "@/stores/auth-store";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +44,7 @@ function getDeviceIcon(deviceType: string) {
 
 export default function SessionsPage() {
   const qc = useQueryClient();
+  const logout = useAuthStore((s) => s.logout);
   const [revokeAllOpen, setRevokeAllOpen] = useState(false);
   const [revokeConfirmText, setRevokeConfirmText] = useState("");
 
@@ -61,13 +63,7 @@ export default function SessionsPage() {
     mutationFn: () => api.del("/auth/sessions"),
     onSuccess: () => {
       toast.success("All sessions revoked — signing out…");
-      // Current session is now invalid, force logout
-      setTimeout(() => {
-        setAccessToken(null);
-        localStorage.removeItem("refresh_token");
-        setSessionHint(false);
-        window.location.href = "/login";
-      }, 1000);
+      setTimeout(() => logout(), 1000);
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
   });
