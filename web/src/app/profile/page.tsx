@@ -125,28 +125,35 @@ export default function ProfilePage() {
         {/* Right column — narrower */}
         <div className="lg:col-span-2 space-y-6">
           {!isSSO ? <ChangePasswordForm /> : (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                  <KeyRound className="h-4 w-4 text-muted-foreground" />
+            <Card className="shadow-sm">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                  <div className="h-7 w-7 rounded-lg bg-primary/8 flex items-center justify-center">
+                    <KeyRound className="h-4 w-4 text-primary" />
+                  </div>
                   Password
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">Managed by your identity provider ({user.sso_provider}).</p>
+                <div className="rounded-xl bg-muted/30 border border-muted px-4 py-3">
+                  <p className="text-sm text-muted-foreground">Managed by your identity provider (<span className="font-medium text-foreground">{user.sso_provider}</span>).</p>
+                </div>
               </CardContent>
             </Card>
           )}
 
           <ConnectedAccountsCard />
 
-          {/* Sessions & danger */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                <Monitor className="h-4 w-4 text-muted-foreground" />
+          {/* Sessions & Danger */}
+          <Card className="shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                <div className="h-7 w-7 rounded-lg bg-primary/8 flex items-center justify-center">
+                  <Monitor className="h-4 w-4 text-primary" />
+                </div>
                 Account
               </CardTitle>
+              <CardDescription>Sessions and account management.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
               <Link href="/profile/sessions" className="group block">
@@ -201,36 +208,41 @@ function ProfileForm({ user, onSaved }: { user: NonNullable<ReturnType<typeof us
   };
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-sm font-medium">
-          <UserRound className="h-4 w-4 text-muted-foreground" />
+    <Card className="shadow-sm hover:shadow-md transition-shadow">
+      <CardHeader className="pb-4">
+        <CardTitle className="flex items-center gap-2 text-base font-semibold">
+          <div className="h-7 w-7 rounded-lg bg-primary/8 flex items-center justify-center">
+            <UserRound className="h-4 w-4 text-primary" />
+          </div>
           Account Details
         </CardTitle>
+        <CardDescription>Your public identity across the platform.</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center gap-3 rounded-lg bg-muted/40 px-3 py-2.5">
+      <CardContent className="space-y-5">
+        <div className="flex items-center gap-3 rounded-xl bg-muted/30 border border-muted px-4 py-3">
           <Shield className="h-4 w-4 text-muted-foreground shrink-0" />
           <div className="min-w-0 flex-1">
-            <p className="text-xs text-muted-foreground">Email</p>
-            <p className="text-sm font-mono truncate">{user.email}</p>
+            <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Email</p>
+            <p className="text-sm font-mono truncate mt-0.5">{user.email}</p>
           </div>
-          <Badge variant="outline" className="text-[10px] shrink-0">Read-only</Badge>
+          <Badge variant="outline" className="text-[10px] shrink-0 bg-background">Read-only</Badge>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="displayName">Display Name</Label>
-          <Input id="displayName" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Your name" />
+        <div className="space-y-1.5">
+          <Label htmlFor="displayName" className="text-sm font-medium">Display Name</Label>
+          <Input id="displayName" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Your name" className="h-10" />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="avatar">Avatar URL</Label>
-          <Input id="avatar" value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} placeholder="https://example.com/avatar.png" />
+        <div className="space-y-1.5">
+          <Label htmlFor="avatar" className="text-sm font-medium">Avatar URL</Label>
+          <Input id="avatar" value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} placeholder="https://example.com/avatar.png" className="h-10" />
           <p className="text-xs text-muted-foreground">Direct link to an image. Leave empty to use initials.</p>
         </div>
         {dirty && (
-          <Button onClick={handleSave} disabled={saving} className="w-full gap-2">
-            <Save className="h-4 w-4" />
-            {saving ? "Saving…" : "Save Changes"}
-          </Button>
+          <div className="pt-1">
+            <Button onClick={handleSave} disabled={saving} className="gap-2 shadow-sm">
+              <Save className="h-4 w-4" />
+              {saving ? "Saving…" : "Save Changes"}
+            </Button>
+          </div>
         )}
       </CardContent>
     </Card>
@@ -261,43 +273,47 @@ function ChangePasswordForm() {
   };
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-sm font-medium">
-          <KeyRound className="h-4 w-4 text-muted-foreground" />
+    <Card className="shadow-sm hover:shadow-md transition-shadow">
+      <CardHeader className="pb-4">
+        <CardTitle className="flex items-center gap-2 text-base font-semibold">
+          <div className="h-7 w-7 rounded-lg bg-primary/8 flex items-center justify-center">
+            <KeyRound className="h-4 w-4 text-primary" />
+          </div>
           Change Password
         </CardTitle>
-        <CardDescription>You&apos;ll be signed out of all sessions.</CardDescription>
+        <CardDescription>You&apos;ll be signed out of all active sessions.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="currentPw">Current Password</Label>
-          <Input id="currentPw" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} autoComplete="current-password" />
+        <div className="space-y-1.5">
+          <Label htmlFor="currentPw" className="text-sm font-medium">Current Password</Label>
+          <Input id="currentPw" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} autoComplete="current-password" className="h-10" />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="newPw">New Password</Label>
-          <Input id="newPw" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} autoComplete="new-password" />
+        <div className="space-y-1.5">
+          <Label htmlFor="newPw" className="text-sm font-medium">New Password</Label>
+          <Input id="newPw" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} autoComplete="new-password" className="h-10" />
           {newPassword.length > 0 && newPassword.length < 8 && (
             <p className="text-xs text-destructive">Must be at least 8 characters</p>
           )}
           {newPassword.length >= 8 && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 mt-1.5">
               <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
-                <div className={`h-full rounded-full transition-all ${newPassword.length >= 12 ? "w-full bg-success" : newPassword.length >= 10 ? "w-2/3 bg-warning/50" : "w-1/3 bg-destructive/50"}`} />
+                <div className={`h-full rounded-full transition-all duration-300 ${newPassword.length >= 12 ? "w-full bg-success" : newPassword.length >= 10 ? "w-2/3 bg-warning" : "w-1/3 bg-destructive/60"}`} />
               </div>
-              <span className="text-[10px] text-muted-foreground">{newPassword.length >= 12 ? "Strong" : newPassword.length >= 10 ? "Medium" : "Weak"}</span>
+              <span className="text-[10px] font-medium text-muted-foreground w-10">{newPassword.length >= 12 ? "Strong" : newPassword.length >= 10 ? "Fair" : "Weak"}</span>
             </div>
           )}
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="confirmPw">Confirm New Password</Label>
-          <Input id="confirmPw" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" />
+        <div className="space-y-1.5">
+          <Label htmlFor="confirmPw" className="text-sm font-medium">Confirm New Password</Label>
+          <Input id="confirmPw" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" className="h-10" />
           {mismatch && <p className="text-xs text-destructive">Passwords do not match</p>}
         </div>
-        <Button onClick={handleChange} disabled={changing || !valid} className="w-full gap-2">
-          <KeyRound className="h-4 w-4" />
-          {changing ? "Changing…" : "Change Password"}
-        </Button>
+        <div className="pt-1">
+          <Button onClick={handleChange} disabled={changing || !valid} className="gap-2 shadow-sm">
+            <KeyRound className="h-3.5 w-3.5" />
+            {changing ? "Changing…" : "Update Password"}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
@@ -343,12 +359,15 @@ function DateTimePreferencesCard() {
   };
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-sm font-medium">
-          <Clock className="h-4 w-4 text-muted-foreground" />
+    <Card className="shadow-sm hover:shadow-md transition-shadow">
+      <CardHeader className="pb-4">
+        <CardTitle className="flex items-center gap-2 text-base font-semibold">
+          <div className="h-7 w-7 rounded-lg bg-primary/8 flex items-center justify-center">
+            <Clock className="h-4 w-4 text-primary" />
+          </div>
           Date & Time
         </CardTitle>
+        <CardDescription>Choose how dates and times display across the app.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
@@ -384,10 +403,12 @@ function DateTimePreferencesCard() {
           </div>
         </div>
         {dirty && (
-          <Button onClick={save} disabled={saving} className="w-full gap-2">
-            <Clock className="h-4 w-4" />
-            {saving ? "Saving…" : "Save Preferences"}
-          </Button>
+          <div className="pt-1">
+            <Button onClick={save} disabled={saving} className="gap-2 shadow-sm">
+              <Save className="h-3.5 w-3.5" />
+              {saving ? "Saving…" : "Save Preferences"}
+            </Button>
+          </div>
         )}
       </CardContent>
     </Card>
@@ -462,12 +483,15 @@ function ConnectedAccountsCard() {
   if (!ssoStatus?.enabled && (!identities || identities.length === 0)) return null;
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-sm font-medium">
-          <Link2 className="h-4 w-4 text-muted-foreground" />
+    <Card className="shadow-sm hover:shadow-md transition-shadow">
+      <CardHeader className="pb-4">
+        <CardTitle className="flex items-center gap-2 text-base font-semibold">
+          <div className="h-7 w-7 rounded-lg bg-primary/8 flex items-center justify-center">
+            <Link2 className="h-4 w-4 text-primary" />
+          </div>
           Connected Accounts
         </CardTitle>
+        <CardDescription>Link or unlink your SSO identities.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         {identitiesLoading ? (
