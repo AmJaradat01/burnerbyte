@@ -38,6 +38,12 @@ export default function ProfilePage() {
     }
   }, [qc]);
 
+  const { data: ssoStatus } = useQuery({
+    queryKey: ["sso-status"],
+    queryFn: () => api.get<{ enabled: boolean; enforce_sso?: boolean }>("/auth/sso-status"),
+    staleTime: 60000,
+  });
+
   if (!user) return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -53,6 +59,8 @@ export default function ProfilePage() {
     : user.email[0].toUpperCase();
 
   const isSSO = !!user.sso_provider;
+  const enforceSSO = ssoStatus?.enforce_sso ?? false;
+  const hidePassword = isSSO || enforceSSO;
 
   return (
     <div className="space-y-6">
@@ -86,11 +94,11 @@ export default function ProfilePage() {
 
         {/* Right */}
         <div className="space-y-6">
-          {!isSSO ? <PasswordCard /> : (
+          {!hidePassword ? <PasswordCard /> : (
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm">Password</CardTitle>
-                <CardDescription>Managed by {user.sso_provider}. Change it through your identity provider.</CardDescription>
+                <CardDescription>{enforceSSO ? "Password changes are disabled. Your organization requires SSO." : `Managed by ${user.sso_provider}. Change it through your identity provider.`}</CardDescription>
               </CardHeader>
             </Card>
           )}
