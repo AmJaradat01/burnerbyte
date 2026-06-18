@@ -54,9 +54,9 @@ export default function ProfilePage() {
     </div>
   );
 
-  const initials = user.display_name
-    ? user.display_name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
-    : user.email[0].toUpperCase();
+  const initials = (user.display_name?.trim()
+    ? user.display_name.trim().split(" ").filter(Boolean).map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+    : user.email[0].toUpperCase()) || "?";
 
   const isSSO = !!user.sso_provider;
   const enforceSSO = ssoStatus?.enforce_sso ?? false;
@@ -67,12 +67,12 @@ export default function ProfilePage() {
       {/* Identity row */}
       <div className="flex items-center gap-4">
         <Avatar className="h-14 w-14 text-lg">
-          <AvatarImage src={user.avatar_url} alt={user.display_name} />
+          <AvatarImage src={user.avatar_url} alt={user.display_name || "User avatar"} />
           <AvatarFallback className="bg-muted font-semibold text-muted-foreground">{initials}</AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-title truncate">{user.display_name || user.email}</h1>
+            <h1 className="text-title truncate">{user.display_name?.trim() || user.email}</h1>
             {user.is_system_admin && <Badge variant="secondary" className="text-[10px]">System Admin</Badge>}
             {user.email_verified && <Badge className="bg-success/10 text-success border-success/20 text-[10px] gap-1"><Shield className="h-2.5 w-2.5" />Verified</Badge>}
           </div>
@@ -141,8 +141,9 @@ function ProfileForm({ user, onSaved }: { user: NonNullable<ReturnType<typeof us
     setSaving(true);
     try {
       await api.patch("/auth/me", { display_name: displayName.trim(), avatar_url: avatarUrl.trim() || undefined });
-      await onSaved();
       toast.success("Profile updated");
+      // Refresh user data — non-critical, don't block on failure
+      onSaved().catch(() => {});
     } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Failed"); }
     finally { setSaving(false); }
   };
