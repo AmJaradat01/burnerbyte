@@ -403,6 +403,13 @@ func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	uc := auth.GetUser(r.Context())
+
+	// Block password changes when the user's organization enforces SSO
+	if h.svc.IsPasswordChangeBlocked(r.Context(), uc.UserID) {
+		writeError(w, http.StatusForbidden, "password changes are disabled when SSO is enforced")
+		return
+	}
+
 	var input domain.ChangePasswordInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
