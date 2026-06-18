@@ -38,7 +38,7 @@ description: Next.js frontend architecture, pages, components, and keyboard shor
 | `/login` | Sign in with password or SSO |
 | `/register` | Account creation with password strength |
 | `/setup` | First-run setup wizard |
-| `/onboarding` | Post-setup onboarding flow |
+| `/onboarding` | Mandatory org-creation flow — forced redirect for users without an org (system admins exempt) |
 
 ## Keyboard Shortcuts
 
@@ -57,6 +57,9 @@ Every data page consistently uses:
 - **Loading skeletons** — Structural placeholders matching the final layout
 - **Error states** — `ErrorState` component with contextual message and retry button
 - **Empty states** — `EmptyState` with a concise message and an optional primary action
+- **No-org state** — `NoOrgState` on org-scoped pages when the user has no organization (CTA to create one or request an invite)
+- **No-team state** — `NoTeamState` on team-scoped pages (webhooks, API keys) when the org has no teams yet
+- **Forced onboarding** — `useOrgBootstrap` hook redirects zero-org users to `/onboarding` server-authoritatively (system admins exempt)
 - **Confirmation dialogs** — `ConfirmDialog` for all destructive actions
 - **Pagination** — `Pagination` component with page numbers
 - **Toast notifications** — Sonner with severity icons (success, error, warning, info)
