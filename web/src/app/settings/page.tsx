@@ -698,32 +698,36 @@ function PlatformSettingsCard() {
             </div>
             <p className="text-sm font-semibold">Demo Mode</p>
           </div>
-          <div className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50">
-            <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center shrink-0">
-                <Play className="h-4 w-4 text-muted-foreground" />
-              </div>
+          <div className="rounded-lg border p-4 space-y-3">
+            <div className="flex items-center justify-between">
               <div>
-                <Label>Enable &ldquo;Try it live&rdquo;</Label>
-                <p className="text-xs text-muted-foreground">Show a public demo inbox on the landing page and /try route.</p>
+                <Label htmlFor="demo-toggle" className="text-sm font-medium">Enable public demo</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">Shows a live inbox on the landing page and <code className="font-mono text-[11px] bg-muted px-1 rounded">/try</code> route. Visitors can see incoming emails without signing in.</p>
               </div>
+              <Switch id="demo-toggle" checked={form.demo_enabled} onCheckedChange={(v) => set("demo_enabled", v)} />
             </div>
-            <Switch checked={form.demo_enabled} onCheckedChange={(v) => set("demo_enabled", v)} />
+            {form.demo_enabled && data && !data.demo_configured && (
+              <div className="flex items-start gap-2.5 rounded-lg border border-warning/30 bg-warning/5 px-3 py-2.5">
+                <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+                <div className="text-xs space-y-1">
+                  <p className="font-medium text-foreground">Configuration required</p>
+                  <p className="text-muted-foreground">Set <code className="font-mono bg-muted px-1 rounded">DEMO_ASSIGNMENT_ID</code> and <code className="font-mono bg-muted px-1 rounded">DEMO_USER_ID</code> in your environment or config file. The demo will remain inactive until both values are provided.</p>
+                </div>
+              </div>
+            )}
+            {form.demo_enabled && data?.demo_configured && (
+              <div className="flex items-center gap-2 rounded-lg border border-success/20 bg-success/5 px-3 py-2 text-xs">
+                <CheckCircle2 className="h-3.5 w-3.5 text-success shrink-0" />
+                <span className="text-muted-foreground">Demo is configured and active. Visitors can access it at <code className="font-mono bg-muted px-1 rounded">/try</code>.</span>
+              </div>
+            )}
           </div>
-          {form.demo_enabled && data && !data.demo_configured && (
-            <p className="flex items-start gap-2 rounded-lg border border-warning/20 bg-warning/10 px-3 py-2 text-xs text-warning">
-              <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-              <span>
-                No effect until <code className="font-mono">DEMO_ASSIGNMENT_ID</code> and{" "}
-                <code className="font-mono">DEMO_USER_ID</code> are set (env or config). The demo stays off until then.
-              </span>
-            </p>
-          )}
         </div>
 
-        <div className="border-t pt-5">
+        <div className="border-t pt-5 flex items-center justify-between">
+          <p className="text-xs text-muted-foreground">Changes take effect immediately after save.</p>
           <Button onClick={save} disabled={saving} size="sm" className="gap-2">
-            <Save className="h-4 w-4" />
+            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-4 w-4" />}
             {saving ? "Saving…" : "Save Platform Settings"}
           </Button>
         </div>
