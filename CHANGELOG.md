@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.2.5 (June 2026) — Org deletion hardening + branding cleanup
+
+### Added
+- **Password confirmation for org deletion** — the Danger Zone now opens a proper confirmation dialog requiring both the org name and the user's password before deleting. Backend enforces password verification via `DELETE /orgs/:id` body.
+
+### Fixed
+- **SSO users (including linked accounts) can delete their org** — previously a user who had a password but now logs in via SSO was blocked because the backend required a password they couldn't provide. Now SSO-authenticated users are verified by their active session; pure password users still must provide their password.
+
+### Changed
+- **Removed `primary_color` from setup wizard branding** — the color field was unused in the app. Branding step now has only Logo URL and Footer text.
+- **Documentation updated** for v1.2.2–v1.2.4 changes: README, architecture, frontend, RBAC, quick-start, and settings-cascade docs all reflect the onboarding gate, empty states, and platform admin decoupling.
+
 ## v1.2.4 (June 2026) — Platform administration without an organization
 
 A system admin can now operate the platform without belonging to an organization, instead of being forced into the org-creation wizard. Regular users are still routed through onboarding.
