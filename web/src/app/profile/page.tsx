@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import Link from "next/link";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { Clock, KeyRound, Link2, Monitor, Save, Shield, Trash2, Unlink, UserRound } from "lucide-react";
+import { KeyRound, Link2, Monitor, Save, Shield, Trash2, Unlink } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useDateFormat } from "@/hooks/use-date-format";
 import { ProviderIcon, providerTypeLabel } from "@/components/provider-icon";
@@ -39,15 +39,12 @@ export default function ProfilePage() {
   }, [qc]);
 
   if (!user) return (
-    <div className="mx-auto max-w-5xl space-y-8">
+    <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Skeleton className="h-16 w-16 rounded-full" />
-        <div className="space-y-2"><Skeleton className="h-6 w-40" /><Skeleton className="h-4 w-56" /></div>
+        <Skeleton className="h-14 w-14 rounded-full" />
+        <div className="space-y-2"><Skeleton className="h-5 w-36" /><Skeleton className="h-4 w-48" /></div>
       </div>
-      <div className="grid gap-6 md:grid-cols-2">
-        <Skeleton className="h-48 w-full rounded-xl" />
-        <Skeleton className="h-48 w-full rounded-xl" />
-      </div>
+      <div className="grid gap-6 lg:grid-cols-2"><Skeleton className="h-64 rounded-xl" /><Skeleton className="h-64 rounded-xl" /></div>
     </div>
   );
 
@@ -58,128 +55,66 @@ export default function ProfilePage() {
   const isSSO = !!user.sso_provider;
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
-      {/* Profile hero */}
-      <div className="relative rounded-2xl border overflow-hidden">
-        {/* Decorative background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/8 via-primary/3 to-transparent" />
-        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/3 blur-3xl" />
-        <div className="relative p-6 sm:p-8">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-            <div className="relative">
-              <Avatar className="h-24 w-24 text-2xl ring-4 ring-background shadow-lg">
-                <AvatarImage src={user.avatar_url} alt={user.display_name} />
-                <AvatarFallback className="bg-primary/10 text-primary font-bold text-3xl">{initials}</AvatarFallback>
-              </Avatar>
-              {user.email_verified && (
-                <div className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-success flex items-center justify-center ring-2 ring-background">
-                  <Shield className="h-3 w-3 text-white" />
-                </div>
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2.5 flex-wrap">
-                <h1 className="text-2xl font-bold tracking-tight truncate">{user.display_name || "Unnamed"}</h1>
-                {user.is_system_admin && <Badge className="bg-primary/10 text-primary border-primary/20 font-medium">System Admin</Badge>}
-              </div>
-              <p className="text-sm text-muted-foreground font-mono mt-1">{user.email}</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {isSSO && (
-                  <Badge variant="outline" className="gap-1.5 py-1">
-                    <KeyRound className="h-3 w-3" /> Authenticated via {user.sso_provider}
-                  </Badge>
-                )}
-                {user.auth_method_lock && (
-                  <Badge variant="outline" className="gap-1.5 py-1 text-primary border-primary/30">
-                    <Shield className="h-3 w-3" /> Locked to {user.auth_method_lock}
-                  </Badge>
-                )}
-              </div>
-            </div>
-            <div className="hidden sm:block shrink-0">
-              <div className="rounded-xl bg-background/80 backdrop-blur-sm border px-4 py-3 space-y-2 text-right">
-                <div>
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Member since</p>
-                  <p className="text-sm font-semibold">{new Date(user.created_at).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}</p>
-                </div>
-                {user.last_login_at && (
-                  <div className="pt-1 border-t border-border/50">
-                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Last active</p>
-                    <p className="text-xs font-medium">{new Date(user.last_login_at).toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
-                  </div>
-                )}
-              </div>
-            </div>
+    <div className="space-y-6">
+      {/* Identity row */}
+      <div className="flex items-center gap-4">
+        <Avatar className="h-14 w-14 text-lg">
+          <AvatarImage src={user.avatar_url} alt={user.display_name} />
+          <AvatarFallback className="bg-muted font-semibold text-muted-foreground">{initials}</AvatarFallback>
+        </Avatar>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-title truncate">{user.display_name || user.email}</h1>
+            {user.is_system_admin && <Badge variant="secondary" className="text-[10px]">System Admin</Badge>}
+            {user.email_verified && <Badge className="bg-success/10 text-success border-success/20 text-[10px] gap-1"><Shield className="h-2.5 w-2.5" />Verified</Badge>}
           </div>
+          <p className="text-sm text-muted-foreground font-mono truncate">{user.email}</p>
+        </div>
+        <div className="hidden sm:block text-right text-xs text-muted-foreground shrink-0">
+          <p>Joined {new Date(user.created_at).toLocaleDateString(undefined, { year: "numeric", month: "short" })}</p>
+          {isSSO && <p className="mt-0.5">via {user.sso_provider}</p>}
         </div>
       </div>
 
-      {/* Content grid */}
-      <div className="grid gap-6 lg:grid-cols-5">
-        {/* Left column — wider */}
-        <div className="lg:col-span-3 space-y-6">
+      {/* Main grid */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Left */}
+        <div className="space-y-6">
           <ProfileForm user={user} onSaved={fetchMe} />
-          <DateTimePreferencesCard />
+          <DateTimeCard />
         </div>
 
-        {/* Right column — narrower */}
-        <div className="lg:col-span-2 space-y-6">
-          {!isSSO ? <ChangePasswordForm /> : (
-            <Card className="shadow-sm">
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2 text-base font-semibold">
-                  <div className="h-7 w-7 rounded-lg bg-primary/8 flex items-center justify-center">
-                    <KeyRound className="h-4 w-4 text-primary" />
-                  </div>
-                  Password
-                </CardTitle>
+        {/* Right */}
+        <div className="space-y-6">
+          {!isSSO ? <PasswordCard /> : (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">Password</CardTitle>
+                <CardDescription>Managed by {user.sso_provider}. Change it through your identity provider.</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="rounded-xl bg-muted/30 border border-muted px-4 py-3">
-                  <p className="text-sm text-muted-foreground">Managed by your identity provider (<span className="font-medium text-foreground">{user.sso_provider}</span>).</p>
-                </div>
-              </CardContent>
             </Card>
           )}
-
           <ConnectedAccountsCard />
-
-          {/* Sessions & Danger */}
-          <Card className="shadow-sm hover:shadow-md transition-shadow">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2 text-base font-semibold">
-                <div className="h-7 w-7 rounded-lg bg-primary/8 flex items-center justify-center">
-                  <Monitor className="h-4 w-4 text-primary" />
-                </div>
-                Account
-              </CardTitle>
-              <CardDescription>Sessions and account management.</CardDescription>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">Sessions</CardTitle>
+              <CardDescription>Active login sessions across your devices.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-2">
-              <Link href="/profile/sessions" className="group block">
-                <div className="flex items-center gap-3 rounded-xl border p-3.5 transition-all hover:bg-muted/50 hover:border-primary/20 hover:shadow-sm">
-                  <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center shrink-0 transition-colors group-hover:bg-primary/10">
-                    <Monitor className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium">Active Sessions</p>
-                    <p className="text-xs text-muted-foreground">View devices and revoke access</p>
-                  </div>
-                </div>
-              </Link>
-              <Link href="/profile/delete" className="group block">
-                <div className="flex items-center gap-3 rounded-xl border border-destructive/20 p-3.5 transition-all hover:bg-destructive/5 hover:border-destructive/40 hover:shadow-sm">
-                  <div className="h-9 w-9 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0">
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-destructive">Delete Account</p>
-                    <p className="text-xs text-muted-foreground">Permanently remove all your data</p>
-                  </div>
-                </div>
+            <CardContent>
+              <Link href="/profile/sessions">
+                <Button variant="outline" size="sm"><Monitor className="h-3.5 w-3.5 mr-1.5" />Manage Sessions</Button>
               </Link>
             </CardContent>
           </Card>
+
+          {/* Danger zone */}
+          <div className="rounded-xl border border-destructive/30 p-5">
+            <p className="text-sm font-medium text-destructive">Delete Account</p>
+            <p className="text-sm text-muted-foreground mt-1 mb-3">Permanently delete your account, inboxes, and all associated data. This cannot be undone.</p>
+            <Link href="/profile/delete">
+              <Button variant="destructive" size="sm"><Trash2 className="h-3.5 w-3.5 mr-1.5" />Delete Account</Button>
+            </Link>
+          </div>
         </div>
       </div>
     </div>
@@ -200,56 +135,39 @@ function ProfileForm({ user, onSaved }: { user: NonNullable<ReturnType<typeof us
       await api.patch("/auth/me", { display_name: displayName.trim(), avatar_url: avatarUrl.trim() || undefined });
       await onSaved();
       toast.success("Profile updated");
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Failed");
-    } finally {
-      setSaving(false);
-    }
+    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Failed"); }
+    finally { setSaving(false); }
   };
 
   return (
-    <Card className="shadow-sm hover:shadow-md transition-shadow">
-      <CardHeader className="pb-4">
-        <CardTitle className="flex items-center gap-2 text-base font-semibold">
-          <div className="h-7 w-7 rounded-lg bg-primary/8 flex items-center justify-center">
-            <UserRound className="h-4 w-4 text-primary" />
-          </div>
-          Account Details
-        </CardTitle>
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm">Profile</CardTitle>
         <CardDescription>Your public identity across the platform.</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-5">
-        <div className="flex items-center gap-3 rounded-xl bg-muted/30 border border-muted px-4 py-3">
-          <Shield className="h-4 w-4 text-muted-foreground shrink-0" />
-          <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Email</p>
-            <p className="text-sm font-mono truncate mt-0.5">{user.email}</p>
-          </div>
-          <Badge variant="outline" className="text-[10px] shrink-0 bg-background">Read-only</Badge>
+      <CardContent className="space-y-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="email" className="text-label">Email</Label>
+          <Input id="email" value={user.email} disabled className="font-mono text-sm opacity-60" />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="displayName" className="text-sm font-medium">Display Name</Label>
-          <Input id="displayName" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Your name" className="h-10" />
+          <Label htmlFor="displayName" className="text-label">Display Name</Label>
+          <Input id="displayName" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Your name" />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="avatar" className="text-sm font-medium">Avatar URL</Label>
-          <Input id="avatar" value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} placeholder="https://example.com/avatar.png" className="h-10" />
-          <p className="text-xs text-muted-foreground">Direct link to an image. Leave empty to use initials.</p>
+          <Label htmlFor="avatar" className="text-label">Avatar URL</Label>
+          <Input id="avatar" value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} placeholder="https://..." />
+          <p className="text-xs text-muted-foreground">Direct image link. Leave empty for initials.</p>
         </div>
         {dirty && (
-          <div className="pt-1">
-            <Button onClick={handleSave} disabled={saving} className="gap-2 shadow-sm">
-              <Save className="h-4 w-4" />
-              {saving ? "Saving…" : "Save Changes"}
-            </Button>
-          </div>
+          <Button onClick={handleSave} disabled={saving} size="sm"><Save className="h-3.5 w-3.5 mr-1.5" />{saving ? "Saving…" : "Save"}</Button>
         )}
       </CardContent>
     </Card>
   );
 }
 
-function ChangePasswordForm() {
+function PasswordCard() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -264,56 +182,41 @@ function ChangePasswordForm() {
     setChanging(true);
     try {
       await api.put("/auth/me/password", { current_password: currentPassword, new_password: newPassword });
-      toast.success("Password changed — signing you out");
+      toast.success("Password changed. Signing out…");
       setTimeout(() => logout(), 1500);
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Failed");
-      setChanging(false);
-    }
+    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Failed"); setChanging(false); }
   };
 
   return (
-    <Card className="shadow-sm hover:shadow-md transition-shadow">
-      <CardHeader className="pb-4">
-        <CardTitle className="flex items-center gap-2 text-base font-semibold">
-          <div className="h-7 w-7 rounded-lg bg-primary/8 flex items-center justify-center">
-            <KeyRound className="h-4 w-4 text-primary" />
-          </div>
-          Change Password
-        </CardTitle>
-        <CardDescription>You&apos;ll be signed out of all active sessions.</CardDescription>
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm">Password</CardTitle>
+        <CardDescription>Changing your password signs out all sessions.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-1.5">
-          <Label htmlFor="currentPw" className="text-sm font-medium">Current Password</Label>
-          <Input id="currentPw" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} autoComplete="current-password" className="h-10" />
+          <Label htmlFor="currentPw" className="text-label">Current</Label>
+          <Input id="currentPw" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} autoComplete="current-password" />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="newPw" className="text-sm font-medium">New Password</Label>
-          <Input id="newPw" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} autoComplete="new-password" className="h-10" />
-          {newPassword.length > 0 && newPassword.length < 8 && (
-            <p className="text-xs text-destructive">Must be at least 8 characters</p>
-          )}
+          <Label htmlFor="newPw" className="text-label">New</Label>
+          <Input id="newPw" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} autoComplete="new-password" />
+          {newPassword.length > 0 && newPassword.length < 8 && <p className="text-xs text-destructive">Min 8 characters</p>}
           {newPassword.length >= 8 && (
-            <div className="flex items-center gap-2 mt-1.5">
-              <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
-                <div className={`h-full rounded-full transition-all duration-300 ${newPassword.length >= 12 ? "w-full bg-success" : newPassword.length >= 10 ? "w-2/3 bg-warning" : "w-1/3 bg-destructive/60"}`} />
+            <div className="flex items-center gap-2">
+              <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden">
+                <div className={`h-full rounded-full transition-all duration-200 ${newPassword.length >= 12 ? "w-full bg-success" : newPassword.length >= 10 ? "w-2/3 bg-warning" : "w-1/3 bg-destructive/60"}`} />
               </div>
-              <span className="text-[10px] font-medium text-muted-foreground w-10">{newPassword.length >= 12 ? "Strong" : newPassword.length >= 10 ? "Fair" : "Weak"}</span>
+              <span className="text-[10px] text-muted-foreground tabular-nums w-9">{newPassword.length >= 12 ? "Strong" : newPassword.length >= 10 ? "Fair" : "Weak"}</span>
             </div>
           )}
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="confirmPw" className="text-sm font-medium">Confirm New Password</Label>
-          <Input id="confirmPw" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" className="h-10" />
-          {mismatch && <p className="text-xs text-destructive">Passwords do not match</p>}
+          <Label htmlFor="confirmPw" className="text-label">Confirm</Label>
+          <Input id="confirmPw" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" />
+          {mismatch && <p className="text-xs text-destructive">Does not match</p>}
         </div>
-        <div className="pt-1">
-          <Button onClick={handleChange} disabled={changing || !valid} className="gap-2 shadow-sm">
-            <KeyRound className="h-3.5 w-3.5" />
-            {changing ? "Changing…" : "Update Password"}
-          </Button>
-        </div>
+        <Button onClick={handleChange} disabled={changing || !valid} size="sm"><KeyRound className="h-3.5 w-3.5 mr-1.5" />{changing ? "Changing…" : "Update Password"}</Button>
       </CardContent>
     </Card>
   );
@@ -321,141 +224,75 @@ function ChangePasswordForm() {
 
 const TIMEZONES = [
   "UTC", "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles",
-  "Europe/London", "Europe/Berlin", "Europe/Paris",
-  "Asia/Amman", "Asia/Dubai", "Asia/Tokyo", "Asia/Shanghai",
-  "Australia/Sydney",
+  "Europe/London", "Europe/Berlin", "Europe/Paris", "Asia/Amman", "Asia/Dubai", "Asia/Tokyo", "Asia/Shanghai", "Australia/Sydney",
 ];
 
-function DateTimePreferencesCard() {
+function DateTimeCard() {
   const { settings } = useDateFormat();
   const qc = useQueryClient();
-  const [tz, setTz] = useState("");
-  const [dateFmt, setDateFmt] = useState("");
-  const [timeFmt, setTimeFmt] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [synced, setSynced] = useState("");
+  const [tz, setTz] = useState(""); const [dateFmt, setDateFmt] = useState(""); const [timeFmt, setTimeFmt] = useState("");
+  const [saving, setSaving] = useState(false); const [synced, setSynced] = useState("");
 
   const key = settings ? `${settings.timezone}-${settings.date_format}-${settings.time_format}` : "";
-  if (key && key !== synced) {
-    setTz(settings!.timezone);
-    setDateFmt(settings!.date_format);
-    setTimeFmt(settings!.time_format);
-    setSynced(key);
-  }
+  if (key && key !== synced) { setTz(settings!.timezone); setDateFmt(settings!.date_format); setTimeFmt(settings!.time_format); setSynced(key); }
 
   const dirty = synced && (tz !== settings?.timezone || dateFmt !== settings?.date_format || timeFmt !== settings?.time_format);
 
   const save = async () => {
     setSaving(true);
-    try {
-      await api.patch("/auth/me", { timezone: tz, date_format: dateFmt, time_format: timeFmt });
-      qc.invalidateQueries({ queryKey: ["datetime-settings"] });
-      toast.success("Date & time preferences saved");
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Failed");
-    } finally {
-      setSaving(false);
-    }
+    try { await api.patch("/auth/me", { timezone: tz, date_format: dateFmt, time_format: timeFmt }); qc.invalidateQueries({ queryKey: ["datetime-settings"] }); toast.success("Preferences saved"); }
+    catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Failed"); }
+    finally { setSaving(false); }
   };
 
   return (
-    <Card className="shadow-sm hover:shadow-md transition-shadow">
-      <CardHeader className="pb-4">
-        <CardTitle className="flex items-center gap-2 text-base font-semibold">
-          <div className="h-7 w-7 rounded-lg bg-primary/8 flex items-center justify-center">
-            <Clock className="h-4 w-4 text-primary" />
-          </div>
-          Date & Time
-        </CardTitle>
-        <CardDescription>Choose how dates and times display across the app.</CardDescription>
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm">Date & Time</CardTitle>
+        <CardDescription>Display preferences for timestamps across the app.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label>Timezone</Label>
+        <div className="space-y-1.5">
+          <Label className="text-label">Timezone</Label>
           <Select value={tz} onValueChange={setTz}>
-            <SelectTrigger><SelectValue placeholder="Select timezone" /></SelectTrigger>
-            <SelectContent>
-              {TIMEZONES.map((t) => <SelectItem key={t} value={t}>{t.replace(/_/g, " ")}</SelectItem>)}
-            </SelectContent>
+            <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+            <SelectContent>{TIMEZONES.map((t) => <SelectItem key={t} value={t}>{t.replace(/_/g, " ")}</SelectItem>)}</SelectContent>
           </Select>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-2">
-            <Label>Date Format</Label>
+          <div className="space-y-1.5">
+            <Label className="text-label">Date</Label>
             <Select value={dateFmt} onValueChange={setDateFmt}>
-              <SelectTrigger><SelectValue placeholder="Select format" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="YYYY-MM-DD">YYYY-MM-DD</SelectItem>
-                <SelectItem value="DD/MM/YYYY">DD/MM/YYYY</SelectItem>
-                <SelectItem value="MM/DD/YYYY">MM/DD/YYYY</SelectItem>
-              </SelectContent>
+              <SelectTrigger><SelectValue placeholder="Format" /></SelectTrigger>
+              <SelectContent><SelectItem value="YYYY-MM-DD">YYYY-MM-DD</SelectItem><SelectItem value="DD/MM/YYYY">DD/MM/YYYY</SelectItem><SelectItem value="MM/DD/YYYY">MM/DD/YYYY</SelectItem></SelectContent>
             </Select>
           </div>
-          <div className="space-y-2">
-            <Label>Time Format</Label>
+          <div className="space-y-1.5">
+            <Label className="text-label">Time</Label>
             <Select value={timeFmt} onValueChange={setTimeFmt}>
-              <SelectTrigger><SelectValue placeholder="Select format" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="24h">24-hour</SelectItem>
-                <SelectItem value="12h">12-hour</SelectItem>
-              </SelectContent>
+              <SelectTrigger><SelectValue placeholder="Format" /></SelectTrigger>
+              <SelectContent><SelectItem value="24h">24-hour</SelectItem><SelectItem value="12h">12-hour</SelectItem></SelectContent>
             </Select>
           </div>
         </div>
-        {dirty && (
-          <div className="pt-1">
-            <Button onClick={save} disabled={saving} className="gap-2 shadow-sm">
-              <Save className="h-3.5 w-3.5" />
-              {saving ? "Saving…" : "Save Preferences"}
-            </Button>
-          </div>
-        )}
+        {dirty && <Button onClick={save} disabled={saving} size="sm"><Save className="h-3.5 w-3.5 mr-1.5" />{saving ? "Saving…" : "Save"}</Button>}
       </CardContent>
     </Card>
   );
 }
 
-
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
-
-interface SSOIdentity {
-  id: string;
-  provider: string;
-  subject: string;
-  email: string;
-  display_name: string;
-  linked_at: string;
-  last_used_at: string;
-}
-
-interface SSOStatusProvider {
-  name: string;
-  provider_type: string;
-  label: string;
-  enabled: boolean;
-}
-
-interface SSOStatusResponse {
-  enabled: boolean;
-  providers?: SSOStatusProvider[];
-  enforce_sso?: boolean;
-}
+interface SSOIdentity { id: string; provider: string; subject: string; email: string; display_name: string; linked_at: string; last_used_at: string; }
+interface SSOStatusProvider { name: string; provider_type: string; label: string; enabled: boolean; }
+interface SSOStatusResponse { enabled: boolean; providers?: SSOStatusProvider[]; enforce_sso?: boolean; }
 
 function ConnectedAccountsCard() {
   const { user } = useAuthStore();
   const qc = useQueryClient();
   const [unlinking, setUnlinking] = useState<string | null>(null);
 
-  const { data: identities, isLoading: identitiesLoading } = useQuery({
-    queryKey: ["sso-identities"],
-    queryFn: () => api.get<SSOIdentity[]>("/auth/me/sso"),
-  });
-
-  const { data: ssoStatus } = useQuery({
-    queryKey: ["sso-status"],
-    queryFn: () => api.get<SSOStatusResponse>("/auth/sso-status"),
-    staleTime: 60000,
-  });
+  const { data: identities, isLoading } = useQuery({ queryKey: ["sso-identities"], queryFn: () => api.get<SSOIdentity[]>("/auth/me/sso") });
+  const { data: ssoStatus } = useQuery({ queryKey: ["sso-status"], queryFn: () => api.get<SSOStatusResponse>("/auth/sso-status"), staleTime: 60000 });
 
   const providers = (ssoStatus?.providers ?? []).filter((p) => p.enabled);
   const linkedProviders = new Set((identities ?? []).map((i) => i.provider));
@@ -465,104 +302,57 @@ function ConnectedAccountsCard() {
 
   const handleUnlink = async (provider: string) => {
     setUnlinking(provider);
-    try {
-      await api.del(`/auth/me/sso/${provider}`);
-      qc.invalidateQueries({ queryKey: ["sso-identities"] });
-      toast.success(`${provider} account unlinked`);
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Failed to unlink");
-    } finally {
-      setUnlinking(null);
-    }
-  };
-
-  const handleLink = (providerName: string) => {
-    window.location.href = `${API_BASE}/auth/sso/${providerName}?intent=link`;
+    try { await api.del(`/auth/me/sso/${provider}`); qc.invalidateQueries({ queryKey: ["sso-identities"] }); toast.success(`${provider} unlinked`); }
+    catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Failed"); }
+    finally { setUnlinking(null); }
   };
 
   if (!ssoStatus?.enabled && (!identities || identities.length === 0)) return null;
 
   return (
-    <Card className="shadow-sm hover:shadow-md transition-shadow">
-      <CardHeader className="pb-4">
-        <CardTitle className="flex items-center gap-2 text-base font-semibold">
-          <div className="h-7 w-7 rounded-lg bg-primary/8 flex items-center justify-center">
-            <Link2 className="h-4 w-4 text-primary" />
-          </div>
-          Connected Accounts
-        </CardTitle>
-        <CardDescription>Link or unlink your SSO identities.</CardDescription>
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm">Connected Accounts</CardTitle>
+        <CardDescription>Linked identity providers for single sign-on.</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3">
-        {identitiesLoading ? (
-          <div className="space-y-3">
-            {[0, 1].map((i) => (
-              <div key={i} className="flex items-center gap-3 rounded-lg border p-3">
-                <Skeleton className="h-8 w-8 rounded-md shrink-0" />
-                <div className="space-y-1.5">
-                  <Skeleton className="h-4 w-28" />
-                  <Skeleton className="h-3 w-40" />
-                </div>
-              </div>
-            ))}
-          </div>
+      <CardContent className="space-y-2">
+        {isLoading ? (
+          <div className="space-y-3">{[0, 1].map((i) => <Skeleton key={i} className="h-12 rounded-lg" />)}</div>
         ) : (
           <>
             {(identities ?? []).map((identity) => {
-              const matchingProvider = providers.find((p) => p.name === identity.provider);
+              const mp = providers.find((p) => p.name === identity.provider);
               return (
-              <div key={identity.id} className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50">
-                <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center shrink-0">
-                    <ProviderIcon providerType={matchingProvider?.provider_type ?? identity.provider} className="h-4 w-4" />
+                <div key={identity.id} className="flex items-center justify-between rounded-lg border px-3 py-2.5">
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center shrink-0">
+                      <ProviderIcon providerType={mp?.provider_type ?? identity.provider} className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{mp ? mp.label : providerTypeLabel(identity.provider)}</p>
+                      <p className="text-xs text-muted-foreground truncate">{identity.email}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium">{matchingProvider ? matchingProvider.label : providerTypeLabel(identity.provider)}</p>
-                    <p className="text-xs text-muted-foreground">{identity.email}</p>
-                    <p className="text-xs text-muted-foreground">Linked {new Date(identity.linked_at).toLocaleDateString()}</p>
-                  </div>
+                  <ConfirmDialog
+                    trigger={<Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive" disabled={unlinking === identity.provider || !hasPassword || enforceSSO} title={!hasPassword ? "Set a password first" : enforceSSO ? "SSO required" : "Unlink"}><Unlink className="h-3.5 w-3.5" /></Button>}
+                    title="Unlink account?"
+                    description={`Disconnect ${identity.provider}. You can re-link later.`}
+                    onConfirm={() => handleUnlink(identity.provider)}
+                  />
                 </div>
-                <ConfirmDialog
-                  trigger={
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-1.5"
-                      disabled={unlinking === identity.provider || !hasPassword || enforceSSO}
-                      title={!hasPassword ? "Set a password first" : enforceSSO ? "SSO required by organization" : "Unlink account"}
-                    >
-                      <Unlink className="h-3.5 w-3.5" />
-                      {unlinking === identity.provider ? "Unlinking…" : "Unlink"}
-                    </Button>
-                  }
-                  title="Unlink SSO account?"
-                  description={`This will disconnect your ${identity.provider} account. You can re-link it later from your profile.`}
-                  onConfirm={() => handleUnlink(identity.provider)}
-                />
-              </div>
               );
             })}
-
             {unlinkedProviders.map((p) => (
-              <div key={p.name} className="flex items-center justify-between rounded-lg border border-dashed p-3">
+              <div key={p.name} className="flex items-center justify-between rounded-lg border border-dashed px-3 py-2.5">
                 <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-md bg-muted/50 flex items-center justify-center shrink-0 opacity-60">
+                  <div className="h-8 w-8 rounded-md bg-muted/50 flex items-center justify-center shrink-0 opacity-50">
                     <ProviderIcon providerType={p.provider_type} className="h-4 w-4" />
                   </div>
-                  <div>
-                    <p className="text-sm font-medium">{p.label}</p>
-                    <p className="text-xs text-muted-foreground">Not connected</p>
-                  </div>
+                  <p className="text-sm text-muted-foreground">{p.label}</p>
                 </div>
-                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => handleLink(p.name)}>
-                  <Link2 className="h-3.5 w-3.5" /> Link Account
-                </Button>
+                <Button variant="outline" size="sm" onClick={() => { window.location.href = `${API_BASE}/auth/sso/${p.name}?intent=link`; }}><Link2 className="h-3.5 w-3.5 mr-1.5" />Link</Button>
               </div>
             ))}
-
-            {(identities ?? []).length === 0 && unlinkedProviders.length === 0 && (
-              <p className="text-sm text-muted-foreground">No SSO providers available.</p>
-            )}
           </>
         )}
       </CardContent>
