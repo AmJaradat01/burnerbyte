@@ -59,37 +59,57 @@ export default function ProfilePage() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      {/* Profile header — personal, not generic */}
-      <div className="relative rounded-xl border bg-gradient-to-br from-primary/5 via-transparent to-muted/30 p-6 overflow-hidden">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
-          <Avatar className="h-20 w-20 text-2xl ring-4 ring-background shadow-sm">
-            <AvatarImage src={user.avatar_url} alt={user.display_name} />
-            <AvatarFallback className="bg-primary/10 text-primary font-bold">{initials}</AvatarFallback>
-          </Avatar>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-2xl font-bold tracking-tight truncate">{user.display_name || "Unnamed"}</h1>
-              {user.is_system_admin && <Badge className="bg-primary/10 text-primary border-primary/20">System Admin</Badge>}
-            </div>
-            <p className="text-sm text-muted-foreground font-mono mt-0.5">{user.email}</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {user.email_verified ? (
-                <Badge className="bg-success/10 text-success border-success/20 gap-1"><Shield className="h-3 w-3" /> Verified</Badge>
-              ) : (
-                <Badge className="bg-warning/10 text-warning border-warning/20 gap-1">Unverified</Badge>
+      {/* Profile hero */}
+      <div className="relative rounded-2xl border overflow-hidden">
+        {/* Decorative background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/8 via-primary/3 to-transparent" />
+        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/3 blur-3xl" />
+        <div className="relative p-6 sm:p-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+            <div className="relative">
+              <Avatar className="h-24 w-24 text-2xl ring-4 ring-background shadow-lg">
+                <AvatarImage src={user.avatar_url} alt={user.display_name} />
+                <AvatarFallback className="bg-primary/10 text-primary font-bold text-3xl">{initials}</AvatarFallback>
+              </Avatar>
+              {user.email_verified && (
+                <div className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-success flex items-center justify-center ring-2 ring-background">
+                  <Shield className="h-3 w-3 text-white" />
+                </div>
               )}
-              {isSSO && <Badge variant="outline" className="gap-1"><KeyRound className="h-3 w-3" /> {user.sso_provider}</Badge>}
             </div>
-          </div>
-          <div className="hidden sm:flex flex-col items-end gap-1 shrink-0 text-right">
-            <p className="text-xs text-muted-foreground">Joined</p>
-            <p className="text-sm font-medium">{new Date(user.created_at).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}</p>
-            {user.last_login_at && (
-              <>
-                <p className="text-xs text-muted-foreground mt-1">Last login</p>
-                <p className="text-xs font-medium">{new Date(user.last_login_at).toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
-              </>
-            )}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h1 className="text-2xl font-bold tracking-tight truncate">{user.display_name || "Unnamed"}</h1>
+                {user.is_system_admin && <Badge className="bg-primary/10 text-primary border-primary/20 font-medium">System Admin</Badge>}
+              </div>
+              <p className="text-sm text-muted-foreground font-mono mt-1">{user.email}</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {isSSO && (
+                  <Badge variant="outline" className="gap-1.5 py-1">
+                    <KeyRound className="h-3 w-3" /> Authenticated via {user.sso_provider}
+                  </Badge>
+                )}
+                {user.auth_method_lock && (
+                  <Badge variant="outline" className="gap-1.5 py-1 text-primary border-primary/30">
+                    <Shield className="h-3 w-3" /> Locked to {user.auth_method_lock}
+                  </Badge>
+                )}
+              </div>
+            </div>
+            <div className="hidden sm:block shrink-0">
+              <div className="rounded-xl bg-background/80 backdrop-blur-sm border px-4 py-3 space-y-2 text-right">
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Member since</p>
+                  <p className="text-sm font-semibold">{new Date(user.created_at).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}</p>
+                </div>
+                {user.last_login_at && (
+                  <div className="pt-1 border-t border-border/50">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Last active</p>
+                    <p className="text-xs font-medium">{new Date(user.last_login_at).toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -129,21 +149,25 @@ export default function ProfilePage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <Link href="/profile/sessions" className="block">
-                <div className="flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50">
-                  <Monitor className="h-4 w-4 text-muted-foreground shrink-0" />
+              <Link href="/profile/sessions" className="group block">
+                <div className="flex items-center gap-3 rounded-xl border p-3.5 transition-all hover:bg-muted/50 hover:border-primary/20 hover:shadow-sm">
+                  <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center shrink-0 transition-colors group-hover:bg-primary/10">
+                    <Monitor className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
+                  </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-medium">Sessions</p>
-                    <p className="text-xs text-muted-foreground">View and revoke active sessions</p>
+                    <p className="text-sm font-medium">Active Sessions</p>
+                    <p className="text-xs text-muted-foreground">View devices and revoke access</p>
                   </div>
                 </div>
               </Link>
-              <Link href="/profile/delete" className="block">
-                <div className="flex items-center gap-3 rounded-lg border border-destructive/20 p-3 transition-colors hover:bg-destructive/5">
-                  <Trash2 className="h-4 w-4 text-destructive shrink-0" />
+              <Link href="/profile/delete" className="group block">
+                <div className="flex items-center gap-3 rounded-xl border border-destructive/20 p-3.5 transition-all hover:bg-destructive/5 hover:border-destructive/40 hover:shadow-sm">
+                  <div className="h-9 w-9 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0">
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </div>
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-destructive">Delete Account</p>
-                    <p className="text-xs text-muted-foreground">Permanently remove your account</p>
+                    <p className="text-xs text-muted-foreground">Permanently remove all your data</p>
                   </div>
                 </div>
               </Link>
