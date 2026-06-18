@@ -307,7 +307,7 @@ function ConnectedAccountsCard() {
     finally { setUnlinking(null); }
   };
 
-  if (!ssoStatus?.enabled && (!identities || identities.length === 0)) return null;
+  if (!ssoStatus?.enabled || providers.length === 0) return null;
 
   return (
     <Card>
