@@ -240,7 +240,7 @@ func main() {
 		ssoMgr.LoadProviders(ctx, nil)
 	}
 	authHandler := handler.NewAuthHandler(authSvc, ssoMgr, cfg)
-	orgHandler := handler.NewOrgHandler(orgSvc)
+	orgHandler := handler.NewOrgHandler(orgSvc, userRepo)
 	domainHandler := handler.NewDomainHandler(domainSvc, inboxRepo, cfg.SMTP.Hostname)
 	teamHandler := handler.NewTeamHandler(teamSvc)
 	assignmentHandler := handler.NewDomainAssignmentHandler(assignmentSvc, inboxRepo, teamSvc)

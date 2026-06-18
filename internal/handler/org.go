@@ -17,11 +17,12 @@ import (
 )
 
 type OrgHandler struct {
-	svc *service.OrgService
+	svc      *service.OrgService
+	userRepo *postgres.UserRepo
 }
 
-func NewOrgHandler(svc *service.OrgService) *OrgHandler {
-	return &OrgHandler{svc: svc}
+func NewOrgHandler(svc *service.OrgService, userRepo *postgres.UserRepo) *OrgHandler {
+	return &OrgHandler{svc: svc, userRepo: userRepo}
 }
 
 func (h *OrgHandler) PreviewInvite(w http.ResponseWriter, r *http.Request) {
@@ -130,6 +131,35 @@ func (h *OrgHandler) DeleteOrg(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if checkOrgPermission(w, r, orgID, "org.delete") {
+		return
+	}
+
+	// Require password confirmation for this destructive action
+	var input struct {
+		Password string `json:"password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if input.Password == "" {
+		writeError(w, http.StatusBadRequest, "password is required to delete an organization")
+		return
+	}
+
+	// Verify the acting user's password
+	uc := auth.GetUser(r.Context())
+	user, err := h.userRepo.GetByID(r.Context(), uc.UserID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to verify identity")
+		return
+	}
+	if user.PasswordHash == nil {
+		writeError(w, http.StatusBadRequest, "SSO-only accounts cannot delete organizations via password; contact a platform admin")
+		return
+	}
+	if !auth.CheckPassword(*user.PasswordHash, input.Password) {
+		writeError(w, http.StatusForbidden, "incorrect password")
 		return
 	}
 

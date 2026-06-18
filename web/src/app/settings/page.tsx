@@ -265,18 +265,30 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
 }
 
 function DangerZone({ org, onDeleted }: { org: Organization; onDeleted: () => void }) {
+  const [open, setOpen] = useState(false);
   const [confirm, setConfirm] = useState("");
+  const [password, setPassword] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState("");
+  const user = useAuthStore((s) => s.user);
+  const isSSO = !!user?.sso_provider;
+
+  const reset = () => { setConfirm(""); setPassword(""); setError(""); };
 
   const handleDelete = async () => {
+    if (confirm !== org.name) { setError("Organization name does not match."); return; }
+    if (!isSSO && !password) { setError("Password is required."); return; }
+    setError("");
     setDeleting(true);
     try {
-      await api.del(`/orgs/${org.id}`);
+      await api.del(`/orgs/${org.id}`, { password: isSSO ? "" : password });
       toast.success("Organization deleted");
+      setOpen(false);
       onDeleted();
       window.location.href = "/dashboard";
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed");
+      const msg = err instanceof Error ? err.message : "Failed to delete organization";
+      setError(msg);
     } finally {
       setDeleting(false);
     }
@@ -297,13 +309,53 @@ function DangerZone({ org, onDeleted }: { org: Organization; onDeleted: () => vo
         <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3">
           <p className="text-sm text-muted-foreground">This removes all teams, domains, inboxes, emails, and members. This action cannot be undone.</p>
         </div>
-        <div className="space-y-2">
-          <Label className="text-xs">Type &quot;{org.name}&quot; to confirm</Label>
-          <Input value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder={org.name} className="max-w-xs" />
-        </div>
-        <Button variant="destructive" disabled={confirm !== org.name || deleting} onClick={handleDelete} className="gap-1.5">
-          <Trash2 className="h-4 w-4" /> {deleting ? "Deleting…" : "Delete Organization"}
-        </Button>
+        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset(); }}>
+          <DialogTrigger asChild>
+            <Button variant="destructive" className="gap-1.5">
+              <Trash2 className="h-4 w-4" /> Delete Organization
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="h-5 w-5" /> Delete &quot;{org.name}&quot;
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-2">
+              <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3">
+                <p className="text-sm text-muted-foreground">
+                  This will <strong>permanently delete</strong> the organization <strong>{org.name}</strong> and all associated data including teams, domains, inboxes, emails, webhooks, API keys, and audit logs. This action cannot be undone.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="dz-confirm" className="text-sm">Type <span className="font-mono font-semibold">{org.name}</span> to confirm</Label>
+                <Input id="dz-confirm" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder={org.name} autoComplete="off" />
+              </div>
+              {!isSSO && (
+                <div className="space-y-2">
+                  <Label htmlFor="dz-password" className="text-sm">Enter your password</Label>
+                  <Input id="dz-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Your account password" autoComplete="current-password" />
+                </div>
+              )}
+              {isSSO && (
+                <p className="text-xs text-muted-foreground bg-muted rounded-md p-2">
+                  You&apos;re signed in via {user?.sso_provider}. No password required — confirm by typing the organization name above.
+                </p>
+              )}
+              {error && (
+                <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2">
+                  <p className="text-sm text-destructive">{error}</p>
+                </div>
+              )}
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => { setOpen(false); reset(); }} disabled={deleting}>Cancel</Button>
+                <Button variant="destructive" onClick={handleDelete} disabled={confirm !== org.name || (!isSSO && !password) || deleting} className="gap-1.5">
+                  <Trash2 className="h-4 w-4" /> {deleting ? "Deleting…" : "Delete Organization"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );
