@@ -551,30 +551,41 @@ func (s *TeamService) BulkRemoveMembers(ctx context.Context, teamID uuid.UUID, u
 		Skipped: []domain.BulkMemberSkipped{},
 	}
 
-	// Pre-check: count current leads and determine how many would remain
+	// Single pass: look up each membership, classify as skipped/removable,
+	// and count leads that would be removed.
 	leadCount, err := s.teamRepo.CountLeads(ctx, teamID)
 	if err != nil {
 		return nil, err
 	}
+
+	type memberEntry struct {
+		uid  uuid.UUID
+		role string
+	}
+	var toRemove []memberEntry
 	leadsToRemove := 0
-	for _, uid := range userIDs {
-		m, err := s.teamRepo.GetMembership(ctx, uid, teamID)
-		if err == nil && m.Role == rbac.TeamLead {
-			leadsToRemove++
-		}
-	}
-	if leadCount-leadsToRemove <= 0 {
-		return nil, fmt.Errorf("cannot remove: would leave the team with zero leads")
-	}
 
 	for _, uid := range userIDs {
-		_, err := s.teamRepo.GetMembership(ctx, uid, teamID)
+		m, err := s.teamRepo.GetMembership(ctx, uid, teamID)
 		if err != nil {
 			result.Skipped = append(result.Skipped, domain.BulkMemberSkipped{Identifier: uid.String(), Reason: "not a member"})
 			continue
 		}
-		if err := s.teamRepo.DeleteMembership(ctx, uid, teamID); err != nil {
-			result.Failed = append(result.Failed, domain.BulkMemberFailed{Identifier: uid.String(), Reason: "failed to remove"})
+		if m.Role == rbac.TeamLead {
+			leadsToRemove++
+		}
+		toRemove = append(toRemove, memberEntry{uid: uid, role: m.Role})
+	}
+
+	// Pre-check: reject entire request if it would leave zero leads
+	if leadCount-leadsToRemove <= 0 {
+		return nil, fmt.Errorf("cannot remove: would leave the team with zero leads")
+	}
+
+	// Execute removals
+	for _, entry := range toRemove {
+		if err := s.teamRepo.DeleteMembership(ctx, entry.uid, teamID); err != nil {
+			result.Failed = append(result.Failed, domain.BulkMemberFailed{Identifier: entry.uid.String(), Reason: "failed to remove"})
 			continue
 		}
 		result.RemovedCount++

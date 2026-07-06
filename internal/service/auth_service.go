@@ -498,6 +498,17 @@ func (s *AuthService) ChangePassword(ctx context.Context, userID uuid.UUID, inpu
 	return s.sessionRepo.RevokeAllExcept(ctx, userID, currentSessionID)
 }
 
+// IsPasswordChangeBlocked returns true when the user belongs to an org that enforces SSO.
+func (s *AuthService) IsPasswordChangeBlocked(ctx context.Context, userID uuid.UUID) bool {
+	var enforced bool
+	_ = s.pool.QueryRow(ctx,
+		`SELECT EXISTS(
+			SELECT 1 FROM organizations o JOIN org_memberships m ON m.org_id = o.id
+			WHERE m.user_id = $1 AND (o.settings->>'enforce_sso')::boolean = true
+		)`, userID).Scan(&enforced)
+	return enforced
+}
+
 func (s *AuthService) DeleteAccount(ctx context.Context, userID uuid.UUID, password string) error {
 	user, err := s.userRepo.GetByID(ctx, userID)
 	if err != nil {
