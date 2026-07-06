@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { AlertTriangle, ArrowLeft, Trash2 } from "lucide-react";
 
@@ -18,20 +19,26 @@ export default function DeleteAccountPage() {
   const [confirm, setConfirm] = useState("");
   const [deleting, setDeleting] = useState(false);
 
-  const isSSO = !!user?.sso_provider;
+  if (!user) return (
+    <div className="max-w-md space-y-6">
+      <Skeleton className="h-8 w-32" />
+      <Skeleton className="h-48 rounded-xl" />
+    </div>
+  );
 
-  const handleDelete = async () => {
-    if (confirm !== "DELETE") {
-      toast.error("Type DELETE to confirm");
-      return;
-    }
+  const isSSO = !!user.sso_provider;
+  const canSubmit = confirm === "DELETE" && (isSSO || password.length > 0);
+
+  const handleDelete = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!canSubmit) return;
     setDeleting(true);
     try {
       await api.del("/auth/me", { password: isSSO ? "" : password });
       toast.success("Account deleted");
       logout();
     } catch (e: unknown) {
-      toast.error((e as Error).message);
+      toast.error(e instanceof Error ? e.message : "Deletion failed");
     } finally {
       setDeleting(false);
     }
@@ -54,7 +61,7 @@ export default function DeleteAccountPage() {
         </div>
       </header>
 
-      <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 flex items-start gap-3">
+      <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 flex items-start gap-3" role="alert">
         <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
         <div className="space-y-1">
           <p className="text-sm font-semibold text-destructive">Permanent action — cannot be undone</p>
@@ -66,30 +73,35 @@ export default function DeleteAccountPage() {
         <CardHeader>
           <CardTitle>Confirm account deletion</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {!isSSO && (
+        <CardContent>
+          <form onSubmit={handleDelete} className="space-y-4">
+            {!isSSO && (
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter your password to confirm" aria-describedby="pw-help" />
+                <p id="pw-help" className="text-xs text-muted-foreground">Required to verify your identity.</p>
+              </div>
+            )}
+            {isSSO && (
+              <p className="text-sm text-muted-foreground bg-muted rounded-lg p-3">
+                You&apos;re signed in via {user.sso_provider}. No password required — type DELETE below to confirm.
+              </p>
+            )}
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter your password to confirm" />
+              <Label htmlFor="confirm">Type <span className="font-mono font-semibold">DELETE</span> to confirm</Label>
+              <Input id="confirm" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="DELETE" autoComplete="off" aria-describedby="confirm-help" />
+              <p id="confirm-help" className="sr-only">Type the word DELETE in uppercase to enable the delete button.</p>
             </div>
-          )}
-          {isSSO && (
-            <p className="text-sm text-muted-foreground bg-muted rounded-lg p-3">
-              You&apos;re signed in via {user.sso_provider}. No password required — just type DELETE below to confirm.
-            </p>
-          )}
-          <div className="space-y-2">
-            <Label htmlFor="confirm">Type DELETE to confirm</Label>
-            <Input id="confirm" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="DELETE" />
-          </div>
-          <Button
-            variant="destructive"
-            onClick={handleDelete}
-            disabled={deleting || confirm !== "DELETE" || (!isSSO && !password)}
-            className="w-full"
-          >
-            {deleting ? "Deleting…" : "Delete My Account"}
-          </Button>
+            <Button
+              type="submit"
+              variant="destructive"
+              disabled={deleting || !canSubmit}
+              className="w-full"
+              aria-busy={deleting}
+            >
+              {deleting ? "Deleting…" : "Delete My Account"}
+            </Button>
+          </form>
         </CardContent>
       </Card>
     </div>
