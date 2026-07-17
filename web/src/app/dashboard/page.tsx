@@ -288,14 +288,14 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {/* Header — compact, functional */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div>
           <h1 className="text-headline">
             {greeting}, {user?.display_name?.split(" ")[0] || "there"}
           </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Here&apos;s what&apos;s happening with {org.name}
+          <p className="text-sm text-muted-foreground mt-1">
+            {org.name}
             {dataUpdatedAt ? <> · <LastUpdated dataUpdatedAt={dataUpdatedAt} /></> : null}
             {autoRefresh && (
               <span className="inline-flex items-center gap-1.5 ml-2 text-success">
@@ -305,7 +305,7 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
             )}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none">
             <Switch
               checked={autoRefresh}
@@ -327,9 +327,34 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
         </div>
       </div>
 
-      {/* Primary stats — compact metric strip */}
-      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={Mail} label="Total Emails" value={stats?.total_emails_received ?? stats?.total_emails} loading={isLoading} sub={`${formatBytes(stats?.total_storage_bytes ?? stats?.storage_used_bytes ?? 0)} storage`} delta={todayDelta} deltaLabel="vs yesterday" />
+      {/* Primary metric — dominant, then supporting stats */}
+      <div className="grid gap-3 grid-cols-1 sm:grid-cols-3 lg:grid-cols-4">
+        {/* Hero metric: Total Emails — double-width on sm, visually dominant */}
+        <div className="sm:col-span-2 lg:col-span-1 rounded-xl border bg-card p-5">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Emails</span>
+            <div className="h-9 w-9 rounded-lg flex items-center justify-center bg-primary/10">
+              <Mail className="h-4.5 w-4.5 text-primary" />
+            </div>
+          </div>
+          {isLoading ? (
+            <Skeleton className="h-10 w-28" />
+          ) : (
+            <p className="text-4xl font-extrabold tabular-nums tracking-tight">
+              {(stats?.total_emails_received ?? stats?.total_emails ?? 0).toLocaleString()}
+            </p>
+          )}
+          <div className="mt-2 flex items-center gap-3">
+            {!isLoading && todayDelta !== 0 && (
+              <span className={cn("flex items-center gap-1 text-xs font-semibold", todayDelta > 0 ? "text-success" : "text-destructive")}>
+                {todayDelta > 0 ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
+                {todayDelta > 0 ? "+" : ""}{todayDelta} today
+              </span>
+            )}
+            <span className="text-xs text-muted-foreground">{formatBytes(stats?.total_storage_bytes ?? stats?.storage_used_bytes ?? 0)} storage</span>
+          </div>
+        </div>
+        {/* Supporting metrics — smaller, quieter */}
         <StatCard icon={InboxIcon} label="Active Inboxes" value={stats?.active_inboxes} loading={isLoading} sub={`${(stats?.total_inboxes_created ?? stats?.total_inboxes ?? 0).toLocaleString()} total created`} />
         <StatCard icon={Globe} label="Domains" value={stats?.total_domains} loading={isLoading} sub={`${stats?.total_members ?? 0} members · ${stats?.total_teams ?? 0} teams`} link="/domains" />
         <StatCard icon={HardDrive} label="Storage" value={formatBytes(stats?.total_storage_bytes ?? stats?.storage_used_bytes ?? 0)} loading={isLoading} isString sub="All-time usage" />
