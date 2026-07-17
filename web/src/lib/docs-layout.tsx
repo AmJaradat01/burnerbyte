@@ -7,7 +7,7 @@ export function baseOptions(): BaseLayoutProps {
       url: '/docs',
     },
     links: [
-      { text: 'App', url: '/dashboard' },
+      { text: 'App', url: '/' },
       { text: 'Getting Started', url: '/docs/getting-started/quick-start' },
       { text: 'API Reference', url: '/docs/api' },
       { text: 'Self-Hosting', url: '/docs/self-hosting/production' },
