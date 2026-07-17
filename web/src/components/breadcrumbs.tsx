@@ -22,10 +22,18 @@ const labels: Record<string, string> = {
 };
 
 // Dynamic route segments are entity UUIDs (inbox / email / domain ids).
-// Show a short form instead of a raw 36-character id in the trail.
-function displayLabel(seg: string): string {
+// Show a human-readable label instead of raw 36-character ids.
+function displayLabel(seg: string, segments: string[], index: number): string {
   if (labels[seg]) return labels[seg];
-  if (/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(seg)) return seg.slice(0, 8) + "…";
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(seg)) {
+    // Contextual label based on parent segment
+    const parent = index > 0 ? segments[index - 1] : "";
+    if (parent === "inboxes") return "Inbox";
+    if (parent === "email") return "Message";
+    if (parent === "domains") return "Domain";
+    if (parent === "teams") return "Team";
+    return seg.slice(0, 8) + "…";
+  }
   return seg;
 }
 
@@ -40,7 +48,7 @@ export function Breadcrumbs() {
       <ol className="flex items-center gap-1">
         {segments.map((seg, i) => {
           const href = "/" + segments.slice(0, i + 1).join("/");
-          const label = displayLabel(seg);
+          const label = displayLabel(seg, segments, i);
           const isLast = i === segments.length - 1;
           return (
             <li key={href} className="flex items-center gap-1">

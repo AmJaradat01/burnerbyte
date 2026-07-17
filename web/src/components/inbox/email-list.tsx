@@ -199,7 +199,7 @@ function EmailRow({ email, selected, onClick }: { email: EmailSummary; selected:
 
 function EmptyList({ hasSearch }: { hasSearch: boolean }) {
   return (
-    <div className="flex flex-col items-center justify-center h-full text-center gap-1 p-6">
+    <div className="flex flex-col items-center justify-start pt-[15vh] h-full text-center gap-1 p-6">
       {hasSearch ? (
         <>
           <p className="text-sm font-medium">No results</p>
