@@ -43,14 +43,14 @@ function NavLink({ href, icon: Icon, label, active, collapsed, badge }: {
         collapsed && "justify-center px-2",
         active
           ? "bg-sidebar-primary/10 text-sidebar-primary"
-          : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+          : "text-muted-foreground hover:bg-muted/80 hover:text-foreground active:scale-[0.98]"
       )}
     >
       {/* Active indicator bar */}
       {active && (
-        <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-0.5 rounded-full bg-sidebar-primary transition-all" />
+        <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-0.5 rounded-full bg-sidebar-primary animate-in slide-in-from-left-1 fade-in duration-200" />
       )}
-      <Icon className={cn("shrink-0 transition-colors", collapsed ? "h-5 w-5" : "h-4 w-4")} />
+      <Icon className={cn("shrink-0 transition-colors duration-150", collapsed ? "h-5 w-5" : "h-4 w-4", active && "text-sidebar-primary")} />
       {!collapsed && (
         <>
           <span className="flex-1 truncate">{label}</span>
@@ -128,7 +128,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         "flex items-center shrink-0 h-14 border-b border-border/50",
         collapsed ? "justify-center px-2" : "justify-between px-3"
       )}>
-        <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+        <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity duration-150">
           <Logo collapsed={collapsed} />
         </Link>
         {!collapsed && (
@@ -164,7 +164,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       {/* ── Org card ── */}
       {currentOrg && !collapsed && (
         <div className="mx-3 mt-3 mb-1 shrink-0">
-          <div className="rounded-lg border bg-muted/30 px-3 py-2.5 transition-colors hover:bg-muted/50">
+          <div className="rounded-lg border bg-muted/30 px-3 py-2.5 transition-colors duration-150 hover:bg-muted/50">
             <div className="flex items-center gap-2.5">
               {currentOrg.logo_url ? (
                 <Image src={currentOrg.logo_url} alt="" width={28} height={28} className="h-7 w-7 rounded-md object-cover" unoptimized />
@@ -238,13 +238,13 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         ) : (
           <Link
             href="/profile"
-            className="flex items-center gap-2.5 rounded-lg px-2 py-2 hover:bg-muted/80 transition-colors group"
+            className="flex items-center gap-2.5 rounded-lg px-2 py-2 hover:bg-muted/80 transition-colors duration-150 group"
           >
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold text-muted-foreground ring-2 ring-background">
               {userInitial}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium leading-tight group-hover:text-foreground transition-colors">
+              <p className="truncate text-sm font-medium leading-tight group-hover:text-foreground transition-colors duration-150">
                 {user?.display_name || "User"}
               </p>
               <p className="truncate text-[11px] text-muted-foreground leading-tight">{user?.email}</p>
@@ -267,7 +267,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive transition-colors"
+            className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive transition-colors duration-150"
             onClick={logout}
             title={tc("signOut")}
             aria-label={tc("signOut")}
