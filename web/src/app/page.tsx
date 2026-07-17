@@ -11,7 +11,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
@@ -371,89 +370,97 @@ function QuickCreateCard() {
 
   // ── Pre-create state — domain selector + generate button ──
   return (
-    <div className="text-center space-y-6 py-4">
-      {/* Domain selector as the hero element */}
-      <div className="inline-flex items-center gap-2.5 rounded-2xl border border-border/80 bg-card px-5 py-3.5 sm:px-7 sm:py-4.5 max-w-full shadow-sm">
-        <Mail className="h-5 w-5 text-muted-foreground shrink-0" />
-        {showAdvanced && alias ? (
-          <span className="font-mono text-xl sm:text-2xl font-bold text-foreground/60">{alias}</span>
-        ) : (
-          <span className="font-mono text-xl sm:text-2xl font-bold text-muted-foreground/30">random</span>
-        )}
-        <span className="font-mono text-xl sm:text-2xl font-bold text-muted-foreground/40">@</span>
-        {(assignments?.data?.length ?? 0) > 1 ? (
-          <Select value={assignmentId} onValueChange={setAssignmentId}>
-            <SelectTrigger className="h-auto border-0 bg-transparent p-0 font-mono text-xl sm:text-2xl font-bold text-primary shadow-none gap-1 w-auto">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {assignments?.data?.map((a) => (
-                <SelectItem key={a.id} value={a.id}>{a.domain_name || a.domain_id}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : (
-          <span className="font-mono text-xl sm:text-2xl font-bold text-primary">{selected?.domain_name}</span>
+    <div className="text-center space-y-5 py-4">
+      {/* Domain row — transforms to editable when Customize is active */}
+      <div className="inline-flex flex-col items-center gap-3">
+        <div className="inline-flex items-center gap-2 rounded-2xl border border-border/80 bg-card px-5 py-3 sm:px-6 sm:py-3.5 max-w-full shadow-sm">
+          <Mail className="h-5 w-5 text-muted-foreground shrink-0" />
+          {showAdvanced ? (
+            <Input
+              value={alias}
+              onChange={(e) => setAlias(e.target.value)}
+              placeholder="random"
+              className="h-auto border-0 bg-transparent p-0 font-mono text-xl sm:text-2xl font-bold shadow-none placeholder:text-muted-foreground/30 w-24 sm:w-32 focus-visible:ring-0"
+            />
+          ) : (
+            <span className="font-mono text-xl sm:text-2xl font-bold text-muted-foreground/30">
+              {alias || "random"}
+            </span>
+          )}
+          <span className="font-mono text-xl sm:text-2xl font-bold text-muted-foreground/40">@</span>
+          {(assignments?.data?.length ?? 0) > 1 ? (
+            <Select value={assignmentId} onValueChange={setAssignmentId}>
+              <SelectTrigger className="h-auto border-0 bg-transparent p-0 font-mono text-xl sm:text-2xl font-bold text-primary shadow-none gap-1 w-auto">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {assignments?.data?.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>{a.domain_name || a.domain_id}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <span className="font-mono text-xl sm:text-2xl font-bold text-primary">{selected?.domain_name}</span>
+          )}
+        </div>
+        {showAdvanced && (
+          <p className="text-[11px] text-muted-foreground animate-in fade-in duration-150">Leave empty for a random address</p>
         )}
       </div>
 
-      {/* Generate button — hero level */}
-      <div>
-        <Button onClick={create} disabled={!assignmentId || creating || isCustomInvalid} size="lg" className="gap-2.5 px-8 h-12 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md">
+      {/* Action row — Generate button + TTL chip + Customize toggle on same line */}
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        <Button onClick={create} disabled={!assignmentId || creating || isCustomInvalid} size="lg" className="gap-2 px-6 h-11 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md">
           {creating ? (
             <><RefreshCw className="h-4 w-4 animate-spin" /> {t("generating")}</>
           ) : (
             <><Zap className="h-4 w-4" /> {t("generate")}</>
           )}
         </Button>
-        {ttlPreset && presetLabels[ttlPreset] && (
-          <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">{presetLabels[ttlPreset]}</p>
-        )}
+
+        {/* TTL chip — inline Select dropdown */}
+        <Select value={ttlPreset === "custom" ? "custom" : ttlPreset} onValueChange={(v) => { setTtlPreset(v); if (v !== "custom") setTtlError(null); }}>
+          <SelectTrigger className="h-9 w-auto gap-1.5 rounded-lg border bg-muted/40 px-3 text-xs font-medium shadow-none">
+            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+            <SelectValue placeholder="1h" />
+          </SelectTrigger>
+          <SelectContent>
+            {availablePresets.map((p) => <SelectItem key={p.value} value={p.value}>{presetLabels[p.key]}</SelectItem>)}
+            <SelectItem value="custom">{ti("custom")}</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* Customize toggle */}
+        <button
+          onClick={() => setShowAdvanced(!showAdvanced)}
+          className={cn(
+            "h-9 inline-flex items-center gap-1.5 rounded-lg border px-3 text-xs font-medium transition-all duration-150",
+            showAdvanced
+              ? "border-primary/20 bg-primary/5 text-primary"
+              : "border-border bg-muted/40 text-muted-foreground hover:text-foreground hover:border-border/80"
+          )}
+        >
+          <ChevronDown className={`h-3 w-3 transition-transform duration-200 ${showAdvanced ? "rotate-180" : ""}`} />
+          Customize
+        </button>
       </div>
 
-      {/* Customize toggle */}
-      <button
-        onClick={() => setShowAdvanced(!showAdvanced)}
-        className="inline-flex items-center gap-2 rounded-lg border border-transparent px-3 py-1.5 text-xs font-medium text-muted-foreground transition-all duration-150 hover:text-foreground hover:border-border hover:bg-muted/30"
-      >
-        <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${showAdvanced ? "rotate-180" : ""}`} />
-        Customize
-      </button>
-
-      {showAdvanced && (
-        <div className="max-w-md mx-auto rounded-xl border bg-card p-5 text-left space-y-4 shadow-xs animate-in fade-in slide-in-from-top-1 duration-200">
-          <div className="space-y-1.5">
-            <Label className="text-xs font-medium">{ti("alias")}</Label>
-            <Input value={alias} onChange={(e) => setAlias(e.target.value)} placeholder={ti("aliasPlaceholder")} className="h-8 text-sm" />
-            <p className="text-[11px] text-muted-foreground">Leave empty for a random address</p>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs font-medium">{ti("lifetime")}</Label>
-            <Select value={ttlPreset} onValueChange={(v) => { setTtlPreset(v); if (v !== "custom") setTtlError(null); }}>
-              <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {availablePresets.map((p) => <SelectItem key={p.value} value={p.value}>{presetLabels[p.key]}</SelectItem>)}
-                <SelectItem value="custom">{ti("custom")}</SelectItem>
-              </SelectContent>
-            </Select>
-            {ttlPreset === "custom" && (
-              <div className="space-y-1 mt-1.5">
-                <Input
-                  value={customTtl}
-                  onChange={(e) => handleCustomTtlChange(e.target.value)}
-                  placeholder={ti("customPlaceholder")}
-                  className={`h-8 text-sm font-mono ${ttlError ? "border-destructive focus-visible:ring-destructive/20" : ""}`}
-                  aria-invalid={!!ttlError}
-                  aria-describedby={ttlError ? "ttl-error" : "ttl-hint"}
-                />
-                {ttlError ? (
-                  <p id="ttl-error" className="text-xs text-destructive">{ttlError}</p>
-                ) : (
-                  <p id="ttl-hint" className="text-[11px] text-muted-foreground">Format: 10m, 1h, 2h30m (max 24h)</p>
-                )}
-              </div>
-            )}
-          </div>
+      {/* Custom TTL input — shown only when "Custom" is selected in the TTL chip */}
+      {ttlPreset === "custom" && (
+        <div className="max-w-xs mx-auto animate-in fade-in duration-150">
+          <Input
+            value={customTtl}
+            onChange={(e) => handleCustomTtlChange(e.target.value)}
+            placeholder={ti("customPlaceholder")}
+            className={`h-8 text-sm font-mono text-center ${ttlError ? "border-destructive focus-visible:ring-destructive/20" : ""}`}
+            aria-invalid={!!ttlError}
+            aria-describedby={ttlError ? "ttl-error" : "ttl-hint"}
+          />
+          {ttlError ? (
+            <p id="ttl-error" className="text-xs text-destructive mt-1">{ttlError}</p>
+          ) : (
+            <p id="ttl-hint" className="text-[11px] text-muted-foreground mt-1">Format: 10m, 1h, 2h30m (max 24h)</p>
+          )}
         </div>
       )}
     </div>
@@ -533,7 +540,7 @@ function InboxCard({ inbox, onExtend, onDelete }: { inbox: Inbox; onExtend: () =
           )}
           <span className={cn("flex items-center gap-1", isEmpty ? "" : "ml-auto", expiringSoon && "text-warning font-medium")}>
             <Clock className="h-3 w-3" />
-            <ExpiryLabel expiresAt={inbox.expires_at} isActive={inbox.is_active} />
+            <ExpiryLabel expiresAt={inbox.expires_at} isActive={inbox.is_active} totalTtl={inbox.original_ttl} />
           </span>
         </div>
 
@@ -564,7 +571,7 @@ function InboxCard({ inbox, onExtend, onDelete }: { inbox: Inbox; onExtend: () =
   );
 }
 
-function ExpiryLabel({ expiresAt, isActive }: { expiresAt: string; isActive: boolean }) {
+function ExpiryLabel({ expiresAt, isActive, totalTtl }: { expiresAt: string; isActive: boolean; totalTtl?: string }) {
   const [label, setLabel] = useState("");
   useEffect(() => {
     const update = () => {
@@ -578,13 +585,20 @@ function ExpiryLabel({ expiresAt, isActive }: { expiresAt: string; isActive: boo
       }
       const h = Math.floor(diff / 3600000);
       const m = Math.floor((diff % 3600000) / 60000);
-      if (h > 24) setLabel(`${Math.floor(h / 24)}d ${h % 24}h`);
-      else if (h > 0) setLabel(`${h}h ${m}m`);
-      else setLabel(`${m}m`);
+      let remaining: string;
+      if (h > 24) remaining = `${Math.floor(h / 24)}d ${h % 24}h`;
+      else if (h > 0) remaining = `${h}h ${m}m`;
+      else remaining = `${m}m`;
+      // Show "remaining / total" when total is available
+      if (totalTtl) {
+        setLabel(`${remaining} / ${formatTtlLabel(totalTtl)}`);
+      } else {
+        setLabel(remaining);
+      }
     };
     update();
     if (isActive) { const iv = setInterval(update, 60000); return () => clearInterval(iv); }
-  }, [expiresAt, isActive]);
+  }, [expiresAt, isActive, totalTtl]);
   return <span className="text-xs font-mono">{label}</span>;
 }
 
