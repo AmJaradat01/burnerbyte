@@ -202,14 +202,12 @@ function OrgAnalytics({ orgId }: { orgId: string }) {
                     {insights.domain_breakdown.map((d) => {
                       const pct = totalDomainEmails > 0 ? (d.count / totalDomainEmails) * 100 : 0;
                       return (
-                        <div key={d.domain} className="space-y-1">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="font-mono truncate">{d.domain}</span>
-                            <span className="text-muted-foreground ml-2 tabular-nums">{d.count.toLocaleString()} ({pct.toFixed(1)}%)</span>
+                        <div key={d.domain} className="flex items-center gap-3">
+                          <div className="flex-1 min-w-0">
+                            <span className="text-sm font-mono truncate block">{d.domain}</span>
                           </div>
-                          <div className="h-2 rounded-full bg-muted overflow-hidden">
-                            <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: "var(--chart-4)" }} />
-                          </div>
+                          <span className="text-sm text-muted-foreground tabular-nums shrink-0">{d.count.toLocaleString()}</span>
+                          <span className="text-xs text-muted-foreground/70 tabular-nums shrink-0 w-12 text-right">{pct.toFixed(1)}%</span>
                         </div>
                       );
                     })}
@@ -225,25 +223,17 @@ function OrgAnalytics({ orgId }: { orgId: string }) {
               <h3 className="text-sm font-medium text-muted-foreground mb-2">Top Sender Domains</h3>
               <Card>
                 <CardContent className="pt-5 pb-4">
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {stats.top_sender_domains.map((sd, i) => {
-                      const max = stats.top_sender_domains![0].count;
-                      const barPct = max > 0 ? (sd.count / max) * 100 : 0;
                       const totalPct = totalSenderEmails > 0 ? (sd.count / totalSenderEmails) * 100 : 0;
                       return (
                         <div key={sd.domain} className="flex items-center gap-3">
-                          <span className="w-5 text-xs text-muted-foreground text-right">{i + 1}</span>
+                          <span className="w-5 text-xs font-mono text-muted-foreground text-right tabular-nums shrink-0">{i + 1}</span>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-sm font-mono truncate">{sd.domain}</span>
-                              <span className="text-sm text-muted-foreground ml-2 whitespace-nowrap tabular-nums">
-                                {sd.count.toLocaleString()} ({totalPct.toFixed(1)}%)
-                              </span>
-                            </div>
-                            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                              <div className="h-full rounded-full transition-all" style={{ width: `${barPct}%`, backgroundColor: "var(--chart-5)" }} />
-                            </div>
+                            <span className="text-sm font-mono truncate block">{sd.domain}</span>
                           </div>
+                          <span className="text-sm text-muted-foreground tabular-nums shrink-0">{sd.count.toLocaleString()}</span>
+                          <span className="text-xs text-muted-foreground/70 tabular-nums shrink-0 w-12 text-right">{totalPct.toFixed(1)}%</span>
                         </div>
                       );
                     })}

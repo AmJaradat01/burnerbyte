@@ -213,6 +213,7 @@ export default function ApiKeysPage() {
         <>
           {!data?.data || data.data.length === 0 ? (
             <EmptyState
+              icon={Key}
               title="No API keys"
               description="Create an API key for programmatic access to inboxes and emails."
             />
@@ -319,10 +320,10 @@ function ApiKeyCard({
               </div>
               <button
                 onClick={copyPrefix}
-                className="mt-1 flex items-center gap-1 text-xs font-mono text-muted-foreground hover:text-foreground transition-colors group"
+                className="mt-1 flex items-center gap-1 text-xs font-mono text-muted-foreground hover:text-foreground transition-colors duration-150 group"
               >
                 {k.key_prefix}•••
-                <Copy className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <Copy className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity duration-150" />
               </button>
             </div>
           </div>
@@ -612,10 +613,10 @@ function RawKeyDisplay({ rawKey, onDone }: { rawKey: string; onDone: () => void 
       </p>
       <button
         onClick={copyKey}
-        className="w-full rounded-md bg-muted p-3 text-left font-mono text-sm break-all hover:bg-muted/80 transition-colors group"
+        className="w-full rounded-md bg-muted p-3 text-left font-mono text-sm break-all hover:bg-muted/80 transition-colors duration-150 group"
       >
         {rawKey}
-        <Copy className="inline-block ml-2 h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+        <Copy className="inline-block ml-2 h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-150" />
       </button>
       <Button onClick={onDone} className="w-full">
         Done

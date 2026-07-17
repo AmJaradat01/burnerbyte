@@ -135,13 +135,19 @@ export default function OnboardingPage() {
             const active = i === step;
             return (
               <div key={s.label} className="flex items-center">
-                <div className={`flex items-center justify-center h-8 w-8 rounded-full text-xs font-semibold ${
-                  done ? "bg-primary text-primary-foreground" : active ? "bg-primary/20 text-primary ring-2 ring-primary/30" : "bg-muted text-muted-foreground"
-                }`}>
+                <div
+                  className={`flex items-center justify-center h-8 w-8 rounded-full text-xs font-semibold transition-all duration-200 ${
+                    done
+                      ? "bg-primary text-primary-foreground shadow-xs"
+                      : active
+                        ? "bg-primary/15 text-primary ring-2 ring-primary/40"
+                        : "bg-muted text-muted-foreground"
+                  }`}
+                >
                   {done ? <Check className="h-4 w-4" /> : <StepIcon className="h-3.5 w-3.5" />}
                 </div>
                 {i < STEPS.length - 1 && (
-                  <div className={`w-8 h-0.5 mx-1 rounded-full ${i < step ? "bg-primary" : "bg-muted"}`} />
+                  <div className={`w-8 h-0.5 mx-1 rounded-full transition-colors duration-300 ${i < step ? "bg-primary" : "bg-muted"}`} />
                 )}
               </div>
             );
@@ -161,7 +167,7 @@ export default function OnboardingPage() {
             </CardDescription>
           </CardHeader>
 
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 animate-in fade-in duration-200">
             {/* Step 0: Org */}
             {step === 0 && (
               user?.is_system_admin ? (

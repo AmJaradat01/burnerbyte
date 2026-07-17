@@ -187,7 +187,7 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
               <CardDescription>Security and feature policies for this organization.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50">
+              <div className="flex items-center justify-between rounded-lg border p-3 transition-colors duration-150 hover:bg-muted/50">
                 <div className="flex items-center gap-3">
                   <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center shrink-0">
                     <Paperclip className="h-4 w-4 text-muted-foreground" />
@@ -199,7 +199,7 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
                 </div>
                 <Switch checked={settings.attachments_enabled ?? true} onCheckedChange={(v) => set("attachments_enabled", v)} />
               </div>
-              <div className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50">
+              <div className="flex items-center justify-between rounded-lg border p-3 transition-colors duration-150 hover:bg-muted/50">
                 <div className="flex items-center gap-3">
                   <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center shrink-0">
                     <Lock className="h-4 w-4 text-muted-foreground" />
@@ -214,7 +214,7 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
                   set("enforce_sso", v);
                 }} />
               </div>
-              <div className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50">
+              <div className="flex items-center justify-between rounded-lg border p-3 transition-colors duration-150 hover:bg-muted/50">
                 <div className="flex items-center gap-3">
                   <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center shrink-0">
                     <Clock className="h-4 w-4 text-muted-foreground" />
@@ -226,7 +226,7 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
                 </div>
                 <Input value={settings.default_inbox_ttl ?? ""} onChange={(e) => set("default_inbox_ttl", e.target.value)} placeholder="1h" className="h-8 w-24 text-xs text-right font-mono" />
               </div>
-              <div className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50">
+              <div className="flex items-center justify-between rounded-lg border p-3 transition-colors duration-150 hover:bg-muted/50">
                 <div className="flex items-center gap-3">
                   <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center shrink-0">
                     <Clock className="h-4 w-4 text-muted-foreground" />
@@ -516,7 +516,7 @@ function PlatformSettingsCard() {
             </div>
             <p className="text-sm font-semibold">Access</p>
           </div>
-          <div className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50">
+          <div className="flex items-center justify-between rounded-lg border p-3 transition-colors duration-150 hover:bg-muted/50">
             <div className="flex items-center gap-3">
               <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center shrink-0">
                 <Users className="h-4 w-4 text-muted-foreground" />
@@ -528,7 +528,7 @@ function PlatformSettingsCard() {
             </div>
             <Switch checked={form.allow_registration} onCheckedChange={(v) => set("allow_registration", v)} />
           </div>
-          <div className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50">
+          <div className="flex items-center justify-between rounded-lg border p-3 transition-colors duration-150 hover:bg-muted/50">
             <div className="flex items-center gap-3">
               <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center shrink-0">
                 <Mail className="h-4 w-4 text-muted-foreground" />
@@ -558,10 +558,10 @@ function PlatformSettingsCard() {
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="flex items-center justify-between rounded-md border px-3 py-2 transition-colors hover:bg-muted/50"><Label className="text-xs">Uppercase</Label><Switch checked={form.password_require_upper} onCheckedChange={(v) => set("password_require_upper", v)} /></div>
-              <div className="flex items-center justify-between rounded-md border px-3 py-2 transition-colors hover:bg-muted/50"><Label className="text-xs">Lowercase</Label><Switch checked={form.password_require_lower} onCheckedChange={(v) => set("password_require_lower", v)} /></div>
-              <div className="flex items-center justify-between rounded-md border px-3 py-2 transition-colors hover:bg-muted/50"><Label className="text-xs">Number</Label><Switch checked={form.password_require_number} onCheckedChange={(v) => set("password_require_number", v)} /></div>
-              <div className="flex items-center justify-between rounded-md border px-3 py-2 transition-colors hover:bg-muted/50"><Label className="text-xs">Special char</Label><Switch checked={form.password_require_special} onCheckedChange={(v) => set("password_require_special", v)} /></div>
+              <div className="flex items-center justify-between rounded-md border px-3 py-2 transition-colors duration-150 hover:bg-muted/50"><Label className="text-xs">Uppercase</Label><Switch checked={form.password_require_upper} onCheckedChange={(v) => set("password_require_upper", v)} /></div>
+              <div className="flex items-center justify-between rounded-md border px-3 py-2 transition-colors duration-150 hover:bg-muted/50"><Label className="text-xs">Lowercase</Label><Switch checked={form.password_require_lower} onCheckedChange={(v) => set("password_require_lower", v)} /></div>
+              <div className="flex items-center justify-between rounded-md border px-3 py-2 transition-colors duration-150 hover:bg-muted/50"><Label className="text-xs">Number</Label><Switch checked={form.password_require_number} onCheckedChange={(v) => set("password_require_number", v)} /></div>
+              <div className="flex items-center justify-between rounded-md border px-3 py-2 transition-colors duration-150 hover:bg-muted/50"><Label className="text-xs">Special char</Label><Switch checked={form.password_require_special} onCheckedChange={(v) => set("password_require_special", v)} /></div>
             </div>
           </div>
         </div>
@@ -1299,6 +1299,7 @@ export function SSOProvidersTab() {
 
       {providerList.length === 0 && (
         <EmptyState
+          icon={Key}
           title="No SSO providers configured"
           description="Add a provider to let your team sign in with single sign-on."
           action={{ label: "Add Provider", onClick: () => setEditing({ ...emptyProvider }) }}
@@ -1617,7 +1618,7 @@ function ProviderCard({
               <button
                 type="button"
                 onClick={handleCopyUrl}
-                className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                className="shrink-0 text-muted-foreground hover:text-foreground transition-colors duration-150"
                 aria-label="Copy redirect URL"
               >
                 {copiedUrl ? <Check className="h-3.5 w-3.5 text-success" aria-hidden="true" /> : <Copy className="h-3.5 w-3.5" aria-hidden="true" />}

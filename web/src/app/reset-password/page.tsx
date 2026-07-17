@@ -61,7 +61,7 @@ function ResetPasswordForm() {
             <Button asChild className="w-full">
               <Link href="/forgot-password">Request a new link</Link>
             </Button>
-            <Link href="/login" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Back to sign in</Link>
+            <Link href="/login" className="text-xs text-muted-foreground hover:text-foreground transition-colors duration-150">Back to sign in</Link>
           </CardFooter>
         </Card>
       </AuthShell>
@@ -94,7 +94,7 @@ function ResetPasswordForm() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors duration-150"
                     aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -117,7 +117,7 @@ function ResetPasswordForm() {
                   <button
                     type="button"
                     onClick={() => setShowConfirm(!showConfirm)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors duration-150"
                     aria-label={showConfirm ? "Hide password" : "Show password"}
                   >
                     {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}

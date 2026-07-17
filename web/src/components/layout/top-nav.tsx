@@ -28,7 +28,7 @@ export function TopNav() {
       <div className="flex h-14 items-center justify-between px-4 sm:px-6">
         {/* Left: logo + nav */}
         <div className="flex items-center gap-6">
-          <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+          <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity duration-150">
             <span className="sm:hidden"><Logo collapsed /></span>
             <span className="hidden sm:inline"><Logo /></span>
           </Link>
@@ -43,10 +43,10 @@ export function TopNav() {
                     "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-150",
                     active
                       ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/80"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/80 active:scale-[0.97]"
                   )}
                 >
-                  <link.icon className="h-3.5 w-3.5" />
+                  <link.icon className={cn("h-3.5 w-3.5 transition-colors duration-150", active && "text-primary")} />
                   {link.label}
                 </Link>
               );
@@ -58,19 +58,19 @@ export function TopNav() {
         <div className="flex items-center gap-1">
           <Link
             href="/profile"
-            className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-muted/80 transition-colors group"
+            className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-muted/80 transition-colors duration-150 group"
           >
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground ring-1 ring-border">
               {userInitial}
             </div>
-            <span className="hidden sm:inline text-sm font-medium max-w-[120px] truncate group-hover:text-foreground transition-colors">
+            <span className="hidden sm:inline text-sm font-medium max-w-[120px] truncate group-hover:text-foreground transition-colors duration-150">
               {user?.display_name}
             </span>
           </Link>
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive transition-colors"
+            className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive transition-colors duration-150"
             onClick={logout}
             title={tc("signOut")}
             aria-label={tc("signOut")}
