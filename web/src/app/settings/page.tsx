@@ -313,7 +313,7 @@ function DangerZone({ org, onDeleted }: { org: Organization; onDeleted: () => vo
       toast.success("Organization deleted");
       setOpen(false);
       onDeleted();
-      window.location.href = "/dashboard";
+      window.location.href = "/";
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to delete organization";
       setError(msg);
