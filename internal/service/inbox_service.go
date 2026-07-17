@@ -127,6 +127,7 @@ func (s *InboxService) CreateInbox(ctx context.Context, teamID, domainID, userID
 	defaultTTL := resolver.ResolveDefaultInboxTTLWithTeam(ctx, assignment.ID, teamSettings)
 	maxTTL := resolver.ResolveMaxInboxTTL(ctx, assignment.ID)
 	ttl := defaultTTL
+	ttlStr := defaultTTL.String() // store the resolved duration for renewal
 	if input.TTL != nil {
 		parsed, err := time.ParseDuration(*input.TTL)
 		if err != nil {
@@ -139,6 +140,7 @@ func (s *InboxService) CreateInbox(ctx context.Context, teamID, domainID, userID
 			return nil, fmt.Errorf("TTL exceeds maximum (%s)", maxTTL)
 		}
 		ttl = parsed
+		ttlStr = *input.TTL
 	}
 
 	inbox := &domain.Inbox{
@@ -150,6 +152,7 @@ func (s *InboxService) CreateInbox(ctx context.Context, teamID, domainID, userID
 		FullAddress:        fullAddress,
 		IsActive:           true,
 		ExpiresAt:          time.Now().Add(ttl),
+		OriginalTTL:        &ttlStr,
 	}
 
 	if err := s.inboxRepo.Create(ctx, inbox); err != nil {
@@ -226,7 +229,9 @@ func (s *InboxService) ExtendTTL(ctx context.Context, id, userID uuid.UUID, exte
 
 	var ext time.Duration
 	if extension == "" {
-		ext = resolver.ResolveDefaultInboxTTL(ctx, inbox.DomainAssignmentID)
+		// Resolve renewal duration based on org's renewal_policy.
+		// Policy cascade: org setting → default "original".
+		ext = s.resolveRenewalDuration(ctx, inbox, resolver)
 	} else {
 		ext, err = time.ParseDuration(extension)
 		if err != nil {
@@ -253,6 +258,53 @@ func (s *InboxService) ExtendTTL(ctx context.Context, id, userID uuid.UUID, exte
 
 	inbox.ExpiresAt = newExpiry
 	return inbox, nil
+}
+
+// resolveRenewalDuration determines how long to extend based on the org's renewal policy.
+// Policy: "original" (default) uses the inbox's stored original_ttl; "default" uses the
+// settings cascade (team → domain → org → system); "fixed" uses the org's renewal_ttl.
+func (s *InboxService) resolveRenewalDuration(ctx context.Context, inbox *domain.Inbox, resolver *SettingsResolver) time.Duration {
+	// Look up org settings for renewal policy
+	policy := "original" // default
+	var fixedTTL string
+
+	if inbox.OrgID != uuid.Nil {
+		org, err := s.orgRepo.GetByID(ctx, inbox.OrgID)
+		if err == nil && org != nil {
+			if org.Settings.RenewalPolicy != nil && *org.Settings.RenewalPolicy != "" {
+				policy = *org.Settings.RenewalPolicy
+			}
+			if org.Settings.RenewalTTL != nil {
+				fixedTTL = *org.Settings.RenewalTTL
+			}
+		}
+	}
+
+	switch policy {
+	case "original":
+		// Use the TTL the user chose at creation time
+		if inbox.OriginalTTL != nil && *inbox.OriginalTTL != "" {
+			if d, err := time.ParseDuration(*inbox.OriginalTTL); err == nil && d > 0 {
+				return d
+			}
+		}
+		// Fallback: inbox has no stored original_ttl (pre-migration inbox), use default cascade
+		return resolver.ResolveDefaultInboxTTL(ctx, inbox.DomainAssignmentID)
+
+	case "fixed":
+		// Use the admin-defined fixed renewal duration
+		if fixedTTL != "" {
+			if d, err := time.ParseDuration(fixedTTL); err == nil && d > 0 {
+				return d
+			}
+		}
+		// Fallback if fixed TTL is invalid: use default cascade
+		return resolver.ResolveDefaultInboxTTL(ctx, inbox.DomainAssignmentID)
+
+	default: // "default"
+		// Use the settings cascade (current pre-existing behavior)
+		return resolver.ResolveDefaultInboxTTL(ctx, inbox.DomainAssignmentID)
+	}
 }
 
 func (s *InboxService) DeleteInbox(ctx context.Context, id, userID uuid.UUID) error {
