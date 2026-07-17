@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useAuthStore } from "@/stores/auth-store";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { NotificationCenter } from "@/components/notification-center";
 import { useTranslations } from "next-intl";
 import { Home, BookOpen, LogOut } from "lucide-react";
 import { Logo } from "@/components/logo";
@@ -54,8 +55,9 @@ export function TopNav() {
           </nav>
         </div>
 
-        {/* Right: profile + logout */}
+        {/* Right: notifications + profile + logout */}
         <div className="flex items-center gap-1">
+          <NotificationCenter />
           <Link
             href="/profile"
             className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-muted/80 transition-colors duration-150 group"
