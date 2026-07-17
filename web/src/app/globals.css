@@ -214,11 +214,18 @@
   .generate-success {
     animation: generate-success 500ms cubic-bezier(0.16, 1, 0.3, 1);
   }
+  .dot-pulse {
+    animation: dot-pulse 2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  }
 }
 @keyframes generate-success {
   0% { transform: scale(1); }
   25% { transform: scale(1.03); }
   100% { transform: scale(1); }
+}
+@keyframes dot-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.8); }
 }
 
 /* ── Header card accent ── */
