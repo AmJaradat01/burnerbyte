@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { EmptyState } from "@/components/empty-state";
+import { Users } from "lucide-react";
 
 /**
  * Shown on team-scoped pages (webhooks, API keys) when there is no current team.
@@ -13,6 +14,7 @@ export function NoTeamState({ resource }: { resource: string }) {
   const router = useRouter();
   return (
     <EmptyState
+      icon={Users}
       title="No team yet"
       description={`${resource} belong to a team. Create your first team to get started.`}
       action={{ label: "Go to Teams", onClick: () => router.push("/teams") }}
