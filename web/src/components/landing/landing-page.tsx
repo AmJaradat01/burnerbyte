@@ -203,7 +203,7 @@ export function LandingPage() {
                 {i < steps.length - 1 && (
                   <div aria-hidden="true" className="absolute top-8 -right-3 hidden h-px w-6 bg-border sm:block" />
                 )}
-                <div className="rounded-xl border bg-background p-6 transition-colors duration-200 hover:bg-muted/40 sm:p-8">
+                <div className="h-full rounded-xl border bg-background p-6 transition-colors duration-200 hover:bg-muted/40 sm:p-8">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 font-mono text-sm font-bold text-primary tabular-nums">
                     {step.num}
                   </div>
@@ -235,7 +235,7 @@ export function LandingPage() {
             {capabilities.slice(0, 3).map((cap) => (
               <div
                 key={cap.label}
-                className="group rounded-xl border bg-background p-6 transition-all duration-200 hover:shadow-sm hover:border-primary/20"
+                className="group h-full rounded-xl border bg-background p-6 transition-all duration-200 hover:shadow-sm hover:border-primary/20"
               >
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted transition-colors duration-200 group-hover:bg-primary/10">
                   <cap.Icon
@@ -254,7 +254,7 @@ export function LandingPage() {
             {capabilities.slice(3).map((cap) => (
               <div
                 key={cap.label}
-                className="group flex items-start gap-3 rounded-lg border bg-background px-4 py-4 transition-colors duration-200 hover:bg-muted/40"
+                className="group flex h-full items-start gap-3 rounded-lg border bg-background px-4 py-4 transition-colors duration-200 hover:bg-muted/40"
               >
                 <cap.Icon
                   className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-colors duration-200 group-hover:text-primary"
