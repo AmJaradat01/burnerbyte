@@ -1,6 +1,6 @@
 // BurnerByte Service Worker — basic offline support
 // Bump CACHE_VERSION on each deploy to invalidate old caches
-const CACHE_VERSION = "2";
+const CACHE_VERSION = "3";
 const CACHE_NAME = `burnerbyte-v${CACHE_VERSION}`;
 
 // Pre-cache the offline page and key assets on install
@@ -27,10 +27,28 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const { request } = event;
 
-  // Skip non-GET requests and API calls
+  // Skip non-GET requests
   if (request.method !== "GET") return;
-  if (request.url.includes("/api/")) return;
   if (request.url.includes("/ws/")) return;
+
+  // Stale-while-revalidate for inbox list API (offline-first for key data)
+  if (request.url.includes("/api/") && request.url.includes("/inboxes")) {
+    event.respondWith(
+      caches.open(CACHE_NAME).then((cache) =>
+        cache.match(request).then((cached) => {
+          const fetchPromise = fetch(request).then((response) => {
+            if (response.ok) cache.put(request, response.clone());
+            return response;
+          }).catch(() => cached || new Response(JSON.stringify({ data: [], total: 0, page: 1, per_page: 12, total_pages: 0 }), { status: 200, headers: { "Content-Type": "application/json" } }));
+          return cached || fetchPromise;
+        })
+      )
+    );
+    return;
+  }
+
+  // Skip other API calls (no caching for mutations, auth, etc.)
+  if (request.url.includes("/api/")) return;
 
   // For navigation requests, try network first
   if (request.mode === "navigate") {
