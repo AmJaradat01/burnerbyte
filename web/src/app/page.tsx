@@ -111,7 +111,7 @@ function HomePage() {
       {/* Greeting */}
       <div>
         <h1 className="text-headline">{greeting}, {user?.display_name?.split(" ")[0] || "there"}</h1>
-        <p className="text-sm text-muted-foreground mt-1">{t("quickCreateDesc")}</p>
+        <p className="text-sm text-muted-foreground mt-1.5">{t("quickCreateDesc")}</p>
       </div>
 
       {/* Quick Create Hero */}
@@ -122,7 +122,7 @@ function HomePage() {
         <div>
           <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <div className="flex items-baseline gap-2 min-w-0">
-              <h2 className="text-lg font-semibold shrink-0">{t("recentInboxes")}</h2>
+              <h2 className="text-subhead shrink-0">{t("recentInboxes")}</h2>
               {data && data.total > 0 && !search && (
                 <span className="text-sm font-medium text-muted-foreground tabular-nums">
                   {data.total} {status === "expired" ? "expired" : status === "all" ? "total" : "active"}
@@ -284,25 +284,25 @@ function QuickCreateCard() {
     const [localPart, domainPart] = addr.split("@");
 
     return (
-      <div className="text-center space-y-5">
-        <div className="inline-flex items-center gap-2 rounded-full border bg-success/10 border-success/20 px-3 py-1">
+      <div className="text-center space-y-6 py-4">
+        <div className="inline-flex items-center gap-2 rounded-full border bg-success/10 border-success/20 px-3.5 py-1.5">
           <span className="h-2 w-2 rounded-full bg-success" />
-          <span className="text-xs font-medium text-success">{t("addressReady")}</span>
+          <span className="text-xs font-semibold text-success">{t("addressReady")}</span>
         </div>
 
         <div>
-          <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wider">{t("yourAddress")}</p>
+          <p className="text-xs text-muted-foreground mb-3 uppercase tracking-wider font-medium">{t("yourAddress")}</p>
           <button
             onClick={copyAddress}
-            className="group inline-flex items-center gap-3 rounded-xl border border-dashed border-primary/20 bg-muted/30 px-5 py-3 sm:px-6 sm:py-4 transition-colors duration-150 hover:border-primary/40 hover:bg-muted/50 cursor-pointer max-w-full"
+            className="group inline-flex items-center gap-4 rounded-2xl border border-primary/15 bg-primary/[0.03] px-6 py-4 sm:px-8 sm:py-5 transition-all duration-200 hover:border-primary/30 hover:bg-primary/[0.06] hover:shadow-md cursor-pointer max-w-full"
           >
-            <span className="font-mono text-xl sm:text-2xl lg:text-3xl font-bold truncate">
+            <span className="font-mono text-2xl sm:text-3xl lg:text-4xl font-extrabold truncate tracking-tight">
               <span>{localPart}</span>
-              <span className="text-muted-foreground">@</span>
+              <span className="text-muted-foreground/50">@</span>
               <span className="text-primary">{domainPart}</span>
             </span>
-            <span className="shrink-0 flex items-center justify-center h-9 w-9 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors duration-150">
-              {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4 text-primary " />}
+            <span className="shrink-0 flex items-center justify-center h-10 w-10 rounded-xl bg-primary/10 group-hover:bg-primary/15 transition-colors duration-150">
+              {copied ? <Check className="h-5 w-5 text-success" /> : <Copy className="h-5 w-5 text-primary" />}
             </span>
           </button>
         </div>
@@ -332,14 +332,14 @@ function QuickCreateCard() {
 
   // ── Pre-create state — domain selector + generate button ──
   return (
-    <div className="text-center space-y-5">
+    <div className="text-center space-y-6 py-4">
       {/* Domain selector as the hero element */}
-      <div className="inline-flex items-center gap-2 rounded-xl border border-dashed border-muted-foreground/20 bg-muted/20 px-5 py-3 sm:px-6 sm:py-4 max-w-full">
+      <div className="inline-flex items-center gap-2.5 rounded-2xl border border-border/80 bg-card px-5 py-3.5 sm:px-7 sm:py-4.5 max-w-full shadow-sm">
         <Mail className="h-5 w-5 text-muted-foreground shrink-0" />
         {showAdvanced && alias ? (
-          <span className="font-mono text-xl sm:text-2xl font-bold text-muted-foreground/60">{alias}</span>
+          <span className="font-mono text-xl sm:text-2xl font-bold text-foreground/60">{alias}</span>
         ) : (
-          <span className="font-mono text-xl sm:text-2xl font-bold text-muted-foreground/40">•••••</span>
+          <span className="font-mono text-xl sm:text-2xl font-bold text-muted-foreground/30">random</span>
         )}
         <span className="font-mono text-xl sm:text-2xl font-bold text-muted-foreground/40">@</span>
         {(assignments?.data?.length ?? 0) > 1 ? (
@@ -358,9 +358,9 @@ function QuickCreateCard() {
         )}
       </div>
 
-      {/* Generate button */}
+      {/* Generate button — hero level */}
       <div>
-        <Button onClick={create} disabled={!assignmentId || creating} className="gap-2 px-6">
+        <Button onClick={create} disabled={!assignmentId || creating} size="lg" className="gap-2.5 px-8 h-12 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md">
           {creating ? (
             <><RefreshCw className="h-4 w-4 animate-spin" /> {t("generating")}</>
           ) : (
@@ -368,7 +368,7 @@ function QuickCreateCard() {
           )}
         </Button>
         {ttlPreset && presetLabels[ttlPreset] && (
-          <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">{presetLabels[ttlPreset]}</p>
+          <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">{presetLabels[ttlPreset]}</p>
         )}
       </div>
 
@@ -377,7 +377,7 @@ function QuickCreateCard() {
         onClick={() => setShowAdvanced(!showAdvanced)}
         className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors duration-150"
       >
-        <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showAdvanced ? "rotate-180" : ""}`} />
+        <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${showAdvanced ? "rotate-180" : ""}`} />
         {t("advancedOptions")}
       </button>
 

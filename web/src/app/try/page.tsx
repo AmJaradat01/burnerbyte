@@ -37,7 +37,7 @@ export default function TryPage() {
       <main className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center px-4 py-12">
         {isLoading ? null : enabled ? (
           <>
-            <h1 className="anim-rise mb-2 text-center text-2xl font-bold tracking-tight">
+            <h1 className="anim-rise mb-2 text-center text-headline">
               Try it now
             </h1>
             <p className="anim-rise mb-8 text-center text-sm text-muted-foreground" style={{ animationDelay: "70ms" }}>
@@ -61,7 +61,7 @@ export default function TryPage() {
           </>
         ) : (
           <div className="text-center">
-            <h1 className="mb-2 text-2xl font-bold tracking-tight">Demo unavailable</h1>
+            <h1 className="mb-2 text-headline">Demo unavailable</h1>
             <p className="text-sm text-muted-foreground">The live demo is currently disabled.</p>
           </div>
         )}
