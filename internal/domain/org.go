@@ -25,6 +25,11 @@ type OrgSettings struct {
 	MaxTeams            *int    `json:"max_teams,omitempty"`
 	MaxInboxesPerDomain *int    `json:"max_inboxes_per_domain,omitempty"`
 	EnforceSSO          *bool   `json:"enforce_sso,omitempty"`
+	// Renewal policy: "original" (use inbox's original_ttl), "default" (use settings cascade), "fixed" (use RenewalTTL).
+	// Default behavior when nil: "original".
+	RenewalPolicy *string `json:"renewal_policy,omitempty"`
+	// Fixed renewal duration (Go-duration string). Only used when RenewalPolicy is "fixed".
+	RenewalTTL *string `json:"renewal_ttl,omitempty"`
 }
 
 type OrgMembership struct {
