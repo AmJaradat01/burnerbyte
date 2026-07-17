@@ -221,7 +221,7 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div>
           <h1 className="text-headline">
-            {greeting}, {user?.display_name?.split(" ")[0] || "there"}
+            {greeting}, {user?.display_name?.split(" ").slice(0, 2).join(" ") || "there"}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             {org.name}
