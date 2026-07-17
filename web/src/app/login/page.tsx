@@ -226,7 +226,7 @@ export default function LoginPage() {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors duration-150"
                         aria-label={showPassword ? "Hide password" : "Show password"}
                       >
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -238,9 +238,9 @@ export default function LoginPage() {
                   </Button>
                 </CardContent>
                 <CardFooter className="flex justify-between text-sm">
-                  <Link href="/forgot-password" className="text-muted-foreground hover:text-foreground transition-colors text-xs">Forgot password?</Link>
+                  <Link href="/forgot-password" className="text-muted-foreground hover:text-foreground transition-colors duration-150 text-xs">Forgot password?</Link>
                   {(sso?.allow_registration ?? true) && (
-                    <Link href="/register" className="text-muted-foreground hover:text-foreground transition-colors text-xs">Create account</Link>
+                    <Link href="/register" className="text-muted-foreground hover:text-foreground transition-colors duration-150 text-xs">Create account</Link>
                   )}
                 </CardFooter>
               </form>

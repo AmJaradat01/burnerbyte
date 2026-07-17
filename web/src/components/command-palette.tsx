@@ -187,7 +187,7 @@ export function CommandPalette() {
                     data-selected={idx === selectedIndex}
                     onClick={() => executeItem(item)}
                     onMouseEnter={() => setSelectedIndex(idx)}
-                    className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center gap-2.5 ${
+                    className={`w-full text-left px-4 py-2.5 text-sm transition-colors duration-150 flex items-center gap-2.5 ${
                       idx === selectedIndex ? "bg-primary/10 text-primary" : "hover:bg-muted"
                     }`}
                   >
@@ -215,7 +215,7 @@ export function CommandPalette() {
                     data-selected={idx === selectedIndex}
                     onClick={() => executeItem(item)}
                     onMouseEnter={() => setSelectedIndex(idx)}
-                    className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center gap-2.5 ${
+                    className={`w-full text-left px-4 py-2.5 text-sm transition-colors duration-150 flex items-center gap-2.5 ${
                       idx === selectedIndex ? "bg-primary/10 text-primary" : "hover:bg-muted"
                     }`}
                   >
@@ -243,7 +243,7 @@ export function CommandPalette() {
                     data-selected={idx === selectedIndex}
                     onClick={() => executeItem(item)}
                     onMouseEnter={() => setSelectedIndex(idx)}
-                    className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center gap-2.5 ${
+                    className={`w-full text-left px-4 py-2.5 text-sm transition-colors duration-150 flex items-center gap-2.5 ${
                       idx === selectedIndex ? "bg-primary/10 text-primary" : "hover:bg-muted"
                     }`}
                   >

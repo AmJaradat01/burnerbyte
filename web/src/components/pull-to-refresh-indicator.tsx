@@ -24,7 +24,7 @@ export function PullToRefreshIndicator({ pulling, refreshing, pullDistance, thre
         <Loader2 className="h-5 w-5 animate-spin text-primary" />
       ) : (
         <div
-          className={`h-5 w-5 rounded-full border-2 transition-colors ${ready ? "border-primary bg-primary/10" : "border-muted-foreground/30"}`}
+          className={`h-5 w-5 rounded-full border-2 transition-colors duration-150 ${ready ? "border-primary bg-primary/10" : "border-muted-foreground/30"}`}
           style={{ transform: `rotate(${progress * 360}deg)` }}
         />
       )}

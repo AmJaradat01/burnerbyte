@@ -49,7 +49,7 @@ export default function VerifyEmailPage() {
             </CardDescription>
           </CardHeader>
           <CardFooter className="justify-center">
-            <Link href="/login" className="text-sm text-muted-foreground hover:underline">Go to sign in</Link>
+            <Link href="/login" className="text-sm text-muted-foreground hover:underline transition-colors duration-150">Go to sign in</Link>
           </CardFooter>
         </Card>
     </AuthShell>

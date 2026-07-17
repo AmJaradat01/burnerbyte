@@ -128,7 +128,7 @@ export default function DomainsPage() {
                     role="tab"
                     aria-selected={statusFilter === s}
                     onClick={() => setStatusFilter(s)}
-                    className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+                    className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
                       statusFilter === s
                         ? "bg-primary/10 text-primary"
                         : "text-muted-foreground hover:bg-muted/80"
@@ -163,6 +163,7 @@ export default function DomainsPage() {
       <>
         {filtered.length === 0 ? (
           <EmptyState
+            icon={Globe}
             title={search ? "No matching domains" : "No domains yet"}
             description={search ? "Try a different search term." : "Add a domain to start receiving email."}
           >
@@ -224,7 +225,7 @@ function DomainCard({ domain: d, onVerify, onDelete, verifying }: {
           </div>
           <div className="min-w-0 flex-1">
             <Link href={`/domains/${d.id}`} className="group/link">
-              <span className="font-mono text-sm font-semibold truncate block group-hover/link:text-primary transition-colors">{d.domain_name}</span>
+              <span className="font-mono text-sm font-semibold truncate block group-hover/link:text-primary transition-colors duration-150">{d.domain_name}</span>
             </Link>
             <p className="text-xs text-muted-foreground mt-0.5 tabular-nums">
               {d.active_inboxes ?? 0} active · {d.inboxes_created_count ?? 0} created · {d.team_count ?? 0} {(d.team_count ?? 0) === 1 ? "team" : "teams"}
@@ -259,14 +260,14 @@ function DomainCard({ domain: d, onVerify, onDelete, verifying }: {
         {!d.txt_verified && d.verification_record && (
           <button
             onClick={copyRecord}
-            className="w-full rounded-md border border-dashed bg-muted/40 px-3 py-2 text-left text-[11px] font-mono break-all hover:bg-muted/60 transition-colors group/copy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="w-full rounded-md border border-dashed bg-muted/40 px-3 py-2 text-left text-[11px] font-mono break-all hover:bg-muted/60 transition-colors duration-150 group/copy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             aria-label={`Copy TXT verification record: ${d.verification_record}`}
           >
             <span className="text-muted-foreground">TXT → </span>
             <span className="text-foreground/80">{d.verification_record}</span>
             {copied
               ? <Check className="inline-block ml-1.5 h-3 w-3 text-success" aria-hidden="true" />
-              : <Copy className="inline-block ml-1.5 h-3 w-3 text-muted-foreground opacity-0 group-hover/copy:opacity-100 transition-opacity" aria-hidden="true" />
+              : <Copy className="inline-block ml-1.5 h-3 w-3 text-muted-foreground opacity-0 group-hover/copy:opacity-100 transition-opacity duration-150" aria-hidden="true" />
             }
           </button>
         )}
@@ -314,7 +315,7 @@ function DnsChipWithCopy({ verified, label, value }: { verified: boolean; label:
       {verified ? <CheckCircle2 className="h-3 w-3" /> : <Circle className="h-3 w-3" />}
       {label}
       {value && (
-        <button onClick={handleCopy} className="ml-0.5 hover:opacity-70 transition-opacity" title={`Copy ${label} record`} aria-label={`Copy ${label} record`}>
+        <button onClick={handleCopy} className="ml-0.5 hover:opacity-70 transition-opacity duration-150" title={`Copy ${label} record`} aria-label={`Copy ${label} record`}>
           {justCopied ? <Check className="h-2.5 w-2.5 text-success" /> : <Copy className="h-2.5 w-2.5" />}
         </button>
       )}
@@ -406,7 +407,7 @@ function DeleteDomainDialog({ domain: d, onConfirm }: { domain: Domain; onConfir
               <div>
                 <button
                   onClick={() => setExpanded(!expanded)}
-                  className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                  className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors duration-150"
                 >
                   {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                   {expanded ? "Hide" : "Show"} affected inboxes
