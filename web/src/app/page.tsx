@@ -141,7 +141,7 @@ function HomePage() {
                     role="tab"
                     aria-selected={status === s}
                     onClick={() => { setStatus(s); setPage(1); }}
-                    className={`rounded-md px-2.5 py-1 capitalize transition-colors ${
+                    className={`rounded-md px-2.5 py-1 capitalize transition-colors duration-150 ${
                       status === s ? "bg-background text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
@@ -294,14 +294,14 @@ function QuickCreateCard() {
           <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wider">{t("yourAddress")}</p>
           <button
             onClick={copyAddress}
-            className="group inline-flex items-center gap-3 rounded-xl border border-dashed border-primary/20 bg-muted/30 px-5 py-3 sm:px-6 sm:py-4 transition-colors hover:border-primary/40 hover:bg-muted/50 cursor-pointer max-w-full"
+            className="group inline-flex items-center gap-3 rounded-xl border border-dashed border-primary/20 bg-muted/30 px-5 py-3 sm:px-6 sm:py-4 transition-colors duration-150 hover:border-primary/40 hover:bg-muted/50 cursor-pointer max-w-full"
           >
             <span className="font-mono text-xl sm:text-2xl lg:text-3xl font-bold truncate">
               <span>{localPart}</span>
               <span className="text-muted-foreground">@</span>
               <span className="text-primary">{domainPart}</span>
             </span>
-            <span className="shrink-0 flex items-center justify-center h-9 w-9 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+            <span className="shrink-0 flex items-center justify-center h-9 w-9 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors duration-150">
               {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4 text-primary " />}
             </span>
           </button>
@@ -375,7 +375,7 @@ function QuickCreateCard() {
       {/* Advanced toggle */}
       <button
         onClick={() => setShowAdvanced(!showAdvanced)}
-        className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors duration-150"
       >
         <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showAdvanced ? "rotate-180" : ""}`} />
         {t("advancedOptions")}
@@ -439,7 +439,7 @@ function InboxCard({ inbox, onExtend, onDelete }: { inbox: Inbox; onExtend: () =
             <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
               <Mail className="h-5 w-5 text-muted-foreground" />
             </div>
-            <p className="font-mono text-sm font-medium truncate group-hover:text-primary transition-colors">
+            <p className="font-mono text-sm font-medium truncate group-hover:text-primary transition-colors duration-150">
             <span>{localPart}</span>
             <span className="text-muted-foreground">@</span>
             <span className="text-primary/80">{domainPart}</span>

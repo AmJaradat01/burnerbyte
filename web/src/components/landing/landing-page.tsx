@@ -38,7 +38,7 @@ const dark = {
 function SectionKicker({ children }: { children: string }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="h-px w-8 shrink-0 bg-primary" />
+      <span className="h-px w-8 shrink-0 bg-primary/60" />
       <span className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">{children}</span>
     </div>
   );
@@ -86,25 +86,25 @@ export function LandingPage() {
             <Logo />
           </Link>
           <nav className="flex items-center gap-0.5 text-sm sm:gap-1">
-            <Link href="/docs" className="rounded-md px-3 py-2 text-muted-foreground transition-colors hover:text-foreground">
+            <Link href="/docs" className="rounded-md px-3 py-2 text-muted-foreground transition-colors duration-150 hover:text-foreground">
               {t("nav.docs")}
             </Link>
             <a
               href={REPO_URL}
               target="_blank"
               rel="noreferrer"
-              className="hidden items-center gap-1.5 rounded-md px-3 py-2 text-muted-foreground transition-colors hover:text-foreground sm:inline-flex"
+              className="hidden items-center gap-1.5 rounded-md px-3 py-2 text-muted-foreground transition-colors duration-150 hover:text-foreground sm:inline-flex"
             >
               <Gitlab className="h-4 w-4" />
               {t("nav.repo")}
             </a>
-            <Link href="/login" className="rounded-md px-3 py-2 font-medium transition-colors hover:bg-muted">
+            <Link href="/login" className="rounded-md px-3 py-2 font-medium transition-colors duration-150 hover:bg-muted">
               {t("nav.signIn")}
             </Link>
             {allowRegistration && (
               <Link
                 href="/register"
-                className="ml-1 inline-flex items-center rounded-md bg-primary px-3.5 py-2 font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                className="ml-1 inline-flex items-center rounded-md bg-primary px-3.5 py-2 font-medium text-primary-foreground transition-colors duration-150 hover:bg-primary/90"
               >
                 {t("nav.getStarted")}
               </Link>
@@ -144,14 +144,14 @@ export function LandingPage() {
               <div className="anim-rise mt-9 flex flex-wrap items-center gap-3" style={{ animationDelay: "140ms" }}>
                 <Link
                   href={allowRegistration ? "/register" : "/login"}
-                  className="group inline-flex h-11 items-center gap-2 rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 active:translate-y-px"
+                  className="group inline-flex h-11 items-center gap-2 rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors duration-150 hover:bg-primary/90 active:translate-y-px"
                 >
                   {allowRegistration ? t("hero.getStarted") : t("cta.signIn")}
                   <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
                 </Link>
                 <Link
                   href={demoEnabled ? "/try" : "/docs"}
-                  className="inline-flex h-11 items-center rounded-md border border-border bg-background px-6 text-sm font-medium transition-colors hover:bg-muted active:translate-y-px"
+                  className="inline-flex h-11 items-center rounded-md border border-border bg-background px-6 text-sm font-medium transition-colors duration-150 hover:bg-muted active:translate-y-px"
                 >
                   {demoEnabled ? t("hero.tryIt") : t("hero.docs")}
                 </Link>
@@ -170,13 +170,23 @@ export function LandingPage() {
             </div>
 
             <div className="anim-rise lg:col-span-5" style={{ animationDelay: "120ms" }}>
-              <LiveInboxDemo
-                labels={{
-                  inboxLabel: t("demo.inbox"),
-                  expiresIn: t("demo.expiresIn"),
-                  expired: t("demo.expired"),
-                }}
-              />
+              <div className="relative">
+                {/* Decorative gradient backdrop for visual depth */}
+                <div
+                  aria-hidden="true"
+                  className="absolute -inset-4 -z-10 rounded-2xl opacity-60"
+                  style={{
+                    background: "radial-gradient(ellipse 80% 70% at 60% 40%, color-mix(in oklch, var(--primary) 8%, transparent), transparent 70%)",
+                  }}
+                />
+                <LiveInboxDemo
+                  labels={{
+                    inboxLabel: t("demo.inbox"),
+                    expiresIn: t("demo.expiresIn"),
+                    expired: t("demo.expired"),
+                  }}
+                />
+              </div>
             </div>
           </div>
         </section>
@@ -189,15 +199,23 @@ export function LandingPage() {
           <h2 className="mt-4 max-w-2xl text-balance text-3xl font-semibold tracking-tight sm:text-4xl">
             {t("how.title")}
           </h2>
-          <div className="reveal mt-12 grid gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-3">
-            {steps.map((step) => (
-              <div key={step.num} className="bg-background p-6 transition-colors duration-200 hover:bg-muted/40 sm:p-8">
-                <div className="font-mono text-sm font-medium text-primary tabular-nums">{step.num}</div>
-                <div className="mt-5 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
-                  {step.label}
+          <div className="reveal mt-12 grid gap-6 sm:grid-cols-3">
+            {steps.map((step, i) => (
+              <div key={step.num} className="relative group">
+                {/* Connector line between steps (hidden on mobile and for last item) */}
+                {i < steps.length - 1 && (
+                  <div aria-hidden="true" className="absolute top-8 -right-3 hidden h-px w-6 bg-border sm:block" />
+                )}
+                <div className="rounded-xl border bg-background p-6 transition-colors duration-200 hover:bg-muted/40 sm:p-8">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 font-mono text-sm font-bold text-primary tabular-nums">
+                    {step.num}
+                  </div>
+                  <div className="mt-5 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                    {step.label}
+                  </div>
+                  <h3 className="mt-2 text-lg font-semibold">{step.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{step.desc}</p>
                 </div>
-                <h3 className="mt-2 text-lg font-semibold">{step.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{step.desc}</p>
               </div>
             ))}
           </div>
@@ -214,29 +232,44 @@ export function LandingPage() {
             </h2>
             <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">{t("capabilities.subtitle")}</p>
           </div>
-          <dl className="reveal mt-12 border-y border-border">
-            {capabilities.map((cap, i) => (
+
+          {/* Primary capabilities - larger, visual grid */}
+          <div className="reveal mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {capabilities.slice(0, 3).map((cap) => (
               <div
                 key={cap.label}
-                className={cn(
-                  "group grid gap-2 px-3 py-5 transition-colors duration-200 hover:bg-muted/40 sm:grid-cols-[13rem_1fr] sm:gap-10 sm:py-6",
-                  i > 0 && "border-t border-border",
-                )}
+                className="group rounded-xl border bg-background p-6 transition-all duration-200 hover:shadow-sm hover:border-primary/20"
               >
-                <dt className="flex items-center gap-2.5 font-mono text-xs uppercase tracking-[0.12em] text-muted-foreground">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted transition-colors duration-200 group-hover:bg-primary/10">
                   <cap.Icon
-                    className="h-4 w-4 shrink-0 text-foreground transition-colors duration-200 group-hover:text-primary"
+                    className="h-5 w-5 text-muted-foreground transition-colors duration-200 group-hover:text-primary"
                     aria-hidden="true"
                   />
-                  {cap.label}
-                </dt>
-                <dd className="sm:flex sm:items-baseline sm:gap-4">
-                  <span className="font-semibold sm:w-44 sm:shrink-0">{cap.title}</span>
-                  <span className="mt-1 block text-sm leading-relaxed text-muted-foreground sm:mt-0">{cap.desc}</span>
-                </dd>
+                </div>
+                <h3 className="mt-4 font-semibold">{cap.title}</h3>
+                <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{cap.desc}</p>
               </div>
             ))}
-          </dl>
+          </div>
+
+          {/* Secondary capabilities - compact horizontal list */}
+          <div className="reveal mt-4 grid gap-4 sm:grid-cols-3">
+            {capabilities.slice(3).map((cap) => (
+              <div
+                key={cap.label}
+                className="group flex items-start gap-3 rounded-lg border bg-background px-4 py-4 transition-colors duration-200 hover:bg-muted/40"
+              >
+                <cap.Icon
+                  className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-colors duration-200 group-hover:text-primary"
+                  aria-hidden="true"
+                />
+                <div className="min-w-0">
+                  <h3 className="text-sm font-semibold">{cap.title}</h3>
+                  <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{cap.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -256,7 +289,7 @@ export function LandingPage() {
               <p className={cn("mt-8 font-mono text-xs", dark.dim)}>{t("trust.facts")}</p>
               <Link
                 href="/docs/self-hosting/production"
-                className={cn("group mt-8 inline-flex items-center gap-2 text-sm font-medium transition-colors", dark.accent, dark.accentHover)}
+                className={cn("group mt-8 inline-flex items-center gap-2 text-sm font-medium transition-colors duration-150", dark.accent, dark.accentHover)}
               >
                 {t("trust.cta")}
                 <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
@@ -290,17 +323,25 @@ export function LandingPage() {
       {/* ── Final CTA ── */}
       <section className="relative isolate border-t border-border">
         <div aria-hidden className="cta-veil pointer-events-none absolute inset-0 -z-10" />
-        <div className="reveal mx-auto max-w-6xl px-6 py-20 text-center sm:px-8 sm:py-24">
-          <h2 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl">{t("cta.title")}</h2>
-          <p className="mx-auto mt-3 max-w-md text-muted-foreground">{t("cta.subtitle")}</p>
-          <div className="mt-8 flex justify-center">
-            <Link
-              href={allowRegistration ? "/register" : "/login"}
-              className="group inline-flex h-11 items-center gap-2 rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 active:translate-y-px"
-            >
-              {allowRegistration ? t("cta.getStarted") : t("cta.signIn")}
-              <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
-            </Link>
+        <div className="reveal mx-auto max-w-6xl px-6 py-20 sm:px-8 sm:py-24">
+          <div className="mx-auto max-w-lg text-center">
+            <h2 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl">{t("cta.title")}</h2>
+            <p className="mx-auto mt-3 max-w-md text-muted-foreground">{t("cta.subtitle")}</p>
+            <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+              <Link
+                href={allowRegistration ? "/register" : "/login"}
+                className="group inline-flex h-11 items-center gap-2 rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors duration-150 hover:bg-primary/90 active:translate-y-px"
+              >
+                {allowRegistration ? t("cta.getStarted") : t("cta.signIn")}
+                <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+              </Link>
+              <Link
+                href="/docs/self-hosting/production"
+                className="inline-flex h-11 items-center rounded-md border border-border bg-background px-6 text-sm font-medium transition-colors duration-150 hover:bg-muted active:translate-y-px"
+              >
+                {t("trust.cta")}
+              </Link>
+            </div>
           </div>
         </div>
       </section>
@@ -356,7 +397,7 @@ function FooterLink({ href, external, children }: { href: string; external?: boo
   if (external) {
     return (
       <li>
-        <a href={href} target="_blank" rel="noreferrer" className="text-muted-foreground transition-colors hover:text-foreground">
+        <a href={href} target="_blank" rel="noreferrer" className="text-muted-foreground transition-colors duration-150 hover:text-foreground">
           {children}
         </a>
       </li>
@@ -364,7 +405,7 @@ function FooterLink({ href, external, children }: { href: string; external?: boo
   }
   return (
     <li>
-      <Link href={href} className="text-muted-foreground transition-colors hover:text-foreground">
+      <Link href={href} className="text-muted-foreground transition-colors duration-150 hover:text-foreground">
         {children}
       </Link>
     </li>

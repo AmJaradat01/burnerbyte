@@ -33,14 +33,14 @@ function CopyableValue({ value, ariaLabel }: { value: string; ariaLabel?: string
   return (
     <button
       onClick={copy}
-      className="flex items-center gap-2 rounded-md bg-muted/50 border px-3 py-1.5 font-mono text-sm break-all text-left hover:bg-muted transition-colors group flex-1 min-w-0 w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      className="flex items-center gap-2 rounded-md bg-muted/50 border px-3 py-1.5 font-mono text-sm break-all text-left hover:bg-muted transition-colors duration-150 group flex-1 min-w-0 w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       aria-label={ariaLabel ?? `Copy ${value}`}
     >
       <span className="flex-1 truncate">{value}</span>
       {copied ? (
         <Check className="h-3.5 w-3.5 text-success shrink-0" aria-hidden="true" />
       ) : (
-        <Copy className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" aria-hidden="true" />
+        <Copy className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-150 shrink-0" aria-hidden="true" />
       )}
     </button>
   );
@@ -149,7 +149,7 @@ export default function DomainDetailPage() {
       <header className="flex flex-wrap items-center gap-3">
         <Link
           href="/domains"
-          className="flex h-9 w-9 items-center justify-center rounded-lg border bg-card hover:bg-accent transition-colors shrink-0"
+          className="flex h-9 w-9 items-center justify-center rounded-lg border bg-card hover:bg-accent transition-colors duration-150 shrink-0"
           aria-label="Back to domains"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
@@ -281,14 +281,14 @@ export default function DomainDetailPage() {
                       <Link
                         key={team.id}
                         href="/teams"
-                        className="flex items-center justify-between rounded-lg border px-3 py-2.5 hover:bg-accent/50 transition-colors group"
+                        className="flex items-center justify-between rounded-lg border px-3 py-2.5 hover:bg-accent/50 transition-colors duration-150 group"
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
                           <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0" aria-hidden="true">
                             {team.name.charAt(0).toUpperCase()}
                           </div>
                           <div className="min-w-0">
-                            <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">{team.name}</p>
+                            <p className="text-sm font-medium truncate group-hover:text-primary transition-colors duration-150">{team.name}</p>
                             <p className="text-[11px] text-muted-foreground tabular-nums">
                               {team.member_count} {team.member_count === 1 ? "member" : "members"}
                             </p>
@@ -300,8 +300,10 @@ export default function DomainDetailPage() {
                   </div>
                 ) : (
                   <EmptyState
+                    icon={Globe}
                     title="No teams assigned"
                     description="Assign this domain to a team to start creating inboxes."
+                    variant="compact"
                   />
                 )}
               </CardContent>

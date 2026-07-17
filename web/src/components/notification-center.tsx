@@ -355,7 +355,7 @@ export function NotificationCenter() {
                   <div key={item.key}>
                     {/* Group header */}
                     <div
-                      className={`flex items-center gap-3 px-4 py-3 border-b cursor-pointer transition-colors hover:bg-muted/50 ${!item.isRead ? "bg-primary/5" : ""}`}
+                      className={`flex items-center gap-3 px-4 py-3 border-b cursor-pointer transition-colors duration-150 hover:bg-muted/50 ${!item.isRead ? "bg-primary/5" : ""}`}
                       onClick={() => toggleGroup(item.key)}
                     >
                       <div className={`mt-0.5 shrink-0 ${cfg.color}`}>
@@ -398,7 +398,7 @@ export function NotificationCenter() {
                         return (
                           <div
                             key={n.id}
-                            className={`group flex items-start gap-3 pl-8 pr-4 py-2.5 border-b last:border-0 transition-colors cursor-pointer hover:bg-muted/50 ${!n.is_read ? "bg-primary/5" : "bg-muted/20"}`}
+                            className={`group flex items-start gap-3 pl-8 pr-4 py-2.5 border-b last:border-0 transition-colors duration-150 cursor-pointer hover:bg-muted/50 ${!n.is_read ? "bg-primary/5" : "bg-muted/20"}`}
                             onClick={() => markRead(n.id)}
                           >
                             <div className={`mt-0.5 shrink-0 ${nCfg.color}`}>
@@ -447,7 +447,7 @@ export function NotificationCenter() {
               return (
                 <div
                   key={item.id}
-                  className={`group flex items-start gap-3 px-4 py-3 border-b last:border-0 transition-colors cursor-pointer hover:bg-muted/50 ${!item.is_read ? "bg-primary/5" : ""}`}
+                  className={`group flex items-start gap-3 px-4 py-3 border-b last:border-0 transition-colors duration-150 cursor-pointer hover:bg-muted/50 ${!item.is_read ? "bg-primary/5" : ""}`}
                   onClick={() => markRead(item.id)}
                 >
                   <div className={`mt-0.5 shrink-0 ${cfg.color}`}>

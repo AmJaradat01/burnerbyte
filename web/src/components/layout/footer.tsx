@@ -14,12 +14,12 @@ export function Footer() {
             <span className="hidden sm:inline">· Self-hosted temporary email</span>
           </div>
           <div className="flex items-center gap-3 sm:gap-4">
-            <Link href="/docs" className="hover:text-foreground transition-colors">Docs</Link>
+            <Link href="/docs" className="hover:text-foreground transition-colors duration-150">Docs</Link>
             <a
               href="https://gitlab.com/burnerbyte/burnerbyte"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+              className="inline-flex items-center gap-1 hover:text-foreground transition-colors duration-150"
             >
               GitLab
               <ExternalLink className="h-2.5 w-2.5" />
