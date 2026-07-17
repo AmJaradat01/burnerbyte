@@ -126,43 +126,40 @@ export function LandingPage() {
 
         {/* ── Hero ── */}
         <section className="mx-auto max-w-6xl px-6 sm:px-8">
-          <div className="grid items-center gap-12 py-16 sm:py-20 lg:grid-cols-12 lg:gap-10 lg:py-24">
+          <div className="grid items-center gap-12 py-20 sm:py-24 lg:grid-cols-12 lg:gap-14 lg:py-28">
             <div className="lg:col-span-7">
-              <h1 className="anim-rise text-balance text-4xl font-semibold leading-[1.04] tracking-tight sm:text-5xl lg:text-6xl">
+              <h1 className="anim-rise text-display">
                 <span className="block">{t("hero.headlineA")}</span>
-                <span className="block">{t("hero.headlineB")}</span>
+                <span className="block text-primary">{t("hero.headlineB")}</span>
               </h1>
               <p
-                className="anim-rise mt-6 max-w-xl text-pretty text-lg leading-relaxed text-muted-foreground"
+                className="anim-rise mt-7 max-w-lg text-pretty text-[1.05rem] leading-relaxed text-muted-foreground"
                 style={{ animationDelay: "70ms" }}
               >
                 {t("hero.subtitle")}
               </p>
-              {/* One primary + one secondary CTA. The live demo (when enabled) is
-                  the strongest secondary for a technical audience; otherwise Docs.
-                  Docs remains reachable from the nav and footer. */}
-              <div className="anim-rise mt-9 flex flex-wrap items-center gap-3" style={{ animationDelay: "140ms" }}>
+              <div className="anim-rise mt-10 flex flex-wrap items-center gap-3" style={{ animationDelay: "140ms" }}>
                 <Link
                   href={allowRegistration ? "/register" : "/login"}
-                  className="group inline-flex h-11 items-center gap-2 rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors duration-150 hover:bg-primary/90 active:translate-y-px"
+                  className="group inline-flex h-12 items-center gap-2 rounded-lg bg-primary px-7 text-sm font-semibold text-primary-foreground shadow-sm transition-all duration-150 hover:bg-primary/85 hover:shadow-md active:translate-y-px"
                 >
                   {allowRegistration ? t("hero.getStarted") : t("cta.signIn")}
                   <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
                 </Link>
                 <Link
                   href={demoEnabled ? "/try" : "/docs"}
-                  className="inline-flex h-11 items-center rounded-md border border-border bg-background px-6 text-sm font-medium transition-colors duration-150 hover:bg-muted active:translate-y-px"
+                  className="inline-flex h-12 items-center rounded-lg border border-border bg-background px-7 text-sm font-medium transition-all duration-150 hover:bg-muted hover:border-border/80 active:translate-y-px"
                 >
                   {demoEnabled ? t("hero.tryIt") : t("hero.docs")}
                 </Link>
               </div>
               <ul
-                className="anim-rise mt-8 flex flex-wrap items-center gap-x-3 gap-y-2 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground"
+                className="anim-rise mt-9 flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground"
                 style={{ animationDelay: "210ms" }}
               >
                 {t("hero.spec").split("·").map((item, i) => (
-                  <li key={item} className="flex items-center gap-3">
-                    {i > 0 && <span className="h-3 w-px bg-border" aria-hidden="true" />}
+                  <li key={item} className="flex items-center gap-4">
+                    {i > 0 && <span className="h-3.5 w-px bg-border" aria-hidden="true" />}
                     <span>{item.trim()}</span>
                   </li>
                 ))}
@@ -171,12 +168,12 @@ export function LandingPage() {
 
             <div className="anim-rise lg:col-span-5" style={{ animationDelay: "120ms" }}>
               <div className="relative">
-                {/* Decorative gradient backdrop for visual depth */}
+                {/* Decorative gradient backdrop - stronger presence */}
                 <div
                   aria-hidden="true"
-                  className="absolute -inset-4 -z-10 rounded-2xl opacity-60"
+                  className="absolute -inset-6 -z-10 rounded-3xl"
                   style={{
-                    background: "radial-gradient(ellipse 80% 70% at 60% 40%, color-mix(in oklch, var(--primary) 8%, transparent), transparent 70%)",
+                    background: "radial-gradient(ellipse 90% 80% at 55% 40%, color-mix(in oklch, var(--primary) 12%, transparent), transparent 70%)",
                   }}
                 />
                 <LiveInboxDemo
@@ -201,7 +198,7 @@ export function LandingPage() {
           </h2>
           <div className="reveal mt-12 grid gap-6 sm:grid-cols-3">
             {steps.map((step, i) => (
-              <div key={step.num} className="relative group">
+              <div key={step.num} className={`relative group ${i === 0 ? "reveal-d1" : i === 1 ? "reveal-d2" : "reveal-d3"}`}>
                 {/* Connector line between steps (hidden on mobile and for last item) */}
                 {i < steps.length - 1 && (
                   <div aria-hidden="true" className="absolute top-8 -right-3 hidden h-px w-6 bg-border sm:block" />
@@ -276,7 +273,7 @@ export function LandingPage() {
       {/* ── 03 Ownership (dark climax) ── */}
       <section className={cn("border-t border-border", dark.bg, dark.text)}>
         <div className="mx-auto max-w-6xl px-6 py-20 sm:px-8 sm:py-28">
-          <div className="reveal grid gap-12 lg:grid-cols-2 lg:items-center lg:gap-16">
+          <div className="reveal-up grid gap-12 lg:grid-cols-2 lg:items-center lg:gap-16">
             <div>
               <div className="flex items-center gap-3">
                 <span className={cn("h-px w-8 shrink-0", dark.rule)} />
@@ -323,21 +320,21 @@ export function LandingPage() {
       {/* ── Final CTA ── */}
       <section className="relative isolate border-t border-border">
         <div aria-hidden className="cta-veil pointer-events-none absolute inset-0 -z-10" />
-        <div className="reveal mx-auto max-w-6xl px-6 py-20 sm:px-8 sm:py-24">
+        <div className="reveal-up mx-auto max-w-6xl px-6 py-24 sm:px-8 sm:py-32">
           <div className="mx-auto max-w-lg text-center">
-            <h2 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl">{t("cta.title")}</h2>
-            <p className="mx-auto mt-3 max-w-md text-muted-foreground">{t("cta.subtitle")}</p>
-            <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+            <h2 className="text-headline">{t("cta.title")}</h2>
+            <p className="mx-auto mt-4 max-w-md text-muted-foreground">{t("cta.subtitle")}</p>
+            <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
               <Link
                 href={allowRegistration ? "/register" : "/login"}
-                className="group inline-flex h-11 items-center gap-2 rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors duration-150 hover:bg-primary/90 active:translate-y-px"
+                className="group inline-flex h-12 items-center gap-2 rounded-lg bg-primary px-7 text-sm font-semibold text-primary-foreground shadow-sm transition-all duration-150 hover:bg-primary/85 hover:shadow-md active:translate-y-px"
               >
                 {allowRegistration ? t("cta.getStarted") : t("cta.signIn")}
                 <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
               </Link>
               <Link
                 href="/docs/self-hosting/production"
-                className="inline-flex h-11 items-center rounded-md border border-border bg-background px-6 text-sm font-medium transition-colors duration-150 hover:bg-muted active:translate-y-px"
+                className="inline-flex h-12 items-center rounded-lg border border-border bg-background px-7 text-sm font-medium transition-all duration-150 hover:bg-muted hover:border-border/80 active:translate-y-px"
               >
                 {t("trust.cta")}
               </Link>

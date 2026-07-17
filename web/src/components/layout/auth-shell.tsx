@@ -29,19 +29,37 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="lg:grid lg:min-h-screen lg:grid-cols-2">
-      <aside className={`relative hidden flex-col p-10 lg:flex ${panel.bg} ${panel.text}`}>
-        <Link href="/" aria-label="BurnerByte home" className="inline-flex flex-col">
-          <span className="text-xl font-bold tracking-tight">
+      <aside className={`relative hidden flex-col p-10 lg:flex ${panel.bg} ${panel.text} overflow-hidden`}>
+        {/* Grid texture backdrop */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 -z-0 opacity-[0.04]"
+          style={{
+            backgroundImage: "radial-gradient(oklch(0.96 0.004 265) 1px, transparent 1px)",
+            backgroundSize: "24px 24px",
+          }}
+        />
+        {/* Subtle radial glow */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 -z-0"
+          style={{
+            background: "radial-gradient(ellipse 60% 50% at 50% 60%, oklch(0.52 0.215 264 / 0.08), transparent 70%)",
+          }}
+        />
+
+        <Link href="/" aria-label="BurnerByte home" className="relative inline-flex flex-col">
+          <span className="text-2xl font-extrabold tracking-tight">
             Burner<span className={panel.accent}>Byte</span>
           </span>
-          <span className={`mt-1 font-mono text-[11px] uppercase tracking-[0.14em] ${panel.dim}`}>
+          <span className={`mt-1.5 font-mono text-[11px] uppercase tracking-[0.14em] ${panel.dim}`}>
             {t("brandMasthead")}
           </span>
         </Link>
 
-        <div className="flex flex-1 flex-col justify-center py-10">
-          <div className="w-full max-w-sm space-y-8">
-            <p className="text-balance text-[1.7rem] font-semibold leading-snug tracking-tight">
+        <div className="relative flex flex-1 flex-col justify-center py-10">
+          <div className="w-full max-w-sm space-y-10">
+            <p className="text-balance text-[2rem] font-extrabold leading-[1.1] tracking-tight">
               {t("brandHeadline")}
             </p>
 
@@ -51,7 +69,7 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
             />
 
             <div className="flex items-center gap-3">
-              <span className={`h-px w-8 shrink-0 ${panel.rule}`} />
+              <span className={`h-px w-10 shrink-0 ${panel.rule}`} />
               <span className={`font-mono text-[11px] ${panel.dim}`}>{t("brandSpec")}</span>
             </div>
           </div>

@@ -42,15 +42,15 @@ function NavLink({ href, icon: Icon, label, active, collapsed, badge }: {
         "relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150",
         collapsed && "justify-center px-2",
         active
-          ? "bg-sidebar-primary/10 text-sidebar-primary"
+          ? "bg-sidebar-primary/12 text-sidebar-primary font-semibold"
           : "text-muted-foreground hover:bg-muted/80 hover:text-foreground active:scale-[0.98]"
       )}
     >
-      {/* Active indicator bar */}
+      {/* Active indicator bar — 3px wide, prominent */}
       {active && (
-        <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-0.5 rounded-full bg-sidebar-primary animate-in slide-in-from-left-1 fade-in duration-200" />
+        <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[3px] rounded-full bg-sidebar-primary shadow-[0_0_6px_rgba(var(--sidebar-primary),0.3)] animate-in slide-in-from-left-1 fade-in duration-200" />
       )}
-      <Icon className={cn("shrink-0 transition-colors duration-150", collapsed ? "h-5 w-5" : "h-4 w-4", active && "text-sidebar-primary")} />
+      <Icon className={cn("shrink-0 transition-all duration-150", collapsed ? "h-5 w-5" : "h-4 w-4", active && "text-sidebar-primary h-[18px] w-[18px]")} />
       {!collapsed && (
         <>
           <span className="flex-1 truncate">{label}</span>
@@ -164,12 +164,12 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       {/* ── Org card ── */}
       {currentOrg && !collapsed && (
         <div className="mx-3 mt-3 mb-1 shrink-0">
-          <div className="rounded-lg border bg-muted/30 px-3 py-2.5 transition-colors duration-150 hover:bg-muted/50">
+          <div className="rounded-lg border border-sidebar-primary/15 bg-sidebar-primary/[0.04] px-3 py-2.5 transition-colors duration-150 hover:bg-sidebar-primary/[0.07]">
             <div className="flex items-center gap-2.5">
               {currentOrg.logo_url ? (
-                <Image src={currentOrg.logo_url} alt="" width={28} height={28} className="h-7 w-7 rounded-md object-cover" unoptimized />
+                <Image src={currentOrg.logo_url} alt="" width={30} height={30} className="h-[30px] w-[30px] rounded-md object-cover ring-1 ring-border" unoptimized />
               ) : (
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-bold text-muted-foreground">
+                <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-md bg-sidebar-primary/10 text-xs font-bold text-sidebar-primary">
                   {currentOrg.name.charAt(0).toUpperCase()}
                 </div>
               )}
@@ -231,7 +231,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         {/* User profile link */}
         {collapsed ? (
           <Link href="/profile" title={user?.display_name || "Profile"} className="flex justify-center mb-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-sm font-semibold text-muted-foreground ring-2 ring-background transition-transform hover:scale-105">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary ring-2 ring-primary/20 transition-transform hover:scale-105">
               {userInitial}
             </div>
           </Link>
@@ -240,7 +240,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             href="/profile"
             className="flex items-center gap-2.5 rounded-lg px-2 py-2 hover:bg-muted/80 transition-colors duration-150 group"
           >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold text-muted-foreground ring-2 ring-background">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary ring-2 ring-primary/20">
               {userInitial}
             </div>
             <div className="min-w-0 flex-1">

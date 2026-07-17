@@ -125,11 +125,27 @@
 
 /* ── Typography utilities ── */
 @layer utilities {
+  /* Display: landing hero, marketing moments. 800 weight for maximum presence.
+     3rem base → 3.5rem at sm → 4rem at md via responsive overrides in markup. */
+  .text-display {
+    font-size: clamp(2.25rem, 5vw, 3.25rem);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.035em;
+  }
+  /* Headline: page-level headings (dashboard greeting, section titles). */
   .text-headline {
-    font-size: 1.75rem;
-    font-weight: 700;
-    line-height: 1.15;
-    letter-spacing: -0.025em;
+    font-size: 2rem;
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+  }
+  /* Subhead: card titles, dialog headers, secondary headings. */
+  .text-subhead {
+    font-size: 1.25rem;
+    font-weight: 650;
+    line-height: 1.25;
+    letter-spacing: -0.015em;
   }
   .text-title {
     font-size: 1.125rem;
@@ -220,12 +236,32 @@
       animation-timeline: view();
       animation-range: entry 0% cover 24%;
     }
+    /* Stagger delays for child elements within a reveal group */
+    .reveal-d1 { animation: rise-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) both; animation-timeline: view(); animation-range: entry 5% cover 28%; }
+    .reveal-d2 { animation: rise-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) both; animation-timeline: view(); animation-range: entry 10% cover 32%; }
+    .reveal-d3 { animation: rise-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) both; animation-timeline: view(); animation-range: entry 15% cover 36%; }
+    /* Larger-translate variant for sections that want more dramatic entrance */
+    .reveal-up {
+      animation: rise-in-lg 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 28%;
+    }
   }
 }
 @keyframes rise-in {
   from {
     opacity: 0;
     transform: translateY(1.25rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes rise-in-lg {
+  from {
+    opacity: 0;
+    transform: translateY(2.5rem);
   }
   to {
     opacity: 1;
