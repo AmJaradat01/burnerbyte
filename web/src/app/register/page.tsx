@@ -249,7 +249,7 @@ export default function RegisterPage() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors duration-150"
                       aria-label={showPassword ? "Hide password" : "Show password"}
                     >
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -286,7 +286,7 @@ export default function RegisterPage() {
                     <button
                       type="button"
                       onClick={() => setShowConfirm(!showConfirm)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors duration-150"
                       aria-label={showConfirm ? "Hide password" : "Show password"}
                     >
                       {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -306,9 +306,9 @@ export default function RegisterPage() {
                   />
                   <span className="text-xs text-muted-foreground leading-tight">
                     I agree to the{" "}
-                    <Link href="/terms" className="underline hover:text-foreground">Terms of Service</Link>{" "}
+                    <Link href="/terms" className="underline hover:text-foreground transition-colors duration-150">Terms of Service</Link>{" "}
                     and{" "}
-                    <Link href="/privacy" className="underline hover:text-foreground">Privacy Policy</Link>
+                    <Link href="/privacy" className="underline hover:text-foreground transition-colors duration-150">Privacy Policy</Link>
                   </span>
                 </label>
 
@@ -317,7 +317,7 @@ export default function RegisterPage() {
                 </Button>
               </CardContent>
               <CardFooter className="justify-center pt-0">
-                <Link href="/login" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Already have an account? Sign in</Link>
+                <Link href="/login" className="text-xs text-muted-foreground hover:text-foreground transition-colors duration-150">Already have an account? Sign in</Link>
               </CardFooter>
             </form>
           </Card>
