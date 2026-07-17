@@ -107,7 +107,6 @@ function HomePage() {
   });
 
   const [page, setPage] = useState(1);
-  const [status, setStatus] = useState<"active" | "all">("active");
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   // Debounce the search box so we don't query on every keystroke.
@@ -117,10 +116,10 @@ function HomePage() {
   }, [searchInput]);
 
   // Inboxes with pagination, filtered by status and (optionally) address search.
-  const inboxParams: Record<string, string> = { page: String(page), per_page: "12", status };
+  const inboxParams: Record<string, string> = { page: String(page), per_page: "12", status: "active" };
   if (search) inboxParams.search = search;
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["home-inboxes", page, status, search],
+    queryKey: ["home-inboxes", page, search],
     queryFn: () => api.get<PaginatedResponse<Inbox>>(`/inboxes`, inboxParams),
     refetchOnWindowFocus: true,
   });
@@ -155,47 +154,26 @@ function HomePage() {
       <QuickCreateCard />
 
       {/* Your Inboxes — shown once you have some; the create card above is the empty action */}
-      {(isLoading || isError || search !== "" || status !== "active" || (data?.data?.length ?? 0) > 0) && (
+      {(isLoading || isError || search !== "" || (data?.data?.length ?? 0) > 0) && (
         <div>
           <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <div className="flex items-baseline gap-2 min-w-0">
               <h2 className="text-subhead shrink-0">{t("recentInboxes")}</h2>
               {data && data.total > 0 && !search && (
                 <span className="text-sm font-medium text-muted-foreground tabular-nums">
-                  {data.total} {status === "all" ? "total" : "active"}
+                  {data.total}
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-2">
-              <div
-                className="inline-flex items-center gap-0.5 rounded-lg border border-border bg-muted/40 p-0.5 text-xs font-medium"
-                role="tablist"
-                aria-label="Inbox status filter"
-              >
-                {(["active", "all"] as const).map((s) => (
-                  <button
-                    key={s}
-                    role="tab"
-                    aria-selected={status === s}
-                    onClick={() => { setStatus(s); setPage(1); }}
-                    className={`rounded-md px-2.5 py-1 capitalize transition-colors duration-150 ${
-                      status === s ? "bg-background text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-              <div className="relative w-36 sm:w-52 shrink-0">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" aria-hidden="true" />
-                <Input
+            <div className="relative w-44 sm:w-56 shrink-0">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" aria-hidden="true" />
+              <Input
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   placeholder="Search inboxes…"
                   className="h-9 pl-8"
                   aria-label="Search inboxes by address"
                 />
-              </div>
             </div>
           </div>
 
@@ -433,23 +411,24 @@ function QuickCreateCard() {
         )}
       </div>
 
-      {/* Advanced toggle */}
+      {/* Customize toggle */}
       <button
         onClick={() => setShowAdvanced(!showAdvanced)}
-        className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors duration-150"
+        className="inline-flex items-center gap-2 rounded-lg border border-transparent px-3 py-1.5 text-xs font-medium text-muted-foreground transition-all duration-150 hover:text-foreground hover:border-border hover:bg-muted/30"
       >
         <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${showAdvanced ? "rotate-180" : ""}`} />
-        {t("advancedOptions")}
+        Customize
       </button>
 
       {showAdvanced && (
-        <div className="max-w-md mx-auto border rounded-xl p-4 text-left space-y-3">
+        <div className="max-w-md mx-auto rounded-xl border bg-card p-5 text-left space-y-4 shadow-xs animate-in fade-in slide-in-from-top-1 duration-200">
           <div className="space-y-1.5">
-            <Label className="text-xs">{ti("alias")}</Label>
+            <Label className="text-xs font-medium">{ti("alias")}</Label>
             <Input value={alias} onChange={(e) => setAlias(e.target.value)} placeholder={ti("aliasPlaceholder")} className="h-8 text-sm" />
+            <p className="text-[11px] text-muted-foreground">Leave empty for a random address</p>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">{ti("lifetime")}</Label>
+            <Label className="text-xs font-medium">{ti("lifetime")}</Label>
             <Select value={ttlPreset} onValueChange={(v) => { setTtlPreset(v); if (v !== "custom") setTtlError(null); }}>
               <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
