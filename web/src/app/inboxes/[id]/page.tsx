@@ -239,12 +239,12 @@ export default function InboxDetailPage() {
             <div className="min-w-0">
               {address ? (
                 <div className="flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center shrink-0" aria-hidden="true">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
+                  <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0" aria-hidden="true">
+                    <Mail className="h-4.5 w-4.5 text-primary" />
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <h1 className="font-mono text-sm font-semibold truncate">{address}</h1>
+                      <h1 className="font-mono text-base font-bold truncate tracking-tight">{address}</h1>
                       <button
                         onClick={copyAddress}
                         className="shrink-0 text-muted-foreground hover:text-foreground transition-colors duration-150 rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
