@@ -27,9 +27,9 @@ func (r *InboxRepo) WithTx(tx database.DBTX) *InboxRepo {
 
 func (r *InboxRepo) Create(ctx context.Context, i *domain.Inbox) error {
 	_, err := r.db.Exec(ctx,
-		`INSERT INTO inboxes (id, domain_assignment_id, domain_id, created_by, address, full_address, is_active, expires_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-		i.ID, i.DomainAssignmentID, i.DomainID, i.CreatedBy, i.Address, i.FullAddress, i.IsActive, i.ExpiresAt)
+		`INSERT INTO inboxes (id, domain_assignment_id, domain_id, created_by, address, full_address, is_active, expires_at, original_ttl)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+		i.ID, i.DomainAssignmentID, i.DomainID, i.CreatedBy, i.Address, i.FullAddress, i.IsActive, i.ExpiresAt, i.OriginalTTL)
 	if err != nil {
 		if isUniqueViolation(err) {
 			return ErrConflict
@@ -43,10 +43,10 @@ func (r *InboxRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Inbox, e
 	var i domain.Inbox
 	err := r.db.QueryRow(ctx,
 		`SELECT i.id, i.domain_assignment_id, i.domain_id, i.created_by, i.address, i.full_address,
-		        (i.is_active AND i.expires_at > NOW()), i.expires_at, i.created_at, d.domain_name, d.org_id
+		        (i.is_active AND i.expires_at > NOW()), i.expires_at, i.created_at, i.original_ttl, d.domain_name, d.org_id
 		 FROM inboxes i JOIN domains d ON i.domain_id = d.id WHERE i.id = $1`, id).
 		Scan(&i.ID, &i.DomainAssignmentID, &i.DomainID, &i.CreatedBy, &i.Address, &i.FullAddress,
-			&i.IsActive, &i.ExpiresAt, &i.CreatedAt, &i.DomainName, &i.OrgID)
+			&i.IsActive, &i.ExpiresAt, &i.CreatedAt, &i.OriginalTTL, &i.DomainName, &i.OrgID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNotFound
@@ -97,7 +97,7 @@ func (r *InboxRepo) listByUser(ctx context.Context, userID uuid.UUID, status, se
 	args = append(args, perPage, offset)
 	rows, err := r.db.Query(ctx,
 		`SELECT i.id, i.domain_assignment_id, i.domain_id, i.created_by, i.address, i.full_address,
-		        (i.is_active AND i.expires_at > NOW()), i.expires_at, i.created_at, d.domain_name,
+		        (i.is_active AND i.expires_at > NOW()), i.expires_at, i.created_at, i.original_ttl, d.domain_name,
 		        (SELECT COUNT(*) FROM emails e WHERE e.inbox_id = i.id),
 		        (SELECT COUNT(*) FROM emails e WHERE e.inbox_id = i.id AND e.is_read = FALSE)
 		 FROM inboxes i JOIN domains d ON i.domain_id = d.id `+where+
@@ -111,7 +111,7 @@ func (r *InboxRepo) listByUser(ctx context.Context, userID uuid.UUID, status, se
 	for rows.Next() {
 		var i domain.Inbox
 		if err := rows.Scan(&i.ID, &i.DomainAssignmentID, &i.DomainID, &i.CreatedBy, &i.Address, &i.FullAddress,
-			&i.IsActive, &i.ExpiresAt, &i.CreatedAt, &i.DomainName, &i.EmailCount, &i.UnreadCount); err != nil {
+			&i.IsActive, &i.ExpiresAt, &i.CreatedAt, &i.OriginalTTL, &i.DomainName, &i.EmailCount, &i.UnreadCount); err != nil {
 			return nil, 0, err
 		}
 		inboxes = append(inboxes, i)
@@ -152,7 +152,7 @@ func (r *InboxRepo) listByTeam(ctx context.Context, teamID, userID uuid.UUID, st
 	offset := (page - 1) * perPage
 	rows, err := r.db.Query(ctx,
 		`SELECT i.id, i.domain_assignment_id, i.domain_id, i.created_by, i.address, i.full_address,
-		        (i.is_active AND i.expires_at > NOW()), i.expires_at, i.created_at, d.domain_name,
+		        (i.is_active AND i.expires_at > NOW()), i.expires_at, i.created_at, i.original_ttl, d.domain_name,
 		        (SELECT COUNT(*) FROM emails e WHERE e.inbox_id = i.id),
 		        (SELECT COUNT(*) FROM emails e WHERE e.inbox_id = i.id AND e.is_read = FALSE)
 		 FROM inboxes i
@@ -169,7 +169,7 @@ func (r *InboxRepo) listByTeam(ctx context.Context, teamID, userID uuid.UUID, st
 	for rows.Next() {
 		var i domain.Inbox
 		if err := rows.Scan(&i.ID, &i.DomainAssignmentID, &i.DomainID, &i.CreatedBy, &i.Address, &i.FullAddress,
-			&i.IsActive, &i.ExpiresAt, &i.CreatedAt, &i.DomainName, &i.EmailCount, &i.UnreadCount); err != nil {
+			&i.IsActive, &i.ExpiresAt, &i.CreatedAt, &i.OriginalTTL, &i.DomainName, &i.EmailCount, &i.UnreadCount); err != nil {
 			return nil, 0, err
 		}
 		inboxes = append(inboxes, i)

@@ -16,6 +16,7 @@ type Inbox struct {
 	IsActive           bool      `json:"is_active"`
 	ExpiresAt          time.Time `json:"expires_at"`
 	CreatedAt          time.Time `json:"created_at"`
+	OriginalTTL        *string   `json:"original_ttl,omitempty"`
 	// Joined
 	DomainName   string    `json:"domain_name,omitempty"`
 	OrgID        uuid.UUID `json:"org_id,omitempty"`

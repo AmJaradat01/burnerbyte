@@ -46,6 +46,19 @@ function durationToMinutes(d?: string): number {
   return mins || Infinity;
 }
 
+/** Formats a Go-duration string for display: "1h0m0s" → "1h", "15m0s" → "15m", "2h30m0s" → "2h30m" */
+function formatTtlLabel(ttl: string): string {
+  // Handle Go's verbose format (e.g. "1h0m0s") and user format (e.g. "1h", "15m", "2h30m")
+  const h = ttl.match(/(\d+)h/);
+  const m = ttl.match(/(\d+)m/);
+  const hours = h ? parseInt(h[1]) : 0;
+  const mins = m ? parseInt(m[1]) : 0;
+  if (hours > 0 && mins > 0) return `${hours}h${mins}m`;
+  if (hours > 0) return `${hours}h`;
+  if (mins > 0) return `${mins}m`;
+  return ttl;
+}
+
 /** Validates a TTL string. Returns null if valid, or an error message. */
 function validateTtl(value: string, maxMins: number): string | null {
   if (!value.trim()) return "TTL is required";
@@ -553,7 +566,7 @@ function InboxCard({ inbox, onExtend, onDelete }: { inbox: Inbox; onExtend: () =
           </Button>
           {inbox.is_active && (
             <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs flex-1" onClick={(e) => { e.stopPropagation(); onExtend(); }}>
-              <Timer className="h-3 w-3" /> {t("renew")}
+              <Timer className="h-3 w-3" /> {t("renew")}{inbox.original_ttl ? ` (${formatTtlLabel(inbox.original_ttl)})` : ""}
             </Button>
           )}
           <ConfirmDialog
