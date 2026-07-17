@@ -62,7 +62,7 @@ export function EmailPreview({ email, onBack, onToggleRead, onDelete }: EmailPre
       {/* Header */}
       <div className="shrink-0 bg-background px-5 py-4 border-b border-border">
         {/* Mobile back */}
-        <button onClick={onBack} className="md:hidden flex items-center gap-1.5 text-xs text-muted-foreground mb-3 hover:text-foreground transition-colors">
+        <button onClick={onBack} className="md:hidden flex items-center gap-1.5 text-xs text-muted-foreground mb-3 hover:text-foreground transition-colors duration-150">
           <ArrowLeft className="h-3.5 w-3.5" /> Back to list
         </button>
 
@@ -137,7 +137,7 @@ export function EmailPreview({ email, onBack, onToggleRead, onDelete }: EmailPre
               type="button"
               onClick={copyCode}
               aria-label="Copy verification code"
-              className="flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
+              className="flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium text-primary transition-colors duration-150 hover:bg-primary/10"
             >
               {codeCopied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
               {codeCopied ? "Copied" : "Copy"}
@@ -265,13 +265,13 @@ function AttachmentChip({ attachment, emailId }: { attachment: Attachment; email
     <button
       onClick={download}
       disabled={downloading}
-      className="flex items-center gap-1.5 rounded-md border bg-background px-2.5 py-1.5 text-xs hover:bg-muted transition-colors group disabled:opacity-50"
+      className="flex items-center gap-1.5 rounded-md border bg-background px-2.5 py-1.5 text-xs hover:bg-muted transition-colors duration-150 group disabled:opacity-50"
       aria-label={`Download ${attachment.filename}`}
     >
       <Icon className="h-3 w-3 text-muted-foreground shrink-0" />
       <span className="truncate max-w-[140px] font-medium">{attachment.filename}</span>
       <span className="text-muted-foreground">({sizeKB > 0 ? `${sizeKB}KB` : `${attachment.size_bytes}B`})</span>
-      <Download className="h-3 w-3 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
+      <Download className="h-3 w-3 text-muted-foreground group-hover:text-foreground transition-colors duration-150 shrink-0" />
     </button>
   );
 }

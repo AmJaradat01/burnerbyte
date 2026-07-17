@@ -146,7 +146,7 @@ export function TryInbox({ labels }: { labels: TryInboxLabels }) {
     <>
       <div
         className={cn(
-          "w-full overflow-hidden rounded-xl border bg-card text-card-foreground shadow-xs transition-opacity",
+          "w-full overflow-hidden rounded-xl border bg-card text-card-foreground shadow-xs transition-opacity duration-150",
           expired && "opacity-70",
         )}
       >
@@ -169,7 +169,7 @@ export function TryInbox({ labels }: { labels: TryInboxLabels }) {
               type="button"
               onClick={onCopy}
               aria-label={labels.copy}
-              className="flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground"
             >
               {copied ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
               <span className="hidden sm:inline">{copied ? labels.copied : labels.copy}</span>
@@ -220,7 +220,7 @@ export function TryInbox({ labels }: { labels: TryInboxLabels }) {
             <button
               type="button"
               onClick={regenerate}
-              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors duration-150 hover:bg-primary/90"
             >
               <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
               {labels.newInbox}

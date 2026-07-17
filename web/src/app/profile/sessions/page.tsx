@@ -144,7 +144,7 @@ export default function SessionsPage() {
           {isLoading ? (
             <div className="space-y-2">{[1,2,3].map(i => <Skeleton key={i} className="h-10 w-full" />)}</div>
           ) : (!sessions || sessions.length === 0) ? (
-            <EmptyState title="No active sessions" description="You don't have any active sessions on other devices." />
+            <EmptyState icon={Monitor} title="No active sessions" description="You don't have any active sessions on other devices." />
           ) : (
             <Table className="table-striped" aria-label="Active sessions">
               <TableHeader>

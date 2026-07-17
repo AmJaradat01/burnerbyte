@@ -116,8 +116,8 @@ export default function ProfilePage() {
           </Card>
 
           {/* Danger zone */}
-          <div className="rounded-xl border border-destructive/30 p-5">
-            <p className="text-sm font-medium text-destructive">Delete Account</p>
+          <div className="rounded-xl border border-destructive/20 bg-destructive/[0.02] p-5">
+            <p className="text-sm font-semibold text-destructive">Delete Account</p>
             <p className="text-sm text-muted-foreground mt-1 mb-3">Permanently delete your account, inboxes, and all associated data. This cannot be undone.</p>
             <Link href="/profile/delete">
               <Button variant="destructive" size="sm"><Trash2 className="h-3.5 w-3.5 mr-1.5" />Delete Account</Button>
@@ -212,9 +212,9 @@ function PasswordCard() {
           <Input id="newPw" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} autoComplete="new-password" aria-describedby={newPassword.length > 0 && newPassword.length < 8 ? "pw-length-err" : newPassword.length >= 8 ? "pw-strength" : undefined} />
           {newPassword.length > 0 && newPassword.length < 8 && <p id="pw-length-err" className="text-xs text-destructive">Min 8 characters</p>}
           {newPassword.length >= 8 && (
-            <div className="flex items-center gap-2" role="progressbar" aria-valuenow={newPassword.length >= 12 ? 100 : newPassword.length >= 10 ? 66 : 33} aria-valuemin={0} aria-valuemax={100} aria-label="Password strength" id="pw-strength">
-              <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden">
-                <div className={`h-full rounded-full transition-all duration-200 ${newPassword.length >= 12 ? "w-full bg-success" : newPassword.length >= 10 ? "w-2/3 bg-warning" : "w-1/3 bg-destructive/60"}`} />
+            <div className="flex items-center gap-2" role="meter" aria-valuenow={newPassword.length >= 12 ? 100 : newPassword.length >= 10 ? 66 : 33} aria-valuemin={0} aria-valuemax={100} aria-label="Password strength" id="pw-strength">
+              <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                <div className={`h-full rounded-full transition-all duration-300 ${newPassword.length >= 12 ? "w-full bg-success" : newPassword.length >= 10 ? "w-2/3 bg-warning" : "w-1/3 bg-destructive/60"}`} />
               </div>
               <span className="text-[10px] text-muted-foreground tabular-nums w-9">{newPassword.length >= 12 ? "Strong" : newPassword.length >= 10 ? "Fair" : "Weak"}</span>
             </div>
@@ -335,7 +335,7 @@ function ConnectedAccountsCard() {
             {(identities ?? []).map((identity) => {
               const mp = providers.find((p) => p.name === identity.provider);
               return (
-                <div key={identity.id} className="flex items-center justify-between rounded-lg border px-3 py-2.5">
+                <div key={identity.id} className="flex items-center justify-between rounded-lg border px-3 py-2.5 transition-colors duration-150 hover:bg-muted/40">
                   <div className="flex items-center gap-3">
                     <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center shrink-0">
                       <ProviderIcon providerType={mp?.provider_type ?? identity.provider} className="h-4 w-4" />

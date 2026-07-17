@@ -120,7 +120,7 @@ export default function TeamsPage() {
       {isLoading ? <TeamGridSkeleton /> : isError ? (
         <ErrorState message="Failed to load teams" onRetry={() => refetch()} />
       ) : teamList.length === 0 ? (
-        <EmptyState title="No teams yet" description="Create a team to organize your domains and inboxes.">
+        <EmptyState icon={Users} title="No teams yet" description="Create a team to organize your domains and inboxes.">
           {isAdmin && (
             <div className="mt-5">
               <CreateTeamDialog orgId={currentOrg.id} existingTeams={[]} />
@@ -162,7 +162,7 @@ function TeamCard({ team, onSelect }: { team: Team; onSelect: () => void }) {
   const inboxes = team.active_inboxes ?? 0;
   return (
     <Card
-      className="cursor-pointer group hover:shadow-md transition-shadow"
+      className="cursor-pointer group hover:shadow-md transition-shadow duration-150"
       onClick={onSelect}
       role="button"
       tabIndex={0}
@@ -175,10 +175,10 @@ function TeamCard({ team, onSelect }: { team: Team; onSelect: () => void }) {
             {team.name.charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold truncate group-hover:text-primary transition-colors">{team.name}</p>
+            <p className="text-sm font-semibold truncate group-hover:text-primary transition-colors duration-150">{team.name}</p>
             <p className="text-[11px] text-muted-foreground font-mono truncate">{team.slug}</p>
           </div>
-          <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-1" aria-hidden="true" />
+          <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-150 shrink-0 mt-1" aria-hidden="true" />
         </div>
         <div className="flex items-center justify-between text-xs text-muted-foreground border-t pt-2">
           <span className="tabular-nums">
@@ -405,7 +405,7 @@ function CreateTeamDialog({ orgId, existingTeams }: { orgId: string; existingTea
                     <div className="px-3 py-3 text-sm text-muted-foreground text-center">No matching members</div>
                   ) : (
                     suggestions.map((s) => (
-                      <button key={s.user_id} type="button" className="flex items-center gap-3 w-full px-3 py-2 text-left hover:bg-accent transition-colors cursor-pointer"
+                      <button key={s.user_id} type="button" className="flex items-center gap-3 w-full px-3 py-2 text-left hover:bg-accent transition-colors duration-150 cursor-pointer"
                         onMouseDown={(e) => { e.preventDefault(); addMember(s); }}>
                         <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">
                           {(s.display_name || s.email).charAt(0).toUpperCase()}
@@ -471,7 +471,7 @@ function CreateTeamDialog({ orgId, existingTeams }: { orgId: string; existingTea
                       <button
                         key={d.id}
                         type="button"
-                        className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-mono hover:bg-accent transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-mono hover:bg-accent transition-colors duration-150 cursor-pointer"
                         onClick={() => { setSelectedDomains((prev) => [...prev, { id: d.id, name: d.domain_name, accessLevel: "full" }]); setDomainSearch(""); }}
                       >
                         <Globe className="h-3 w-3 text-muted-foreground" />
@@ -657,7 +657,7 @@ function TeamMembersTab({ orgId, teamId, isAdmin }: { orgId: string; teamId: str
                           <button
                             key={s.user_id}
                             type="button"
-                            className="flex items-center gap-3 w-full px-3 py-2 text-left hover:bg-accent transition-colors cursor-pointer"
+                            className="flex items-center gap-3 w-full px-3 py-2 text-left hover:bg-accent transition-colors duration-150 cursor-pointer"
                             onMouseDown={(e) => { e.preventDefault(); selectSuggestion(s); }}
                           >
                             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">
@@ -699,7 +699,7 @@ function TeamMembersTab({ orgId, teamId, isAdmin }: { orgId: string; teamId: str
         ) : (
           <>
               {filtered.length === 0 && !search && (
-                <EmptyState title="No members yet" description="Add members so the team can start receiving and managing inboxes." />
+                <EmptyState icon={Users} title="No members yet" description="Add members so the team can start receiving and managing inboxes." />
               )}
               {filtered.length === 0 && search && (
                 <Table className="table-striped">
@@ -878,7 +878,7 @@ function DomainAssignmentsTab({ orgId, teamId, isAdmin }: { orgId: string; teamI
         ) : (
           filtered.length === 0 ? (
             assignmentList.length === 0 ? (
-              <EmptyState title="No domains assigned" description="Assign verified domains so this team can create inboxes." />
+              <EmptyState icon={Globe} title="No domains assigned" description="Assign verified domains so this team can create inboxes." />
             ) : (
               <div className="py-8 text-center text-sm text-muted-foreground">No domains match &quot;{search}&quot;</div>
             )
@@ -900,7 +900,7 @@ function DomainAssignmentsTab({ orgId, teamId, isAdmin }: { orgId: string; teamI
                       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
                         <Globe className="h-4 w-4 text-muted-foreground" />
                       </div>
-                      <span className="font-medium font-mono text-sm group-hover:text-primary transition-colors">{a.domain_name || a.domain_id}</span>
+                      <span className="font-medium font-mono text-sm group-hover:text-primary transition-colors duration-150">{a.domain_name || a.domain_id}</span>
                     </Link>
                   </TableCell>
                   <TableCell>

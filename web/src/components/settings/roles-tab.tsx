@@ -298,7 +298,7 @@ function RoleCard({
   const permPercent = totalPermissions > 0 ? Math.round((permCount / totalPermissions) * 100) : 0;
 
   return (
-    <Card className="flex flex-col transition-colors hover:border-primary/30">
+    <Card className="flex flex-col transition-colors duration-150 hover:border-primary/30">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">

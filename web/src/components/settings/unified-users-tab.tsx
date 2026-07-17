@@ -168,12 +168,12 @@ export function UnifiedUsersTab({ orgId }: { orgId: string }) {
 
       {/* Summary */}
       <p className="text-sm text-muted-foreground tabular-nums">
-        <button className={`hover:text-foreground transition-colors ${filter === "all" ? "font-semibold text-foreground" : ""}`} onClick={() => setFilter("all")}>{isAdmin ? (usersData?.total ?? 0) : members.length} user{(isAdmin ? (usersData?.total ?? 0) : members.length) !== 1 ? "s" : ""}</button>
+        <button className={`hover:text-foreground transition-colors duration-150 ${filter === "all" ? "font-semibold text-foreground" : ""}`} onClick={() => setFilter("all")}>{isAdmin ? (usersData?.total ?? 0) : members.length} user{(isAdmin ? (usersData?.total ?? 0) : members.length) !== 1 ? "s" : ""}</button>
         {" · "}
-        <button className={`hover:text-foreground transition-colors ${filter === "members" ? "font-semibold text-foreground" : ""}`} onClick={() => setFilter(filter === "members" ? "all" : "members")}>{memberCount} member{memberCount !== 1 ? "s" : ""}</button>
-        {isAdmin && <>{" · "}<button className={`hover:text-foreground transition-colors ${filter === "non-members" ? "font-semibold text-foreground" : ""}`} onClick={() => setFilter(filter === "non-members" ? "all" : "non-members")}>{nonMemberCount} no org</button></>}
+        <button className={`hover:text-foreground transition-colors duration-150 ${filter === "members" ? "font-semibold text-foreground" : ""}`} onClick={() => setFilter(filter === "members" ? "all" : "members")}>{memberCount} member{memberCount !== 1 ? "s" : ""}</button>
+        {isAdmin && <>{" · "}<button className={`hover:text-foreground transition-colors duration-150 ${filter === "non-members" ? "font-semibold text-foreground" : ""}`} onClick={() => setFilter(filter === "non-members" ? "all" : "non-members")}>{nonMemberCount} no org</button></>}
         {" · "}{pendingInvites.length} pending
-        {isAdmin && <>{" · "}<button className={`hover:text-foreground transition-colors ${filter === "unverified" ? "font-semibold text-foreground" : ""}`} onClick={() => setFilter(filter === "unverified" ? "all" : "unverified")}>{unverifiedCount} unverified</button></>}
+        {isAdmin && <>{" · "}<button className={`hover:text-foreground transition-colors duration-150 ${filter === "unverified" ? "font-semibold text-foreground" : ""}`} onClick={() => setFilter(filter === "unverified" ? "all" : "unverified")}>{unverifiedCount} unverified</button></>}
       </p>
 
       {/* Search + Invite */}
@@ -522,7 +522,7 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-lg border p-3 space-y-1">
                     <p className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Copy className="h-3 w-3" />User ID</p>
-                    <button onClick={copyId} className="font-mono text-xs truncate block w-full text-left hover:text-primary transition-colors" title="Click to copy">
+                    <button onClick={copyId} className="font-mono text-xs truncate block w-full text-left hover:text-primary transition-colors duration-150" title="Click to copy">
                       {copied ? "Copied!" : u.id.slice(0, 8) + "…"}
                     </button>
                   </div>

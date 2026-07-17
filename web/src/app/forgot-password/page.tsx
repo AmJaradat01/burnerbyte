@@ -53,7 +53,7 @@ export default function ForgotPasswordPage() {
             </CardHeader>
             <CardFooter className="flex-col gap-3">
               <Button variant="outline" className="w-full" onClick={() => setSent(false)}>Try a different email</Button>
-              <Link href="/login" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Back to sign in</Link>
+              <Link href="/login" className="text-xs text-muted-foreground hover:text-foreground transition-colors duration-150">Back to sign in</Link>
             </CardFooter>
           </Card>
         ) : (
@@ -83,7 +83,7 @@ export default function ForgotPasswordPage() {
                 </Button>
               </CardContent>
               <CardFooter className="justify-center pt-0">
-                <Link href="/login" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Back to sign in</Link>
+                <Link href="/login" className="text-xs text-muted-foreground hover:text-foreground transition-colors duration-150">Back to sign in</Link>
               </CardFooter>
             </form>
           </Card>
