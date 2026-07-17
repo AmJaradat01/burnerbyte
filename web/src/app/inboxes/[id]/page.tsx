@@ -25,6 +25,18 @@ import type { EmailSummary, Email, Inbox, PaginatedResponse } from "@/types";
    when the inbox is within 10 minutes of expiry; otherwise stays muted. No
    surrounding pill: visual intensity is rationed (Quiet Accent Rule). */
 
+/** Formats a Go-duration string for display: "1h0m0s" → "1h", "15m0s" → "15m" */
+function formatTtlLabel(ttl: string): string {
+  const h = ttl.match(/(\d+)h/);
+  const m = ttl.match(/(\d+)m/);
+  const hours = h ? parseInt(h[1]) : 0;
+  const mins = m ? parseInt(m[1]) : 0;
+  if (hours > 0 && mins > 0) return `${hours}h${mins}m`;
+  if (hours > 0) return `${hours}h`;
+  if (mins > 0) return `${mins}m`;
+  return ttl;
+}
+
 function Countdown({ expiresAt }: { expiresAt: string }) {
   const [remaining, setRemaining] = useState("");
   const [urgent, setUrgent] = useState(false);
@@ -289,7 +301,7 @@ export default function InboxDetailPage() {
             )}
             {inbox?.is_active && (
               <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={() => extend.mutate()}>
-                <Timer className="h-3.5 w-3.5" /> Renew
+                <Timer className="h-3.5 w-3.5" /> Renew{inbox.original_ttl ? ` (${formatTtlLabel(inbox.original_ttl)})` : ""}
               </Button>
             )}
             <ConfirmDialog
