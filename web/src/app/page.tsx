@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -486,27 +487,45 @@ function InboxCard({ inbox, onExtend, onDelete }: { inbox: Inbox; onExtend: () =
   const addr = inbox.full_address || inbox.address;
   const [localPart, domainPart] = addr.split("@");
   const hasUnread = (inbox.unread_count ?? 0) > 0;
+  const isEmpty = (inbox.email_count ?? 0) === 0;
   // Display-only time hint: Date.now() only controls a CSS border style, no logic depends on it
   // eslint-disable-next-line react-hooks/purity
-  const expiringSoon = inbox.is_active && (new Date(inbox.expires_at).getTime() - Date.now()) < 30 * 60 * 1000;
+  const expiringSoon = inbox.is_active && (new Date(inbox.expires_at).getTime() - Date.now()) < 10 * 60 * 1000;
 
   return (
     <Card
-      className={`transition-[color,box-shadow,border-color] hover:border-primary/30 hover:shadow-md cursor-pointer group ${!inbox.is_active ? "opacity-60" : ""} ${expiringSoon ? "border-warning/40" : ""}`}
+      className={cn(
+        "transition-[color,box-shadow,border-color] duration-150 hover:border-primary/30 hover:shadow-md cursor-pointer group",
+        !inbox.is_active && "opacity-50 border-dashed",
+        expiringSoon && "border-warning/40",
+        isEmpty && inbox.is_active && "border-dashed border-border/70",
+        hasUnread && "border-primary/20",
+      )}
       onClick={() => router.push(`/inboxes/${inbox.id}`)}
     >
       <CardContent className="pt-4 pb-3 space-y-2.5">
         {/* Address */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
-              <Mail className="h-5 w-5 text-muted-foreground" />
+            <div className={cn(
+              "h-10 w-10 rounded-lg flex items-center justify-center shrink-0",
+              hasUnread ? "bg-primary/10" : isEmpty ? "bg-muted/60" : "bg-muted",
+            )}>
+              <Mail className={cn(
+                "h-5 w-5",
+                hasUnread ? "text-primary" : "text-muted-foreground",
+              )} />
             </div>
-            <p className="font-mono text-sm font-medium truncate group-hover:text-primary transition-colors duration-150">
-            <span>{localPart}</span>
-            <span className="text-muted-foreground">@</span>
-            <span className="text-primary/80">{domainPart}</span>
-            </p>
+            <div className="min-w-0">
+              <p className="font-mono text-sm font-medium truncate group-hover:text-primary transition-colors duration-150">
+                <span>{localPart}</span>
+                <span className="text-muted-foreground">@</span>
+                <span className="text-primary/80">{domainPart}</span>
+              </p>
+              {isEmpty && inbox.is_active && (
+                <p className="text-[10px] text-muted-foreground/70 mt-0.5">Waiting for mail</p>
+              )}
+            </div>
           </div>
           {hasUnread && (
             <Badge className="shrink-0 text-[10px] px-1.5 py-0 animate-in fade-in">{inbox.unread_count}</Badge>
@@ -515,10 +534,12 @@ function InboxCard({ inbox, onExtend, onDelete }: { inbox: Inbox; onExtend: () =
 
         {/* Stats row */}
         <div className="flex items-center gap-3 text-xs text-muted-foreground tabular-nums">
-          <span className="flex items-center gap-1">
-            <Mail className="h-3 w-3" /> {inbox.email_count ?? 0}
-          </span>
-          <span className="flex items-center gap-1 ml-auto">
+          {!isEmpty && (
+            <span className="flex items-center gap-1">
+              <Mail className="h-3 w-3" /> {inbox.email_count}
+            </span>
+          )}
+          <span className={cn("flex items-center gap-1", isEmpty ? "" : "ml-auto", expiringSoon && "text-warning font-medium")}>
             <Clock className="h-3 w-3" />
             <ExpiryLabel expiresAt={inbox.expires_at} isActive={inbox.is_active} />
           </span>
