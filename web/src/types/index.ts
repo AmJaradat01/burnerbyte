@@ -42,6 +42,8 @@ export interface OrgSettings {
   max_teams?: number;
   max_inboxes_per_domain?: number;
   enforce_sso?: boolean;
+  renewal_policy?: string;
+  renewal_ttl?: string;
 }
 
 export interface Team {
@@ -94,6 +96,7 @@ export interface Inbox {
   is_active: boolean;
   expires_at: string;
   created_at: string;
+  original_ttl?: string;
   domain_name?: string;
   email_count: number;
   unread_count: number;
