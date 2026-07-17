@@ -209,6 +209,18 @@
   100% { transform: scale(1); color: inherit; }
 }
 
+/* ── Generate success pulse ── */
+@media (prefers-reduced-motion: no-preference) {
+  .generate-success {
+    animation: generate-success 500ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+@keyframes generate-success {
+  0% { transform: scale(1); }
+  25% { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+
 /* ── Header card accent ── */
 .card-header-accent {
   border-top: 2px solid color-mix(in oklch, var(--primary) 15%, transparent);
