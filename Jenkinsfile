@@ -36,7 +36,12 @@ pipeline {
 
         stage('Test Backend') {
             steps {
-                sh 'go test ./...'
+                sh '''
+                    # Apply migrations to test database before running integration tests
+                    TEST_DB="${TEST_DATABASE_URL:-postgres://postgres:password@localhost:5432/burnerbyte_test?sslmode=disable}"
+                    migrate -database "$TEST_DB" -path migrations up 2>/dev/null || true
+                    go test ./...
+                '''
             }
         }
 
