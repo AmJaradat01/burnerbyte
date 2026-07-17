@@ -197,14 +197,14 @@ export default function SetupPage() {
                   onClick={() => i < step && setStep(i)}
                   disabled={i > step}
                   title={s.label}
-                  className={`flex items-center justify-center h-7 w-7 rounded-full text-xs ${
-                    done ? "bg-primary text-primary-foreground cursor-pointer" : active ? "bg-primary/20 text-primary ring-2 ring-primary/30" : "bg-muted text-muted-foreground"
+                  className={`flex items-center justify-center h-7 w-7 rounded-full text-xs transition-all duration-200 ${
+                    done ? "bg-primary text-primary-foreground cursor-pointer shadow-xs" : active ? "bg-primary/15 text-primary ring-2 ring-primary/40" : "bg-muted text-muted-foreground"
                   }`}
                 >
                   {done ? <Check className="h-3.5 w-3.5" /> : <Icon className="h-3 w-3" />}
                 </button>
                 {i < STEPS.length - 1 && (
-                  <div className={`w-3 sm:w-5 lg:w-7 h-0.5 mx-0.5 rounded-full ${i < step ? "bg-primary" : "bg-muted"}`} />
+                  <div className={`w-3 sm:w-5 lg:w-7 h-0.5 mx-0.5 rounded-full transition-colors duration-300 ${i < step ? "bg-primary" : "bg-muted"}`} />
                 )}
               </div>
             );
