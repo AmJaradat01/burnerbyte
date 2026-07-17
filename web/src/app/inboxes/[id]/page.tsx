@@ -247,7 +247,7 @@ export default function InboxDetailPage() {
                       <h1 className="font-mono text-sm font-semibold truncate">{address}</h1>
                       <button
                         onClick={copyAddress}
-                        className="shrink-0 text-muted-foreground hover:text-foreground transition-colors rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                        className="shrink-0 text-muted-foreground hover:text-foreground transition-colors duration-150 rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                         aria-label={copied ? "Address copied" : "Copy address"}
                         title={copied ? "Copied" : "Copy address"}
                       >
