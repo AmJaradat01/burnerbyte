@@ -20,7 +20,7 @@ import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ErrorState } from "@/components/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Activity, AlertTriangle, Check, CheckCircle2, Clock, Copy, Database, HardDrive, Key, Loader2, Lock, Mail, Monitor, Paperclip, Pencil, Play, Plus, Save, Search, Settings, Shield, Trash2, Users, XCircle } from "lucide-react";
+import { Activity, AlertTriangle, Check, CheckCircle2, Clock, Copy, Database, HardDrive, Key, Loader2, Lock, Mail, Monitor, Paperclip, Pencil, Play, Plus, RefreshCw, Save, Search, Settings, Shield, Trash2, Users, XCircle } from "lucide-react";
 import Link from "next/link";
 import { UnifiedUsersTab } from "@/components/settings/unified-users-tab";
 import { RolesTab } from "@/components/settings/roles-tab";
@@ -238,6 +238,34 @@ function GeneralTab({ org, onSaved }: { org: Organization; onSaved: () => void }
                 </div>
                 <Input value={settings.max_inbox_ttl ?? ""} onChange={(e) => set("max_inbox_ttl", e.target.value)} placeholder="24h" className="h-8 w-24 text-xs text-right font-mono" />
               </div>
+              <div className="flex items-center justify-between rounded-lg border p-3 transition-colors duration-150 hover:bg-muted/50">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center shrink-0">
+                    <RefreshCw className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <Label>Renewal Policy</Label>
+                    <p className="text-xs text-muted-foreground">How inbox renewal duration is determined</p>
+                  </div>
+                </div>
+                <Select value={settings.renewal_policy ?? "original"} onValueChange={(v) => set("renewal_policy", v)}>
+                  <SelectTrigger className="h-8 w-32 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="original">Original TTL</SelectItem>
+                    <SelectItem value="default">System default</SelectItem>
+                    <SelectItem value="fixed">Fixed duration</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {settings.renewal_policy === "fixed" && (
+                <div className="flex items-center justify-between rounded-lg border border-dashed p-3 ml-11">
+                  <div>
+                    <Label>Fixed Renewal Duration</Label>
+                    <p className="text-xs text-muted-foreground">Duration used for all renewals (e.g. 30m, 1h)</p>
+                  </div>
+                  <Input value={settings.renewal_ttl ?? ""} onChange={(e) => set("renewal_ttl", e.target.value)} placeholder="1h" className="h-8 w-24 text-xs text-right font-mono" />
+                </div>
+              )}
             </CardContent>
           </Card>
 
