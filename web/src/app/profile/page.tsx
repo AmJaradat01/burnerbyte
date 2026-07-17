@@ -66,17 +66,17 @@ export default function ProfilePage() {
     <div className="space-y-6">
       {/* Identity row */}
       <div className="flex items-center gap-4">
-        <Avatar className="h-14 w-14 text-lg">
+        <Avatar className="h-16 w-16 text-xl">
           <AvatarImage src={user.avatar_url} alt={user.display_name || "User avatar"} />
-          <AvatarFallback className="bg-muted font-semibold text-muted-foreground">{initials}</AvatarFallback>
+          <AvatarFallback className="bg-primary/10 font-bold text-primary">{initials}</AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-title truncate">{user.display_name?.trim() || user.email}</h1>
+            <h1 className="text-subhead truncate">{user.display_name?.trim() || user.email}</h1>
             {user.is_system_admin && <Badge variant="secondary" className="text-[10px]">System Admin</Badge>}
-            {user.email_verified && <Badge className="bg-success/10 text-success border-success/20 text-[10px] gap-1"><Shield className="h-2.5 w-2.5" />Verified</Badge>}
+            {user.email_verified && <Badge className="bg-success/15 text-success border-success/25 text-[10px] gap-1"><Shield className="h-2.5 w-2.5" />Verified</Badge>}
           </div>
-          <p className="text-sm text-muted-foreground font-mono truncate">{user.email}</p>
+          <p className="text-sm text-muted-foreground font-mono truncate mt-0.5">{user.email}</p>
         </div>
         <div className="hidden sm:block text-right text-xs text-muted-foreground shrink-0">
           <p>Joined {new Date(user.created_at).toLocaleDateString(undefined, { year: "numeric", month: "short" })}</p>

@@ -162,7 +162,7 @@ export default function LoginPage() {
     <AuthShell>
       <Card className="w-full">
           <CardHeader className="text-center pb-2">
-            <CardTitle className="text-xl font-semibold">Sign in</CardTitle>
+            <CardTitle className="text-xl font-bold tracking-tight">Sign in</CardTitle>
             <CardDescription className="text-sm">
               {enforceSSO ? "Sign in with SSO to continue" : "Enter your credentials to continue"}
             </CardDescription>
@@ -233,7 +233,7 @@ export default function LoginPage() {
                       </button>
                     </div>
                   </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
+                  <Button type="submit" className="w-full h-11 font-semibold" disabled={loading}>
                     {loading ? "Signing in…" : "Sign in"}
                   </Button>
                 </CardContent>

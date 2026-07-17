@@ -171,7 +171,7 @@ function TeamCard({ team, onSelect }: { team: Team; onSelect: () => void }) {
     >
       <CardContent className="space-y-3">
         <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-sm font-bold text-muted-foreground" aria-hidden="true">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-sm font-bold text-primary" aria-hidden="true">
             {team.name.charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
