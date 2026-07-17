@@ -265,7 +265,7 @@ export default function AuditPage() {
               role="tab"
               aria-selected={scope === s}
               onClick={() => { setScope(s); setPage(1); }}
-              className={`rounded-md px-3 py-1 transition-colors ${
+              className={`rounded-md px-3 py-1 transition-colors duration-150 ${
                 scope === s ? "bg-background text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -363,7 +363,7 @@ export default function AuditPage() {
                 role="tab"
                 aria-selected={isActive}
                 onClick={() => handleQuickFilter(qf.value)}
-                className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+                className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
                   isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/80"
                 }`}
               >
@@ -379,7 +379,7 @@ export default function AuditPage() {
       isLoading ? <AuditSkeleton /> : (
       <>
         {(!data?.data || data.data.length === 0) ? (
-          <EmptyState title="No audit entries" description={hasFilters ? "Try adjusting your filters." : "Actions will appear here as they happen."} />
+          <EmptyState icon={Shield} title="No audit entries" description={hasFilters ? "Try adjusting your filters." : "Actions will appear here as they happen."} />
         ) : (
           <div>
             {/* Timeline container */}
@@ -424,7 +424,7 @@ function AuditRow({ entry: e, isFirst, isLast }: { entry: AuditEntry; isFirst: b
 
       <div className="flex-1 mb-3">
         <Card
-          className="cursor-pointer transition-colors"
+          className="cursor-pointer transition-colors duration-150"
           onClick={() => setExpanded(!expanded)}
           role="button"
           tabIndex={0}
@@ -534,7 +534,7 @@ function DetailField({ label, value, mono, copyable }: { label: string; value: s
         {copyable && (
           <button
             onClick={() => copyToClipboard(value)}
-            className="shrink-0 p-0.5 rounded hover:bg-muted transition-colors"
+            className="shrink-0 p-0.5 rounded hover:bg-muted transition-colors duration-150"
             title="Copy to clipboard"
             aria-label={`Copy ${label}`}
           >
