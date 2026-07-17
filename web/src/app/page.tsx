@@ -174,9 +174,9 @@ function HomePage() {
               <Input
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
-                  placeholder="Search inboxes…"
+                  placeholder={t("searchInboxes")}
                   className="h-9 pl-8"
-                  aria-label="Search inboxes by address"
+                  aria-label={t("searchInboxesLabel")}
                 />
             </div>
           </div>
@@ -221,7 +221,7 @@ function randomLocal(len: number): string {
 /** Shows a cycling random string preview (e.g. "a7k2x9") that updates every
  *  2.5 seconds. Respects prefers-reduced-motion (shows static text instead).
  *  When the user has typed an alias, shows that instead. */
-function AnimatedLocalPart({ alias }: { alias: string }) {
+function AnimatedLocalPart({ alias, fallbackText }: { alias: string; fallbackText: string }) {
   const [preview, setPreview] = useState(() => randomLocal(6));
   const [reduced, setReduced] = useState(false);
 
@@ -245,7 +245,7 @@ function AnimatedLocalPart({ alias }: { alias: string }) {
 
   return (
     <span className="font-mono text-xl sm:text-2xl font-bold text-muted-foreground/40 transition-opacity duration-300">
-      {reduced ? "random" : preview}
+      {reduced ? fallbackText : preview}
     </span>
   );
 }
@@ -447,7 +447,7 @@ function QuickCreateCard() {
               className="h-auto border-0 bg-transparent p-0 font-mono text-xl sm:text-2xl font-bold shadow-none placeholder:text-muted-foreground/30 w-24 sm:w-32 focus-visible:ring-0"
             />
           ) : (
-            <AnimatedLocalPart alias={alias} />
+            <AnimatedLocalPart alias={alias} fallbackText={t("randomPlaceholder")} />
           )}
           <span className="font-mono text-xl sm:text-2xl font-bold text-muted-foreground/40">@</span>
           {(assignments?.data?.length ?? 0) > 1 ? (
@@ -466,13 +466,13 @@ function QuickCreateCard() {
           )}
         </div>
         {showAdvanced && (
-          <p className="text-[11px] text-muted-foreground animate-in fade-in duration-150">Leave empty for a random address</p>
+          <p className="text-[11px] text-muted-foreground animate-in fade-in duration-150">{t("aliasHint")}</p>
         )}
       </div>
 
-      {/* Action row — Generate button + TTL chip + Customize toggle on same line */}
+      {/* Action row — Generate button + TTL chip + Customize toggle */}
       <div className="flex flex-wrap items-center justify-center gap-2">
-        <Button onClick={create} disabled={!assignmentId || creating || isCustomInvalid} size="lg" className="gap-2 px-6 h-11 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md">
+        <Button onClick={create} disabled={!assignmentId || creating || isCustomInvalid} size="lg" className="gap-2 px-6 h-11 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md w-full sm:w-auto">
           {creating ? (
             <><RefreshCw className="h-4 w-4 animate-spin" /> {t("generating")}</>
           ) : (
@@ -503,7 +503,7 @@ function QuickCreateCard() {
           )}
         >
           <ChevronDown className={`h-3 w-3 transition-transform duration-200 ${showAdvanced ? "rotate-180" : ""}`} />
-          Customize
+          {t("customize")}
         </button>
       </div>
 
