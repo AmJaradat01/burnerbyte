@@ -321,7 +321,7 @@ export default function InboxDetailPage() {
       {/* ── Split pane ── */}
       <div className="flex flex-1 min-h-0">
         {/* ── Email list ── */}
-        <div className={`w-full md:w-[340px] lg:w-[400px] shrink-0 border-r flex flex-col bg-muted/20 ${selectedEmailId ? "hidden md:flex" : "flex"}`}>
+        <div className={`w-full md:w-[340px] lg:w-[400px] shrink-0 border-r border-border/80 shadow-[1px_0_3px_-1px_rgba(30,27,75,0.08)] flex flex-col bg-muted/20 ${selectedEmailId ? "hidden md:flex" : "flex"}`}>
           <EmailList
             emails={emails}
             totalEmails={totalEmails}

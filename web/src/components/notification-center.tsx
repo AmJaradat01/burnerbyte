@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Bell, Check, ChevronDown, ChevronRight, Clock, Inbox, Mail, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useFaviconBadge } from "@/hooks/use-favicon-badge";
 
 interface Notification {
   id: string;
@@ -121,6 +122,8 @@ export function NotificationCenter() {
 
   const unread = notifications.filter((n) => !n.is_read).length;
 
+  useFaviconBadge(unread);
+
   const toggleGroup = useCallback((key: string) => {
     setExpandedGroups((prev) => {
       const next = new Set(prev);
@@ -166,7 +169,11 @@ export function NotificationCenter() {
             title = type.replace(/\./g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
             message = data.data?.message || JSON.stringify(data.data || {}).slice(0, 100);
           }
-          toast(title, { description: message });
+          const inboxId = data.data?.inbox_id;
+          toast(title, {
+            description: message,
+            action: inboxId ? { label: "Open", onClick: () => window.location.href = `/inboxes/${inboxId}` } : undefined,
+          });
 
           // Send browser notification when tab is not focused
           if (

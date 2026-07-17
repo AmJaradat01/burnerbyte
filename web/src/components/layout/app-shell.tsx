@@ -214,12 +214,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <OfflineBanner />
       <TopNav />
       <main id="main-content" className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 py-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Breadcrumbs />
-          </div>
-          <NotificationCenter />
-        </div>
+        <Breadcrumbs />
         <Suspense fallback={<div className="h-32 animate-pulse rounded-lg bg-muted" />}>
           <div className="animate-in fade-in duration-200">
             {children}

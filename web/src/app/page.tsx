@@ -108,6 +108,7 @@ function HomePage() {
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   // Debounce the search box so we don't query on every keystroke.
   useEffect(() => {
     const id = setTimeout(() => { setSearch(searchInput.trim()); setPage(1); }, 300);
@@ -140,6 +141,36 @@ function HomePage() {
     onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
   });
 
+  const bulkDelete = useCallback(async () => {
+    if (selectedIds.size === 0) return;
+    const ids = Array.from(selectedIds);
+    try {
+      await Promise.all(ids.map((id) => api.del(`/inboxes/${id}`)));
+      qc.invalidateQueries({ queryKey: ["home-inboxes"] });
+      toast.success(`${ids.length} inbox${ids.length > 1 ? "es" : ""} deleted`);
+      setSelectedIds(new Set());
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Failed"); }
+  }, [selectedIds, qc]);
+
+  const bulkRenew = useCallback(async () => {
+    if (selectedIds.size === 0) return;
+    const ids = Array.from(selectedIds);
+    try {
+      await Promise.all(ids.map((id) => api.post(`/inboxes/${id}/extend`, {})));
+      qc.invalidateQueries({ queryKey: ["home-inboxes"] });
+      toast.success(`${ids.length} inbox${ids.length > 1 ? "es" : ""} renewed`);
+      setSelectedIds(new Set());
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Failed"); }
+  }, [selectedIds, qc]);
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+
   const hasInboxes = (data?.data?.length ?? 0) > 0;
   const showInboxSection = isLoading || isError || search !== "" || hasInboxes;
 
@@ -150,7 +181,7 @@ function HomePage() {
       <PullToRefreshIndicator pulling={pulling} refreshing={refreshing} pullDistance={pullDistance} />
       {/* Greeting */}
       <div className={showInboxSection ? "" : "text-center"}>
-        <h1 className="text-headline">{greeting}, {user?.display_name?.split(" ")[0] || "there"}</h1>
+        <h1 className="text-headline">{greeting}, {user?.display_name?.split(" ").slice(0, 2).join(" ") || "there"}</h1>
         <p className="text-sm text-muted-foreground mt-1.5">{t("quickCreateDesc")}</p>
       </div>
 
@@ -189,9 +220,22 @@ function HomePage() {
             </p>
            ) : (
             <>
+              {/* Bulk action bar */}
+              {selectedIds.size > 0 && (
+                <div className="flex items-center gap-2 mb-3 p-2 rounded-lg border bg-muted/30 animate-in fade-in duration-150">
+                  <span className="text-xs font-medium text-muted-foreground">{selectedIds.size} selected</span>
+                  <Button variant="outline" size="sm" className="h-7 gap-1 text-xs" onClick={bulkRenew}>
+                    <Timer className="h-3 w-3" /> Renew all
+                  </Button>
+                  <Button variant="outline" size="sm" className="h-7 gap-1 text-xs text-destructive hover:text-destructive" onClick={bulkDelete}>
+                    <Trash2 className="h-3 w-3" /> Delete all
+                  </Button>
+                  <button className="ml-auto text-xs text-muted-foreground hover:text-foreground transition-colors duration-150" onClick={() => setSelectedIds(new Set())}>Clear</button>
+                </div>
+              )}
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {data?.data?.map((inbox) => (
-                  <InboxCard key={inbox.id} inbox={inbox} onExtend={() => extend.mutate(inbox.id)} onDelete={() => remove.mutate(inbox.id)} />
+                  <InboxCard key={inbox.id} inbox={inbox} onExtend={() => extend.mutate(inbox.id)} onDelete={() => remove.mutate(inbox.id)} selected={selectedIds.has(inbox.id)} onToggleSelect={() => toggleSelect(inbox.id)} />
                 ))}
               </div>
               {data && data.total_pages > 1 && (
@@ -388,7 +432,7 @@ function QuickCreateCard() {
     return (
       <div className="text-center space-y-6 py-4 generate-success">
         <div className="inline-flex items-center gap-2 rounded-full border bg-success/10 border-success/20 px-3.5 py-1.5">
-          <span className="h-2 w-2 rounded-full bg-success" />
+          <span className="h-2 w-2 rounded-full bg-success dot-pulse" />
           <span className="text-xs font-semibold text-success">{t("addressReady")}</span>
         </div>
 
@@ -531,7 +575,7 @@ function QuickCreateCard() {
 
 /* ── Inbox card ── */
 
-function InboxCard({ inbox, onExtend, onDelete }: { inbox: Inbox; onExtend: () => void; onDelete: () => void }) {
+function InboxCard({ inbox, onExtend, onDelete, selected, onToggleSelect }: { inbox: Inbox; onExtend: () => void; onDelete: () => void; selected?: boolean; onToggleSelect?: () => void }) {
   const tc = useTranslations("common");
   const t = useTranslations("home");
   const router = useRouter();
@@ -553,6 +597,12 @@ function InboxCard({ inbox, onExtend, onDelete }: { inbox: Inbox; onExtend: () =
   // eslint-disable-next-line react-hooks/purity
   const expiringSoon = inbox.is_active && (new Date(inbox.expires_at).getTime() - Date.now()) < 10 * 60 * 1000;
 
+  // Timer progress: percentage of time elapsed
+  const totalMs = new Date(inbox.expires_at).getTime() - new Date(inbox.created_at).getTime();
+  // eslint-disable-next-line react-hooks/purity
+  const elapsedMs = Date.now() - new Date(inbox.created_at).getTime();
+  const progressPct = inbox.is_active ? Math.min(Math.max((elapsedMs / totalMs) * 100, 0), 100) : 100;
+
   return (
     <Card
       className={cn(
@@ -561,13 +611,25 @@ function InboxCard({ inbox, onExtend, onDelete }: { inbox: Inbox; onExtend: () =
         expiringSoon && "border-warning/40",
         isEmpty && inbox.is_active && "border-dashed border-border/70",
         hasUnread && "border-primary/20",
+        selected && "ring-2 ring-primary/30 border-primary/30",
       )}
       onClick={() => router.push(`/inboxes/${inbox.id}`)}
+      onMouseEnter={() => router.prefetch(`/inboxes/${inbox.id}`)}
     >
       <CardContent className="pt-4 pb-3 space-y-2.5">
         {/* Address */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2.5 min-w-0">
+            {onToggleSelect && (
+              <input
+                type="checkbox"
+                checked={!!selected}
+                onChange={(e) => { e.stopPropagation(); onToggleSelect(); }}
+                onClick={(e) => e.stopPropagation()}
+                className="h-4 w-4 rounded border-input accent-primary shrink-0"
+                aria-label={`Select ${addr}`}
+              />
+            )}
             <div className={cn(
               "h-10 w-10 rounded-lg flex items-center justify-center shrink-0",
               hasUnread ? "bg-primary/10" : isEmpty ? "bg-muted/60" : "bg-muted",
@@ -605,6 +667,16 @@ function InboxCard({ inbox, onExtend, onDelete }: { inbox: Inbox; onExtend: () =
             <ExpiryLabel expiresAt={inbox.expires_at} isActive={inbox.is_active} totalTtl={inbox.original_ttl} />
           </span>
         </div>
+
+        {/* Timer progress bar */}
+        {inbox.is_active && (
+          <div className="h-1 rounded-full bg-muted overflow-hidden -mx-1">
+            <div
+              className={cn("h-full rounded-full transition-all", progressPct > 80 ? "bg-warning" : "bg-primary/40")}
+              style={{ width: `${100 - progressPct}%` }}
+            />
+          </div>
+        )}
 
         {/* Actions */}
         <div className="flex items-center gap-1 pt-0.5 border-t" onClick={(e) => e.stopPropagation()}>
@@ -669,10 +741,28 @@ function InboxGridSkeleton() {
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: 3 }).map((_, i) => (
         <Card key={i}>
-          <CardContent className="pt-4 pb-4 space-y-3">
-            <Skeleton className="h-4 w-3/4" />
-            <Skeleton className="h-3 w-1/2" />
-            <Skeleton className="h-7 w-full" />
+          <CardContent className="pt-4 pb-3 space-y-2.5">
+            {/* Address row */}
+            <div className="flex items-center gap-2.5">
+              <Skeleton className="h-10 w-10 rounded-lg shrink-0" />
+              <div className="space-y-1.5 flex-1">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-1/3" />
+              </div>
+            </div>
+            {/* Stats row */}
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-3 w-16" />
+              <Skeleton className="h-3 w-20 ml-auto" />
+            </div>
+            {/* Progress bar */}
+            <Skeleton className="h-1 w-full rounded-full" />
+            {/* Actions row */}
+            <div className="flex items-center gap-1 pt-0.5 border-t">
+              <Skeleton className="h-7 w-16" />
+              <Skeleton className="h-7 w-20" />
+              <Skeleton className="h-7 w-7 ml-auto rounded" />
+            </div>
           </CardContent>
         </Card>
       ))}
