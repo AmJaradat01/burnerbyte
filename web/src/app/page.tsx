@@ -202,6 +202,49 @@ function HomePage() {
   );
 }
 
+/* ── Animated local-part preview ── */
+
+/** Generates a cryptographically random alphanumeric string for preview.
+ *  Uses crypto.getRandomValues (not Math.random) for unpredictability. */
+function randomLocal(len: number): string {
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  const arr = new Uint8Array(len);
+  crypto.getRandomValues(arr);
+  return Array.from(arr, (b) => chars[b % chars.length]).join("");
+}
+
+/** Shows a cycling random string preview (e.g. "a7k2x9") that updates every
+ *  2.5 seconds. Respects prefers-reduced-motion (shows static text instead).
+ *  When the user has typed an alias, shows that instead. */
+function AnimatedLocalPart({ alias }: { alias: string }) {
+  const [preview, setPreview] = useState(() => randomLocal(6));
+  const [reduced, setReduced] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReduced(mq.matches);
+    const handler = () => setReduced(mq.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
+  useEffect(() => {
+    if (reduced || alias) return;
+    const iv = setInterval(() => setPreview(randomLocal(6)), 2500);
+    return () => clearInterval(iv);
+  }, [reduced, alias]);
+
+  if (alias) {
+    return <span className="font-mono text-xl sm:text-2xl font-bold text-foreground/60">{alias}</span>;
+  }
+
+  return (
+    <span className="font-mono text-xl sm:text-2xl font-bold text-muted-foreground/40 transition-opacity duration-300">
+      {reduced ? "random" : preview}
+    </span>
+  );
+}
+
 /* ── Quick Create Card ── */
 
 function QuickCreateCard() {
@@ -282,6 +325,22 @@ function QuickCreateCard() {
     }
   }, [assignmentId, ttl, alias, qc, ttlPreset, customTtl, maxMins]);
 
+  // Keyboard shortcut: 'n' to trigger Generate (only when no input is focused)
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if (e.key === "n" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        if (assignmentId && !creating && !isCustomInvalid && !createdInbox) {
+          create();
+        }
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [assignmentId, creating, isCustomInvalid, createdInbox, create]);
+
   const copyAddress = () => {
     if (!createdInbox) return;
     copyToClipboard(createdInbox.full_address || createdInbox.address);
@@ -322,7 +381,7 @@ function QuickCreateCard() {
     const [localPart, domainPart] = addr.split("@");
 
     return (
-      <div className="text-center space-y-6 py-4">
+      <div className="text-center space-y-6 py-4 generate-success">
         <div className="inline-flex items-center gap-2 rounded-full border bg-success/10 border-success/20 px-3.5 py-1.5">
           <span className="h-2 w-2 rounded-full bg-success" />
           <span className="text-xs font-semibold text-success">{t("addressReady")}</span>
@@ -379,13 +438,11 @@ function QuickCreateCard() {
             <Input
               value={alias}
               onChange={(e) => setAlias(e.target.value)}
-              placeholder="random"
+              placeholder="custom"
               className="h-auto border-0 bg-transparent p-0 font-mono text-xl sm:text-2xl font-bold shadow-none placeholder:text-muted-foreground/30 w-24 sm:w-32 focus-visible:ring-0"
             />
           ) : (
-            <span className="font-mono text-xl sm:text-2xl font-bold text-muted-foreground/30">
-              {alias || "random"}
-            </span>
+            <AnimatedLocalPart alias={alias} />
           )}
           <span className="font-mono text-xl sm:text-2xl font-bold text-muted-foreground/40">@</span>
           {(assignments?.data?.length ?? 0) > 1 ? (
@@ -400,7 +457,7 @@ function QuickCreateCard() {
               </SelectContent>
             </Select>
           ) : (
-            <span className="font-mono text-xl sm:text-2xl font-bold text-primary">{selected?.domain_name}</span>
+            <span className="inline-flex items-center rounded-lg bg-primary/5 px-2 py-0.5 font-mono text-xl sm:text-2xl font-bold text-primary">{selected?.domain_name}</span>
           )}
         </div>
         {showAdvanced && (
