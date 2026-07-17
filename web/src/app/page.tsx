@@ -140,11 +140,16 @@ function HomePage() {
     onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
   });
 
+  const hasInboxes = (data?.data?.length ?? 0) > 0;
+  const showInboxSection = isLoading || isError || search !== "" || hasInboxes;
+
   return (
-    <div className="space-y-8">
+    <div className={cn(
+      showInboxSection ? "space-y-6" : "flex flex-col items-center justify-center min-h-[60vh]",
+    )}>
       <PullToRefreshIndicator pulling={pulling} refreshing={refreshing} pullDistance={pullDistance} />
       {/* Greeting */}
-      <div>
+      <div className={showInboxSection ? "" : "text-center"}>
         <h1 className="text-headline">{greeting}, {user?.display_name?.split(" ")[0] || "there"}</h1>
         <p className="text-sm text-muted-foreground mt-1.5">{t("quickCreateDesc")}</p>
       </div>
@@ -153,7 +158,7 @@ function HomePage() {
       <QuickCreateCard />
 
       {/* Your Inboxes — shown once you have some; the create card above is the empty action */}
-      {(isLoading || isError || search !== "" || (data?.data?.length ?? 0) > 0) && (
+      {showInboxSection && (
         <div>
           <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <div className="flex items-baseline gap-2 min-w-0">

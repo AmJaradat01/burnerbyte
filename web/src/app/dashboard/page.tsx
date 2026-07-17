@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, WS_BASE, getWsTicket } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -77,6 +78,7 @@ export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
   const { hasPermission } = useOrgStore();
   const isAdmin = hasPermission("org.analytics.view") || user?.is_system_admin;
+  const router = useRouter();
 
   // Computed once on mount so render stays pure (the hour does not change mid-session).
   const [greeting] = useState(() => {
@@ -86,89 +88,16 @@ export default function DashboardPage() {
     return "Good evening";
   });
 
+  // Non-admin users are redirected to the home page (/) which has the
+  // QuickCreate + inbox list — the dashboard is admin-only.
+  useEffect(() => {
+    if (!isAdmin) router.replace("/");
+  }, [isAdmin, router]);
+
   if (!org) return <NoOrgState />;
+  if (!isAdmin) return null;
 
-  return isAdmin ? (
-    <AdminDashboard org={org} user={user} greeting={greeting} />
-  ) : (
-    <MemberDashboard org={org} user={user} greeting={greeting} />
-  );
-}
-
-/* ── Member Dashboard ── */
-
-function MemberDashboard({ org, user, greeting }: { org: { id: string; name: string }; user: User | null; greeting: string }) {
-  const { data: inboxes, isLoading } = useQuery({
-    queryKey: ["member-inboxes-count", org.id],
-    queryFn: () => api.get<PaginatedResponse<Inbox>>(`/inboxes`, { status: "active", per_page: "5" }),
-    enabled: !!org,
-  });
-
-  const recentInboxes = inboxes?.data?.slice(0, 3) ?? [];
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-headline">{greeting}, {user?.display_name?.split(" ")[0] || "there"}</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Welcome to {org.name}</p>
-        </div>
-        <Button asChild>
-          <Link href="/"><Plus className="h-4 w-4 mr-2" />Create Inbox</Link>
-        </Button>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Card>
-          <CardContent className="pt-5 pb-4">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-medium text-muted-foreground">Active Inboxes</span>
-              <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-muted text-muted-foreground">
-                <InboxIcon className="h-4 w-4" />
-              </div>
-            </div>
-            {isLoading ? (
-              <Skeleton className="h-8 w-20" />
-            ) : (
-              <p className="text-2xl font-bold tabular-nums">{inboxes?.total ?? 0}</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Recent inboxes */}
-      {recentInboxes.length > 0 && (
-        <Card>
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Recent Inboxes</CardTitle>
-              <Link href="/" className="text-xs text-primary hover:underline">View all →</Link>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {recentInboxes.map((inbox) => (
-                <Link key={inbox.id} href={`/inboxes/${inbox.id}`} className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors duration-150">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-mono font-medium truncate">{inbox.full_address || inbox.address}</p>
-                      <p className="text-xs text-muted-foreground">{inbox.email_count ?? 0} emails</p>
-                    </div>
-                  </div>
-                  <Badge variant={inbox.is_active ? "default" : "secondary"} className="text-[10px] shrink-0">
-                    {inbox.is_active ? "Active" : "Expired"}
-                  </Badge>
-                </Link>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  );
+  return <AdminDashboard org={org} user={user} greeting={greeting} />;
 }
 
 /* ── Admin Dashboard ── */
