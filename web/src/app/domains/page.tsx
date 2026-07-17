@@ -218,10 +218,10 @@ function DomainCard({ domain: d, onVerify, onDelete, verifying }: {
         {/* Header: icon + name + status */}
         <div className="flex items-start gap-3">
           <div
-            className="h-10 w-10 rounded-lg flex items-center justify-center shrink-0 bg-muted"
+            className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${fullyVerified ? "bg-primary/10" : "bg-muted"}`}
             aria-hidden="true"
           >
-            <Globe className="h-5 w-5 text-muted-foreground" />
+            <Globe className={`h-5 w-5 ${fullyVerified ? "text-primary" : "text-muted-foreground"}`} />
           </div>
           <div className="min-w-0 flex-1">
             <Link href={`/domains/${d.id}`} className="group/link">
