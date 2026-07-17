@@ -45,6 +45,29 @@ function durationToMinutes(d?: string): number {
   return mins || Infinity;
 }
 
+/** Validates a TTL string. Returns null if valid, or an error message. */
+function validateTtl(value: string, maxMins: number): string | null {
+  if (!value.trim()) return "TTL is required";
+  // Must match Go-duration format: e.g. 10m, 1h, 2h30m, 30m
+  const pattern = /^(?:(\d+)h)?(?:(\d+)m)?$/;
+  const match = value.trim().match(pattern);
+  if (!match || (!match[1] && !match[2])) {
+    return "Use format like 10m, 1h, or 2h30m";
+  }
+  const hours = match[1] ? parseInt(match[1]) : 0;
+  const mins = match[2] ? parseInt(match[2]) : 0;
+  const totalMins = hours * 60 + mins;
+  if (totalMins < 1) return "Minimum is 1m";
+  if (totalMins > 1440) return "Maximum is 24h";
+  if (maxMins < Infinity && totalMins > maxMins) {
+    const maxH = Math.floor(maxMins / 60);
+    const maxM = maxMins % 60;
+    const maxLabel = maxH > 0 ? (maxM > 0 ? `${maxH}h${maxM}m` : `${maxH}h`) : `${maxMins}m`;
+    return `Exceeds domain limit of ${maxLabel}`;
+  }
+  return null;
+}
+
 const ALL_PRESETS = [
   { mins: 10, value: "10m", key: "10m" as const },
   { mins: 30, value: "30m", key: "30m" as const },
@@ -195,6 +218,7 @@ function QuickCreateCard() {
   const [alias, setAlias] = useState("");
   const [ttlPreset, setTtlPreset] = useState("");
   const [customTtl, setCustomTtl] = useState("");
+  const [ttlError, setTtlError] = useState<string | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createdInbox, setCreatedInbox] = useState<Inbox | null>(null);
@@ -229,8 +253,25 @@ function QuickCreateCard() {
 
   const ttl = ttlPreset === "custom" ? customTtl : ttlPreset;
 
+  // Validate custom TTL on change
+  const handleCustomTtlChange = (value: string) => {
+    setCustomTtl(value);
+    if (value.trim()) {
+      setTtlError(validateTtl(value, maxMins));
+    } else {
+      setTtlError(null);
+    }
+  };
+
+  const isCustomInvalid = ttlPreset === "custom" && (!!ttlError || !customTtl.trim());
+
   const create = useCallback(async () => {
     if (!assignmentId || !ttl) return;
+    // Final validation before submit
+    if (ttlPreset === "custom") {
+      const error = validateTtl(customTtl, maxMins);
+      if (error) { setTtlError(error); return; }
+    }
     setCreating(true);
     try {
       const res = await api.post<Inbox>(`/inboxes`, { domain_assignment_id: assignmentId, alias: alias || undefined, ttl });
@@ -238,11 +279,17 @@ function QuickCreateCard() {
       qc.invalidateQueries({ queryKey: ["home-inboxes"] });
       qc.invalidateQueries({ queryKey: ["inboxes"] });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed");
+      const msg = err instanceof Error ? err.message : "Failed";
+      // Surface API validation errors as inline if they're TTL-related
+      if (msg.toLowerCase().includes("ttl")) {
+        setTtlError(msg);
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setCreating(false);
     }
-  }, [assignmentId, ttl, alias, qc]);
+  }, [assignmentId, ttl, alias, qc, ttlPreset, customTtl, maxMins]);
 
   const copyAddress = () => {
     if (!createdInbox) return;
@@ -360,7 +407,7 @@ function QuickCreateCard() {
 
       {/* Generate button — hero level */}
       <div>
-        <Button onClick={create} disabled={!assignmentId || creating} size="lg" className="gap-2.5 px-8 h-12 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md">
+        <Button onClick={create} disabled={!assignmentId || creating || isCustomInvalid} size="lg" className="gap-2.5 px-8 h-12 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md">
           {creating ? (
             <><RefreshCw className="h-4 w-4 animate-spin" /> {t("generating")}</>
           ) : (
@@ -389,14 +436,30 @@ function QuickCreateCard() {
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">{ti("lifetime")}</Label>
-            <Select value={ttlPreset} onValueChange={setTtlPreset}>
+            <Select value={ttlPreset} onValueChange={(v) => { setTtlPreset(v); if (v !== "custom") setTtlError(null); }}>
               <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {availablePresets.map((p) => <SelectItem key={p.value} value={p.value}>{presetLabels[p.key]}</SelectItem>)}
                 <SelectItem value="custom">{ti("custom")}</SelectItem>
               </SelectContent>
             </Select>
-            {ttlPreset === "custom" && <Input value={customTtl} onChange={(e) => setCustomTtl(e.target.value)} placeholder={ti("customPlaceholder")} className="h-8 text-sm mt-1.5" />}
+            {ttlPreset === "custom" && (
+              <div className="space-y-1 mt-1.5">
+                <Input
+                  value={customTtl}
+                  onChange={(e) => handleCustomTtlChange(e.target.value)}
+                  placeholder={ti("customPlaceholder")}
+                  className={`h-8 text-sm font-mono ${ttlError ? "border-destructive focus-visible:ring-destructive/20" : ""}`}
+                  aria-invalid={!!ttlError}
+                  aria-describedby={ttlError ? "ttl-error" : "ttl-hint"}
+                />
+                {ttlError ? (
+                  <p id="ttl-error" className="text-xs text-destructive">{ttlError}</p>
+                ) : (
+                  <p id="ttl-hint" className="text-[11px] text-muted-foreground">Format: 10m, 1h, 2h30m (max 24h)</p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
