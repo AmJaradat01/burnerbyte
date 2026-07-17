@@ -156,6 +156,33 @@
   to { opacity: 0; transform: scale(0.95); height: 0; margin: 0; padding: 0; overflow: hidden; }
 }
 
+/* ── Interaction utilities ── */
+
+/* Clickable element with press-down feedback */
+.press-down {
+  transition: transform 150ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.press-down:active {
+  transform: translateY(1px);
+}
+
+/* Interactive row highlight (tables, lists) */
+.row-interactive {
+  transition: background-color 150ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.row-interactive:hover {
+  background-color: color-mix(in oklch, var(--muted) 40%, transparent);
+}
+
+/* Subtle lift on hover for interactive surfaces */
+.lift-on-hover {
+  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.lift-on-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
 /* ── Email count pulse ── */
 .count-pulse {
   animation: count-pulse 600ms cubic-bezier(0.16, 1, 0.3, 1);
