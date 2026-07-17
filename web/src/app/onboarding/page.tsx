@@ -32,7 +32,7 @@ export default function OnboardingPage() {
   const user = useAuthStore((s) => s.user);
 
   useEffect(() => {
-    if (currentOrg) router.replace("/dashboard");
+    if (currentOrg) router.replace("/");
   }, [currentOrg, router]);
 
   const [step, setStep] = useState(0);
@@ -106,7 +106,7 @@ export default function OnboardingPage() {
         await fetchTeams(org.id);
         if (team) setCurrentTeam(team);
       }
-      router.push("/dashboard");
+      router.push("/");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed");
     } finally { setBusy(false); }
