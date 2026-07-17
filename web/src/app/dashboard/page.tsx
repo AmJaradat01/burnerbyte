@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, WS_BASE, getWsTicket } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import { NoOrgState } from "@/components/no-org-state";
 import { useAuthStore } from "@/stores/auth-store";
 import { useOrgStore } from "@/stores/org-store";
@@ -147,7 +148,7 @@ function MemberDashboard({ org, user, greeting }: { org: { id: string; name: str
           <CardContent>
             <div className="space-y-2">
               {recentInboxes.map((inbox) => (
-                <Link key={inbox.id} href={`/inboxes/${inbox.id}`} className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors">
+                <Link key={inbox.id} href={`/inboxes/${inbox.id}`} className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors duration-150">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
                       <Mail className="h-4 w-4 text-muted-foreground" />
@@ -326,12 +327,12 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
         </div>
       </div>
 
-      {/* Primary stats — 4 cards, uniform height */}
+      {/* Primary stats — compact metric strip */}
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={Mail} label="Total Emails" value={stats?.total_emails_received ?? stats?.total_emails} loading={isLoading} accent="text-muted-foreground bg-muted" sub={`${formatBytes(stats?.total_storage_bytes ?? stats?.storage_used_bytes ?? 0)} storage`} delta={todayDelta} deltaLabel="vs yesterday" />
-        <StatCard icon={InboxIcon} label="Active Inboxes" value={stats?.active_inboxes} loading={isLoading} accent="text-muted-foreground bg-muted" sub={`${(stats?.total_inboxes_created ?? stats?.total_inboxes ?? 0).toLocaleString()} total created`} />
-        <StatCard icon={Globe} label="Domains" value={stats?.total_domains} loading={isLoading} accent="text-muted-foreground bg-muted" sub={`${stats?.total_members ?? 0} members · ${stats?.total_teams ?? 0} teams`} link="/domains" />
-        <StatCard icon={HardDrive} label="Storage" value={formatBytes(stats?.total_storage_bytes ?? stats?.storage_used_bytes ?? 0)} loading={isLoading} accent="text-muted-foreground bg-muted" isString sub="All-time usage" />
+        <StatCard icon={Mail} label="Total Emails" value={stats?.total_emails_received ?? stats?.total_emails} loading={isLoading} sub={`${formatBytes(stats?.total_storage_bytes ?? stats?.storage_used_bytes ?? 0)} storage`} delta={todayDelta} deltaLabel="vs yesterday" />
+        <StatCard icon={InboxIcon} label="Active Inboxes" value={stats?.active_inboxes} loading={isLoading} sub={`${(stats?.total_inboxes_created ?? stats?.total_inboxes ?? 0).toLocaleString()} total created`} />
+        <StatCard icon={Globe} label="Domains" value={stats?.total_domains} loading={isLoading} sub={`${stats?.total_members ?? 0} members · ${stats?.total_teams ?? 0} teams`} link="/domains" />
+        <StatCard icon={HardDrive} label="Storage" value={formatBytes(stats?.total_storage_bytes ?? stats?.storage_used_bytes ?? 0)} loading={isLoading} isString sub="All-time usage" />
       </div>
 
       {/* Charts + sidebar */}
@@ -417,24 +418,20 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
                       </div>
                       <CardTitle className="text-sm">Top Senders</CardTitle>
                     </div>
-                    <Link href="/analytics" className="text-xs text-primary font-medium hover:underline">Details →</Link>
+                    <Link href="/analytics" className="text-xs text-primary font-medium hover:underline">Details</Link>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-2">
+                <CardContent className="space-y-3">
                   {topSenders.map((sd, i) => {
                     const pct = totalSenderEmails > 0 ? (sd.count / totalSenderEmails) * 100 : 0;
                     return (
-                      <div key={sd.domain}>
-                        <div className="flex items-center justify-between text-sm mb-1">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-[10px] text-muted-foreground w-3 text-right shrink-0">{i + 1}</span>
-                            <span className="font-mono text-xs truncate">{sd.domain}</span>
-                          </div>
-                          <span className="text-[11px] text-muted-foreground tabular-nums shrink-0 ml-2">{sd.count} ({pct.toFixed(0)}%)</span>
+                      <div key={sd.domain} className="flex items-center gap-3">
+                        <span className="text-[10px] font-mono text-muted-foreground w-3 text-right shrink-0 tabular-nums">{i + 1}</span>
+                        <div className="flex-1 min-w-0">
+                          <span className="font-mono text-xs truncate block">{sd.domain}</span>
                         </div>
-                        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                          <div className="h-full rounded-full bg-primary/50 transition-all" style={{ width: `${Math.max((sd.count / maxSenderCount) * 100, 4)}%` }} />
-                        </div>
+                        <span className="text-[11px] text-muted-foreground tabular-nums shrink-0">{sd.count}</span>
+                        <span className="text-[10px] text-muted-foreground/70 tabular-nums shrink-0 w-8 text-right">{pct.toFixed(0)}%</span>
                       </div>
                     );
                   })}
@@ -452,19 +449,17 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
                     <CardTitle className="text-sm">Emails by Domain</CardTitle>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-2">
+                <CardContent className="space-y-3">
                   {insights.domain_breakdown.map((d) => {
                     const total = insights.domain_breakdown.reduce((s, x) => s + x.count, 0);
                     const pct = total > 0 ? (d.count / total) * 100 : 0;
                     return (
-                      <div key={d.domain}>
-                        <div className="flex items-center justify-between text-sm mb-1">
-                          <span className="font-mono text-xs truncate">{d.domain}</span>
-                          <span className="text-[11px] text-muted-foreground tabular-nums shrink-0 ml-2">{d.count} ({pct.toFixed(0)}%)</span>
+                      <div key={d.domain} className="flex items-center gap-3">
+                        <div className="flex-1 min-w-0">
+                          <span className="font-mono text-xs truncate block">{d.domain}</span>
                         </div>
-                        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                          <div className="h-full rounded-full bg-primary/50 transition-all" style={{ width: `${Math.max(pct, 4)}%` }} />
-                        </div>
+                        <span className="text-[11px] text-muted-foreground tabular-nums shrink-0">{d.count}</span>
+                        <span className="text-[10px] text-muted-foreground/70 tabular-nums shrink-0 w-8 text-right">{pct.toFixed(0)}%</span>
                       </div>
                     );
                   })}
@@ -516,12 +511,12 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
               ) : (
                 <div className="flex items-center justify-center h-[120px] text-xs text-muted-foreground">No data</div>
               )}
-              <div className="grid grid-cols-3 gap-2 pt-2 border-t">
+              <div className="grid grid-cols-3 gap-4 pt-3 border-t">
                 <div className="text-center">
                   <p className="text-lg font-semibold tabular-nums">{todayCount}</p>
                   <p className="text-[10px] text-muted-foreground">Today</p>
                 </div>
-                <div className="text-center border-x border-border/50">
+                <div className="text-center">
                   <p className="text-lg font-semibold tabular-nums">{yesterdayCount}</p>
                   <p className="text-[10px] text-muted-foreground">Yesterday</p>
                 </div>
@@ -566,7 +561,7 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
                       <div className={`mt-1.5 h-2 w-2 rounded-full shrink-0 ${actionDotColor(entry.action)}`} aria-hidden="true" />
                       <span className="sr-only">{humanizeAction(entry.action)} status</span>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">{humanizeAction(entry.action)}</p>
+                        <p className="text-sm font-medium truncate group-hover:text-primary transition-colors duration-150">{humanizeAction(entry.action)}</p>
                         <p className="text-[11px] text-muted-foreground truncate">
                           {entry.actor_email ?? "System"} · {timeAgo(entry.created_at)}
                         </p>
@@ -595,9 +590,9 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
           <Link
             key={item.href}
             href={item.href}
-            className="flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/80 hover:border-primary/20 transition-all"
+            className="group flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium text-muted-foreground transition-all duration-150 hover:text-foreground hover:bg-muted/80 hover:border-primary/20 active:scale-[0.97]"
           >
-            <item.icon className="h-3.5 w-3.5 shrink-0" />
+            <item.icon className="h-3.5 w-3.5 shrink-0 transition-colors duration-150 group-hover:text-primary" />
             {item.label}
           </Link>
         ))}
@@ -608,12 +603,11 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
 
 /* ── Stat Card (compact, uniform height) ── */
 
-function StatCard({ icon: Icon, label, value, loading, accent, sub, delta, deltaLabel, link, isString }: {
+function StatCard({ icon: Icon, label, value, loading, sub, delta, deltaLabel, link, isString }: {
   icon: typeof Mail;
   label: string;
   value?: number | string;
   loading: boolean;
-  accent: string;
   sub?: string;
   delta?: number;
   deltaLabel?: string;
@@ -621,35 +615,36 @@ function StatCard({ icon: Icon, label, value, loading, accent, sub, delta, delta
   isString?: boolean;
 }) {
   const inner = (
-    <Card className={link ? "cursor-pointer" : ""}>
-      <CardContent className="pt-4 pb-3">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-medium text-muted-foreground">{label}</span>
-          <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${accent}`}>
-            <Icon className="h-4 w-4" />
-          </div>
+    <div className={cn(
+      "rounded-xl border bg-card p-4 transition-all duration-150",
+      link && "cursor-pointer hover:border-primary/20 hover:shadow-sm",
+    )}>
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-medium text-muted-foreground">{label}</span>
+        <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-muted">
+          <Icon className="h-4 w-4 text-muted-foreground" />
         </div>
-        {loading ? (
-          <Skeleton className="h-7 w-20" />
-        ) : (
-          <p className="text-2xl font-bold tabular-nums tracking-tight">
-            {isString ? String(value ?? "—") : (typeof value === "number" ? value.toLocaleString() : "0")}
-          </p>
-        )}
-        <div className="mt-1 h-4 flex items-center">
-          {!loading && delta !== undefined && delta !== 0 ? (
-            <span className={`flex items-center gap-1 text-[11px] font-medium ${delta > 0 ? "text-success" : "text-destructive"}`}>
-              {delta > 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-              {delta > 0 ? "+" : ""}{delta} {deltaLabel}
-            </span>
-          ) : sub ? (
-            <span className="text-[11px] text-muted-foreground truncate">{sub}</span>
-          ) : link ? (
-            <span className="text-[11px] text-primary font-medium">Manage →</span>
-          ) : null}
-        </div>
-      </CardContent>
-    </Card>
+      </div>
+      {loading ? (
+        <Skeleton className="h-7 w-20" />
+      ) : (
+        <p className="text-2xl font-bold tabular-nums tracking-tight">
+          {isString ? String(value ?? "—") : (typeof value === "number" ? value.toLocaleString() : "0")}
+        </p>
+      )}
+      <div className="mt-1.5 h-4 flex items-center">
+        {!loading && delta !== undefined && delta !== 0 ? (
+          <span className={cn("flex items-center gap-1 text-[11px] font-medium", delta > 0 ? "text-success" : "text-destructive")}>
+            {delta > 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+            {delta > 0 ? "+" : ""}{delta} {deltaLabel}
+          </span>
+        ) : sub ? (
+          <span className="text-[11px] text-muted-foreground truncate">{sub}</span>
+        ) : link ? (
+          <span className="text-[11px] text-primary font-medium">Manage</span>
+        ) : null}
+      </div>
+    </div>
   );
 
   if (link) return <Link href={link} className="block">{inner}</Link>;
