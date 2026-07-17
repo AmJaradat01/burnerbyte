@@ -7,9 +7,9 @@ describe("safeRedirect", () => {
     expect(safeRedirect("/orgs/abc/settings?tab=team")).toBe("/orgs/abc/settings?tab=team");
   });
 
-  it("falls back to /dashboard for empty input", () => {
-    expect(safeRedirect(null)).toBe("/dashboard");
-    expect(safeRedirect("")).toBe("/dashboard");
+  it("falls back to / for empty input", () => {
+    expect(safeRedirect(null)).toBe("/");
+    expect(safeRedirect("")).toBe("/");
   });
 
   it("blocks open-redirect vectors", () => {
@@ -23,7 +23,7 @@ describe("safeRedirect", () => {
       " /inboxes", // leading space -> not a "/" start
     ];
     for (const a of attacks) {
-      expect(safeRedirect(a), `should block ${JSON.stringify(a)}`).toBe("/dashboard");
+      expect(safeRedirect(a), `should block ${JSON.stringify(a)}`).toBe("/");
     }
   });
 });
