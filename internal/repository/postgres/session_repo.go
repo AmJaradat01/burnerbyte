@@ -156,6 +156,10 @@ func (r *SessionRepo) CountActiveByUser(ctx context.Context, userID uuid.UUID) (
 		userID,
 	).Scan(&count)
 	if err != nil {
+		// COUNT(*) should always return a row; if it doesn't, treat as 0 (defensive).
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, nil
+		}
 		return 0, fmt.Errorf("count active sessions: %w", err)
 	}
 	return count, nil

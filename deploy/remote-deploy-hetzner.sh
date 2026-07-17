@@ -47,8 +47,16 @@ systemctl restart burnerbyte-smtpd
 systemctl restart burnerbyte-frontend
 
 # ── Health check ──
-sleep 3
-if curl -sf http://localhost:8080/healthz > /dev/null; then
+# Retry up to 5 times with 2-second intervals (total wait: 10s max).
+HEALTH_OK=false
+for i in 1 2 3 4 5; do
+    sleep 2
+    if curl -sf http://localhost:8080/healthz > /dev/null 2>&1; then
+        HEALTH_OK=true
+        break
+    fi
+done
+if [ "$HEALTH_OK" = true ]; then
     echo "✅ API healthy"
 else
     echo "❌ API health check failed — rolling back"

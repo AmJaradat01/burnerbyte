@@ -39,10 +39,10 @@ func newAttachmentSvcWithOwner(inboxOwner uuid.UUID) *AttachmentService {
 					true, any(nil), int64(1234), float32(0), false, now, now,
 				}}
 			case strings.Contains(sql, "inboxes i JOIN domains"):
-				// InboxRepo.GetByID (11 cols); created_by at index 3 is the owner.
+				// InboxRepo.GetByID (12 cols); created_by at index 3 is the owner.
 				return &mockRow{values: []any{
 					inboxID, uuid.New(), uuid.New(), inboxOwner, "addr", "addr@b.com",
-					true, now, now, "b.com", uuid.New(),
+					true, now, now, (*string)(nil), "b.com", uuid.New(),
 				}}
 			default:
 				return &mockRow{err: pgx.ErrNoRows}
