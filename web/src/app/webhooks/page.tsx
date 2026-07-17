@@ -21,7 +21,7 @@ import { ErrorState } from "@/components/error-state";
 import { EmptyState } from "@/components/empty-state";
 import { NoTeamState } from "@/components/no-team-state";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { AlertCircle, AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Clock, Code2, Copy, ExternalLink, Globe, Inbox, Link2, Mail, Pencil, Plus, Trash2, XCircle } from "lucide-react";
+import { AlertCircle, AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Clock, Code2, Copy, ExternalLink, Globe, Inbox, Link2, Mail, Pencil, Plus, Trash2, Webhook as WebhookIcon, XCircle } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { Webhook, PaginatedResponse } from "@/types";
 
@@ -136,7 +136,7 @@ export default function WebhooksPage() {
       isLoading ? <WebhookListSkeleton /> : (
       <>
         {(!data?.data || data.data.length === 0) ? (
-          <EmptyState title="No webhooks" description="Add a webhook to receive event notifications via HTTP." />
+          <EmptyState icon={WebhookIcon} title="No webhooks" description="Add a webhook to receive event notifications via HTTP." />
         ) : (
           <div className="space-y-4">
             {data.data.map((w) => (
@@ -183,7 +183,7 @@ function WebhookCard({ webhook: w, expanded, onToggleExpand, onToggleActive, onD
   webhook: Webhook; expanded: boolean; onToggleExpand: () => void; onToggleActive: (v: boolean) => void; onDelete: () => void; orgId: string; teamId: string;
 }) {
   return (
-    <Card className={!w.active ? "border-dashed opacity-70" : ""}>
+    <Card className={`transition-all duration-150 ${!w.active ? "border-dashed opacity-70" : ""}`}>
       <CardContent className="space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1 space-y-2">
@@ -219,7 +219,7 @@ function WebhookCard({ webhook: w, expanded, onToggleExpand, onToggleActive, onD
           )}
           <button
             onClick={onToggleExpand}
-            className="ml-auto flex items-center gap-1 hover:text-foreground transition-colors rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="ml-auto flex items-center gap-1 hover:text-foreground transition-colors duration-150 rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             aria-expanded={expanded}
           >
             {expanded ? <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" /> : <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />}
@@ -227,7 +227,7 @@ function WebhookCard({ webhook: w, expanded, onToggleExpand, onToggleActive, onD
           </button>
         </div>
         {expanded && (
-          <div className="border-t pt-3">
+          <div className="border-t pt-3 animate-in fade-in slide-in-from-top-1 duration-150">
             <DeliveryLogPanel orgId={orgId} teamId={teamId} webhookId={w.id} />
           </div>
         )}
@@ -315,7 +315,7 @@ function EventCard({ info, selected, onToggle }: { info: typeof EVENT_INFO[numbe
 
   return (
     <div
-      className={`rounded-lg border p-3 transition-colors ${
+      className={`rounded-lg border p-3 transition-colors duration-150 ${
         selected ? "border-primary/40 bg-primary/5" : "border-border hover:bg-muted/40"
       }`}
     >
@@ -340,7 +340,7 @@ function EventCard({ info, selected, onToggle }: { info: typeof EVENT_INFO[numbe
       <button
         type="button"
         onClick={() => setShowExample(!showExample)}
-        className="ml-11 mt-2 inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className="ml-11 mt-2 inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors duration-150 rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         aria-expanded={showExample}
       >
         <Code2 className="h-3 w-3" aria-hidden="true" />
@@ -453,9 +453,9 @@ function CreateWebhookDialog({ orgId, teamId }: { orgId: string; teamId: string 
         {secret ? (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">Copy this signing secret now — it won&apos;t be shown again.</p>
-            <button onClick={copySecret} className="w-full rounded-md bg-muted p-3 text-left font-mono text-sm break-all hover:bg-muted/80 transition-colors group">
+            <button onClick={copySecret} className="w-full rounded-md bg-muted p-3 text-left font-mono text-sm break-all hover:bg-muted/80 transition-colors duration-150 group">
               {secret}
-              <Copy className="inline-block ml-2 h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+              <Copy className="inline-block ml-2 h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-150" />
             </button>
             <Button onClick={close} className="w-full">Done</Button>
           </div>
