@@ -69,6 +69,11 @@
     "openInbox": "Open Inbox",
     "createAnother": "Create Another",
     "advancedOptions": "Advanced options",
+    "customize": "Customize",
+    "aliasHint": "Leave empty for a random address",
+    "searchInboxes": "Search inboxes…",
+    "searchInboxesLabel": "Search inboxes by address",
+    "randomPlaceholder": "random",
     "recentInboxes": "Your Inboxes",
     "viewAll": "View All",
     "emails": "{count} {count, plural, one {email} other {emails}}"
