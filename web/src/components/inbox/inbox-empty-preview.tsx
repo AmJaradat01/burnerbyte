@@ -8,7 +8,7 @@ interface InboxEmptyPreviewProps {
 
 export function InboxEmptyPreview({ totalEmails }: InboxEmptyPreviewProps) {
   return (
-    <div className="flex-1 flex items-center justify-center">
+    <div className="flex-1 flex items-start justify-center pt-[20vh]">
       <div className="text-center">
         <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-muted/60">
           <Mail className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
