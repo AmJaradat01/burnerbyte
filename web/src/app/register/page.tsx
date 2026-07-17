@@ -153,7 +153,7 @@ export default function RegisterPage() {
         ) : (
           <Card className="w-full">
             <CardHeader className="text-center">
-              <CardTitle className="text-xl">Create your account</CardTitle>
+              <CardTitle className="text-xl font-bold tracking-tight">Create your account</CardTitle>
               <CardDescription>Get started with BurnerByte</CardDescription>
             </CardHeader>
             <form onSubmit={handleSubmit}>
@@ -312,7 +312,7 @@ export default function RegisterPage() {
                   </span>
                 </label>
 
-                <Button type="submit" className="w-full" disabled={loading || !agreed || passwordsMismatch}>
+                <Button type="submit" className="w-full h-11 font-semibold" disabled={loading || !agreed || passwordsMismatch}>
                   {loading ? "Creating account…" : "Create account"}
                 </Button>
               </CardContent>
