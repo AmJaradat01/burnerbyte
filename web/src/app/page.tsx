@@ -70,7 +70,7 @@ function HomePage() {
   });
 
   const [page, setPage] = useState(1);
-  const [status, setStatus] = useState<"active" | "expired" | "all">("active");
+  const [status, setStatus] = useState<"active" | "all">("active");
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   // Debounce the search box so we don't query on every keystroke.
@@ -125,7 +125,7 @@ function HomePage() {
               <h2 className="text-subhead shrink-0">{t("recentInboxes")}</h2>
               {data && data.total > 0 && !search && (
                 <span className="text-sm font-medium text-muted-foreground tabular-nums">
-                  {data.total} {status === "expired" ? "expired" : status === "all" ? "total" : "active"}
+                  {data.total} {status === "all" ? "total" : "active"}
                 </span>
               )}
             </div>
@@ -135,7 +135,7 @@ function HomePage() {
                 role="tablist"
                 aria-label="Inbox status filter"
               >
-                {(["active", "expired", "all"] as const).map((s) => (
+                {(["active", "all"] as const).map((s) => (
                   <button
                     key={s}
                     role="tab"
@@ -166,7 +166,7 @@ function HomePage() {
            isLoading ? <InboxGridSkeleton /> :
            (data?.data?.length ?? 0) === 0 ? (
             <p className="text-sm text-muted-foreground py-8 text-center">
-              {search ? `No inboxes match “${search}”.` : status === "expired" ? "No expired inboxes." : "No inboxes yet."}
+              {search ? `No inboxes match "${search}".` : "No inboxes yet."}
             </p>
            ) : (
             <>
