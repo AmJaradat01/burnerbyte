@@ -48,3 +48,19 @@ func (s *AnalyticsService) GetOrgPeakHours(ctx context.Context, orgID uuid.UUID,
 func (s *AnalyticsService) GetOrgDomainBreakdown(ctx context.Context, orgID uuid.UUID) ([]domain.DomainBreakdown, error) {
 	return s.repo.GetOrgDomainBreakdown(ctx, orgID)
 }
+
+func (s *AnalyticsService) GetOrgStoragePerDay(ctx context.Context, orgID uuid.UUID, days ...int) ([]domain.StoragePoint, error) {
+	return s.repo.GetOrgStoragePerDay(ctx, orgID, days...)
+}
+
+func (s *AnalyticsService) GetOrgDomainTimeSeries(ctx context.Context, orgID uuid.UUID, domainName string, days ...int) ([]domain.TimeSeriesPoint, error) {
+	return s.repo.GetOrgDomainTimeSeries(ctx, orgID, domainName, days...)
+}
+
+func (s *AnalyticsService) GetTeamInboxesPerDay(ctx context.Context, teamID uuid.UUID, days ...int) ([]domain.TimeSeriesPoint, error) {
+	return s.repo.GetTeamInboxesPerDay(ctx, teamID, days...)
+}
+
+func (s *AnalyticsService) GetTeamStoragePerDay(ctx context.Context, teamID uuid.UUID, days ...int) ([]domain.StoragePoint, error) {
+	return s.repo.GetTeamStoragePerDay(ctx, teamID, days...)
+}

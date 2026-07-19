@@ -245,6 +245,122 @@ func (r *AnalyticsRepo) GetOrgDomainBreakdown(ctx context.Context, orgID uuid.UU
 	return results, rows.Err()
 }
 
+// GetOrgStoragePerDay reads from persistent daily_email_stats.storage_bytes (survives email deletion).
+func (r *AnalyticsRepo) GetOrgStoragePerDay(ctx context.Context, orgID uuid.UUID, days ...int) ([]domain.StoragePoint, error) {
+	d := 30
+	if len(days) > 0 && days[0] > 0 {
+		d = days[0]
+	}
+	rows, err := r.db.Query(ctx,
+		`SELECT d::date, COALESCE(sub.storage_bytes, 0) FROM generate_series(
+		  (NOW() - make_interval(days => $2))::date, NOW()::date, '1 day'::interval
+		) d LEFT JOIN (
+		  SELECT date, storage_bytes FROM daily_email_stats
+		  WHERE org_id = $1 AND date >= (NOW() - make_interval(days => $2))::date
+		) sub ON d::date = sub.date ORDER BY d`, orgID, d)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var points []domain.StoragePoint
+	for rows.Next() {
+		var p domain.StoragePoint
+		var date time.Time
+		if err := rows.Scan(&date, &p.StorageBytes); err != nil {
+			return nil, err
+		}
+		p.Date = date.Format("2006-01-02")
+		points = append(points, p)
+	}
+	return points, rows.Err()
+}
+
+// GetTeamInboxesPerDay reads from persistent daily_team_email_stats (survives inbox deletion).
+func (r *AnalyticsRepo) GetTeamInboxesPerDay(ctx context.Context, teamID uuid.UUID, days ...int) ([]domain.TimeSeriesPoint, error) {
+	d := 30
+	if len(days) > 0 && days[0] > 0 { d = days[0] }
+	rows, err := r.db.Query(ctx,
+		`SELECT d::date, COALESCE(sub.inboxes_created, 0) FROM generate_series(
+		  (NOW() - make_interval(days => $2))::date, NOW()::date, '1 day'::interval
+		) d LEFT JOIN (
+		  SELECT date, inboxes_created FROM daily_team_email_stats
+		  WHERE team_id = $1 AND date >= (NOW() - make_interval(days => $2))::date
+		) sub ON d::date = sub.date ORDER BY d`, teamID, d)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var points []domain.TimeSeriesPoint
+	for rows.Next() {
+		var p domain.TimeSeriesPoint
+		var date time.Time
+		if err := rows.Scan(&date, &p.Count); err != nil {
+			return nil, err
+		}
+		p.Date = date.Format("2006-01-02")
+		points = append(points, p)
+	}
+	return points, rows.Err()
+}
+
+// GetTeamStoragePerDay reads from persistent daily_team_email_stats (survives email deletion).
+func (r *AnalyticsRepo) GetTeamStoragePerDay(ctx context.Context, teamID uuid.UUID, days ...int) ([]domain.StoragePoint, error) {
+	d := 30
+	if len(days) > 0 && days[0] > 0 { d = days[0] }
+	rows, err := r.db.Query(ctx,
+		`SELECT d::date, COALESCE(sub.storage_bytes, 0) FROM generate_series(
+		  (NOW() - make_interval(days => $2))::date, NOW()::date, '1 day'::interval
+		) d LEFT JOIN (
+		  SELECT date, storage_bytes FROM daily_team_email_stats
+		  WHERE team_id = $1 AND date >= (NOW() - make_interval(days => $2))::date
+		) sub ON d::date = sub.date ORDER BY d`, teamID, d)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var points []domain.StoragePoint
+	for rows.Next() {
+		var p domain.StoragePoint
+		var date time.Time
+		if err := rows.Scan(&date, &p.StorageBytes); err != nil {
+			return nil, err
+		}
+		p.Date = date.Format("2006-01-02")
+		points = append(points, p)
+	}
+	return points, rows.Err()
+}
+
+// GetOrgDomainTimeSeries returns daily email counts for a specific receiving domain.
+func (r *AnalyticsRepo) GetOrgDomainTimeSeries(ctx context.Context, orgID uuid.UUID, domainName string, days ...int) ([]domain.TimeSeriesPoint, error) {
+	d := 30
+	if len(days) > 0 && days[0] > 0 {
+		d = days[0]
+	}
+	rows, err := r.db.Query(ctx,
+		`SELECT d::date, COALESCE(sub.emails_received, 0) FROM generate_series(
+		  (NOW() - make_interval(days => $3))::date, NOW()::date, '1 day'::interval
+		) d LEFT JOIN (
+		  SELECT date, emails_received FROM daily_domain_email_stats
+		  WHERE org_id = $1 AND domain_name = $2 AND date >= (NOW() - make_interval(days => $3))::date
+		) sub ON d::date = sub.date ORDER BY d`, orgID, domainName, d)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var points []domain.TimeSeriesPoint
+	for rows.Next() {
+		var p domain.TimeSeriesPoint
+		var date time.Time
+		if err := rows.Scan(&date, &p.Count); err != nil {
+			return nil, err
+		}
+		p.Date = date.Format("2006-01-02")
+		points = append(points, p)
+	}
+	return points, rows.Err()
+}
+
 // GetTeamEmailsPerDay reads from persistent daily_team_email_stats (survives email deletion).
 func (r *AnalyticsRepo) GetTeamEmailsPerDay(ctx context.Context, teamID uuid.UUID, days ...int) ([]domain.TimeSeriesPoint, error) {
 	d := 30

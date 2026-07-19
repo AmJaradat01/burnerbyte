@@ -45,3 +45,12 @@ type WebhookDeliveryLog struct {
 	IdempotencyKey string    `json:"idempotency_key"`
 	CreatedAt      time.Time `json:"created_at"`
 }
+
+type WebhookStats struct {
+	TotalDeliveries   int64   `json:"total_deliveries"`
+	SuccessCount      int64   `json:"success_count"`
+	FailureCount      int64   `json:"failure_count"`
+	SuccessRate       float64 `json:"success_rate"`
+	AvgResponseTimeMs float64 `json:"avg_response_time_ms"`
+	LastDeliveryAt    *string `json:"last_delivery_at,omitempty"`
+}
