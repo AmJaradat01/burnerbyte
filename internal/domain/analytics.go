@@ -54,6 +54,11 @@ type DomainBreakdown struct {
 	Count  int64  `json:"count"`
 }
 
+type StoragePoint struct {
+	Date         string `json:"date"`
+	StorageBytes int64  `json:"storage_bytes"`
+}
+
 type SystemStats struct {
 	TotalUsers          int64 `json:"total_users"`
 	TotalTeams          int64 `json:"total_teams"`

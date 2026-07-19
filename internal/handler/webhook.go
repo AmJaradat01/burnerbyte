@@ -148,3 +148,23 @@ func (h *WebhookHandler) ListDeliveryLogs(w http.ResponseWriter, r *http.Request
 	if err != nil { writeError(w, http.StatusInternalServerError, "failed"); return }
 	writeJSON(w, http.StatusOK, paginatedResponse(logs, total, page, perPage))
 }
+
+func (h *WebhookHandler) WebhookStats(w http.ResponseWriter, r *http.Request) {
+	uc := auth.GetUser(r.Context())
+	if uc != nil && len(uc.APIKeyScopes) > 0 && !auth.HasScope(r.Context(), "team.webhooks.view") {
+		writeError(w, http.StatusForbidden, "insufficient scope")
+		return
+	}
+	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
+	if err != nil { writeError(w, http.StatusBadRequest, "invalid org ID"); return }
+	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
+	if err != nil { writeError(w, http.StatusBadRequest, "invalid team ID"); return }
+	if checkTeamPermission(w, r, orgID, teamID, "team.webhooks.view") {
+		return
+	}
+	webhookID, err := uuid.Parse(chi.URLParam(r, "webhookId"))
+	if err != nil { writeError(w, http.StatusBadRequest, "invalid webhook ID"); return }
+	stats, err := h.svc.GetWebhookStats(r.Context(), webhookID)
+	if err != nil { writeError(w, http.StatusInternalServerError, "failed"); return }
+	writeJSON(w, http.StatusOK, stats)
+}

@@ -88,11 +88,43 @@ func (h *AnalyticsHandler) OrgInsights(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed")
 		return
 	}
+	storagePerDay, err := h.svc.GetOrgStoragePerDay(r.Context(), orgID, days)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed")
+		return
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"inboxes_per_day":  inboxes,
 		"peak_hours":       peaks,
 		"domain_breakdown": breakdown,
+		"storage_per_day":  storagePerDay,
 	})
+}
+
+func (h *AnalyticsHandler) OrgDomainTimeSeries(w http.ResponseWriter, r *http.Request) {
+	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid org id")
+		return
+	}
+	if checkOrgPermission(w, r, orgID, "org.analytics.view") {
+		return
+	}
+	domainName := r.URL.Query().Get("domain")
+	if domainName == "" {
+		writeError(w, http.StatusBadRequest, "domain query parameter required")
+		return
+	}
+	days := h.defaultDays
+	if v, err := strconv.Atoi(r.URL.Query().Get("days")); err == nil && v > 0 && v <= 365 {
+		days = v
+	}
+	data, err := h.svc.GetOrgDomainTimeSeries(r.Context(), orgID, domainName, days)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"data": data, "domain": domainName})
 }
 
 func (h *AnalyticsHandler) TeamAnalytics(w http.ResponseWriter, r *http.Request) {
@@ -141,4 +173,38 @@ func (h *AnalyticsHandler) TeamEmailsPerDay(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"data": data})
+}
+
+func (h *AnalyticsHandler) TeamInsights(w http.ResponseWriter, r *http.Request) {
+	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid org id")
+		return
+	}
+	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid team id")
+		return
+	}
+	if checkTeamPermission(w, r, orgID, teamID, "team.analytics.view") {
+		return
+	}
+	days := h.defaultDays
+	if v, err := strconv.Atoi(r.URL.Query().Get("days")); err == nil && v > 0 && v <= 365 {
+		days = v
+	}
+	inboxes, err := h.svc.GetTeamInboxesPerDay(r.Context(), teamID, days)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed")
+		return
+	}
+	storage, err := h.svc.GetTeamStoragePerDay(r.Context(), teamID, days)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"inboxes_per_day": inboxes,
+		"storage_per_day": storage,
+	})
 }
