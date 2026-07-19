@@ -361,6 +361,15 @@ func (r *AnalyticsRepo) GetOrgDomainTimeSeries(ctx context.Context, orgID uuid.U
 	return points, rows.Err()
 }
 
+// OrgHasDomain checks if a domain name belongs to the specified organization.
+func (r *AnalyticsRepo) OrgHasDomain(ctx context.Context, orgID uuid.UUID, domainName string) (bool, error) {
+	var exists bool
+	err := r.db.QueryRow(ctx,
+		`SELECT EXISTS(SELECT 1 FROM daily_domain_email_stats WHERE org_id = $1 AND domain_name = $2 LIMIT 1)`,
+		orgID, domainName).Scan(&exists)
+	return exists, err
+}
+
 // GetTeamEmailsPerDay reads from persistent daily_team_email_stats (survives email deletion).
 func (r *AnalyticsRepo) GetTeamEmailsPerDay(ctx context.Context, teamID uuid.UUID, days ...int) ([]domain.TimeSeriesPoint, error) {
 	d := 30

@@ -115,6 +115,15 @@ func (h *AnalyticsHandler) OrgDomainTimeSeries(w http.ResponseWriter, r *http.Re
 		writeError(w, http.StatusBadRequest, "domain query parameter required")
 		return
 	}
+	exists, err := h.svc.OrgHasDomain(r.Context(), orgID, domainName)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed")
+		return
+	}
+	if !exists {
+		writeJSON(w, http.StatusOK, map[string]any{"data": []any{}, "domain": domainName})
+		return
+	}
 	days := h.defaultDays
 	if v, err := strconv.Atoi(r.URL.Query().Get("days")); err == nil && v > 0 && v <= 365 {
 		days = v
