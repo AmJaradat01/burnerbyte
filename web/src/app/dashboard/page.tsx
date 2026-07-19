@@ -13,12 +13,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/error-state";
+import { ChartTooltip } from "../analytics/chart-tooltip";
+import { computeTrend } from "../analytics/page";
 import type { AnalyticsStats, AuditEntry, EmailsPerDay, Inbox, PaginatedResponse, User } from "@/types";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { timeAgo } from "@/lib/time";
 import {
-  Activity, ArrowDownRight, ArrowUpRight, BarChart3, Clock, Globe, HardDrive,
+  ArrowDownRight, ArrowUpRight, BarChart3, Clock, Globe, HardDrive,
   Inbox as InboxIcon, Key, Mail, Plus, RefreshCw, Shield,
   TrendingUp, Users, Webhook,
 } from "lucide-react";
@@ -26,9 +28,7 @@ import { Switch } from "@/components/ui/switch";
 import { LastUpdated } from "@/components/last-updated";
 
 const RechartsBarChart = dynamic(() => import("recharts").then((m) => m.BarChart), { ssr: false });
-const RechartsAreaChart = dynamic(() => import("recharts").then((m) => m.AreaChart), { ssr: false });
 const Bar = dynamic(() => import("recharts").then((m) => m.Bar), { ssr: false });
-const Area = dynamic(() => import("recharts").then((m) => m.Area), { ssr: false });
 const XAxis = dynamic(() => import("recharts").then((m) => m.XAxis), { ssr: false });
 const YAxis = dynamic(() => import("recharts").then((m) => m.YAxis), { ssr: false });
 const Tooltip = dynamic(() => import("recharts").then((m) => m.Tooltip), { ssr: false });
@@ -185,7 +185,6 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
   }, [autoRefresh, org.id, qc]);
 
   // Computed values (kept above early return so hooks run unconditionally)
-  const weekTotal = chartWeek?.data?.reduce((sum, d) => sum + d.count, 0) ?? 0;
   const todayStr = new Date().toISOString().slice(0, 10);
   // Display-only time hint: Date.now() identifies yesterday's date bucket for a UI counter only
   // eslint-disable-next-line react-hooks/purity
@@ -195,6 +194,9 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
   const todayDelta = todayCount - yesterdayCount;
   const chartData = chart?.data ?? [];
   const chartAvg = chartData.length > 0 ? Math.round(chartData.reduce((s, d) => s + d.count, 0) / chartData.length) : 0;
+
+  const emailTrend = computeTrend(chartWeek?.data ?? []);
+  const inboxTrend = computeTrend(insights?.inboxes_per_day ?? []);
 
   const topSenders = stats?.top_sender_domains?.slice(0, 5);
   const maxSenderCount = topSenders?.[0]?.count ?? 1;
@@ -207,13 +209,6 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
   }, [insights?.peak_hours]);
 
   if (isError) return <ErrorState message="Failed to load dashboard" onRetry={() => refetch()} />;
-
-  const tooltipStyle = {
-    borderRadius: 8,
-    border: "1px solid var(--border)",
-    background: "var(--popover)",
-    color: "var(--popover-foreground)",
-  };
 
   return (
     <div className="space-y-6">
@@ -284,9 +279,11 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
           </div>
         </div>
         {/* Supporting metrics — smaller, quieter */}
-        <StatCard icon={InboxIcon} label="Active Inboxes" value={stats?.active_inboxes} loading={isLoading} sub={`${(stats?.total_inboxes_created ?? stats?.total_inboxes ?? 0).toLocaleString()} total created`} />
+        <StatCard icon={InboxIcon} label="Active Inboxes" value={stats?.active_inboxes} loading={isLoading} sub={`${(stats?.total_inboxes_created ?? stats?.total_inboxes ?? 0).toLocaleString()} total created`} trend={inboxTrend} />
         <StatCard icon={Globe} label="Domains" value={stats?.total_domains} loading={isLoading} sub={`${stats?.total_members ?? 0} members · ${stats?.total_teams ?? 0} teams`} link="/domains" />
         <StatCard icon={HardDrive} label="Storage" value={formatBytes(stats?.total_storage_bytes ?? stats?.storage_used_bytes ?? 0)} loading={isLoading} isString sub="All-time usage" />
+        <StatCard icon={Mail} label="Emails Received" value={stats?.total_emails_received ?? stats?.total_emails ?? 0} loading={isLoading} sub="All-time" trend={emailTrend} />
+        <StatCard icon={InboxIcon} label="Inboxes Created" value={stats?.total_inboxes_created ?? stats?.total_inboxes ?? 0} loading={isLoading} sub="All-time" />
       </div>
 
       {/* Charts + sidebar */}
@@ -312,14 +309,14 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
             <CardContent>
               {chartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={280}>
-                  <RechartsAreaChart data={chartData}>
+                  <RechartsBarChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
                     <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(v) => v.slice(5)} stroke="var(--muted-foreground)" />
                     <YAxis tick={{ fontSize: 11 }} allowDecimals={false} stroke="var(--muted-foreground)" />
-                    <Tooltip contentStyle={tooltipStyle} labelFormatter={(v) => `Date: ${v}`} formatter={(v) => [`${Number(v).toLocaleString()}`, "Emails"]} />
+                    <Tooltip content={<ChartTooltip average={chartAvg} unit="emails" labelFormatter={(v) => `Date: ${v}`} />} />
                     <ReferenceLine y={chartAvg} stroke="var(--muted-foreground)" strokeDasharray="6 4" strokeOpacity={0.5} />
-                    <Area type="monotone" dataKey="count" stroke="var(--chart-1)" strokeWidth={2} fill="var(--chart-1)" fillOpacity={0.12} />
-                  </RechartsAreaChart>
+                    <Bar dataKey="count" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
+                  </RechartsBarChart>
                 </ResponsiveContainer>
               ) : (
                 <div className="flex items-center justify-center h-[280px] text-sm font-medium text-muted-foreground">
@@ -352,7 +349,7 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
                     <XAxis dataKey="hour" tick={{ fontSize: 10 }} tickFormatter={formatHour} stroke="var(--muted-foreground)" />
                     <YAxis tick={{ fontSize: 10 }} allowDecimals={false} stroke="var(--muted-foreground)" />
-                    <Tooltip contentStyle={tooltipStyle} labelFormatter={(v) => formatHour(Number(v))} formatter={(v) => [`${Number(v).toLocaleString()}`, "Emails"]} />
+                    <Tooltip content={<ChartTooltip average={peakHour?.count ?? 0} unit="emails" labelFormatter={(v) => formatHour(Number(v))} />} />
                     <Bar dataKey="count" fill="var(--chart-1)" radius={[3, 3, 0, 0]} fillOpacity={0.85} />
                   </RechartsBarChart>
                 </ResponsiveContainer>
@@ -425,60 +422,45 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
 
         {/* Right column */}
         <div className="space-y-4">
-          {/* Weekly summary */}
+          {/* Inbox Activity */}
           <Card className="overflow-hidden">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="h-6 w-6 rounded-md bg-muted flex items-center justify-center">
-                    <Activity className="h-3.5 w-3.5 text-muted-foreground" />
+                    <InboxIcon className="h-3.5 w-3.5 text-muted-foreground" />
                   </div>
-                  <CardTitle className="text-base">This Week</CardTitle>
+                  <CardTitle className="text-base">Inbox Activity</CardTitle>
                 </div>
                 <Badge variant="outline" className="text-[10px]">7 days</Badge>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-xl font-semibold tabular-nums">{weekTotal.toLocaleString()}</span>
-                  <span className="text-xs text-muted-foreground">emails this week</span>
-                </div>
-                {todayDelta !== 0 && (
-                  <div className={`flex items-center gap-1 text-xs font-medium ${todayDelta > 0 ? "text-success" : "text-destructive"}`}>
-                    {todayDelta > 0 ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
-                    {Math.abs(todayDelta)} today
-                  </div>
-                )}
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-xl font-semibold tabular-nums">
+                  {(insights?.inboxes_per_day?.reduce((s, d) => s + d.count, 0) ?? 0).toLocaleString()}
+                </span>
+                <span className="text-xs text-muted-foreground">inboxes created this week</span>
               </div>
-              {chartWeek?.data && chartWeek.data.length > 0 ? (
+              {insights?.inboxes_per_day && insights.inboxes_per_day.length > 0 ? (
                 <ResponsiveContainer width="100%" height={120}>
-                  <RechartsBarChart data={chartWeek.data}>
+                  <RechartsBarChart data={insights.inboxes_per_day}>
                     <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={(v) => {
                       const d = new Date(v);
                       return d.toLocaleDateString(undefined, { weekday: "short" });
                     }} stroke="var(--muted-foreground)" />
-                    <Tooltip contentStyle={tooltipStyle} labelFormatter={(v) => v} formatter={(v) => [`${Number(v).toLocaleString()}`, "Emails"]} />
-                    <Bar dataKey="count" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
+                    <Tooltip content={<ChartTooltip average={Math.round((insights.inboxes_per_day.reduce((s, d) => s + d.count, 0)) / insights.inboxes_per_day.length)} unit="inboxes" labelFormatter={(v) => `${v}`} />} />
+                    <Bar dataKey="count" fill="var(--chart-2)" radius={[4, 4, 0, 0]} />
                   </RechartsBarChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex items-center justify-center h-[120px] text-xs text-muted-foreground">No data</div>
+                <div className="flex items-center justify-center h-[120px] text-xs text-muted-foreground">No inbox data</div>
               )}
-              <div className="grid grid-cols-3 gap-4 pt-3 border-t">
-                <div className="text-center">
-                  <p className="text-lg font-semibold tabular-nums">{todayCount}</p>
-                  <p className="text-[10px] text-muted-foreground">Today</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-lg font-semibold tabular-nums">{yesterdayCount}</p>
-                  <p className="text-[10px] text-muted-foreground">Yesterday</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-lg font-semibold tabular-nums">{Math.round(weekTotal / 7)}</p>
-                  <p className="text-[10px] text-muted-foreground">Daily avg</p>
-                </div>
-              </div>
+              {inboxTrend !== null && (
+                <p className={cn("text-xs font-medium", inboxTrend > 0 ? "text-success" : inboxTrend < 0 ? "text-destructive" : "text-muted-foreground")}>
+                  {inboxTrend > 0 ? "+" : ""}{inboxTrend.toFixed(1)}% vs previous period
+                </p>
+              )}
             </CardContent>
           </Card>
 
@@ -557,7 +539,7 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
 
 /* ── Stat Card (compact, uniform height) ── */
 
-function StatCard({ icon: Icon, label, value, loading, sub, delta, deltaLabel, link, isString }: {
+function StatCard({ icon: Icon, label, value, loading, sub, delta, deltaLabel, link, isString, trend }: {
   icon: typeof Mail;
   label: string;
   value?: number | string;
@@ -567,6 +549,7 @@ function StatCard({ icon: Icon, label, value, loading, sub, delta, deltaLabel, l
   deltaLabel?: string;
   link?: string;
   isString?: boolean;
+  trend?: number | null;
 }) {
   const inner = (
     <div className={cn(
@@ -597,6 +580,12 @@ function StatCard({ icon: Icon, label, value, loading, sub, delta, deltaLabel, l
         ) : link ? (
           <span className="text-[11px] text-primary font-medium">Manage</span>
         ) : null}
+        {!loading && trend !== undefined && trend !== null && (
+          <span className={cn("flex items-center gap-1 text-[11px] font-medium", trend > 0 ? "text-success" : trend < 0 ? "text-destructive" : "text-muted-foreground")}>
+            {trend > 0 ? <ArrowUpRight className="h-3 w-3" /> : trend < 0 ? <ArrowDownRight className="h-3 w-3" /> : null}
+            {trend > 0 ? "+" : ""}{trend.toFixed(1)}%
+          </span>
+        )}
       </div>
     </div>
   );
