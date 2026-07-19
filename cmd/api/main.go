@@ -412,6 +412,7 @@ func main() {
 			r.Patch("/orgs/{orgId}/teams/{teamId}/webhooks/{webhookId}", webhookHandler.Update)
 			r.Delete("/orgs/{orgId}/teams/{teamId}/webhooks/{webhookId}", webhookHandler.Delete)
 			r.Get("/orgs/{orgId}/teams/{teamId}/webhooks/{webhookId}/deliveries", webhookHandler.ListDeliveryLogs)
+			r.Get("/orgs/{orgId}/teams/{teamId}/webhooks/{webhookId}/stats", webhookHandler.WebhookStats)
 
 			// API Keys
 			r.Post("/orgs/{orgId}/teams/{teamId}/api-keys", apikeyHandler.Create)
@@ -426,8 +427,10 @@ func main() {
 			r.Get("/orgs/{orgId}/analytics", analyticsHandler.OrgAnalytics)
 			r.Get("/orgs/{orgId}/analytics/emails-per-day", analyticsHandler.OrgEmailsPerDay)
 			r.Get("/orgs/{orgId}/analytics/insights", analyticsHandler.OrgInsights)
+			r.Get("/orgs/{orgId}/analytics/domain-series", analyticsHandler.OrgDomainTimeSeries)
 			r.Get("/orgs/{orgId}/teams/{teamId}/analytics", analyticsHandler.TeamAnalytics)
 			r.Get("/orgs/{orgId}/teams/{teamId}/analytics/emails-per-day", analyticsHandler.TeamEmailsPerDay)
+			r.Get("/orgs/{orgId}/teams/{teamId}/analytics/insights", analyticsHandler.TeamInsights)
 
 			// Audit
 			r.Get("/orgs/{orgId}/audit", auditHandler.List)

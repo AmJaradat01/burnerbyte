@@ -52,6 +52,19 @@ func NewAdminHandler(analyticsSvc *service.AnalyticsService, orgSvc *service.Org
 }
 
 func (h *AdminHandler) Stats(w http.ResponseWriter, r *http.Request) {
+	// Fast path: try the Redis analytics cache written by the analytics worker.
+	if h.rdb != nil {
+		data, err := h.rdb.Get(r.Context(), "bb:analytics:system_stats").Bytes()
+		if err == nil {
+			var cached domain.SystemStats
+			if json.Unmarshal(data, &cached) == nil {
+				writeJSON(w, http.StatusOK, cached)
+				return
+			}
+		}
+	}
+
+	// Cache miss or error: fall back to DB query.
 	stats, err := h.analyticsSvc.GetSystemStats(r.Context())
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed")
