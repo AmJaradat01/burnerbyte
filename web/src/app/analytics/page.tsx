@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { api } from "@/lib/api";
 import { NoOrgState } from "@/components/no-org-state";
 import { useOrgStore } from "@/stores/org-store";
@@ -10,12 +11,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from "recharts";
 import { ErrorState } from "@/components/error-state";
-import { BarChart3 } from "lucide-react";
+import { BarChart3, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronUp } from "lucide-react";
+import { ChartTooltip } from "./chart-tooltip";
+import { DomainDetailChart } from "./domain-detail-chart";
+
+const StorageTrendChart = dynamic(() => import('./storage-trend-chart'), {
+  ssr: false,
+  loading: () => <Skeleton className="h-[300px] w-full rounded-xl" />,
+});
 
 interface OrgStats {
   total_members: number; total_teams: number; total_domains: number;
   total_inboxes: number; total_emails: number; active_inboxes: number;
   storage_used_bytes: number; top_sender_domains?: { domain: string; count: number }[];
+  total_emails_received: number; total_inboxes_created: number;
+  total_storage_bytes: number;
 }
 interface TeamStats { total_members: number; total_inboxes: number; total_emails: number; active_inboxes: number; }
 interface TimeSeriesPoint { date: string; count: number; }
@@ -23,6 +33,7 @@ interface Insights {
   inboxes_per_day: { date: string; count: number }[];
   peak_hours: { hour: number; count: number }[];
   domain_breakdown: { domain: string; count: number }[];
+  storage_per_day: { date: string; storage_bytes: number }[];
 }
 
 const RANGES = [
@@ -35,6 +46,40 @@ function formatHour(hour: number): string {
   if (hour === 0) return "12am";
   if (hour === 12) return "12pm";
   return hour < 12 ? `${hour}am` : `${hour - 12}pm`;
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  const k = 1024;
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  const index = Math.min(i, units.length - 1);
+  const value = bytes / Math.pow(k, index);
+  return `${value.toFixed(1)} ${units[index]}`;
+}
+
+/**
+ * Computes a trend percentage by splitting time-series data into two halves
+ * and comparing the sum of the second half (recent) to the first half (earlier).
+ * Returns null if insufficient data or if the first half sums to zero.
+ * Result is capped at +/-999%.
+ */
+export function computeTrend(data: { count: number }[]): number | null {
+  if (!data || data.length < 2) return null;
+
+  const midpoint = Math.floor(data.length / 2);
+  const firstHalf = data.slice(0, midpoint);
+  const secondHalf = data.slice(midpoint);
+
+  const previousSum = firstHalf.reduce((sum, point) => sum + point.count, 0);
+  const currentSum = secondHalf.reduce((sum, point) => sum + point.count, 0);
+
+  if (previousSum === 0) return null;
+
+  const trend = ((currentSum - previousSum) / previousSum) * 100;
+
+  // Cap at +/-999%
+  return Math.max(-999, Math.min(999, trend));
 }
 
 export default function AnalyticsPage() {
@@ -83,6 +128,7 @@ export default function AnalyticsPage() {
 
 function OrgAnalytics({ orgId }: { orgId: string }) {
   const [days, setDays] = useState("30");
+  const [expandedDomain, setExpandedDomain] = useState<string | null>(null);
   const { data: stats, isLoading, isError, refetch } = useQuery({
     queryKey: ["analytics-org", orgId],
     queryFn: () => api.get<OrgStats>(`/orgs/${orgId}/analytics`),
@@ -109,9 +155,16 @@ function OrgAnalytics({ orgId }: { orgId: string }) {
   return (
     <div className="space-y-6">
       {stats && (
-        <p className="text-sm text-muted-foreground tabular-nums">
-          {stats.total_emails.toLocaleString()} emails · {stats.active_inboxes.toLocaleString()} inboxes · {stats.total_domains.toLocaleString()} domains this period
-        </p>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+          <MetricCard label="Total Emails" value={stats.total_emails.toLocaleString()} trend={computeTrend(timeSeries?.data ?? [])} />
+          <MetricCard label="Total Inboxes" value={stats.total_inboxes.toLocaleString()} trend={computeTrend(insights?.inboxes_per_day ?? [])} />
+          <MetricCard label="Total Domains" value={stats.total_domains.toLocaleString()} trend={null} />
+          <MetricCard label="Storage Used" value={`${formatBytes(stats.storage_used_bytes)} / ${formatBytes(stats.total_storage_bytes)}`} trend={null} />
+          <MetricCard label="Members" value={stats.total_members.toLocaleString()} trend={null} />
+          <MetricCard label="Teams" value={stats.total_teams.toLocaleString()} trend={null} />
+          <MetricCard label="Emails Received" value={stats.total_emails_received.toLocaleString()} trend={null} />
+          <MetricCard label="Inboxes Created" value={stats.total_inboxes_created.toLocaleString()} trend={null} />
+        </div>
       )}
 
       <div className="flex items-center justify-between">
@@ -140,22 +193,32 @@ function OrgAnalytics({ orgId }: { orgId: string }) {
                   {insights.inboxes_per_day.length === 0 ? (
                     <p className="py-12 text-center text-sm text-muted-foreground">No inbox data for this period.</p>
                   ) : (
-                    <ResponsiveContainer width="100%" height={300}>
-                      <BarChart data={insights.inboxes_per_day}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
-                        <XAxis dataKey="date" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickFormatter={(v) => v.slice(5)} />
-                        <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} allowDecimals={false} />
-                        <Tooltip
-                          contentStyle={{ backgroundColor: 'var(--popover)', border: '1px solid var(--border)', color: 'var(--popover-foreground)' }}
-                          labelFormatter={(v) => `Date: ${v}`}
-                          formatter={(v) => [`${Number(v).toLocaleString()}`, "Inboxes"]}
-                        />
-                        <Bar dataKey="count" fill="var(--chart-2)" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                    (() => {
+                      const inboxAvg = Math.round(insights.inboxes_per_day.reduce((s, d) => s + d.count, 0) / insights.inboxes_per_day.length);
+                      return (
+                        <ResponsiveContainer width="100%" height={300}>
+                          <BarChart data={insights.inboxes_per_day}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+                            <XAxis dataKey="date" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickFormatter={(v) => v.slice(5)} />
+                            <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} allowDecimals={false} />
+                            <Tooltip content={<ChartTooltip average={inboxAvg} unit="inboxes" labelFormatter={(v) => `Date: ${v}`} />} />
+                            <Bar dataKey="count" fill="var(--chart-2)" radius={[4, 4, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      );
+                    })()
                   )}
                 </CardContent>
               </Card>
+            )}
+          </div>
+
+          {/* Storage trend */}
+          <div>
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">Storage Trend</h3>
+            {insightsLoading && <Skeleton className="h-[300px] w-full rounded-xl" />}
+            {!insightsLoading && (
+              <StorageTrendChart data={insights?.storage_per_day ?? []} />
             )}
           </div>
         </div>
@@ -172,19 +235,20 @@ function OrgAnalytics({ orgId }: { orgId: string }) {
                   {insights.peak_hours.length === 0 ? (
                     <p className="py-12 text-center text-sm text-muted-foreground">No activity data for this period.</p>
                   ) : (
-                    <ResponsiveContainer width="100%" height={300}>
-                      <BarChart data={insights.peak_hours}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
-                        <XAxis dataKey="hour" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickFormatter={formatHour} />
-                        <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} allowDecimals={false} />
-                        <Tooltip
-                          contentStyle={{ backgroundColor: 'var(--popover)', border: '1px solid var(--border)', color: 'var(--popover-foreground)' }}
-                          labelFormatter={(v) => formatHour(Number(v))}
-                          formatter={(v) => [`${Number(v).toLocaleString()}`, "Emails"]}
-                        />
-                        <Bar dataKey="count" fill="var(--chart-3)" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                    (() => {
+                      const hourAvg = Math.round(insights.peak_hours.reduce((s, d) => s + d.count, 0) / insights.peak_hours.length);
+                      return (
+                        <ResponsiveContainer width="100%" height={300}>
+                          <BarChart data={insights.peak_hours}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+                            <XAxis dataKey="hour" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickFormatter={formatHour} />
+                            <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} allowDecimals={false} />
+                            <Tooltip content={<ChartTooltip average={hourAvg} unit="emails" labelFormatter={(v) => formatHour(Number(v))} />} />
+                            <Bar dataKey="count" fill="var(--chart-3)" radius={[4, 4, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      );
+                    })()
                   )}
                 </CardContent>
               </Card>
@@ -198,16 +262,33 @@ function OrgAnalytics({ orgId }: { orgId: string }) {
             {insights?.domain_breakdown && insights.domain_breakdown.length > 0 && (
               <Card>
                 <CardContent className="pt-5 pb-4">
-                  <div className="space-y-3">
+                  <div className="space-y-1">
                     {insights.domain_breakdown.map((d) => {
                       const pct = totalDomainEmails > 0 ? (d.count / totalDomainEmails) * 100 : 0;
+                      const isExpanded = expandedDomain === d.domain;
                       return (
-                        <div key={d.domain} className="flex items-center gap-3">
-                          <div className="flex-1 min-w-0">
-                            <span className="text-sm font-mono truncate block">{d.domain}</span>
-                          </div>
-                          <span className="text-sm text-muted-foreground tabular-nums shrink-0">{d.count.toLocaleString()}</span>
-                          <span className="text-xs text-muted-foreground/70 tabular-nums shrink-0 w-12 text-right">{pct.toFixed(1)}%</span>
+                        <div key={d.domain}>
+                          <button
+                            type="button"
+                            onClick={() => setExpandedDomain(isExpanded ? null : d.domain)}
+                            className="flex items-center gap-3 w-full text-left hover:bg-muted/40 -mx-2 px-2 py-1.5 rounded-md transition-colors"
+                            aria-expanded={isExpanded}
+                            aria-label={`${d.domain}: ${d.count.toLocaleString()} emails, ${pct.toFixed(1)}%`}
+                          >
+                            {isExpanded ? (
+                              <ChevronUp className="h-3.5 w-3.5 text-muted-foreground shrink-0" aria-hidden="true" />
+                            ) : (
+                              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" aria-hidden="true" />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <span className="text-sm font-mono truncate block">{d.domain}</span>
+                            </div>
+                            <span className="text-sm text-muted-foreground tabular-nums shrink-0">{d.count.toLocaleString()}</span>
+                            <span className="text-xs text-muted-foreground/70 tabular-nums shrink-0 w-12 text-right">{pct.toFixed(1)}%</span>
+                          </button>
+                          {isExpanded && (
+                            <DomainDetailChart orgId={orgId} domain={d.domain} days={days} />
+                          )}
                         </div>
                       );
                     })}
@@ -248,7 +329,7 @@ function OrgAnalytics({ orgId }: { orgId: string }) {
   );
 }
 
-function TeamAnalytics({ orgId, teamId }: { orgId: string; teamId: string }) {
+export function TeamAnalytics({ orgId, teamId }: { orgId: string; teamId: string }) {
   const [days, setDays] = useState("30");
   const { data: stats, isLoading, isError, refetch } = useQuery({
     queryKey: ["analytics-team", teamId],
@@ -258,6 +339,10 @@ function TeamAnalytics({ orgId, teamId }: { orgId: string; teamId: string }) {
     queryKey: ["analytics-team-ts", teamId, days],
     queryFn: () => api.get<{ data: TimeSeriesPoint[] }>(`/orgs/${orgId}/teams/${teamId}/analytics/emails-per-day`, { days }),
   });
+  const { data: teamInsights, isLoading: teamInsightsLoading } = useQuery({
+    queryKey: ["analytics-team-insights", teamId, days],
+    queryFn: () => api.get<{ inboxes_per_day: { date: string; count: number }[]; storage_per_day: { date: string; storage_bytes: number }[] }>(`/orgs/${orgId}/teams/${teamId}/analytics/insights`, { days }),
+  });
 
   if (isError) return <ErrorState message="Failed to load team analytics" onRetry={() => refetch()} />;
   if (isLoading) return <AnalyticsSkeleton columns={1} />;
@@ -265,17 +350,72 @@ function TeamAnalytics({ orgId, teamId }: { orgId: string; teamId: string }) {
   return (
     <div className="space-y-6">
       {stats && (
-        <p className="text-sm text-muted-foreground tabular-nums">
-          {stats.total_emails.toLocaleString()} emails · {stats.active_inboxes.toLocaleString()} inboxes · {stats.total_members.toLocaleString()} members this period
-        </p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <MetricCard label="Total Emails" value={stats.total_emails.toLocaleString()} trend={computeTrend(timeSeries?.data ?? [])} />
+          <MetricCard label="Total Inboxes" value={stats.total_inboxes.toLocaleString()} trend={computeTrend(teamInsights?.inboxes_per_day ?? [])} />
+          <MetricCard label="Active Inboxes" value={stats.active_inboxes.toLocaleString()} trend={null} />
+          <MetricCard label="Members" value={stats.total_members.toLocaleString()} trend={null} />
+        </div>
       )}
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold tracking-tight">Emails per Day</h2>
+        <h2 className="text-base font-semibold tracking-tight">Overview</h2>
         <DateRangeSelector value={days} onChange={setDays} />
       </div>
-      {tsError && <ErrorState message="Failed to load email trends" />}
-      {tsLoading && <Skeleton className="h-[300px] w-full rounded-xl" />}
-      {timeSeries?.data && <EmailChart data={timeSeries.data} />}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left column */}
+        <div className="space-y-6">
+          {/* Emails per day */}
+          <div>
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">Emails per Day</h3>
+            {tsError && <ErrorState message="Failed to load email trends" />}
+            {tsLoading && <Skeleton className="h-[300px] w-full rounded-xl" />}
+            {timeSeries?.data && <EmailChart data={timeSeries.data} />}
+          </div>
+
+          {/* Inbox creation trend */}
+          <div>
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">Inbox Creation Trend</h3>
+            {teamInsightsLoading && <Skeleton className="h-[300px] w-full rounded-xl" />}
+            {teamInsights?.inboxes_per_day && (
+              <Card>
+                <CardContent className="pt-6">
+                  {teamInsights.inboxes_per_day.length === 0 ? (
+                    <p className="py-12 text-center text-sm text-muted-foreground">No inbox data for this period.</p>
+                  ) : (
+                    (() => {
+                      const inboxAvg = Math.round(teamInsights.inboxes_per_day.reduce((s, d) => s + d.count, 0) / teamInsights.inboxes_per_day.length);
+                      return (
+                        <ResponsiveContainer width="100%" height={300}>
+                          <BarChart data={teamInsights.inboxes_per_day}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+                            <XAxis dataKey="date" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickFormatter={(v) => v.slice(5)} />
+                            <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} allowDecimals={false} />
+                            <Tooltip content={<ChartTooltip average={inboxAvg} unit="inboxes" labelFormatter={(v) => `Date: ${v}`} />} />
+                            <Bar dataKey="count" fill="var(--chart-2)" radius={[4, 4, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      );
+                    })()
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
+
+        {/* Right column */}
+        <div className="space-y-6">
+          {/* Storage trend */}
+          <div>
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">Storage Trend</h3>
+            {teamInsightsLoading && <Skeleton className="h-[300px] w-full rounded-xl" />}
+            {!teamInsightsLoading && (
+              <StorageTrendChart data={teamInsights?.storage_per_day ?? []} />
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -321,16 +461,39 @@ function EmailChart({ data, average }: { data: TimeSeriesPoint[]; average?: numb
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
             <XAxis dataKey="date" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickFormatter={(v) => v.slice(5)} />
             <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} allowDecimals={false} />
-            <Tooltip
-              contentStyle={{ backgroundColor: 'var(--popover)', border: '1px solid var(--border)', color: 'var(--popover-foreground)' }}
-              labelFormatter={(v) => `Date: ${v}`}
-              formatter={(v) => [`${Number(v).toLocaleString()} (Avg: ${avg})`, "Emails"]}
-            />
+            <Tooltip content={<ChartTooltip average={avg} unit="emails" labelFormatter={(v) => `Date: ${v}`} />} />
             <ReferenceLine y={avg} stroke="var(--muted-foreground)" strokeDasharray="6 4" label={{ value: `Avg: ${avg}`, position: "insideTopRight", fontSize: 11, fill: "var(--muted-foreground)" }} />
             <Bar dataKey="count" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>
     </Card>
+  );
+}
+
+function MetricCard({ label, value, trend }: { label: string; value: string; trend: number | null }) {
+  return (
+    <div className="border-t pt-4 space-y-1">
+      <span className="text-label text-muted-foreground">{label}</span>
+      <p className="text-lg font-semibold tabular-nums">{value}</p>
+      <div className="flex items-center gap-1">
+        {trend === null ? (
+          <span className="flex items-center gap-1 text-muted-foreground">
+            <Minus className="h-3 w-3" aria-hidden="true" />
+            <span className="text-xs tabular-nums">--</span>
+          </span>
+        ) : trend > 0 ? (
+          <span className="flex items-center gap-1 text-[oklch(0.45_0.15_145)]">
+            <TrendingUp className="h-3 w-3" aria-hidden="true" />
+            <span className="text-xs tabular-nums">+{Math.min(trend, 999).toFixed(1)}%</span>
+          </span>
+        ) : (
+          <span className="flex items-center gap-1 text-[oklch(0.45_0.15_25)]">
+            <TrendingDown className="h-3 w-3" aria-hidden="true" />
+            <span className="text-xs tabular-nums">{Math.max(trend, -999).toFixed(1)}%</span>
+          </span>
+        )}
+      </div>
+    </div>
   );
 }

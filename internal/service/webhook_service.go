@@ -103,6 +103,10 @@ func (s *WebhookService) ListDeliveryLogs(ctx context.Context, teamID, webhookID
 	return s.webhookRepo.ListDeliveryLogs(ctx, webhookID, page, perPage)
 }
 
+func (s *WebhookService) GetWebhookStats(ctx context.Context, webhookID uuid.UUID) (*domain.WebhookStats, error) {
+	return s.webhookRepo.GetWebhookStats(ctx, webhookID)
+}
+
 // validateWebhookURL checks that a webhook URL is syntactically valid and
 // does not point to private/internal IP ranges (SSRF prevention).
 func validateWebhookURL(rawURL string) error {
