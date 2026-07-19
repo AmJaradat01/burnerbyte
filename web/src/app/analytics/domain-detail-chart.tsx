@@ -18,7 +18,7 @@ interface DomainDetailChartProps {
 }
 
 export function DomainDetailChart({ orgId, domain, days }: DomainDetailChartProps) {
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, isFetching } = useQuery({
     queryKey: ["analytics-domain-series", orgId, domain, days],
     queryFn: () =>
       api.get<{ data: TimeSeriesPoint[]; domain: string }>(
@@ -52,7 +52,7 @@ export function DomainDetailChart({ orgId, domain, days }: DomainDetailChartProp
   );
 
   return (
-    <div className="mt-2 rounded-lg border bg-muted/20 p-3">
+    <div className={`mt-2 rounded-lg border bg-muted/20 p-3 transition-opacity ${isFetching && !isLoading ? 'opacity-50' : ''}`}>
       <ResponsiveContainer width="100%" height={150}>
         <BarChart data={data.data}>
           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />

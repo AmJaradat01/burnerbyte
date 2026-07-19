@@ -57,6 +57,10 @@ func (s *AnalyticsService) GetOrgDomainTimeSeries(ctx context.Context, orgID uui
 	return s.repo.GetOrgDomainTimeSeries(ctx, orgID, domainName, days...)
 }
 
+func (s *AnalyticsService) OrgHasDomain(ctx context.Context, orgID uuid.UUID, domainName string) (bool, error) {
+	return s.repo.OrgHasDomain(ctx, orgID, domainName)
+}
+
 func (s *AnalyticsService) GetTeamInboxesPerDay(ctx context.Context, teamID uuid.UUID, days ...int) ([]domain.TimeSeriesPoint, error) {
 	return s.repo.GetTeamInboxesPerDay(ctx, teamID, days...)
 }
