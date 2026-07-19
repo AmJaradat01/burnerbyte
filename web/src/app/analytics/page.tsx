@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from "recharts";
 import { ErrorState } from "@/components/error-state";
-import { BarChart3, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronUp } from "lucide-react";
+import { BarChart3, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronUp, Globe } from "lucide-react";
 import { ChartTooltip } from "./chart-tooltip";
 import { DomainDetailChart } from "./domain-detail-chart";
 
@@ -155,7 +155,7 @@ function OrgAnalytics({ orgId }: { orgId: string }) {
   return (
     <div className="space-y-6">
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-4">
           <MetricCard label="Total Emails" value={stats.total_emails.toLocaleString()} trend={computeTrend(timeSeries?.data ?? [])} />
           <MetricCard label="Total Inboxes" value={stats.total_inboxes.toLocaleString()} trend={computeTrend(insights?.inboxes_per_day ?? [])} />
           <MetricCard label="Total Domains" value={stats.total_domains.toLocaleString()} trend={null} />
@@ -259,42 +259,52 @@ function OrgAnalytics({ orgId }: { orgId: string }) {
           <div>
             <h3 className="text-sm font-medium text-muted-foreground mb-2">Emails by Domain</h3>
             {insightsLoading && <Skeleton className="h-[120px] w-full rounded-xl" />}
-            {insights?.domain_breakdown && insights.domain_breakdown.length > 0 && (
-              <Card>
-                <CardContent className="pt-5 pb-4">
-                  <div className="space-y-1">
-                    {insights.domain_breakdown.map((d) => {
-                      const pct = totalDomainEmails > 0 ? (d.count / totalDomainEmails) * 100 : 0;
-                      const isExpanded = expandedDomain === d.domain;
-                      return (
-                        <div key={d.domain}>
-                          <button
-                            type="button"
-                            onClick={() => setExpandedDomain(isExpanded ? null : d.domain)}
-                            className="flex items-center gap-3 w-full text-left hover:bg-muted/40 -mx-2 px-2 py-1.5 rounded-md transition-colors"
-                            aria-expanded={isExpanded}
-                            aria-label={`${d.domain}: ${d.count.toLocaleString()} emails, ${pct.toFixed(1)}%`}
-                          >
-                            {isExpanded ? (
-                              <ChevronUp className="h-3.5 w-3.5 text-muted-foreground shrink-0" aria-hidden="true" />
-                            ) : (
-                              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" aria-hidden="true" />
+            {insights?.domain_breakdown && (
+              insights.domain_breakdown.length > 0 ? (
+                <Card>
+                  <CardContent className="pt-5 pb-4">
+                    <div className="space-y-1">
+                      {insights.domain_breakdown.map((d) => {
+                        const pct = totalDomainEmails > 0 ? (d.count / totalDomainEmails) * 100 : 0;
+                        const isExpanded = expandedDomain === d.domain;
+                        return (
+                          <div key={d.domain}>
+                            <button
+                              type="button"
+                              onClick={() => setExpandedDomain(isExpanded ? null : d.domain)}
+                              className="flex items-center gap-3 w-full text-left hover:bg-muted/40 -mx-2 px-2 py-1.5 rounded-md transition-colors"
+                              aria-expanded={isExpanded}
+                              aria-label={`${d.domain}: ${d.count.toLocaleString()} emails, ${pct.toFixed(1)}%`}
+                            >
+                              {isExpanded ? (
+                                <ChevronUp className="h-3.5 w-3.5 text-muted-foreground shrink-0" aria-hidden="true" />
+                              ) : (
+                                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" aria-hidden="true" />
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <span className="text-sm font-mono truncate block">{d.domain}</span>
+                              </div>
+                              <span className="text-sm text-muted-foreground tabular-nums shrink-0">{d.count.toLocaleString()}</span>
+                              <span className="text-xs text-muted-foreground/70 tabular-nums shrink-0 w-12 text-right">{pct.toFixed(1)}%</span>
+                            </button>
+                            {isExpanded && (
+                              <DomainDetailChart orgId={orgId} domain={d.domain} days={days} />
                             )}
-                            <div className="flex-1 min-w-0">
-                              <span className="text-sm font-mono truncate block">{d.domain}</span>
-                            </div>
-                            <span className="text-sm text-muted-foreground tabular-nums shrink-0">{d.count.toLocaleString()}</span>
-                            <span className="text-xs text-muted-foreground/70 tabular-nums shrink-0 w-12 text-right">{pct.toFixed(1)}%</span>
-                          </button>
-                          {isExpanded && (
-                            <DomainDetailChart orgId={orgId} domain={d.domain} days={days} />
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card>
+                  <CardContent className="py-16 flex flex-col items-center justify-center text-center">
+                    <Globe className="h-8 w-8 text-muted-foreground mb-3" aria-hidden="true" />
+                    <p className="text-sm font-medium text-muted-foreground">No domain data</p>
+                    <p className="text-xs text-muted-foreground/70 mt-1">Emails will appear here once your domains receive traffic.</p>
+                  </CardContent>
+                </Card>
+              )
             )}
           </div>
 
