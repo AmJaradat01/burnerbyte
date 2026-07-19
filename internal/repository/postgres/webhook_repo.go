@@ -177,3 +177,25 @@ func (r *WebhookRepo) ResetFailureCount(ctx context.Context, id uuid.UUID) error
 	_, err := r.db.Exec(ctx, `UPDATE webhooks SET failure_count = 0 WHERE id = $1`, id)
 	return err
 }
+
+func (r *WebhookRepo) GetWebhookStats(ctx context.Context, webhookID uuid.UUID) (*domain.WebhookStats, error) {
+	stats := &domain.WebhookStats{}
+	var lastDelivery *string
+	err := r.db.QueryRow(ctx,
+		`SELECT
+			COUNT(*) AS total,
+			COUNT(*) FILTER (WHERE success = TRUE) AS successes,
+			COUNT(*) FILTER (WHERE success = FALSE) AS failures,
+			CASE WHEN COUNT(*) > 0 THEN ROUND(COUNT(*) FILTER (WHERE success = TRUE)::numeric / COUNT(*)::numeric * 100, 1) ELSE 0 END AS success_rate,
+			COALESCE(AVG(response_time_ms) FILTER (WHERE response_time_ms IS NOT NULL), 0) AS avg_response_time,
+			MAX(created_at)::text AS last_delivery
+		 FROM webhook_delivery_logs WHERE webhook_id = $1`, webhookID).
+		Scan(&stats.TotalDeliveries, &stats.SuccessCount, &stats.FailureCount, &stats.SuccessRate, &stats.AvgResponseTimeMs, &lastDelivery)
+	if err != nil {
+		return stats, nil
+	}
+	if lastDelivery != nil && *lastDelivery != "" {
+		stats.LastDeliveryAt = lastDelivery
+	}
+	return stats, nil
+}
