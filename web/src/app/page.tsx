@@ -233,11 +233,20 @@ function HomePage() {
                   <button className="ml-auto text-xs text-muted-foreground hover:text-foreground transition-colors duration-150" onClick={() => setSelectedIds(new Set())}>Clear</button>
                 </div>
               )}
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {data?.data?.map((inbox) => (
-                  <InboxCard key={inbox.id} inbox={inbox} onExtend={() => extend.mutate(inbox.id)} onDelete={() => remove.mutate(inbox.id)} selected={selectedIds.has(inbox.id)} onToggleSelect={() => toggleSelect(inbox.id)} />
-                ))}
-              </div>
+              {/* Compact row list for 7+ inboxes; card grid for fewer */}
+              {(data?.data?.length ?? 0) >= 7 ? (
+                <div className="rounded-xl border divide-y">
+                  {data?.data?.map((inbox) => (
+                    <InboxRow key={inbox.id} inbox={inbox} onExtend={() => extend.mutate(inbox.id)} onDelete={() => remove.mutate(inbox.id)} selected={selectedIds.has(inbox.id)} onToggleSelect={() => toggleSelect(inbox.id)} />
+                  ))}
+                </div>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {data?.data?.map((inbox) => (
+                    <InboxCard key={inbox.id} inbox={inbox} onExtend={() => extend.mutate(inbox.id)} onDelete={() => remove.mutate(inbox.id)} selected={selectedIds.has(inbox.id)} onToggleSelect={() => toggleSelect(inbox.id)} />
+                  ))}
+                </div>
+              )}
               {data && data.total_pages > 1 && (
                 <div className="mt-4">
                   <Pagination page={page} totalPages={data.total_pages} onPageChange={setPage} />
@@ -263,10 +272,11 @@ function randomLocal(len: number): string {
 }
 
 /** Shows a cycling random string preview (e.g. "a7k2x9") that updates every
- *  2.5 seconds. Respects prefers-reduced-motion (shows static text instead).
- *  When the user has typed an alias, shows that instead. */
+ *  2.5 seconds with a smooth entrance animation. Respects prefers-reduced-motion
+ *  (shows static text instead). When the user has typed an alias, shows that instead. */
 function AnimatedLocalPart({ alias, fallbackText }: { alias: string; fallbackText: string }) {
   const [preview, setPreview] = useState(() => randomLocal(6));
+  const [animKey, setAnimKey] = useState(0);
   const [reduced, setReduced] = useState(false);
 
   useEffect(() => {
@@ -279,16 +289,22 @@ function AnimatedLocalPart({ alias, fallbackText }: { alias: string; fallbackTex
 
   useEffect(() => {
     if (reduced || alias) return;
-    const iv = setInterval(() => setPreview(randomLocal(6)), 2500);
+    const iv = setInterval(() => {
+      setPreview(randomLocal(6));
+      setAnimKey((k) => k + 1);
+    }, 2500);
     return () => clearInterval(iv);
   }, [reduced, alias]);
 
   if (alias) {
-    return <span className="font-mono text-xl sm:text-2xl font-bold text-foreground/60">{alias}</span>;
+    return <span className="font-mono text-xl sm:text-2xl font-bold text-foreground">{alias}</span>;
   }
 
   return (
-    <span className="font-mono text-xl sm:text-2xl font-bold text-muted-foreground/40 transition-opacity duration-300">
+    <span
+      key={animKey}
+      className="font-mono text-xl sm:text-2xl font-bold text-muted-foreground/50 local-part-enter inline-block"
+    >
       {reduced ? fallbackText : preview}
     </span>
   );
@@ -484,12 +500,19 @@ function QuickCreateCard() {
         <div className="inline-flex items-center gap-2 rounded-2xl border border-border/80 bg-card px-5 py-3 sm:px-6 sm:py-3.5 max-w-full shadow-sm">
           <Mail className="h-5 w-5 text-muted-foreground shrink-0" />
           {showAdvanced ? (
-            <Input
-              value={alias}
-              onChange={(e) => setAlias(e.target.value)}
-              placeholder="custom"
-              className="h-auto border-0 bg-transparent p-0 font-mono text-xl sm:text-2xl font-bold shadow-none placeholder:text-muted-foreground/30 w-24 sm:w-32 focus-visible:ring-0"
-            />
+            <div className="relative">
+              <Input
+                value={alias}
+                onChange={(e) => setAlias(e.target.value)}
+                placeholder="custom"
+                autoFocus
+                className="h-auto border-0 bg-transparent p-0 font-mono text-xl sm:text-2xl font-bold shadow-none placeholder:text-muted-foreground/40 w-28 sm:w-36 focus-visible:ring-0"
+                aria-label="Custom email alias"
+              />
+              {!alias && (
+                <span className="absolute bottom-0 left-0 right-0 h-[2px] rounded-full bg-primary/40 animate-in fade-in duration-200" />
+              )}
+            </div>
           ) : (
             <AnimatedLocalPart alias={alias} fallbackText={t("randomPlaceholder")} />
           )}
@@ -569,6 +592,13 @@ function QuickCreateCard() {
           )}
         </div>
       )}
+
+      {/* Keyboard shortcut hint — reduces perceived effort for power users */}
+      {!showAdvanced && ttlPreset !== "custom" && (
+        <p className="text-[10px] text-muted-foreground/60 hidden sm:block">
+          Press <kbd className="inline-flex items-center justify-center h-4 min-w-[1rem] px-1 rounded border border-border/60 bg-muted/50 font-mono text-[9px] font-medium">N</kbd> to generate instantly
+        </p>
+      )}
     </div>
   );
 }
@@ -606,18 +636,17 @@ function InboxCard({ inbox, onExtend, onDelete, selected, onToggleSelect }: { in
   return (
     <Card
       className={cn(
-        "transition-[color,box-shadow,border-color] duration-150 hover:border-primary/30 hover:shadow-md cursor-pointer group",
+        "transition-[color,box-shadow,border-color] duration-150 hover:border-primary/30 hover:shadow-md cursor-pointer group flex flex-col",
         !inbox.is_active && "opacity-50 border-dashed",
         expiringSoon && "border-warning/40",
-        isEmpty && inbox.is_active && "border-dashed border-border/70",
         hasUnread && "border-primary/20",
         selected && "ring-2 ring-primary/30 border-primary/30",
       )}
       onClick={() => router.push(`/inboxes/${inbox.id}`)}
       onMouseEnter={() => router.prefetch(`/inboxes/${inbox.id}`)}
     >
-      <CardContent className="pt-4 pb-3 space-y-2.5">
-        {/* Address */}
+      <CardContent className="pt-4 pb-3 flex flex-col flex-1 gap-2.5">
+        {/* Address — copy-first: the address itself is the primary copy target */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2.5 min-w-0">
             {onToggleSelect && (
@@ -630,65 +659,75 @@ function InboxCard({ inbox, onExtend, onDelete, selected, onToggleSelect }: { in
                 aria-label={`Select ${addr}`}
               />
             )}
-            <div className={cn(
-              "h-10 w-10 rounded-lg flex items-center justify-center shrink-0",
-              hasUnread ? "bg-primary/10" : isEmpty ? "bg-muted/60" : "bg-muted",
-            )}>
-              <Mail className={cn(
-                "h-5 w-5",
-                hasUnread ? "text-primary" : "text-muted-foreground",
-              )} />
-            </div>
-            <div className="min-w-0">
-              <p className="font-mono text-sm font-medium truncate group-hover:text-primary transition-colors duration-150">
-                <span>{localPart}</span>
-                <span className="text-muted-foreground">@</span>
-                <span className="text-primary/80">{domainPart}</span>
-              </p>
-              {isEmpty && inbox.is_active && (
-                <p className="text-[10px] text-muted-foreground/70 mt-0.5">Waiting for mail</p>
+            <button
+              onClick={copyAddress}
+              className={cn(
+                "flex items-center gap-2 min-w-0 rounded-lg px-2 py-1.5 -mx-2 -my-1 transition-all duration-150",
+                "hover:bg-primary/5 active:scale-[0.98]",
+                copied && "bg-success/5",
               )}
-            </div>
+              aria-label={`Copy ${addr}`}
+            >
+              <div className={cn(
+                "h-8 w-8 rounded-md flex items-center justify-center shrink-0 transition-colors duration-150 relative",
+                copied ? "bg-success/10" : hasUnread ? "bg-primary/10" : "bg-muted",
+              )}>
+                {copied ? (
+                  <Check className="h-4 w-4 text-success" />
+                ) : (
+                  <>
+                    <Copy className={cn("h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity duration-150 absolute", hasUnread ? "text-primary" : "text-muted-foreground")} />
+                    <Mail className={cn("h-4 w-4 group-hover:opacity-0 transition-opacity duration-150", hasUnread ? "text-primary" : "text-muted-foreground")} />
+                  </>
+                )}
+              </div>
+              <div className="min-w-0 text-left">
+                <p className="font-mono text-sm font-medium truncate group-hover:text-primary transition-colors duration-150">
+                  <span>{localPart}</span>
+                  <span className="text-muted-foreground">@</span>
+                  <span className="text-primary/80">{domainPart}</span>
+                </p>
+                <p className="text-[10px] text-muted-foreground/70 mt-0.5">
+                  {copied ? tc("copied") : isEmpty && inbox.is_active ? "Waiting for mail" : !isEmpty ? `${inbox.email_count} email${inbox.email_count === 1 ? "" : "s"}` : "Expired"}
+                </p>
+              </div>
+            </button>
           </div>
           {hasUnread && (
             <Badge className="shrink-0 text-[10px] px-1.5 py-0 animate-in fade-in">{inbox.unread_count}</Badge>
           )}
         </div>
 
-        {/* Stats row */}
-        <div className="flex items-center gap-3 text-xs text-muted-foreground tabular-nums">
-          {!isEmpty && (
-            <span className="flex items-center gap-1">
-              <Mail className="h-3 w-3" /> {inbox.email_count}
+        {/* Timer + progress — pushed to bottom via flex-1 on parent */}
+        <div className="mt-auto space-y-1.5">
+          <div className="flex items-center gap-3 text-xs text-muted-foreground tabular-nums">
+            <span className={cn("flex items-center gap-1 ml-auto", expiringSoon && "text-warning font-medium")}>
+              <Clock className="h-3 w-3" />
+              <ExpiryLabel expiresAt={inbox.expires_at} isActive={inbox.is_active} totalTtl={inbox.original_ttl} />
             </span>
+          </div>
+
+          {/* Timer progress bar */}
+          {inbox.is_active && (
+            <div className="h-1 rounded-full bg-muted overflow-hidden">
+              <div
+                className={cn("h-full rounded-full transition-all", progressPct > 80 ? "bg-warning" : "bg-primary/40")}
+                style={{ width: `${100 - progressPct}%` }}
+              />
+            </div>
           )}
-          <span className={cn("flex items-center gap-1", isEmpty ? "" : "ml-auto", expiringSoon && "text-warning font-medium")}>
-            <Clock className="h-3 w-3" />
-            <ExpiryLabel expiresAt={inbox.expires_at} isActive={inbox.is_active} totalTtl={inbox.original_ttl} />
-          </span>
         </div>
 
-        {/* Timer progress bar */}
-        {inbox.is_active && (
-          <div className="h-1 rounded-full bg-muted overflow-hidden -mx-1">
-            <div
-              className={cn("h-full rounded-full transition-all", progressPct > 80 ? "bg-warning" : "bg-primary/40")}
-              style={{ width: `${100 - progressPct}%` }}
-            />
-          </div>
-        )}
-
-        {/* Actions */}
-        <div className="flex items-center gap-1 pt-0.5 border-t" onClick={(e) => e.stopPropagation()}>
-          <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs flex-1" onClick={copyAddress}>
-            {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-            {copied ? tc("copied") : tc("copy")}
-          </Button>
+        {/* Actions — streamlined, copy removed since address is now the copy target */}
+        <div className="flex items-center gap-1 pt-1 border-t" onClick={(e) => e.stopPropagation()}>
           {inbox.is_active && (
             <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs flex-1" onClick={(e) => { e.stopPropagation(); onExtend(); }}>
               <Timer className="h-3 w-3" /> {t("renew")}{inbox.original_ttl ? ` (${formatTtlLabel(inbox.original_ttl)})` : ""}
             </Button>
           )}
+          <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs flex-1" onClick={(e) => { e.stopPropagation(); router.push(`/inboxes/${inbox.id}`); }}>
+            <ExternalLink className="h-3 w-3" /> Open
+          </Button>
           <ConfirmDialog
             trigger={
               <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:text-destructive" aria-label="Delete inbox">
@@ -702,6 +741,120 @@ function InboxCard({ inbox, onExtend, onDelete, selected, onToggleSelect }: { in
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+/* ── Inbox row (compact list view for 7+ inboxes) ── */
+
+function InboxRow({ inbox, onExtend, onDelete, selected, onToggleSelect }: { inbox: Inbox; onExtend: () => void; onDelete: () => void; selected?: boolean; onToggleSelect?: () => void }) {
+  const tc = useTranslations("common");
+  const t = useTranslations("home");
+  const router = useRouter();
+  const [copied, setCopied] = useState(false);
+
+  const addr = inbox.full_address || inbox.address;
+  const [localPart, domainPart] = addr.split("@");
+  const hasUnread = (inbox.unread_count ?? 0) > 0;
+  // eslint-disable-next-line react-hooks/purity
+  const expiringSoon = inbox.is_active && (new Date(inbox.expires_at).getTime() - Date.now()) < 10 * 60 * 1000;
+
+  const totalMs = new Date(inbox.expires_at).getTime() - new Date(inbox.created_at).getTime();
+  // eslint-disable-next-line react-hooks/purity
+  const elapsedMs = Date.now() - new Date(inbox.created_at).getTime();
+  const progressPct = inbox.is_active ? Math.min(Math.max((elapsedMs / totalMs) * 100, 0), 100) : 100;
+
+  const copyAddress = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    copyToClipboard(addr);
+    setCopied(true);
+    toast.success(tc("copied"));
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-3 px-4 py-3 transition-colors duration-150 cursor-pointer group",
+        "hover:bg-muted/40",
+        !inbox.is_active && "opacity-50",
+        selected && "bg-primary/5",
+      )}
+      onClick={() => router.push(`/inboxes/${inbox.id}`)}
+      onMouseEnter={() => router.prefetch(`/inboxes/${inbox.id}`)}
+    >
+      {/* Checkbox */}
+      {onToggleSelect && (
+        <input
+          type="checkbox"
+          checked={!!selected}
+          onChange={(e) => { e.stopPropagation(); onToggleSelect(); }}
+          onClick={(e) => e.stopPropagation()}
+          className="h-4 w-4 rounded border-input accent-primary shrink-0"
+          aria-label={`Select ${addr}`}
+        />
+      )}
+
+      {/* Address — click to copy */}
+      <button
+        onClick={copyAddress}
+        className="flex items-center gap-2 min-w-0 flex-1 text-left rounded-md px-1.5 py-0.5 -mx-1.5 hover:bg-primary/5 active:scale-[0.99] transition-all duration-150"
+        aria-label={`Copy ${addr}`}
+      >
+        <span className={cn(
+          "h-6 w-6 rounded-md flex items-center justify-center shrink-0 relative",
+          copied ? "bg-success/10" : hasUnread ? "bg-primary/10" : "bg-muted",
+        )}>
+          {copied ? (
+            <Check className="h-3.5 w-3.5 text-success" />
+          ) : (
+            <Mail className={cn("h-3.5 w-3.5", hasUnread ? "text-primary" : "text-muted-foreground")} />
+          )}
+        </span>
+        <span className="font-mono text-sm font-medium truncate group-hover:text-primary transition-colors duration-150">
+          <span>{localPart}</span>
+          <span className="text-muted-foreground">@</span>
+          <span className="text-primary/80">{domainPart}</span>
+        </span>
+        {hasUnread && (
+          <Badge className="shrink-0 text-[10px] px-1.5 py-0 ml-1">{inbox.unread_count}</Badge>
+        )}
+      </button>
+
+      {/* Timer */}
+      <span className={cn("flex items-center gap-1 text-xs text-muted-foreground tabular-nums shrink-0", expiringSoon && "text-warning font-medium")}>
+        <Clock className="h-3 w-3" />
+        <ExpiryLabel expiresAt={inbox.expires_at} isActive={inbox.is_active} totalTtl={inbox.original_ttl} />
+      </span>
+
+      {/* Compact progress indicator */}
+      {inbox.is_active && (
+        <div className="w-12 h-1 rounded-full bg-muted overflow-hidden shrink-0 hidden sm:block">
+          <div
+            className={cn("h-full rounded-full", progressPct > 80 ? "bg-warning" : "bg-primary/40")}
+            style={{ width: `${100 - progressPct}%` }}
+          />
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150" onClick={(e) => e.stopPropagation()}>
+        {inbox.is_active && (
+          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); onExtend(); }} aria-label={`Renew ${addr}`}>
+            <Timer className="h-3.5 w-3.5" />
+          </Button>
+        )}
+        <ConfirmDialog
+          trigger={
+            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:text-destructive" aria-label={`Delete ${addr}`}>
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          }
+          title={t("deleteInbox")}
+          description={t("deleteInboxDesc", { address: addr })}
+          onConfirm={onDelete}
+        />
+      </div>
+    </div>
   );
 }
 
