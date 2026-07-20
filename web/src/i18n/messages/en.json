@@ -57,6 +57,7 @@
     "extendedBy1h": "Inbox renewed",
     "inboxCreated": "Inbox created",
     "inboxDeleted": "Inbox deleted",
+    "inboxExpired": "Inbox has expired and was removed",
     "renew": "Renew",
     "unread": "{count} unread",
     "new": "{count} new",
