@@ -12,7 +12,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -21,7 +20,12 @@ import { toast } from "sonner";
 import { Pagination } from "@/components/pagination";
 import { ErrorState } from "@/components/error-state";
 import { EmptyState } from "@/components/empty-state";
-import { AlertTriangle, Check, CheckCircle2, ChevronDown, ChevronUp, Circle, Copy, Globe, Loader2, Plus, RefreshCw, Search, Trash2, X } from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+  AlertTriangle, Check, CheckCircle2, ChevronDown, ChevronUp,
+  Circle, Copy, ExternalLink, Globe, Loader2, Plus, RefreshCw,
+  Search, Trash2, X,
+} from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Domain, PaginatedResponse } from "@/types";
 
@@ -103,7 +107,7 @@ export default function DomainsPage() {
         <AddDomainDialog orgId={currentOrg.id} />
       </header>
 
-      {/* Search + Sort + Status filter */}
+      {/* Filters */}
       {totalDomains > 0 && (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="relative max-w-sm flex-1">
@@ -117,7 +121,6 @@ export default function DomainsPage() {
             />
           </div>
           <div className="flex items-center gap-2">
-            {/* Status filter tabs */}
             <div className="flex items-center gap-1" role="tablist" aria-label="Status filter">
               {(["all", "verified", "pending"] as const).map((s) => {
                 const count = s === "all" ? domains.length : s === "verified" ? verifiedCount : pendingCount;
@@ -128,11 +131,12 @@ export default function DomainsPage() {
                     role="tab"
                     aria-selected={statusFilter === s}
                     onClick={() => setStatusFilter(s)}
-                    className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors duration-150",
                       statusFilter === s
                         ? "bg-primary/10 text-primary"
                         : "text-muted-foreground hover:bg-muted/80"
-                    }`}
+                    )}
                   >
                     {s === "all" ? "All" : s === "verified" ? "Verified" : "Pending"}
                     <span className="tabular-nums opacity-60">{count}</span>
@@ -140,7 +144,6 @@ export default function DomainsPage() {
                 );
               })}
             </div>
-            {/* Sort dropdown */}
             <Select value={sort} onValueChange={(v) => setSort(v as SortOption)}>
               <SelectTrigger className="w-[150px] h-8 text-xs" aria-label="Sort domains">
                 <SelectValue />
@@ -159,7 +162,7 @@ export default function DomainsPage() {
 
       {/* Domain list */}
       {isError ? <ErrorState message="Failed to load domains" onRetry={() => refetch()} /> :
-      isLoading ? <DomainGridSkeleton /> : (
+      isLoading ? <DomainListSkeleton /> : (
       <>
         {filtered.length === 0 ? (
           <EmptyState
@@ -175,9 +178,37 @@ export default function DomainsPage() {
           </EmptyState>
         ) : (
           <>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {/* Desktop: table view */}
+            <div className="hidden sm:block rounded-xl border overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="text-xs font-medium">Domain</TableHead>
+                    <TableHead className="text-xs font-medium">Status</TableHead>
+                    <TableHead className="text-xs font-medium">DNS</TableHead>
+                    <TableHead className="text-xs font-medium text-right">Inboxes</TableHead>
+                    <TableHead className="text-xs font-medium">Added</TableHead>
+                    <TableHead className="text-xs font-medium w-[100px]"><span className="sr-only">Actions</span></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((d) => (
+                    <DomainTableRow
+                      key={d.id}
+                      domain={d}
+                      onVerify={() => verify.mutate(d.id)}
+                      onDelete={() => remove.mutate(d.id)}
+                      verifying={verify.isPending && verify.variables === d.id}
+                    />
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Mobile: stacked rows */}
+            <div className="sm:hidden rounded-xl border divide-y">
               {filtered.map((d) => (
-                <DomainCard
+                <DomainMobileRow
                   key={d.id}
                   domain={d}
                   onVerify={() => verify.mutate(d.id)}
@@ -186,6 +217,7 @@ export default function DomainsPage() {
                 />
               ))}
             </div>
+
             <Pagination page={page} totalPages={data?.total_pages ?? 1} onPageChange={setPage} />
           </>
         )}
@@ -195,149 +227,178 @@ export default function DomainsPage() {
   );
 }
 
-/* ── Domain card ── */
+/* ── Desktop table row ── */
 
-function DomainCard({ domain: d, onVerify, onDelete, verifying }: {
+function DomainTableRow({ domain: d, onVerify, onDelete, verifying }: {
   domain: Domain; onVerify: () => void; onDelete: () => void; verifying: boolean;
 }) {
-  const [copied, setCopied] = useState(false);
   const fullyVerified = d.mx_verified && d.txt_verified;
 
-  const copyRecord = () => {
-    if (d.verification_record) {
-      copyToClipboard(d.verification_record);
-      setCopied(true);
-      toast.success("Verification record copied");
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
   return (
-    <Card className={`group ${fullyVerified ? "" : "border-dashed"}`}>
-      <CardContent className="space-y-3">
-        {/* Header: icon + name + status */}
-        <div className="flex items-start gap-3">
-          <div
-            className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${fullyVerified ? "bg-primary/10" : "bg-muted"}`}
-            aria-hidden="true"
-          >
-            <Globe className={`h-5 w-5 ${fullyVerified ? "text-primary" : "text-muted-foreground"}`} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <Link href={`/domains/${d.id}`} className="group/link">
-              <span className="font-mono text-sm font-semibold truncate block group-hover/link:text-primary transition-colors duration-150">{d.domain_name}</span>
-            </Link>
-            <p className="text-xs text-muted-foreground mt-0.5 tabular-nums">
-              {d.active_inboxes ?? 0} active · {d.inboxes_created_count ?? 0} created · {d.team_count ?? 0} {(d.team_count ?? 0) === 1 ? "team" : "teams"}
-            </p>
-          </div>
-          {fullyVerified ? (
-            <Badge variant="success" className="gap-1 text-[10px] shrink-0">
-              <CheckCircle2 className="h-2.5 w-2.5" aria-hidden="true" /> Verified
-            </Badge>
-          ) : (
-            <Badge variant="warning" className="gap-1 text-[10px] shrink-0">
-              <Circle className="h-2.5 w-2.5" aria-hidden="true" /> Pending
-            </Badge>
-          )}
-        </div>
+    <TableRow className="group">
+      {/* Domain name */}
+      <TableCell>
+        <Link href={`/domains/${d.id}`} className="inline-flex items-center gap-2 group/link">
+          <span className={cn(
+            "h-7 w-7 rounded-md flex items-center justify-center shrink-0",
+            fullyVerified ? "bg-primary/10" : "bg-muted",
+          )}>
+            <Globe className={cn("h-3.5 w-3.5", fullyVerified ? "text-primary" : "text-muted-foreground")} />
+          </span>
+          <span className="font-mono text-sm font-medium group-hover/link:text-primary transition-colors duration-150">
+            {d.domain_name}
+          </span>
+        </Link>
+      </TableCell>
 
-        {/* DNS chips */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <DnsChipWithCopy verified={d.mx_verified} label="MX" value={d.mx_target ?? "mail.burnerbyte.com"} />
-          <DnsChipWithCopy verified={d.txt_verified} label="TXT" value={d.verification_record} />
-          {d.dns_last_checked_at && (
-            <span
-              className="ml-auto text-xs text-muted-foreground"
-              title={new Date(d.dns_last_checked_at).toLocaleString()}
-            >
-              checked {timeAgo(d.dns_last_checked_at)}
-            </span>
-          )}
-        </div>
-
-        {/* TXT record hint for pending */}
-        {!d.txt_verified && d.verification_record && (
-          <button
-            onClick={copyRecord}
-            className="w-full rounded-md border border-dashed bg-muted/40 px-3 py-2 text-left text-[11px] font-mono break-all hover:bg-muted/60 transition-colors duration-150 group/copy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-            aria-label={`Copy TXT verification record: ${d.verification_record}`}
-          >
-            <span className="text-muted-foreground">TXT → </span>
-            <span className="text-foreground/80">{d.verification_record}</span>
-            {copied
-              ? <Check className="inline-block ml-1.5 h-3 w-3 text-success" aria-hidden="true" />
-              : <Copy className="inline-block ml-1.5 h-3 w-3 text-muted-foreground opacity-0 group-hover/copy:opacity-100 transition-opacity duration-150" aria-hidden="true" />
-            }
-          </button>
+      {/* Status */}
+      <TableCell>
+        {fullyVerified ? (
+          <Badge variant="success" className="gap-1 text-[10px]">
+            <CheckCircle2 className="h-2.5 w-2.5" /> Verified
+          </Badge>
+        ) : (
+          <Badge variant="warning" className="gap-1 text-[10px]">
+            <Circle className="h-2.5 w-2.5" /> Pending
+          </Badge>
         )}
+      </TableCell>
 
-        {/* Actions */}
-        <div className="flex items-center gap-1.5 pt-1 border-t">
+      {/* DNS chips */}
+      <TableCell>
+        <div className="flex items-center gap-1.5">
+          <DnsChip verified={d.mx_verified} label="MX" />
+          <DnsChip verified={d.txt_verified} label="TXT" />
+        </div>
+      </TableCell>
+
+      {/* Inboxes */}
+      <TableCell className="text-right">
+        <span className="text-sm tabular-nums">{d.active_inboxes ?? 0}</span>
+        <span className="text-xs text-muted-foreground ml-1">/ {d.inboxes_created_count ?? 0}</span>
+      </TableCell>
+
+      {/* Added */}
+      <TableCell>
+        <span className="text-xs text-muted-foreground">{timeAgo(d.created_at)}</span>
+      </TableCell>
+
+      {/* Actions */}
+      <TableCell>
+        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
           {!fullyVerified && (
-            <Button variant="outline" size="sm" className="gap-1.5 flex-1 h-8 text-xs" onClick={onVerify} disabled={verifying}>
-              <RefreshCw className={`h-3 w-3 ${verifying ? "animate-spin" : ""}`} aria-hidden="true" />
-              {verifying ? "Verifying…" : "Verify DNS"}
+            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={onVerify} disabled={verifying} aria-label="Verify DNS">
+              <RefreshCw className={cn("h-3.5 w-3.5", verifying && "animate-spin")} />
             </Button>
           )}
-          <Link href={`/domains/${d.id}`} className="flex-1">
-            <Button variant="outline" size="sm" className="w-full gap-1.5 h-8 text-xs">
-              <Globe className="h-3 w-3" aria-hidden="true" /> Manage
+          <Link href={`/domains/${d.id}`}>
+            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" aria-label="Manage domain">
+              <ExternalLink className="h-3.5 w-3.5" />
             </Button>
           </Link>
           <DeleteDomainDialog domain={d} onConfirm={onDelete} />
         </div>
-      </CardContent>
-    </Card>
+      </TableCell>
+    </TableRow>
   );
 }
 
-/* ── DNS chip with copy ── */
+/* ── Mobile stacked row ── */
 
-function DnsChipWithCopy({ verified, label, value }: { verified: boolean; label: string; value?: string }) {
-  const [justCopied, setJustCopied] = useState(false);
-
-  const handleCopy = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!value) return;
-    copyToClipboard(value);
-    setJustCopied(true);
-    toast.success(`${label} record copied`);
-    setTimeout(() => setJustCopied(false), 2000);
-  };
+function DomainMobileRow({ domain: d, onVerify, onDelete, verifying }: {
+  domain: Domain; onVerify: () => void; onDelete: () => void; verifying: boolean;
+}) {
+  const fullyVerified = d.mx_verified && d.txt_verified;
 
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
-      verified
-        ? "bg-success/10 text-success"
-        : "bg-muted text-muted-foreground"
-    }`}>
-      {verified ? <CheckCircle2 className="h-3 w-3" /> : <Circle className="h-3 w-3" />}
+    <div className="px-4 py-3 space-y-2">
+      {/* Top: name + status */}
+      <div className="flex items-center justify-between gap-2">
+        <Link href={`/domains/${d.id}`} className="flex items-center gap-2 min-w-0 group/link">
+          <span className={cn(
+            "h-7 w-7 rounded-md flex items-center justify-center shrink-0",
+            fullyVerified ? "bg-primary/10" : "bg-muted",
+          )}>
+            <Globe className={cn("h-3.5 w-3.5", fullyVerified ? "text-primary" : "text-muted-foreground")} />
+          </span>
+          <span className="font-mono text-sm font-medium truncate group-hover/link:text-primary transition-colors duration-150">
+            {d.domain_name}
+          </span>
+        </Link>
+        {fullyVerified ? (
+          <Badge variant="success" className="gap-1 text-[10px] shrink-0">
+            <CheckCircle2 className="h-2.5 w-2.5" /> Verified
+          </Badge>
+        ) : (
+          <Badge variant="warning" className="gap-1 text-[10px] shrink-0">
+            <Circle className="h-2.5 w-2.5" /> Pending
+          </Badge>
+        )}
+      </div>
+
+      {/* Middle: meta row */}
+      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+        <div className="flex items-center gap-1.5">
+          <DnsChip verified={d.mx_verified} label="MX" />
+          <DnsChip verified={d.txt_verified} label="TXT" />
+        </div>
+        <span className="tabular-nums">{d.active_inboxes ?? 0} active</span>
+        <span className="ml-auto">{timeAgo(d.created_at)}</span>
+      </div>
+
+      {/* Bottom: actions */}
+      <div className="flex items-center gap-1.5 pt-1">
+        {!fullyVerified && (
+          <Button variant="outline" size="sm" className="h-7 gap-1 text-xs flex-1" onClick={onVerify} disabled={verifying}>
+            <RefreshCw className={cn("h-3 w-3", verifying && "animate-spin")} />
+            {verifying ? "Verifying" : "Verify DNS"}
+          </Button>
+        )}
+        <Link href={`/domains/${d.id}`} className="flex-1">
+          <Button variant="outline" size="sm" className="w-full h-7 gap-1 text-xs">
+            <ExternalLink className="h-3 w-3" /> Manage
+          </Button>
+        </Link>
+        <DeleteDomainDialog domain={d} onConfirm={onDelete} />
+      </div>
+    </div>
+  );
+}
+
+/* ── DNS chip (compact) ── */
+
+function DnsChip({ verified, label }: { verified: boolean; label: string }) {
+  return (
+    <span className={cn(
+      "inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+      verified ? "bg-success/10 text-success" : "bg-muted text-muted-foreground",
+    )}>
+      {verified ? <CheckCircle2 className="h-2.5 w-2.5" /> : <Circle className="h-2.5 w-2.5" />}
       {label}
-      {value && (
-        <button onClick={handleCopy} className="ml-0.5 hover:opacity-70 transition-opacity duration-150" title={`Copy ${label} record`} aria-label={`Copy ${label} record`}>
-          {justCopied ? <Check className="h-2.5 w-2.5 text-success" /> : <Copy className="h-2.5 w-2.5" />}
-        </button>
-      )}
     </span>
   );
 }
 
 /* ── Skeleton ── */
 
-function DomainGridSkeleton() {
+function DomainListSkeleton() {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {Array.from({ length: 3 }).map((_, i) => (
-        <Card key={i}>
-          <CardContent className="space-y-3">
-            <div className="flex justify-between"><Skeleton className="h-4 w-3/4" /><Skeleton className="h-5 w-16 rounded-full" /></div>
-            <div className="flex gap-2"><Skeleton className="h-5 w-12 rounded-full" /><Skeleton className="h-5 w-12 rounded-full" /></div>
-            <Skeleton className="h-3 w-1/2" />
-            <Skeleton className="h-8 w-full" />
-          </CardContent>
-        </Card>
-      ))}
+    <div className="rounded-xl border overflow-hidden">
+      <div className="divide-y">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-4 px-4 py-3">
+            <Skeleton className="h-7 w-7 rounded-md shrink-0" />
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="h-5 w-16 rounded-full ml-4" />
+            <div className="flex gap-1.5 ml-4">
+              <Skeleton className="h-5 w-10 rounded-full" />
+              <Skeleton className="h-5 w-10 rounded-full" />
+            </div>
+            <Skeleton className="h-4 w-12 ml-auto" />
+            <Skeleton className="h-4 w-16" />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -378,7 +439,7 @@ function DeleteDomainDialog({ domain: d, onConfirm }: { domain: Domain; onConfir
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setConfirmText(""); setExpanded(false); } }}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive hover:text-destructive">
+        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:text-destructive" aria-label={`Delete ${d.domain_name}`}>
           <Trash2 className="h-3.5 w-3.5" />
         </Button>
       </DialogTrigger>
@@ -483,9 +544,9 @@ function validateDomain(input: string): string | null {
   if (!input.includes(".")) return "Domain must contain at least one dot";
   const labels = input.split(".");
   const tld = labels[labels.length - 1];
-  if (!/^[a-z]{2,}$/.test(tld)) return "Invalid TLD — must be at least 2 letters";
+  if (!/^[a-z]{2,}$/.test(tld)) return "Invalid TLD: must be at least 2 letters";
   for (const label of labels) {
-    if (label.length === 0 || label.length > 63) return "Each label must be 1–63 characters";
+    if (label.length === 0 || label.length > 63) return "Each label must be 1-63 characters";
     if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(label)) return "Labels must be alphanumeric (hyphens allowed, not at start/end)";
   }
   return null;
@@ -507,7 +568,7 @@ function AddDomainDialog({ orgId }: { orgId: string }) {
     try {
       await api.post(`/orgs/${orgId}/domains`, { domain_name: domain });
       qc.invalidateQueries({ queryKey: ["domains"] });
-      toast.success("Domain added — configure DNS records to verify");
+      toast.success("Domain added. Configure DNS records to verify.");
       setOpen(false);
       setRawInput("");
     } catch (err) {
@@ -536,7 +597,9 @@ function AddDomainDialog({ orgId }: { orgId: string }) {
                 onChange={(e) => setRawInput(e.target.value)}
                 placeholder="example.com"
                 onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-                className={domain ? (isValid ? "pr-9 border-success/40 focus-visible:ring-success/40" : "pr-9 border-destructive focus-visible:ring-destructive") : ""}
+                className={cn(
+                  domain && (isValid ? "pr-9 border-success/40 focus-visible:ring-success/40" : "pr-9 border-destructive focus-visible:ring-destructive"),
+                )}
               />
               {domain && (
                 <span className="absolute right-2.5 top-1/2 -translate-y-1/2">
@@ -550,7 +613,7 @@ function AddDomainDialog({ orgId }: { orgId: string }) {
               <p className="text-xs text-muted-foreground">Will be added as: <span className="font-mono">{domain}</span></p>
             )}
             {error && <p className="text-xs text-destructive">{error}</p>}
-            <p className="text-xs text-muted-foreground">Don&apos;t include http:// or www — just the bare domain (e.g. example.com)</p>
+            <p className="text-xs text-muted-foreground">Don&apos;t include http:// or www. Just the bare domain (e.g. example.com)</p>
           </div>
 
           <Button onClick={handleAdd} className="w-full" disabled={!isValid || adding}>
