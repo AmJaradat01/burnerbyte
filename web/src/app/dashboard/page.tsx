@@ -252,33 +252,35 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
       </div>
 
       {/* Primary metric — dominant, then supporting stats */}
-      <div className="grid gap-3 grid-cols-1 sm:grid-cols-3 lg:grid-cols-4">
-        {/* Hero metric: Total Emails — double-width on sm, visually dominant */}
-        <div className="sm:col-span-2 lg:col-span-1 rounded-xl border bg-card p-5">
-          <div className="flex items-center justify-between mb-3">
+      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+        {/* Hero metric: Total Emails — same height as siblings */}
+        <div className="rounded-xl border bg-card p-4 flex flex-col">
+          <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Emails</span>
-            <div className="h-9 w-9 rounded-lg flex items-center justify-center bg-primary/10">
-              <Mail className="h-4.5 w-4.5 text-primary" />
+            <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-primary/10">
+              <Mail className="h-4 w-4 text-primary" />
             </div>
           </div>
           {isLoading ? (
-            <Skeleton className="h-10 w-28" />
+            <Skeleton className="h-7 w-28" />
           ) : (
-            <p className="text-4xl font-extrabold tabular-nums tracking-tight">
+            <p className="text-2xl font-bold tabular-nums tracking-tight">
               {(stats?.total_emails_received ?? stats?.total_emails ?? 0).toLocaleString()}
             </p>
           )}
-          <div className="mt-2 flex items-center gap-3">
+          <div className="mt-1.5 h-4 flex items-center">
             {!isLoading && todayDelta !== 0 && (
-              <span className={cn("flex items-center gap-1 text-xs font-semibold", todayDelta > 0 ? "text-success" : "text-destructive")}>
-                {todayDelta > 0 ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
+              <span className={cn("flex items-center gap-1 text-[11px] font-semibold", todayDelta > 0 ? "text-success" : "text-destructive")}>
+                {todayDelta > 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
                 {todayDelta > 0 ? "+" : ""}{todayDelta} today
               </span>
             )}
-            <span className="text-xs text-muted-foreground">{formatBytes(stats?.total_storage_bytes ?? stats?.storage_used_bytes ?? 0)} storage</span>
+            {!isLoading && todayDelta === 0 && (
+              <span className="text-[11px] text-muted-foreground">{formatBytes(stats?.total_storage_bytes ?? stats?.storage_used_bytes ?? 0)} storage</span>
+            )}
           </div>
         </div>
-        {/* Supporting metrics — smaller, quieter */}
+        {/* Supporting metrics — uniform with hero */}
         <StatCard icon={InboxIcon} label="Active Inboxes" value={stats?.active_inboxes} loading={isLoading} sub={`${(stats?.total_inboxes_created ?? stats?.total_inboxes ?? 0).toLocaleString()} total created`} trend={inboxTrend} />
         <StatCard icon={Globe} label="Domains" value={stats?.total_domains} loading={isLoading} sub={`${stats?.total_members ?? 0} members · ${stats?.total_teams ?? 0} teams`} link="/domains" />
         <StatCard icon={HardDrive} label="Storage" value={formatBytes(stats?.total_storage_bytes ?? stats?.storage_used_bytes ?? 0)} loading={isLoading} isString sub="All-time usage" />
@@ -553,7 +555,7 @@ function StatCard({ icon: Icon, label, value, loading, sub, delta, deltaLabel, l
 }) {
   const inner = (
     <div className={cn(
-      "rounded-xl border bg-card p-4 transition-all duration-150",
+      "rounded-xl border bg-card p-4 flex flex-col h-full transition-all duration-150",
       link && "cursor-pointer hover:border-primary/20 hover:shadow-sm",
     )}>
       <div className="flex items-center justify-between mb-2">
@@ -569,7 +571,7 @@ function StatCard({ icon: Icon, label, value, loading, sub, delta, deltaLabel, l
           {isString ? String(value ?? "—") : (typeof value === "number" ? value.toLocaleString() : "0")}
         </p>
       )}
-      <div className="mt-1.5 h-4 flex items-center">
+      <div className="mt-auto pt-1.5 h-4 flex items-center">
         {!loading && delta !== undefined && delta !== 0 ? (
           <span className={cn("flex items-center gap-1 text-[11px] font-medium", delta > 0 ? "text-success" : "text-destructive")}>
             {delta > 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
@@ -581,7 +583,7 @@ function StatCard({ icon: Icon, label, value, loading, sub, delta, deltaLabel, l
           <span className="text-[11px] text-primary font-medium">Manage</span>
         ) : null}
         {!loading && trend !== undefined && trend !== null && (
-          <span className={cn("flex items-center gap-1 text-[11px] font-medium", trend > 0 ? "text-success" : trend < 0 ? "text-destructive" : "text-muted-foreground")}>
+          <span className={cn("flex items-center gap-1 text-[11px] font-medium ml-auto", trend > 0 ? "text-success" : trend < 0 ? "text-destructive" : "text-muted-foreground")}>
             {trend > 0 ? <ArrowUpRight className="h-3 w-3" /> : trend < 0 ? <ArrowDownRight className="h-3 w-3" /> : null}
             {trend > 0 ? "+" : ""}{trend.toFixed(1)}%
           </span>

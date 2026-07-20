@@ -209,6 +209,25 @@
   100% { transform: scale(1); color: inherit; }
 }
 
+/* ── Animated local-part text cycle ── */
+@media (prefers-reduced-motion: no-preference) {
+  .local-part-enter {
+    animation: local-part-in 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+}
+@keyframes local-part-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+
 /* ── Generate success pulse ── */
 @media (prefers-reduced-motion: no-preference) {
   .generate-success {
