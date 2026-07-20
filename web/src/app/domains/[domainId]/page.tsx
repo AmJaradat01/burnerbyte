@@ -8,6 +8,8 @@ import { api } from "@/lib/api";
 import { NoOrgState } from "@/components/no-org-state";
 import { useOrgStore } from "@/stores/org-store";
 import { copyToClipboard } from "@/lib/clipboard";
+import { timeAgo } from "@/lib/time";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -53,14 +55,17 @@ function DnsRecordCard({ title, icon: Icon, description, verified, records }: {
   records: { label: string; value: string }[];
 }) {
   return (
-    <Card className={verified ? "" : "border-dashed"}>
+    <Card className={cn(verified ? "" : "border-dashed border-warning/30")}>
       <CardContent className="space-y-4">
         <div className="flex items-start gap-3">
           <div
-            className={`h-9 w-9 rounded-lg flex items-center justify-center shrink-0 ${verified ? "bg-success/10" : "bg-warning/10"}`}
+            className={cn(
+              "h-9 w-9 rounded-lg flex items-center justify-center shrink-0",
+              verified ? "bg-success/10" : "bg-warning/10",
+            )}
             aria-hidden="true"
           >
-            <Icon className={`h-4 w-4 ${verified ? "text-success" : "text-warning"}`} />
+            <Icon className={cn("h-4 w-4", verified ? "text-success" : "text-warning")} />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
@@ -78,6 +83,14 @@ function DnsRecordCard({ title, icon: Icon, description, verified, records }: {
             <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
           </div>
         </div>
+
+        {/* Step instruction for pending records */}
+        {!verified && (
+          <div className="rounded-lg bg-warning/5 border border-warning/15 px-3 py-2 text-xs text-warning">
+            Add the following record to your DNS provider, then click "Verify DNS Records" below.
+          </div>
+        )}
+
         <dl className="space-y-1.5">
           {records.map((r) => (
             <div key={r.label} className="flex items-center gap-3">
@@ -181,9 +194,9 @@ export default function DomainDetailPage() {
               <p className="text-sm text-muted-foreground tabular-nums">
                 {domain.active_inboxes ?? 0} active · {domain.inboxes_created_count ?? 0} created · {domain.team_count ?? 0} {(domain.team_count ?? 0) === 1 ? "team" : "teams"}
                 {" · Added "}
-                {new Date(domain.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                {timeAgo(domain.created_at)}
                 {domain.dns_last_checked_at && (
-                  <> · Last checked {new Date(domain.dns_last_checked_at).toLocaleTimeString()}</>
+                  <> · DNS checked {timeAgo(domain.dns_last_checked_at)}</>
                 )}
               </p>
             </div>
@@ -337,9 +350,9 @@ export default function DomainDetailPage() {
 
 function DetailRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
-    <div className="flex items-center justify-between py-2 border-b last:border-0">
-      <span className="text-sm font-medium text-muted-foreground">{label}</span>
-      <span className={`text-sm ${mono ? "font-mono text-xs" : ""} truncate max-w-[60%] text-right`}>{value}</span>
+    <div className="flex items-center justify-between py-2 border-b last:border-0 gap-4">
+      <span className="text-sm font-medium text-muted-foreground shrink-0">{label}</span>
+      <span className={cn("text-sm truncate max-w-[60%] text-right", mono && "font-mono text-xs")}>{value}</span>
     </div>
   );
 }

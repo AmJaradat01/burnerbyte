@@ -4,7 +4,6 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { NoOrgState } from "@/components/no-org-state";
-import { copyToClipboard } from "@/lib/clipboard";
 import { timeAgo } from "@/lib/time";
 import { useOrgStore } from "@/stores/org-store";
 import { useAuthStore } from "@/stores/auth-store";
@@ -23,7 +22,7 @@ import { EmptyState } from "@/components/empty-state";
 import { cn } from "@/lib/utils";
 import {
   AlertTriangle, Check, CheckCircle2, ChevronDown, ChevronUp,
-  Circle, Copy, ExternalLink, Globe, Loader2, Plus, RefreshCw,
+  Circle, ExternalLink, Globe, Loader2, Plus, RefreshCw,
   Search, Trash2, X,
 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
