@@ -66,7 +66,12 @@ const EVENT_INFO: { key: string; label: string; description: string; icon: Lucid
 
 function isValidWebhookUrl(url: string): boolean {
   if (!url) return false;
-  return url.startsWith("https://") || url.startsWith("http://localhost");
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 export default function WebhooksPage() {
@@ -221,9 +226,25 @@ function WebhookStatusBadge({ webhook: w }: { webhook: Webhook }) {
 
 /* ── Desktop table row ── */
 
+interface WebhookStats {
+  total_deliveries: number;
+  success_count: number;
+  failure_count: number;
+  success_rate: number;
+  avg_response_time_ms: number;
+  last_delivery_at?: string;
+}
+
 function WebhookTableRow({ webhook: w, expanded, onToggleExpand, onToggleActive, onDelete, orgId, teamId }: {
   webhook: Webhook; expanded: boolean; onToggleExpand: () => void; onToggleActive: (v: boolean) => void; onDelete: () => void; orgId: string; teamId: string;
 }) {
+  const { data: stats } = useQuery({
+    queryKey: ["webhook-stats", w.id],
+    queryFn: () => api.get<WebhookStats>(`/orgs/${orgId}/teams/${teamId}/webhooks/${w.id}/stats`),
+    enabled: expanded,
+    staleTime: 30000,
+  });
+
   return (
     <>
       <TableRow className={cn("group", !w.active && "opacity-60")}>
@@ -298,11 +319,24 @@ function WebhookTableRow({ webhook: w, expanded, onToggleExpand, onToggleActive,
           </div>
         </TableCell>
       </TableRow>
-      {/* Expanded delivery logs */}
+      {/* Expanded: stats + delivery logs */}
       {expanded && (
         <TableRow>
           <TableCell colSpan={5} className="p-0 border-t-0">
-            <div className="px-4 py-3 bg-muted/20 animate-in fade-in slide-in-from-top-1 duration-150">
+            <div className="px-4 py-3 bg-muted/20 animate-in fade-in slide-in-from-top-1 duration-150 space-y-3">
+              {/* Stats summary */}
+              {stats && stats.total_deliveries > 0 && (
+                <div className="flex items-center gap-4 text-xs text-muted-foreground pb-2 border-b">
+                  <span className="tabular-nums"><strong className="text-foreground">{stats.total_deliveries}</strong> deliveries</span>
+                  <span className={cn("tabular-nums", stats.success_rate >= 95 ? "text-success" : stats.success_rate >= 80 ? "text-warning" : "text-destructive")}>
+                    {stats.success_rate.toFixed(1)}% success
+                  </span>
+                  <span className="tabular-nums">{Math.round(stats.avg_response_time_ms)}ms avg</span>
+                  {stats.failure_count > 0 && (
+                    <span className="text-destructive tabular-nums">{stats.failure_count} failed</span>
+                  )}
+                </div>
+              )}
               <DeliveryLogPanel orgId={orgId} teamId={teamId} webhookId={w.id} />
             </div>
           </TableCell>
@@ -522,17 +556,17 @@ function UrlInput({ url, onChange }: { url: string; onChange: (v: string) => voi
       <Input
         value={url}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="https://example.com/webhook"
+        placeholder="https://your-server.com/webhooks/burnerbyte"
         type="url"
         className={showError ? "border-destructive focus-visible:ring-destructive" : ""}
       />
       {showError && (
         <p className="text-xs text-destructive flex items-center gap-1">
           <AlertCircle className="h-3 w-3" />
-          Must start with https:// (or http://localhost for development)
+          URL must use https:// (required for signature verification)
         </p>
       )}
-      <p className="text-[11px] text-muted-foreground">Payloads are signed with HMAC-SHA256. Private/internal IPs are blocked for security.</p>
+      <p className="text-[11px] text-muted-foreground">Payloads are signed with HMAC-SHA256. Localhost and private IPs are blocked.</p>
     </div>
   );
 }
