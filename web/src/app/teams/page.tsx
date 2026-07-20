@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { cn } from "@/lib/utils";
+import { timeAgo } from "@/lib/time";
 import { NoOrgState } from "@/components/no-org-state";
 import { useOrgStore } from "@/stores/org-store";
 import { useAuthStore } from "@/stores/auth-store";
@@ -144,11 +146,35 @@ export default function TeamsPage() {
           {filteredTeams.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">No teams match &quot;{search}&quot;.</p>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {filteredTeams.map((t) => (
-                <TeamCard key={t.id} team={t} onSelect={() => setSelectedTeam(t)} />
-              ))}
-            </div>
+            <>
+              {/* Desktop: table view */}
+              <div className="hidden sm:block rounded-xl border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="text-xs font-medium">Team</TableHead>
+                      <TableHead className="text-xs font-medium text-right">Members</TableHead>
+                      <TableHead className="text-xs font-medium text-right">Domains</TableHead>
+                      <TableHead className="text-xs font-medium text-right">Inboxes</TableHead>
+                      <TableHead className="text-xs font-medium">Created</TableHead>
+                      <TableHead className="text-xs font-medium w-[60px]"><span className="sr-only">Open</span></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredTeams.map((t) => (
+                      <TeamTableRow key={t.id} team={t} onSelect={() => setSelectedTeam(t)} />
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile: stacked rows */}
+              <div className="sm:hidden rounded-xl border divide-y">
+                {filteredTeams.map((t) => (
+                  <TeamMobileRow key={t.id} team={t} onSelect={() => setSelectedTeam(t)} />
+                ))}
+              </div>
+            </>
           )}
         </>
       )}
@@ -156,58 +182,99 @@ export default function TeamsPage() {
   );
 }
 
-function TeamCard({ team, onSelect }: { team: Team; onSelect: () => void }) {
-  const members = team.member_count ?? 0;
-  const domains = team.domain_count ?? 0;
-  const inboxes = team.active_inboxes ?? 0;
+/* ── Desktop table row ── */
+
+function TeamTableRow({ team, onSelect }: { team: Team; onSelect: () => void }) {
   return (
-    <Card
-      className="cursor-pointer group hover:shadow-md transition-shadow duration-150"
+    <TableRow
+      className="group cursor-pointer"
+      onClick={onSelect}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(); } }}
+    >
+      <TableCell>
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-xs font-bold text-primary" aria-hidden="true">
+            {team.name.charAt(0).toUpperCase()}
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-medium truncate group-hover:text-primary transition-colors duration-150">{team.name}</p>
+            <p className="text-[11px] text-muted-foreground font-mono truncate">{team.slug}</p>
+          </div>
+        </div>
+      </TableCell>
+      <TableCell className="text-right">
+        <span className="text-sm tabular-nums">{team.member_count ?? 0}</span>
+      </TableCell>
+      <TableCell className="text-right">
+        <span className="text-sm tabular-nums">{team.domain_count ?? 0}</span>
+      </TableCell>
+      <TableCell className="text-right">
+        <span className="text-sm tabular-nums">{team.active_inboxes ?? 0}</span>
+      </TableCell>
+      <TableCell>
+        <span className="text-xs text-muted-foreground">{timeAgo(team.created_at)}</span>
+      </TableCell>
+      <TableCell>
+        <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-150" aria-hidden="true" />
+      </TableCell>
+    </TableRow>
+  );
+}
+
+/* ── Mobile stacked row ── */
+
+function TeamMobileRow({ team, onSelect }: { team: Team; onSelect: () => void }) {
+  return (
+    <div
+      className="px-4 py-3 space-y-1.5 cursor-pointer group hover:bg-muted/40 transition-colors duration-150"
       onClick={onSelect}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(); } }}
       aria-label={`Open team ${team.name}`}
     >
-      <CardContent className="space-y-3">
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-sm font-bold text-primary" aria-hidden="true">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-xs font-bold text-primary" aria-hidden="true">
             {team.name.charAt(0).toUpperCase()}
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold truncate group-hover:text-primary transition-colors duration-150">{team.name}</p>
+          <div className="min-w-0">
+            <p className="text-sm font-medium truncate group-hover:text-primary transition-colors duration-150">{team.name}</p>
             <p className="text-[11px] text-muted-foreground font-mono truncate">{team.slug}</p>
           </div>
-          <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-150 shrink-0 mt-1" aria-hidden="true" />
         </div>
-        <div className="flex items-center justify-between text-xs text-muted-foreground border-t pt-2">
-          <span className="tabular-nums">
-            {members} {members === 1 ? "member" : "members"} · {domains} {domains === 1 ? "domain" : "domains"} · {inboxes} active
-          </span>
-          <span>{new Date(team.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
-        </div>
-      </CardContent>
-    </Card>
+        <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-150 shrink-0" aria-hidden="true" />
+      </div>
+      <div className="flex items-center gap-3 text-xs text-muted-foreground pl-[42px] tabular-nums">
+        <span>{team.member_count ?? 0} members</span>
+        <span>{team.domain_count ?? 0} domains</span>
+        <span>{team.active_inboxes ?? 0} active</span>
+        <span className="ml-auto">{timeAgo(team.created_at)}</span>
+      </div>
+    </div>
   );
 }
 
 function TeamGridSkeleton() {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {Array.from({ length: 3 }).map((_, i) => (
-        <Card key={i}>
-          <CardContent className="space-y-3">
-            <div className="flex items-start gap-3">
-              <Skeleton className="h-10 w-10 rounded-lg shrink-0" />
-              <div className="flex-1 space-y-1.5">
-                <Skeleton className="h-4 w-2/3" />
-                <Skeleton className="h-3 w-1/3" />
-              </div>
+    <div className="rounded-xl border overflow-hidden">
+      <div className="divide-y">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-4 px-4 py-3">
+            <Skeleton className="h-8 w-8 rounded-md shrink-0" />
+            <div className="space-y-1 flex-1">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3 w-20" />
             </div>
-            <div className="border-t pt-2"><Skeleton className="h-3 w-full" /></div>
-          </CardContent>
-        </Card>
-      ))}
+            <Skeleton className="h-4 w-8" />
+            <Skeleton className="h-4 w-8" />
+            <Skeleton className="h-4 w-8" />
+            <Skeleton className="h-4 w-16" />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
