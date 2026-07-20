@@ -86,8 +86,9 @@ function DnsRecordCard({ title, icon: Icon, description, verified, records }: {
 
         {/* Step instruction for pending records */}
         {!verified && (
-          <div className="rounded-lg bg-warning/5 border border-warning/15 px-3 py-2 text-xs text-warning">
-            Add the following record to your DNS provider, then click "Verify DNS Records" below.
+          <div className="rounded-lg bg-warning/5 border border-warning/15 px-3 py-2 text-xs text-warning space-y-1">
+            <p>Add the following record to your DNS provider, then click &quot;Verify DNS Records&quot; below.</p>
+            <p className="text-warning/70">Some providers use <span className="font-mono">@</span> for the Host field when adding records to the root domain.</p>
           </div>
         )}
 
@@ -249,7 +250,7 @@ export default function DomainDetailPage() {
                 verified={domain.mx_verified}
                 records={[
                   { label: "Type", value: "MX" },
-                  { label: "Name", value: "@" },
+                  { label: "Host", value: domain.domain_name },
                   { label: "Priority", value: "10" },
                   { label: "Value", value: domain.mx_target || "mail.burnerbyte.com" },
                 ]}
@@ -261,7 +262,7 @@ export default function DomainDetailPage() {
                 verified={domain.txt_verified}
                 records={[
                   { label: "Type", value: "TXT" },
-                  { label: "Name", value: "@" },
+                  { label: "Host", value: domain.domain_name },
                   { label: "Value", value: domain.verification_record || "" },
                 ]}
               />
