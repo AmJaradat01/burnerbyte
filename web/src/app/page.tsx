@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -118,10 +118,23 @@ function HomePage() {
   // Inboxes with pagination, filtered by status and (optionally) address search.
   const inboxParams: Record<string, string> = { page: String(page), per_page: "12", status: "active" };
   if (search) inboxParams.search = search;
+
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["home-inboxes", page, search],
     queryFn: () => api.get<PaginatedResponse<Inbox>>(`/inboxes`, inboxParams),
     refetchOnWindowFocus: true,
+    // Dynamic refetch interval: poll faster when inboxes are close to expiry
+    // so the list updates promptly once the backend cleanup removes them.
+    refetchInterval: (query) => {
+      const inboxes = query.state.data?.data;
+      if (!inboxes?.length) return false;
+      const now = Date.now();
+      const soonestMs = Math.min(...inboxes.map((ib) => new Date(ib.expires_at).getTime() - now));
+      if (soonestMs <= 0) return 5_000; // Already expired, refetch quickly
+      if (soonestMs <= 2 * 60_000) return 15_000; // Within 2 min, poll fast
+      if (soonestMs <= 10 * 60_000) return 30_000; // Within 10 min
+      return 60_000; // Baseline: every 60s
+    },
   });
 
   const { pulling, refreshing, pullDistance } = usePullToRefresh({
@@ -132,20 +145,35 @@ function HomePage() {
   const extend = useMutation({
     mutationFn: (id: string) => api.post(`/inboxes/${id}/extend`, {}),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["home-inboxes"] }); toast.success(t("extendedBy1h")); },
-    onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
+    onError: (err) => {
+      if (err instanceof ApiError && err.status === 404) {
+        qc.invalidateQueries({ queryKey: ["home-inboxes"] });
+        toast.error(t("inboxExpired"));
+      } else {
+        toast.error(err instanceof Error ? err.message : "Failed");
+      }
+    },
   });
 
   const remove = useMutation({
     mutationFn: (id: string) => api.del(`/inboxes/${id}`),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["home-inboxes"] }); qc.invalidateQueries({ queryKey: ["notifications"] }); toast.success(t("inboxDeleted")); },
-    onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
+    onError: (err) => {
+      if (err instanceof ApiError && err.status === 404) {
+        // Inbox was already removed (expired), just refresh the list
+        qc.invalidateQueries({ queryKey: ["home-inboxes"] });
+        toast.success(t("inboxDeleted"));
+      } else {
+        toast.error(err instanceof Error ? err.message : "Failed");
+      }
+    },
   });
 
   const bulkDelete = useCallback(async () => {
     if (selectedIds.size === 0) return;
     const ids = Array.from(selectedIds);
     try {
-      await Promise.all(ids.map((id) => api.del(`/inboxes/${id}`)));
+      await Promise.allSettled(ids.map((id) => api.del(`/inboxes/${id}`)));
       qc.invalidateQueries({ queryKey: ["home-inboxes"] });
       toast.success(`${ids.length} inbox${ids.length > 1 ? "es" : ""} deleted`);
       setSelectedIds(new Set());
@@ -156,9 +184,17 @@ function HomePage() {
     if (selectedIds.size === 0) return;
     const ids = Array.from(selectedIds);
     try {
-      await Promise.all(ids.map((id) => api.post(`/inboxes/${id}/extend`, {})));
+      const results = await Promise.allSettled(ids.map((id) => api.post(`/inboxes/${id}/extend`, {})));
+      const failed = results.filter((r) => r.status === "rejected");
+      const expired = failed.filter((r) => r.reason instanceof ApiError && r.reason.status === 404);
       qc.invalidateQueries({ queryKey: ["home-inboxes"] });
-      toast.success(`${ids.length} inbox${ids.length > 1 ? "es" : ""} renewed`);
+      if (expired.length > 0 && expired.length === failed.length) {
+        toast.error(`${expired.length} inbox${expired.length > 1 ? "es" : ""} already expired`);
+      } else if (failed.length > 0) {
+        toast.error(`${failed.length} inbox${failed.length > 1 ? "es" : ""} failed to renew`);
+      } else {
+        toast.success(`${ids.length} inbox${ids.length > 1 ? "es" : ""} renewed`);
+      }
       setSelectedIds(new Set());
     } catch (err) { toast.error(err instanceof Error ? err.message : "Failed"); }
   }, [selectedIds, qc]);
