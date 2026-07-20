@@ -208,7 +208,7 @@ export default function DomainDetailPage() {
                 onClick={() => verify.mutate()}
                 disabled={verify.isPending}
               >
-                <RefreshCw className={`h-3.5 w-3.5 ${verify.isPending ? "animate-spin" : ""}`} aria-hidden="true" />
+                <RefreshCw className={cn("h-3.5 w-3.5", verify.isPending && "animate-spin")} aria-hidden="true" />
                 Verify DNS
               </Button>
             )}
@@ -218,29 +218,38 @@ export default function DomainDetailPage() {
 
       {domain && (
         <>
-          {/* Hero: DNS configuration, full width */}
+          {/* DNS Configuration section */}
           <section className="space-y-4" aria-labelledby="dns-config-heading">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <div>
                 <h2 id="dns-config-heading" className="text-title">DNS Configuration</h2>
                 <p className="text-sm text-muted-foreground">
-                  Add these records to your DNS provider for <span className="font-mono">{domain.domain_name}</span>.
+                  {allVerified
+                    ? <>Your DNS records for <span className="font-mono">{domain.domain_name}</span> are correctly configured.</>
+                    : <>Add these records to your DNS provider for <span className="font-mono">{domain.domain_name}</span>.</>
+                  }
                 </p>
               </div>
-              <div className="text-sm tabular-nums text-muted-foreground">
-                {verifiedCount} of 2 verified
-              </div>
+              {allVerified ? (
+                <Badge variant="success" className="gap-1 text-xs">
+                  <CheckCircle2 className="h-3 w-3" /> All records verified
+                </Badge>
+              ) : (
+                <div className="text-sm tabular-nums text-muted-foreground">
+                  {verifiedCount} of 2 verified
+                </div>
+              )}
             </div>
 
             <div className="grid gap-4 lg:grid-cols-2">
               <DnsRecordCard
                 title="MX Record"
                 icon={Inbox}
-                description={`Routes incoming email for ${domain.domain_name}`}
+                description={allVerified ? `Routing email to ${domain.domain_name}` : `Routes incoming email for ${domain.domain_name}`}
                 verified={domain.mx_verified}
                 records={[
                   { label: "Type", value: "MX" },
-                  { label: "Name", value: domain.domain_name },
+                  { label: "Name", value: "@" },
                   { label: "Priority", value: "10" },
                   { label: "Value", value: domain.mx_target || "mail.burnerbyte.com" },
                 ]}
@@ -248,28 +257,48 @@ export default function DomainDetailPage() {
               <DnsRecordCard
                 title="TXT Record"
                 icon={FileText}
-                description="Verifies domain ownership"
+                description={allVerified ? "Domain ownership confirmed" : "Verifies domain ownership"}
                 verified={domain.txt_verified}
                 records={[
                   { label: "Type", value: "TXT" },
-                  { label: "Name", value: domain.domain_name },
+                  { label: "Name", value: "@" },
                   { label: "Value", value: domain.verification_record || "" },
                 ]}
               />
             </div>
 
-            <div className="flex items-center gap-3 flex-wrap">
-              <Button size="sm" onClick={() => verify.mutate()} disabled={verify.isPending} className="gap-1.5">
-                <RefreshCw className={`h-3.5 w-3.5 ${verify.isPending ? "animate-spin" : ""}`} aria-hidden="true" />
-                {verify.isPending ? "Checking…" : "Verify DNS Records"}
-              </Button>
-              {needsPoll && (
-                <span className="flex items-center gap-1.5 text-xs text-muted-foreground" role="status">
-                  <span className="h-1.5 w-1.5 rounded-full bg-warning" aria-hidden="true" />
-                  Auto-checking every 30s
+            {/* Actions: only show verify button when NOT fully verified */}
+            {!allVerified && (
+              <div className="flex items-center gap-3 flex-wrap">
+                <Button size="sm" onClick={() => verify.mutate()} disabled={verify.isPending} className="gap-1.5">
+                  <RefreshCw className={cn("h-3.5 w-3.5", verify.isPending && "animate-spin")} aria-hidden="true" />
+                  {verify.isPending ? "Checking…" : "Verify DNS Records"}
+                </Button>
+                {needsPoll && (
+                  <span className="flex items-center gap-1.5 text-xs text-muted-foreground" role="status">
+                    <span className="h-1.5 w-1.5 rounded-full bg-warning" aria-hidden="true" />
+                    Auto-checking every 30s
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Verified: show last-checked time and re-check option */}
+            {allVerified && domain.dns_last_checked_at && (
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1.5">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-success" />
+                  Last verified {timeAgo(domain.dns_last_checked_at)}
                 </span>
-              )}
-            </div>
+                <button
+                  onClick={() => verify.mutate()}
+                  disabled={verify.isPending}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors duration-150 underline underline-offset-2"
+                >
+                  {verify.isPending ? "Re-checking…" : "Re-check"}
+                </button>
+              </div>
+            )}
           </section>
 
           {/* Supporting context: teams, details, settings */}
