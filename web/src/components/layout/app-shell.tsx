@@ -185,20 +185,22 @@ export function AppShell({ children }: { children: ReactNode }) {
           </SheetContent>
         </Sheet>
         <div className="flex-1 flex flex-col min-h-0">
-          <main id="main-content" className="flex-1 overflow-auto p-4 pt-14 md:p-6 md:pt-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Breadcrumbs />
+          <main id="main-content" className="flex-1 overflow-auto">
+            <div className="flex flex-col min-h-full p-4 pt-14 md:p-6 md:pt-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Breadcrumbs />
+                </div>
+                <NotificationCenter />
               </div>
-              <NotificationCenter />
+              <Suspense fallback={<div className="h-32 animate-pulse rounded-lg bg-muted" />}>
+                <div className="animate-in fade-in duration-200 flex-1">
+                  {children}
+                </div>
+              </Suspense>
+              <Footer />
             </div>
-            <Suspense fallback={<div className="h-32 animate-pulse rounded-lg bg-muted" />}>
-              <div className="animate-in fade-in duration-200">
-                {children}
-              </div>
-            </Suspense>
           </main>
-          <Footer />
         </div>
         <CommandPalette />
         <ShortcutHelp open={shortcutHelp.open} onOpenChange={shortcutHelp.setOpen} />
