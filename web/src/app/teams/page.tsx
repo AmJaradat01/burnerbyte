@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { cn } from "@/lib/utils";
 import { timeAgo } from "@/lib/time";
 import { NoOrgState } from "@/components/no-org-state";
 import { useOrgStore } from "@/stores/org-store";

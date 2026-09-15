@@ -15,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/error-state";
 import { ChartTooltip } from "../analytics/chart-tooltip";
 import { computeTrend } from "../analytics/page";
-import type { AnalyticsStats, AuditEntry, EmailsPerDay, Inbox, PaginatedResponse, User } from "@/types";
+import type { AnalyticsStats, AuditEntry, EmailsPerDay, PaginatedResponse, User } from "@/types";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { timeAgo } from "@/lib/time";
@@ -199,7 +199,6 @@ function AdminDashboard({ org, user, greeting }: { org: { id: string; name: stri
   const inboxTrend = computeTrend(insights?.inboxes_per_day ?? []);
 
   const topSenders = stats?.top_sender_domains?.slice(0, 5);
-  const maxSenderCount = topSenders?.[0]?.count ?? 1;
   const totalSenderEmails = topSenders?.reduce((s, d) => s + d.count, 0) ?? 0;
 
   // Peak hour from insights

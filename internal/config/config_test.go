@@ -172,4 +172,47 @@ func TestEnvOnlyDefaults(t *testing.T) {
 	if cfg.Workers.CleanupInterval <= 0 {
 		t.Errorf("workers.cleanup_interval = %v, want > 0 (worker would skip)", cfg.Workers.CleanupInterval)
 	}
+
+	if cfg.SMTP.Hostname == "" {
+		t.Error("smtp.hostname = \"\", want a domain (the 220 greeting and every " +
+			"HELO/EHLO reply embed it, and RFC 5321 requires one)")
+	}
+	if cfg.MinIO.Bucket == "" {
+		t.Error("minio.bucket = \"\", want a default bucket name")
+	}
+}
+
+// TestEnvOverridesReachNestedKeys guards the failure mode described above
+// SetDefault in Load: viper's AutomaticEnv silently drops a BB_* value whose
+// nested key was never registered. These two groups regressed that way —
+// docker-compose set BB_MINIO_* and BB_SMTP_HOSTNAME, the binary ignored every
+// one of them, and object storage quietly degraded to local-filesystem
+// attachments with no error surfaced.
+func TestEnvOverridesReachNestedKeys(t *testing.T) {
+	t.Setenv("BB_MINIO_ENDPOINT", "minio:9000")
+	t.Setenv("BB_MINIO_ACCESS_KEY", "key-from-env")
+	t.Setenv("BB_MINIO_SECRET_KEY", "secret-from-env")
+	t.Setenv("BB_MINIO_BUCKET", "bucket-from-env")
+	t.Setenv("BB_MINIO_USE_SSL", "true")
+	t.Setenv("BB_SMTP_HOSTNAME", "mail.example.com")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() failed: %v", err)
+	}
+
+	for _, tc := range []struct{ name, got, want string }{
+		{"minio.endpoint", cfg.MinIO.Endpoint, "minio:9000"},
+		{"minio.access_key", cfg.MinIO.AccessKey, "key-from-env"},
+		{"minio.secret_key", cfg.MinIO.SecretKey, "secret-from-env"},
+		{"minio.bucket", cfg.MinIO.Bucket, "bucket-from-env"},
+		{"smtp.hostname", cfg.SMTP.Hostname, "mail.example.com"},
+	} {
+		if tc.got != tc.want {
+			t.Errorf("%s = %q, want %q (BB_* override ignored)", tc.name, tc.got, tc.want)
+		}
+	}
+	if !cfg.MinIO.UseSSL {
+		t.Error("minio.use_ssl = false, want true (BB_MINIO_USE_SSL override ignored)")
+	}
 }

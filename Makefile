@@ -1,6 +1,8 @@
-.PHONY: run-api run-smtp build lint docker-up docker-infra docker-down migrate-up migrate-down migrate-create migrate-test
+.PHONY: run-api run-smtp build lint test docker-up docker-infra docker-down docker-logs migrate-up migrate-down migrate-create migrate-test migrate-test-db
 
 DATABASE_URL ?= postgres://postgres:password@localhost:5432/burnerbyte?sslmode=disable
+# Integration tests in internal/repository/postgres run against this database.
+TEST_DATABASE_URL ?= postgres://postgres:password@localhost:5432/burnerbyte_test?sslmode=disable
 MIGRATE := migrate -database "$(DATABASE_URL)" -path migrations
 
 # ── Run ──
@@ -23,6 +25,9 @@ build:
 lint:
 	golangci-lint run ./...
 
+test:
+	go test -race ./...
+
 # ── Docker ──
 
 # Full stack (postgres, redis, minio, migrate, api, smtpd, frontend).
@@ -30,11 +35,16 @@ docker-up:
 	docker compose up -d
 
 # Infra only — for local development where the app runs via `make run-api`.
+# The dev overlay publishes the postgres/redis/minio ports to the host, which
+# the base compose file deliberately does not (see its header comment).
 docker-infra:
-	docker compose up -d postgres redis minio
+	docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres redis minio
 
 docker-down:
 	docker compose down
+
+docker-logs:
+	docker compose logs -f
 
 # ── Migrations ──
 
@@ -47,6 +57,13 @@ migrate-down:
 migrate-create:
 	@read -p "Migration name: " name; \
 	$(MIGRATE) create -ext sql -dir migrations -seq $$name
+
+# Create (if needed) and migrate the integration-test database to head. The
+# repository tests fail with a pointer to this target when the schema is behind.
+migrate-test-db:
+	@psql "$(TEST_DATABASE_URL)" -c 'SELECT 1' >/dev/null 2>&1 || \
+		createdb "$$(basename "$(TEST_DATABASE_URL)" | sed 's/?.*//')" 2>/dev/null || true
+	migrate -database "$(TEST_DATABASE_URL)" -path migrations up
 
 migrate-test:
 	@echo "Testing migrations (up then down for each)..."
