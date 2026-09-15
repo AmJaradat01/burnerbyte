@@ -16,9 +16,10 @@ BurnerByte layers configuration, each source overriding the one before it:
 
 <Callout type="info">
 A `BB_*` variable only works for a key the binary has registered. Every key in
-this reference is registered and covered by `TestEnvOverridesReachNestedKeys`; if
-you add a new config key, register it with `SetDefault` (or `BindEnv`) or its
-environment override will be silently discarded.
+this reference is registered, and `TestConfigExampleCoversEveryRegisteredKey` /
+`TestEnvExampleCoversEveryRegisteredKey` keep `config.example.yaml` and
+`.env.example` exhaustive. If you add a config key, register it with
+`SetDefault` (or `BindEnv`) or its environment override is silently discarded.
 </Callout>
 
 ## Server
@@ -125,7 +126,7 @@ Mailer config can be overridden at runtime via the setup wizard. Values are stor
 | `rate_limit.unauthenticated` | `BB_RATE_LIMIT_UNAUTHENTICATED` | `60` | Requests/min (unauthenticated) |
 | `rate_limit.login` | `BB_RATE_LIMIT_LOGIN` | `10` | Login attempts/min per IP |
 | `rate_limit.forgot_password` | `BB_RATE_LIMIT_FORGOT_PASSWORD` | `3` | Reset requests/hour per IP |
-| `rate_limit.trusted_proxies` | `BB_RATE_LIMIT_TRUSTED_PROXIES` | — | Comma-separated proxy IPs trusted for client-IP resolution |
+| `rate_limit.trusted_proxies` | `BB_RATE_LIMIT_TRUSTED_PROXIES` | *(empty)* | Comma-separated CIDRs (a bare IP is treated as `/32`) whose `X-Forwarded-For` is trusted for client-IP resolution |
 
 ## Account Lockout
 
@@ -143,7 +144,7 @@ Mailer config can be overridden at runtime via the setup wizard. Values are stor
 | `password_policy.require_lowercase` | `BB_PASSWORD_POLICY_REQUIRE_LOWERCASE` | `true` | Require lowercase letter |
 | `password_policy.require_number` | `BB_PASSWORD_POLICY_REQUIRE_NUMBER` | `true` | Require digit |
 | `password_policy.require_special` | `BB_PASSWORD_POLICY_REQUIRE_SPECIAL` | `true` | Require special character |
-| `password_policy.bcrypt_cost` | `BB_PASSWORD_POLICY_BCRYPT_COST` | — | bcrypt hashing cost (higher is slower and stronger) |
+| `password_policy.bcrypt_cost` | `BB_PASSWORD_POLICY_BCRYPT_COST` | `10` | bcrypt hashing cost (higher is slower and stronger) |
 
 ## Defaults
 
@@ -180,6 +181,17 @@ Mailer config can be overridden at runtime via the setup wizard. Values are stor
 | `workers.reconciler_interval` | `BB_WORKERS_RECONCILER_INTERVAL` | `1m` | Redis ↔ Postgres sync |
 | `workers.analytics_interval` | `BB_WORKERS_ANALYTICS_INTERVAL` | `5m` | Analytics cache refresh |
 
+Two of the seven workers have hardcoded intervals and no config key:
+
+| Worker | Interval | Description |
+|---|---|---|
+| `invite_expiry` | `24h` | Emails inviters about invites expiring within 24 hours, then deletes lapsed ones |
+| `admin_stats` | `10s` | Refreshes the cached platform stats streamed over `/api/v1/ws/admin-stats` |
+
+Every job runs once at startup before its ticker begins, and every API process
+starts all seven — there is no leader election and no way to run an API instance
+without them. See [Production Deployment](/docs/self-hosting/production).
+
 ## CORS
 
 | Key | Env Var | Description |
@@ -194,7 +206,7 @@ Mailer config can be overridden at runtime via the setup wizard. Values are stor
 | Key | Env Var | Default | Description |
 |---|---|---|---|
 | `email_verification.enabled` | `BB_EMAIL_VERIFICATION_ENABLED` | `true` | Require email verification on registration |
-| `email_verification.ttl` | `BB_EMAIL_VERIFICATION_TTL` | — | Verification link lifetime |
+| `email_verification.ttl` | `BB_EMAIL_VERIFICATION_TTL` | `24h` | Verification link lifetime |
 
 ## Logging & Metrics
 

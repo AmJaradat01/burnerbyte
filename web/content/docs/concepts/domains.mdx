@@ -14,6 +14,8 @@ POST /api/v1/orgs/{orgId}/domains
 
 The TXT verification value is derived from the domain's UUID and returned as `verification_record`: `burnerbyte-verify=<domain-uuid>`.
 
+Creating a domain immediately kicks off an asynchronous MX/TXT/SPF pass in the background, so a domain whose DNS is already in place can come back verified with no manual step. That first check is recorded with `trigger_source = "auto_create"`.
+
 ## DNS Verification
 
 Two DNS records must be configured:
@@ -48,3 +50,17 @@ POST /api/v1/orgs/{orgId}/teams/{teamId}/domains
 ```
 
 Access levels: `full` (manage the assignment + create inboxes), `create_inbox` (create inboxes only), or `read_only` (view only). Each assignment can override two settings: `attachments_enabled` and `max_inbox_ttl`. Maximum attachment size is an org-level setting only.
+
+## Bulk and Administrative Operations
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/v1/orgs/{orgId}/domains/bulk-verify` | Re-verify several domains at once |
+| `POST` | `/api/v1/orgs/{orgId}/domains/bulk-delete` | Delete several domains at once |
+| `GET` | `/api/v1/orgs/{orgId}/domains/{domainId}/impact` | What a delete would take with it — assignments, inboxes, emails |
+| `GET` | `/api/v1/orgs/{orgId}/domains/{domainId}/verification-history` | Per-check MX/TXT/SPF results, paginated |
+| `POST` | `/api/v1/orgs/{orgId}/domains/{domainId}/transfer` | Move a domain to another org. **System admins only** |
+
+Every check — automatic on create, manual, bulk, or from the background worker —
+appends a row to `domain_verification_history` with the MX/TXT/SPF results, any
+lookup errors, and a `trigger_source` of `auto_create`, `manual`, or `background`.

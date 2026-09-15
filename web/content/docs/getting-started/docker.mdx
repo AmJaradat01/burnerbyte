@@ -40,18 +40,18 @@ All ports and credentials are configurable via environment variables. Create a `
 POSTGRES_USER=burnerbyte
 POSTGRES_PASSWORD=a-strong-password
 POSTGRES_DB=burnerbyte
-POSTGRES_PORT=5432
+POSTGRES_PORT=5432        # dev overlay only — the base stack publishes no DB port
 
 # Redis
-REDIS_PORT=6379
+REDIS_PORT=6379           # dev overlay only
 REDIS_PASSWORD=a-strong-redis-password
 
 # MinIO
 MINIO_ROOT_USER=minioadmin
 MINIO_ROOT_PASSWORD=a-strong-password
 MINIO_BUCKET=burnerbyte
-MINIO_PORT=9000
-MINIO_CONSOLE_PORT=9001
+MINIO_PORT=9000           # dev overlay only
+MINIO_CONSOLE_PORT=9001   # dev overlay only
 
 # Service ports
 API_PORT=8080

@@ -37,6 +37,26 @@ cp config.example.yaml config.yaml
 to load it from elsewhere. For Docker Compose, environment variables are the
 normal route — see [Configuration](/docs/getting-started/configuration).
 
+## First-Run Web Installer
+
+Starting the API with no database configured — `DATABASE_URL` unset and no
+`config.yaml` — boots a token-gated installer instead of the API. Every other
+path answers `503 BurnerByte is not configured yet` until it completes.
+
+The startup log prints a one-time URL:
+
+```
+open http://<host>:8080/install?token=<token>
+```
+
+The form collects the database URL, Redis URL, JWT secret and (strongly
+recommended) an encryption key, verifies the connections, writes `config.yaml`,
+and re-execs into a normal boot. `BB_CONFIG_PATH` changes where that file is
+written. An already-configured instance never exposes the installer.
+
+Setting `DATABASE_URL` and `REDIS_URL` in the environment skips it entirely,
+which is what Docker Compose and the systemd deploy scripts do.
+
 ## Which Database Am I Configuring?
 
 Database and Redis are the only settings the setup wizard cannot change — its own
@@ -98,7 +118,7 @@ See [Configuration](/docs/getting-started/configuration) for all available optio
 make migrate-up
 ```
 
-This applies all 46 database migrations, creating tables for users, organizations, teams, domains, inboxes, emails, attachments, webhooks, API keys, audit logs, sessions, SSO, analytics, and more.
+This applies all 47 database migrations, creating tables for users, organizations, teams, domains, inboxes, emails, attachments, webhooks, API keys, audit logs, sessions, SSO, analytics, and more.
 
 ## Install Frontend Dependencies
 

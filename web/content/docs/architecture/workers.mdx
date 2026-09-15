@@ -5,7 +5,7 @@ description: The 7 background jobs that keep BurnerByte running.
 
 ## Worker Manager
 
-The API server runs a worker manager that schedules 7 periodic jobs. Each runs at its interval (most configurable, two fixed) and is gracefully stopped on shutdown.
+The API server runs a worker manager that schedules 7 periodic jobs. Every job **runs once immediately at startup**, before its ticker begins, so a fresh boot does not wait a full interval for the first pass. A job configured with a zero or negative interval is logged as an error and skipped entirely. Each run is wrapped in panic recovery, so a panicking job logs and continues on the next tick rather than taking the process down. Each runs at its interval (most configurable, two fixed) and is gracefully stopped on shutdown.
 
 ## Jobs
 
@@ -62,3 +62,7 @@ workers:
   analytics_interval: 5m
   # invite_expiry (24h) and admin_stats (10s) run at fixed, non-configurable intervals
 ```
+
+The `admin_stats` job short-circuits when no admin client is connected — it skips the stats query rather than computing a snapshot nobody will receive.
+
+Every API process starts all seven workers. There is no leader election and no flag to run an API instance without them, so a second replica duplicates every job — see [Production Deployment](/docs/self-hosting/production).

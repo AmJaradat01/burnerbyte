@@ -22,6 +22,10 @@ redis:
   max_retries: 3
 
 minio:
+  # Leave endpoint empty to store attachments on the local filesystem
+  # (./data/attachments). localhost:9000 is what `make docker-infra` starts; an
+  # endpoint that is set but unreachable costs a dial timeout on every boot
+  # before falling back, so clear it rather than leaving a stale value.
   endpoint: localhost:9000
   access_key: "CHANGE_ME"
   secret_key: "CHANGE_ME"
@@ -45,6 +49,9 @@ smtp:
   max_size: 26214400
   queue_size: 1000
   workers: 4
+  # Set both to enable STARTTLS on the inbound listener.
+  tls_cert: ""
+  tls_key: ""
 
 mailer:
   host: ""
@@ -59,6 +66,12 @@ sso:
   client_id: ""
   client_secret: "CHANGE_ME"
   redirect_url: http://localhost:8080/api/v1/auth/sso/callback
+  tenant_id: ""          # azure
+  issuer_url: ""         # okta / generic oidc discovery
+  auto_provision: false  # give first-time SSO users an org (and team) membership
+  default_org_role: ""
+  default_team_role: ""
+  allowed_domains: ""    # comma-separated; empty allows any
 
 cors:
   allowed_origins:
@@ -82,7 +95,9 @@ rate_limit:
   authenticated: 300    # requests per minute per user
   unauthenticated: 60   # requests per minute per IP
   login: 10             # attempts per minute per IP
-  forgot_password: 3
+  forgot_password: 3    # requests per hour per IP
+  # CIDRs whose X-Forwarded-For is trusted when resolving the client IP.
+  trusted_proxies: []
 
 lockout:
   max_attempts: 5
@@ -94,6 +109,7 @@ password_policy:
   require_lowercase: true
   require_number: true
   require_special: true
+  bcrypt_cost: 10       # bcrypt.DefaultCost; out-of-range falls back to it
 
 defaults:
   attachments_enabled: true
@@ -111,9 +127,15 @@ defaults:
   presigned_url_ttl: 15m
   webhook_timeout: 10s
   analytics_cache_ttl: 2h
+  webhook_max_retries: 3
+  analytics_default_days: 30
+  timezone: UTC
+  date_format: YYYY-MM-DD
+  time_format: 24h
 
 email_verification:
   enabled: true
+  ttl: 24h
 
 logging:
   level: info

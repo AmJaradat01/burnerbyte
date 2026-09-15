@@ -9,12 +9,17 @@ The SMTP server (`cmd/smtpd`) is a custom implementation that handles inbound em
 
 ## Connection Flow
 
-1. **TCP Accept** — Listener accepts incoming SMTP connection
-2. **EHLO/HELO** — Server identifies itself with configured hostname
+1. **TCP Accept** — Listener accepts the connection; at most **100 concurrent**, beyond which the connection is closed immediately
+2. **EHLO/HELO** — Server advertises `SIZE`, `8BITMIME`, `PIPELINING`, `ENHANCEDSTATUSCODES`, and `STARTTLS` when both `smtp.tls_cert` and `smtp.tls_key` are set
 3. **MAIL FROM** — Sender address recorded
-4. **RCPT TO** — Recipient validated against domain router
-5. **DATA** — Email content received and queued
-6. **Processing** — Worker pool handles MIME parsing and storage
+4. **RCPT TO** — Recipient validated against the domain router; at most **100 recipients** per message (`452` beyond that)
+5. **DATA** — Message read under a 5-minute deadline, rejected with `552` if it exceeds `smtp.max_size` (default 25 MB)
+6. **Parse and enqueue** — The listener parses the MIME envelope with enmime and pushes one message per recipient onto the queue (`smtp.queue_size`, default 1000); a full queue answers `451`
+7. **Processing** — A pool of `smtp.workers` goroutines (default 4) stores each queued message and runs the fan-out
+
+Parsing happens in the listener, before the queue — the worker pool receives an
+already-parsed message. A message enmime cannot parse at all is still stored,
+with the raw bytes as the text body and the subject `(parse error)`.
 
 ## Domain Router
 
@@ -34,16 +39,26 @@ Emails are parsed using the `enmime` library which handles multipart messages (t
 
 Attachments are processed through the settings resolver which checks the inheritance cascade:
 
-1. Are attachments enabled at the org level?
-2. Are attachments enabled for this domain assignment?
-3. Does the file size exceed the configured maximum?
+1. Is the extension on the executable blocklist? Sixteen are refused outright, before any size check: `.exe`, `.bat`, `.cmd`, `.com`, `.msi`, `.scr`, `.pif`, `.vbs`, `.js`, `.wsh`, `.wsf`, `.ps1`, `.hta`, `.cpl`, `.reg`, `.inf`
+2. Are attachments enabled at the org level?
+3. Are attachments enabled for this domain or domain assignment?
+4. Does the file exceed the resolved maximum size?
+
+A rejected attachment is skipped and logged; the rest of the message is still
+delivered. If every attachment is skipped, the optimistic `has_attachments` flag
+is corrected back to `false`.
 
 If allowed, attachments are uploaded to object storage (MinIO/S3, or the local-filesystem fallback) under `attachments/{email_id}/{random_uuid}/{sanitized_filename}`, and the key is recorded in `attachments.storage_key`.
 
 ## Fan-out
 
+Before the row is written, the worker computes a spam score (0–10, from missing
+`Message-ID` / `Subject` / `Date` / `From` headers, a `Received-SPF` fail, and a
+live SPF lookup against the connecting IP) and sanitizes the HTML body with
+bluemonday's `UGCPolicy`. Only the sanitized HTML is persisted.
+
 After storage, the handler triggers:
 
-- **WebSocket** — Pushes a notification to the inbox's WebSocket hub for real-time UI updates
-- **Notification Hub** — Pushes to the user's notification WebSocket for the bell icon
-- **Webhooks** — Dispatches `email.received` events to all matching webhook subscriptions
+- **Realtime** — Publishes an inbox event on the `bb:inbox` Redis channel; the API server's bridge broadcasts it to the inbox hub, pushes it to the owner's notification hub, persists a `notifications` row, and increments the analytics counters
+- **Webhooks** — Dispatches `email.received` to every active webhook on the owning team subscribed to that event
+- **Audit** — Records an `email.received` entry against the inbox's org, with the inbox address as the resource name
