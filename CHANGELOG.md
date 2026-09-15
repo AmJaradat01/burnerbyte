@@ -5,6 +5,15 @@ All notable changes to this project are documented here. The format follows
 uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html): `feat:` work
 takes a minor bump, `fix:` / `docs:` / `test:` a patch.
 
+## v1.16.1 (September 2026) — Analytics rendering fixes
+
+### Fixed
+- **The KPI strip showed eight dashes on a fresh install.** `MetricCard` drew a minus icon and a literal `--` whenever a trend was null; five of the eight metrics pass null unconditionally, and with no history every one of them is null. It now renders nothing, keeping the row's height so the grid does not shift when real trends arrive.
+- **The average reference line collided with the date axis.** It was drawn even when the average was zero, putting it exactly on the x-axis with its `Avg: 0` label over the ticks. A zero average is not a comparison worth drawing, so the line is now conditional.
+- **An all-zero date range rendered as a row of flat bars** with no explanation; only a literally empty array reached the "No email data for this period" state.
+
+Screenshots in the README and docs were regenerated afterwards, so they show the fixed UI.
+
 ## v1.16.0 (September 2026) — Attribution, product screenshots, and a CORS port fix
 
 ### Added
