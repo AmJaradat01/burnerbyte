@@ -14,6 +14,14 @@
 # Every setting below has a working default, so a clean checkout runs with no
 # .env at all. Copy .env.example to .env and set at least JWT_SECRET and
 # ENCRYPTION_KEY before exposing this to anything but localhost.
+#
+# To use a managed database instead of the bundled containers, set
+# EXTERNAL_DATABASE_URL and/or EXTERNAL_REDIS_URL in .env — api, smtpd and the
+# migrate job all honour them. They are deliberately NOT named DATABASE_URL /
+# REDIS_URL: .env is shared with host-mode `make run-api`, where those point at
+# localhost, and localhost inside a container is the container itself.
+# The bundled postgres/redis then sit idle; skip them with
+#   docker compose up -d api smtpd frontend
 
 services:
   postgres:
@@ -72,7 +80,7 @@ services:
       - "-path"
       - "/migrations"
       - "-database"
-      - "postgres://${POSTGRES_USER:-burnerbyte}:${POSTGRES_PASSWORD:-burnerbyte}@postgres:5432/${POSTGRES_DB:-burnerbyte}?sslmode=disable"
+      - "${EXTERNAL_DATABASE_URL:-postgres://${POSTGRES_USER:-burnerbyte}:${POSTGRES_PASSWORD:-burnerbyte}@postgres:5432/${POSTGRES_DB:-burnerbyte}?sslmode=disable}"
       - "up"
     depends_on:
       postgres:
@@ -88,8 +96,8 @@ services:
       - "${API_PORT:-8080}:8080"
     environment:
       # For production, change sslmode=disable to sslmode=require or sslmode=verify-full
-      DATABASE_URL: postgres://${POSTGRES_USER:-burnerbyte}:${POSTGRES_PASSWORD:-burnerbyte}@postgres:5432/${POSTGRES_DB:-burnerbyte}?sslmode=disable
-      REDIS_URL: redis://:${REDIS_PASSWORD:-burnerbyte-redis}@redis:6379
+      DATABASE_URL: ${EXTERNAL_DATABASE_URL:-postgres://${POSTGRES_USER:-burnerbyte}:${POSTGRES_PASSWORD:-burnerbyte}@postgres:5432/${POSTGRES_DB:-burnerbyte}?sslmode=disable}
+      REDIS_URL: ${EXTERNAL_REDIS_URL:-redis://:${REDIS_PASSWORD:-burnerbyte-redis}@redis:6379}
       # Must be >= 32 chars or the API refuses to start. This default is for a
       # local stack only: generate a real one (openssl rand -hex 32) and set
       # JWT_SECRET in .env before exposing this anywhere.
@@ -144,8 +152,8 @@ services:
       - "${SMTPD_PORT:-2525}:2525"
     environment:
       # For production, change sslmode=disable to sslmode=require or sslmode=verify-full
-      DATABASE_URL: postgres://${POSTGRES_USER:-burnerbyte}:${POSTGRES_PASSWORD:-burnerbyte}@postgres:5432/${POSTGRES_DB:-burnerbyte}?sslmode=disable
-      REDIS_URL: redis://:${REDIS_PASSWORD:-burnerbyte-redis}@redis:6379
+      DATABASE_URL: ${EXTERNAL_DATABASE_URL:-postgres://${POSTGRES_USER:-burnerbyte}:${POSTGRES_PASSWORD:-burnerbyte}@postgres:5432/${POSTGRES_DB:-burnerbyte}?sslmode=disable}
+      REDIS_URL: ${EXTERNAL_REDIS_URL:-redis://:${REDIS_PASSWORD:-burnerbyte-redis}@redis:6379}
       # Share the same key as the api so encrypted-at-rest values round-trip.
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
       BB_SMTP_LISTEN: ":2525"
