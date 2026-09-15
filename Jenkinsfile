@@ -32,7 +32,7 @@ pipeline {
                 checkout scmGit(
                     branches: [[name: "refs/tags/${params.TAG}"]],
                     userRemoteConfigs: [[
-                        url: 'git@gitlab.com:burnerbyte/burnerbyte.git',
+                        url: 'git@gitlab.com:amjaradat01/burnerbyte.git',
                         credentialsId: 'gitlab-ssh-key'
                     ]]
                 )

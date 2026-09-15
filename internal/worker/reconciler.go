@@ -5,8 +5,8 @@ import (
 	"log/slog"
 	"time"
 
-	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
-	redisrepo "gitlab.com/burnerbyte/burnerbyte/internal/repository/redis"
+	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
+	redisrepo "gitlab.com/amjaradat01/burnerbyte/internal/repository/redis"
 )
 
 func ReconcilerJob(inboxRepoPG *postgres.InboxRepo, inboxRepoRedis *redisrepo.InboxRepo) func(ctx context.Context) error {

@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
-	redisrepo "gitlab.com/burnerbyte/burnerbyte/internal/repository/redis"
+	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
+	redisrepo "gitlab.com/amjaradat01/burnerbyte/internal/repository/redis"
 )
 
 // Router determines if an inbound email should be accepted or rejected.

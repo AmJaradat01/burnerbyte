@@ -8,7 +8,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
+	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
 )
 
 func AnalyticsJob(analyticsRepo *postgres.AnalyticsRepo, rdb *redis.Client, cacheTTL time.Duration) func(ctx context.Context) error {
