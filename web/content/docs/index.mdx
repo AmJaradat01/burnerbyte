@@ -18,6 +18,7 @@ BurnerByte is open-source under the Apache 2.0 license. Source code is available
   <Card title="Quick Start" description="Run BurnerByte and receive your first email in minutes" href="/docs/getting-started/quick-start" />
   <Card title="Docker Setup" description="Run the full stack with Docker Compose" href="/docs/getting-started/docker" />
   <Card title="Configuration" description="All config options, env vars, and runtime overrides" href="/docs/getting-started/configuration" />
+  <Card title="First-Run Installer" description="Boot with no database configured and set it up from the browser" href="/docs/getting-started/installation" />
 </Cards>
 
 ## Core Concepts
@@ -109,7 +110,7 @@ Two separate Go binaries scale independently:
 | Backend | Go 1.25+, Chi router, pgxpool, go-redis, gorilla/websocket, enmime |
 | Frontend | Next.js 16, React 19, shadcn/ui, Tailwind CSS 4, Zustand, TanStack Query, Recharts |
 | Docs | Fumadocs (MDX, full-text search, syntax highlighting) |
-| Database | PostgreSQL 16 (46 migrations, 74 indexes, 7 triggers) |
+| Database | PostgreSQL 16 (47 migrations, 74 indexes, 7 triggers) |
 | Cache | Redis 7 (inbox routing, analytics cache, rate limiting) |
 | Storage | MinIO (S3-compatible object storage for attachments) |
 | Infrastructure | Docker, Docker Compose |

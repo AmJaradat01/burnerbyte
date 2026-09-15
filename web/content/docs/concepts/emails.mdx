@@ -5,7 +5,7 @@ description: Email parsing, storage, attachments, and the reading experience.
 
 ## Email Storage
 
-Emails are stored in PostgreSQL with fields for `from_address`, `to_address`, `subject`, `body_text`, `body_html`, `raw_headers`, `size_bytes`, `spam_score`, `is_read`, and `has_attachments`.
+Emails are stored in PostgreSQL with fields for `from_address`, `to_address`, `subject`, `body_text`, `body_html`, `raw_headers`, `size_bytes`, `spam_score`, `is_read`, and `has_attachments`. `spam_score` is computed at ingest on a 0–10 scale from header completeness (`Message-ID`, `Subject`, `Date`, `From`), a `Received-SPF` failure, and a live SPF lookup against the connecting IP; it is recorded for reference and does not filter anything.
 
 ## HTML Rendering
 
@@ -20,14 +20,30 @@ Attachments are stored in S3-compatible object storage (MinIO by default, with a
 3. Files uploaded to object storage at `attachments/{email_id}/{random_uuid}/{sanitized_filename}`
 4. Download generates a time-limited presigned URL (configurable via `defaults.presigned_url_ttl`)
 
-Attachments with dangerous executable extensions (such as `.exe`, `.bat`, `.js`) are rejected at ingest.
+Attachments with executable extensions are dropped at ingest — a fixed list of 16, checked before the size limit. See the [SMTP pipeline](/docs/architecture/smtp-pipeline) for the full list.
 
 ## API Operations
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/api/v1/inboxes/{id}/emails` | List emails (paginated) |
+| `GET` | `/api/v1/inboxes/{id}/emails` | List emails (paginated; pass `q` to search) |
+| `POST` | `/api/v1/inboxes/{id}/emails/mark-all-read` | Mark every email in the inbox as read |
 | `GET` | `/api/v1/emails/{id}` | Get email detail |
 | `PATCH` | `/api/v1/emails/{id}` | Mark read/unread |
 | `DELETE` | `/api/v1/emails/{id}` | Delete email + attachments |
 | `GET` | `/api/v1/emails/{id}/attachments/{aid}` | Get presigned download URL |
+
+## Full-Text Search
+
+Pass `q` to the list endpoint to search within an inbox:
+
+```
+GET /api/v1/inboxes/{inboxId}/emails?q=invoice&page=1&per_page=20
+```
+
+Search is backed by a PostgreSQL `tsvector` column on `emails` with a GIN index,
+kept current by a trigger over `subject`, `body_text` and `from_address`. The
+query runs through `plainto_tsquery` with the `english` configuration, so terms
+are stemmed and combined with AND — operators, quoted phrases and prefix
+matching are not supported. Queries longer than 200 characters are rejected with
+`400`. Results paginate and sort newest-first like an unfiltered list.

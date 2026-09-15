@@ -23,7 +23,9 @@ During inbox creation, `default_inbox_ttl` resolves through an additional team t
 | `max_inbox_ttl` | Org, Domain, Assignment | Maximum inbox lifetime |
 | `max_domains` | Org | Maximum domains per org |
 | `max_teams` | Org | Maximum teams per org |
-| `max_inboxes_per_domain` | Org, Domain, Team | Maximum active inboxes per domain (the team value is an additional cap applied on top of the domain/org value) |
+| `max_inboxes_per_domain` | Org, Team | Maximum active inboxes per domain (the team value is an additional cap on top of the org value) |
+| `renewal_policy` | Org | How an extend with no explicit duration is sized: `original` (default — reuse the inbox's creation TTL), `default` (re-resolve the cascade), `fixed` (use `renewal_ttl`) |
+| `renewal_ttl` | Org | Fixed renewal duration; read only when `renewal_policy` is `fixed` |
 | `enforce_sso` | Org | Require SSO for all members |
 
 ## Example
@@ -31,3 +33,20 @@ During inbox creation, `default_inbox_ttl` resolves through an additional team t
 If the org has `attachments_enabled: true` and `max_attachment_size_mb: 25`, but a specific domain assignment overrides with `attachments_enabled: false`, then inboxes on that assignment will not accept attachments.
 
 Org-level settings are managed on the **Settings** page. Domain assignment settings are managed on the **Teams** page when editing domain assignments.
+
+## Which Tiers Each Setting Uses
+
+Not every setting walks every tier:
+
+- `default_inbox_ttl` — Team → Domain → Org → system default (no assignment tier)
+- `max_inbox_ttl` and `attachments_enabled` — Assignment → Domain → Org → system default (no team tier)
+- `max_inboxes_per_domain` — Org → system default, with the team's value applied afterwards as an additional cap
+- `max_attachment_size_mb` — Org only
+
+## Declared but Unused
+
+Three fields are accepted and stored but never read, so setting them has no
+effect today:
+
+- `TeamSettings.attachments_enabled` and `TeamSettings.max_inbox_ttl` — both resolve through the assignment → domain → org chain only
+- `DomainSettings.max_inboxes_per_domain` — inbox creation reads the org value and the team cap, skipping the domain tier

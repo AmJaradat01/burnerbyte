@@ -21,6 +21,16 @@ The API server starts on port 8080 and the frontend on port 3000.
 The SMTP server (`make run-smtp`) is optional for initial setup. Start it when you're ready to receive real emails.
 </Callout>
 
+
+<Callout type="warn">
+This assumes you have already run through [Installation](/docs/getting-started/installation)
+— infrastructure up and `.env` in place. On a clean checkout with no `.env` and
+no `config.yaml` the API has no database URL, so it boots the
+[first-run installer](/docs/getting-started/installation#first-run-web-installer)
+instead: the log prints a one-time `http://<host>:8080/install?token=...` URL and
+every other path answers `503`.
+</Callout>
+
 ## Setup Wizard
 
 Navigate to [http://localhost:3000](http://localhost:3000). On first launch, you'll be redirected to the setup wizard which guides you through:
