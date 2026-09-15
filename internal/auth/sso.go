@@ -18,9 +18,9 @@ import (
 	"github.com/coreos/go-oidc/v3/oidc"
 	"golang.org/x/oauth2"
 
-	"gitlab.com/burnerbyte/burnerbyte/internal/config"
-	appcrypto "gitlab.com/burnerbyte/burnerbyte/internal/crypto"
-	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
+	"gitlab.com/amjaradat01/burnerbyte/internal/config"
+	appcrypto "gitlab.com/amjaradat01/burnerbyte/internal/crypto"
+	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
 )
 
 // providerState holds the initialized state for a single SSO provider.

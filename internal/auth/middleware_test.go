@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 	"pgregory.net/rapid"
 
-	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
+	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
 )
 
 // Feature: enhanced-api-keys, Property 7: Middleware Rejects Disabled and Revoked Keys

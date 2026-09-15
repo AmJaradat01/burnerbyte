@@ -15,11 +15,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
-	"gitlab.com/burnerbyte/burnerbyte/internal/auth"
-	"gitlab.com/burnerbyte/burnerbyte/internal/config"
-	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
-	"gitlab.com/burnerbyte/burnerbyte/internal/mailer"
-	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
+	"gitlab.com/amjaradat01/burnerbyte/internal/auth"
+	"gitlab.com/amjaradat01/burnerbyte/internal/config"
+	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
+	"gitlab.com/amjaradat01/burnerbyte/internal/mailer"
+	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
 )
 
 // stripPort extracts the host/IP from a "host:port" string.

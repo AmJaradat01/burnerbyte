@@ -12,7 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"pgregory.net/rapid"
 
-	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
+	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
 )
 
 // ===========================================================================

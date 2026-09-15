@@ -7,8 +7,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"gitlab.com/burnerbyte/burnerbyte/internal/auth"
-	"gitlab.com/burnerbyte/burnerbyte/internal/auth/rbac"
+	"gitlab.com/amjaradat01/burnerbyte/internal/auth"
+	"gitlab.com/amjaradat01/burnerbyte/internal/auth/rbac"
 )
 
 // RBAC is the shared role checker, set during initialization.

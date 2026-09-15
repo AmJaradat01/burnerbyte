@@ -13,9 +13,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/minio/minio-go/v7"
 
-	"gitlab.com/burnerbyte/burnerbyte/internal/config"
-	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
-	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
+	"gitlab.com/amjaradat01/burnerbyte/internal/config"
+	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
+	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
 )
 
 // ObjectStorage is the interface for storing and retrieving attachment files.
