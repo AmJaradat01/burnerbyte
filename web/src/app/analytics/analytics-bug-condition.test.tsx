@@ -223,6 +223,35 @@ describe("Bug Condition Exploration: Missing Analytics Data Not Rendered", () =>
     });
   });
 
+  describe("Org View - Absent Trend Renders Nothing, Not Dashes", () => {
+    // MetricCard used to draw a minus icon and a literal "--" whenever a trend
+    // was null. Five of the eight metrics pass null unconditionally, and on a
+    // fresh install every one of them is null, so the strip showed a row of
+    // eight dashes that read as broken data rather than "no comparison yet".
+    it("does not render a literal -- placeholder for metrics with no trend", async () => {
+      setupOrgView();
+      const { container } = renderWithClient(<AnalyticsPage />);
+
+      await waitFor(() => {
+        expect(container.textContent).toContain("5,000");
+      });
+
+      expect(container.textContent).not.toContain("--");
+    });
+
+    it("still renders a real trend percentage when one can be computed", async () => {
+      setupOrgView();
+      const { container } = renderWithClient(<AnalyticsPage />);
+
+      await waitFor(() => {
+        expect(container.textContent).toContain("5,000");
+      });
+
+      // A percentage is only shown where the series supports a comparison.
+      expect(container.textContent).toMatch(/[+-]?\d+\.\d%/);
+    });
+  });
+
   describe("Org View - Missing Storage Trend Chart (Req 1.4)", () => {
     it("should render a storage trend chart when insights contain storage_per_day data", async () => {
       setupOrgView();
