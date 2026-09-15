@@ -16,7 +16,7 @@ export function Footer() {
           <div className="flex items-center gap-3 sm:gap-4">
             <Link href="/docs" className="hover:text-foreground transition-colors duration-150">Docs</Link>
             <a
-              href="https://gitlab.com/burnerbyte/burnerbyte"
+              href="https://gitlab.com/amjaradat01/burnerbyte"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 hover:text-foreground transition-colors duration-150"

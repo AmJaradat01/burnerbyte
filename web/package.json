@@ -6,7 +6,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://gitlab.com/burnerbyte/burnerbyte.git",
+    "url": "https://gitlab.com/amjaradat01/burnerbyte.git",
     "directory": "web"
   },
   "packageManager": "pnpm@10.30.3",

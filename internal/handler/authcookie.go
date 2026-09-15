@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"time"
 
-	"gitlab.com/burnerbyte/burnerbyte/internal/config"
-	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
+	"gitlab.com/amjaradat01/burnerbyte/internal/config"
+	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
 )
 
 // Browser clients opt into cookie mode (use_cookie: true on the auth

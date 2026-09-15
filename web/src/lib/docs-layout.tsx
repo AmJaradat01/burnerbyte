@@ -14,7 +14,7 @@ export function baseOptions(): BaseLayoutProps {
       { text: 'App', url: '/' },
       {
         text: 'GitLab',
-        url: 'https://gitlab.com/burnerbyte/burnerbyte',
+        url: 'https://gitlab.com/amjaradat01/burnerbyte',
         external: true,
       },
     ],

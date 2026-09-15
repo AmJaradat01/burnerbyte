@@ -4,8 +4,8 @@ import (
 	"context"
 	"log/slog"
 
-	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
-	"gitlab.com/burnerbyte/burnerbyte/internal/webhook"
+	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
+	"gitlab.com/amjaradat01/burnerbyte/internal/webhook"
 )
 
 // WebhookRetryJob resets failure counts on retryable webhooks so the

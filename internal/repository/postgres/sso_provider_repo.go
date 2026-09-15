@@ -7,9 +7,9 @@ import (
 
 	"github.com/google/uuid"
 
-	appcrypto "gitlab.com/burnerbyte/burnerbyte/internal/crypto"
-	"gitlab.com/burnerbyte/burnerbyte/internal/database"
-	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
+	appcrypto "gitlab.com/amjaradat01/burnerbyte/internal/crypto"
+	"gitlab.com/amjaradat01/burnerbyte/internal/database"
+	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
 )
 
 type SSOProviderRepo struct {

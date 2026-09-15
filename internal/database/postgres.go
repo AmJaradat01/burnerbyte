@@ -10,7 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"gitlab.com/burnerbyte/burnerbyte/internal/config"
+	"gitlab.com/amjaradat01/burnerbyte/internal/config"
 )
 
 // DBTX is the common interface for pgxpool.Pool and pgx.Tx so repositories

@@ -23,11 +23,11 @@ import (
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 
-	"gitlab.com/burnerbyte/burnerbyte/internal/auth"
-	"gitlab.com/burnerbyte/burnerbyte/internal/config"
-	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
-	"gitlab.com/burnerbyte/burnerbyte/internal/mailer"
-	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
+	"gitlab.com/amjaradat01/burnerbyte/internal/auth"
+	"gitlab.com/amjaradat01/burnerbyte/internal/config"
+	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
+	"gitlab.com/amjaradat01/burnerbyte/internal/mailer"
+	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
 )
 
 // Thin wrappers for testability

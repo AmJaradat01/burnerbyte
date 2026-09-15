@@ -5,8 +5,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
-	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
+	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
+	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
 )
 
 type AnalyticsService struct {

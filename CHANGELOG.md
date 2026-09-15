@@ -5,6 +5,15 @@ All notable changes to this project are documented here. The format follows
 uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html): `feat:` work
 takes a minor bump, `fix:` / `docs:` / `test:` a patch.
 
+## v1.18.0 (September 2026) — Moved to gitlab.com/amjaradat01/burnerbyte; brand marks
+
+### Changed
+- **The Go module path is now `gitlab.com/amjaradat01/burnerbyte`.** The project moved out of the `burnerbyte` group into a personal namespace. GitLab redirects the old path, so nothing was broken — but the redirect only holds while the old group exists, and a module path should not point at a namespace someone else could later claim. Rewritten across 106 Go files plus `go.mod`, `.golangci.yml`, the Jenkins checkout URL, `package.json`, README, CONTRIBUTING and the docs: 118 files, 279 references.
+- `web/public/favicon.svg` used `#4F46E5` (Tailwind's indigo) rather than the product's `#2459E2`, and `web/public/manifest.json` set a warm `#fafaf8` background where the token is the cool `#F8FAFD` — the same warm/cool inversion already corrected in DESIGN.md.
+
+### Added
+- Brand marks in `brand/`: a full lockup (the `B` over the wordmark on the indigo tile) for the repo avatar and README, and the `B` alone for the favicon and PWA icon. Two marks rather than one because the wordmark stops being legible below roughly 48px — the same split the product already makes, where the sidebar collapses `BurnerByte` to `B`. `brand/README.md` covers which to use where, the exact tokens, and how to regenerate the PNGs.
+
 ## v1.17.1 (September 2026) — About card trimmed; version shows the nearest tag
 
 ### Changed

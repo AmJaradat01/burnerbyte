@@ -9,8 +9,8 @@ import { cn } from "@/lib/utils";
 import { Logo } from "@/components/logo";
 import { LiveInboxDemo } from "./live-inbox-demo";
 
-/** Canonical repository, from the go.mod module path (gitlab.com/burnerbyte/burnerbyte). */
-const REPO_URL = "https://gitlab.com/burnerbyte/burnerbyte";
+/** Canonical repository, from the go.mod module path (gitlab.com/amjaradat01/burnerbyte). */
+const REPO_URL = "https://gitlab.com/amjaradat01/burnerbyte";
 const APACHE_URL = "https://www.apache.org/licenses/LICENSE-2.0";
 
 interface SSOStatus {

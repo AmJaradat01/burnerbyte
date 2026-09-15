@@ -6,7 +6,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"gitlab.com/burnerbyte/burnerbyte/internal/config"
+	"gitlab.com/amjaradat01/burnerbyte/internal/config"
 )
 
 func NewRedis(ctx context.Context, cfg config.RedisConfig) (*redis.Client, error) {
