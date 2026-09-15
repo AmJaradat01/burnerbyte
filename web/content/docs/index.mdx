@@ -109,9 +109,9 @@ Two separate Go binaries scale independently:
 | Backend | Go 1.25+, Chi router, pgxpool, go-redis, gorilla/websocket, enmime |
 | Frontend | Next.js 16, React 19, shadcn/ui, Tailwind CSS 4, Zustand, TanStack Query, Recharts |
 | Docs | Fumadocs (MDX, full-text search, syntax highlighting) |
-| Database | PostgreSQL 16 (43 migrations, 74 indexes, 7 triggers) |
+| Database | PostgreSQL 16 (46 migrations, 74 indexes, 7 triggers) |
 | Cache | Redis 7 (inbox routing, analytics cache, rate limiting) |
 | Storage | MinIO (S3-compatible object storage for attachments) |
 | Infrastructure | Docker, Docker Compose |
-| CI/CD | GitLab CI (lint, build, test, Docker registry) |
+| CI/CD | Jenkins (`Jenkinsfile`) — test, build Go + frontend, tag-driven deploy |
 | Testing | `pgregory.net/rapid` for property-based testing |

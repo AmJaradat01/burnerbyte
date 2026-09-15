@@ -9,15 +9,15 @@ Emails are stored in PostgreSQL with fields for `from_address`, `to_address`, `s
 
 ## HTML Rendering
 
-Inbound HTML is sanitized server-side at ingest with bluemonday's UGC policy (a permissive allowlist that strips scripts and dangerous attributes). The frontend then renders the sanitized HTML in a sandboxed `<iframe>` with `sandbox=""` (no permissions), preventing JavaScript execution, form submissions, and navigation.
+Inbound HTML is sanitized server-side at ingest with bluemonday's UGC policy (a permissive allowlist that strips scripts and dangerous attributes). The frontend then renders the sanitized HTML inside an `<iframe sandbox="allow-popups">` — no scripts, no forms, no same-origin access; only opening a link in a new tab is permitted. A `Content-Security-Policy` meta tag injected into the frame defaults to `default-src 'none'` and blocks remote images (tracking pixels) until the reader clicks "Load images".
 
 ## Attachments
 
-Attachments are stored in MinIO (S3-compatible) and served via presigned URLs:
+Attachments are stored in S3-compatible object storage (MinIO by default, with a local-filesystem fallback) and served via presigned URLs. On the local-filesystem backend the download URL is served by the API under `/api/v1/files` instead:
 
 1. MIME parser extracts attachments from inbound email
 2. Settings resolver checks if attachments are allowed (org → domain assignment cascade)
-3. Files uploaded to MinIO at `{inbox_id}/{email_id}/{attachment_id}/{filename}`
+3. Files uploaded to object storage at `attachments/{email_id}/{random_uuid}/{sanitized_filename}`
 4. Download generates a time-limited presigned URL (configurable via `defaults.presigned_url_ttl`)
 
 Attachments with dangerous executable extensions (such as `.exe`, `.bat`, `.js`) are rejected at ingest.
@@ -26,8 +26,8 @@ Attachments with dangerous executable extensions (such as `.exe`, `.bat`, `.js`)
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/inboxes/{id}/emails` | List emails (paginated) |
-| `GET` | `/emails/{id}` | Get email detail |
-| `PATCH` | `/emails/{id}` | Mark read/unread |
-| `DELETE` | `/emails/{id}` | Delete email + attachments |
-| `GET` | `/emails/{id}/attachments/{aid}` | Get presigned download URL |
+| `GET` | `/api/v1/inboxes/{id}/emails` | List emails (paginated) |
+| `GET` | `/api/v1/emails/{id}` | Get email detail |
+| `PATCH` | `/api/v1/emails/{id}` | Mark read/unread |
+| `DELETE` | `/api/v1/emails/{id}` | Delete email + attachments |
+| `GET` | `/api/v1/emails/{id}/attachments/{aid}` | Get presigned download URL |

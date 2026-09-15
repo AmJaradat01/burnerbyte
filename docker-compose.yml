@@ -103,6 +103,10 @@ services:
       # so a custom domain works by setting FRONTEND_URL alone; set
       # CORS_ALLOWED_ORIGINS (comma-separated) to allow more than one origin.
       BB_CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-${FRONTEND_URL:-http://localhost:3000}}
+      # The API — not smtpd — verifies domains, comparing each domain's MX and
+      # SPF records against this exact hostname. Setting it only on smtpd left
+      # the API on the "localhost" default, so no domain could ever verify.
+      BB_SMTP_HOSTNAME: ${SMTP_HOSTNAME:-mail.burnerbyte.local}
       BB_MINIO_ENDPOINT: minio:9000
       BB_MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
       BB_MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}

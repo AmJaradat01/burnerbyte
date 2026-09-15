@@ -13,7 +13,7 @@ you provision and enable it.
 - A visitor calls `POST /api/v1/try/inbox`, which creates an inbox under a
   dedicated demo user/domain with a short TTL, and polls
   `GET /api/v1/try/inbox/{id}/emails` for incoming mail.
-- Creation is rate-limited per IP; polling has its own lenient limit.
+- Creation is rate-limited per IP, sharing the login bucket (`rate_limit.login`, default 10/min) — so demo traffic and sign-in attempts contend for the same allowance. Polling has its own bucket, fixed at 60 requests per minute per IP. `GET /api/v1/try/status` is unlimited.
 - It is **receive-only** and **IDOR-safe**: the read endpoint is scoped to the
   demo user, so only demo inboxes are ever readable. Inboxes expire on the TTL
   and are removed by the cleanup worker.
@@ -55,9 +55,10 @@ The IDs are read at startup; `DEMO_TTL` controls how long each demo inbox lives.
 ## Turn it on and off
 
 Once the IDs are configured, an admin can flip demo mode on or off **without a
-restart** from **Settings → Platform → Demo Mode**. If the toggle is on but the
-IDs aren't configured, the settings page warns you and the demo stays off (the
-endpoints return `404`).
+restart** from **Settings → System → Platform Settings → Demo Mode**. If the toggle is on but the
+IDs aren't configured, the settings page warns you and the demo stays off.
+`GET /api/v1/try/status` still answers `200` with `{"enabled": false}` so the
+frontend can probe it cheaply; the two inbox endpoints return `404`.
 
 ## Security notes
 

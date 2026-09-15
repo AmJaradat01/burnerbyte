@@ -120,29 +120,29 @@ Every API endpoint checks a specific permission key via the `checkOrgPermission`
 
 ### Self-Protection
 
-Users cannot modify peers at the same or higher rank. Role change and deactivation endpoints use `RequireRankAbove` to enforce this — the acting user's role rank must be strictly higher than the target user's.
+Users cannot modify peers at the same or higher rank. Role change and deactivation endpoints use `RequireRankAbove` (org scope) or `RequireTeamRankAbove` (team scope) to enforce this — the acting user's rank must be strictly higher than the target's. System admins bypass the check.
 
 ### Org-Level Fallback
 
-Org admins and owners (rank ≥ 2) can access any team's resources without being an explicit team member. The `RequireTeamPermission` check falls back to the user's org role when no team membership exists.
+Org admins and owners (rank ≥ 2) can access any team's resources in their own org without being an explicit team member — the check short-circuits on org rank before the team membership is consulted. `RequireTeamPermission` first confirms the `{teamId}` in the route actually belongs to the `{orgId}`, so an admin cannot pair their own org with another tenant's team.
 
 ## Permission Cache
 
-Permissions are loaded into an in-memory cache at startup from the `role_permissions` table. The cache is thread-safe (`sync.RWMutex`) and is refreshed automatically when roles are updated via the admin API (role create, update, or delete triggers a cache refresh).
+Permissions are loaded into an in-memory cache at startup from the `role_permissions` table. The cache is thread-safe (`sync.RWMutex`) and is refreshed when a role's permission set changes through the admin API (a create that supplies permissions, or a permission update). A role deletion does not currently trigger a refresh, so a deleted role stays cached until the API restarts.
 
 ## Custom Roles
 
 Admins can create custom roles with specific permissions via **Settings → Roles** or the admin API:
 
-- `POST /admin/roles` — create a new role with scope, value, label, description, rank, and permissions
-- `PATCH /admin/roles/:id` — update label, description, or permissions
-- `DELETE /admin/roles/:id` — remove a custom role
+- `POST /api/v1/admin/roles` — create a new role with scope, value, label, description, rank, and permissions
+- `PATCH /api/v1/admin/roles/{roleId}` — update label, description, or permissions
+- `DELETE /api/v1/admin/roles/{roleId}` — remove a custom role
 
-Custom roles appear in the permission cache alongside system roles and can be assigned to org members or team members.
+Custom roles appear in the permission cache alongside system roles. Note that `org_memberships.role` and `team_memberships.role` still carry CHECK constraints limiting stored values to `owner`/`admin`/`member` and `lead`/`member`, so a custom role cannot yet be assigned to a member — custom roles currently only adjust the permission sets attached to the built-in role values.
 
 ## System Admin
 
-The `is_system_admin` flag on the user record bypasses all RBAC checks and grants access to all `/admin` routes, including:
+The `is_system_admin` flag on the user record bypasses all RBAC checks and grants access to all `/api/v1/admin` routes, including:
 
 - System stats and health checks
 - User management (list, edit, delete platform users)

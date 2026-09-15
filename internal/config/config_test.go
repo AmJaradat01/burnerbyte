@@ -196,6 +196,23 @@ func TestEnvOverridesReachNestedKeys(t *testing.T) {
 	t.Setenv("BB_MINIO_USE_SSL", "true")
 	t.Setenv("BB_SMTP_HOSTNAME", "mail.example.com")
 
+	// Every group below shipped unregistered at some point, so each documented
+	// BB_* name silently did nothing. .env.example advertises all of them.
+	t.Setenv("BB_MAILER_HOST", "smtp.example.com")
+	t.Setenv("BB_MAILER_USERNAME", "mailer-user")
+	t.Setenv("BB_MAILER_PASSWORD", "mailer-pass")
+	t.Setenv("BB_MAILER_FROM", "noreply@example.com")
+	t.Setenv("BB_SSO_PROVIDER", "okta")
+	t.Setenv("BB_SSO_CLIENT_ID", "sso-client")
+	t.Setenv("BB_SSO_CLIENT_SECRET", "sso-secret")
+	t.Setenv("BB_SSO_AUTO_PROVISION", "true")
+	t.Setenv("BB_RATE_LIMIT_TRUSTED_PROXIES", "10.0.0.0/8")
+	t.Setenv("BB_PASSWORD_POLICY_BCRYPT_COST", "12")
+	t.Setenv("BB_DEFAULTS_WEBHOOK_MAX_RETRIES", "7")
+	t.Setenv("BB_DEFAULTS_ANALYTICS_DEFAULT_DAYS", "14")
+	t.Setenv("BB_DEFAULTS_TIMEZONE", "Asia/Amman")
+	t.Setenv("BB_EMAIL_VERIFICATION_TTL", "73h")
+
 	cfg, err := Load()
 	if err != nil {
 		t.Fatalf("Load() failed: %v", err)
@@ -207,12 +224,41 @@ func TestEnvOverridesReachNestedKeys(t *testing.T) {
 		{"minio.secret_key", cfg.MinIO.SecretKey, "secret-from-env"},
 		{"minio.bucket", cfg.MinIO.Bucket, "bucket-from-env"},
 		{"smtp.hostname", cfg.SMTP.Hostname, "mail.example.com"},
+		{"mailer.host", cfg.Mailer.Host, "smtp.example.com"},
+		{"mailer.username", cfg.Mailer.Username, "mailer-user"},
+		{"mailer.password", cfg.Mailer.Password, "mailer-pass"},
+		{"mailer.from", cfg.Mailer.From, "noreply@example.com"},
+		{"sso.provider", cfg.SSO.Provider, "okta"},
+		{"sso.client_id", cfg.SSO.ClientID, "sso-client"},
+		{"sso.client_secret", cfg.SSO.ClientSecret, "sso-secret"},
+		{"defaults.timezone", cfg.Defaults.Timezone, "Asia/Amman"},
 	} {
 		if tc.got != tc.want {
 			t.Errorf("%s = %q, want %q (BB_* override ignored)", tc.name, tc.got, tc.want)
 		}
 	}
+	for _, tc := range []struct {
+		name      string
+		got, want int
+	}{
+		{"password_policy.bcrypt_cost", cfg.Password.BcryptCost, 12},
+		{"defaults.webhook_max_retries", cfg.Defaults.WebhookMaxRetries, 7},
+		{"defaults.analytics_default_days", cfg.Defaults.AnalyticsDefaultDays, 14},
+	} {
+		if tc.got != tc.want {
+			t.Errorf("%s = %d, want %d (BB_* override ignored)", tc.name, tc.got, tc.want)
+		}
+	}
 	if !cfg.MinIO.UseSSL {
 		t.Error("minio.use_ssl = false, want true (BB_MINIO_USE_SSL override ignored)")
+	}
+	if !cfg.SSO.AutoProvision {
+		t.Error("sso.auto_provision = false, want true (BB_SSO_AUTO_PROVISION override ignored)")
+	}
+	if cfg.EmailVerification.TTL != 73*time.Hour {
+		t.Errorf("email_verification.ttl = %v, want 73h (BB_EMAIL_VERIFICATION_TTL override ignored)", cfg.EmailVerification.TTL)
+	}
+	if len(cfg.RateLimit.TrustedProxies) != 1 || cfg.RateLimit.TrustedProxies[0] != "10.0.0.0/8" {
+		t.Errorf("rate_limit.trusted_proxies = %v, want [10.0.0.0/8]", cfg.RateLimit.TrustedProxies)
 	}
 }

@@ -8,7 +8,8 @@ description: Prerequisites and initial setup for BurnerByte.
 | Requirement | Version |
 |---|---|
 | Go | 1.25+ |
-| Node.js | 20+ with pnpm |
+| Node.js | 20.9+ (images build on 22) with pnpm 10.30.3 via corepack |
+| golang-migrate | v4.18.3 — only for the `make migrate-*` targets; Docker runs migrations for you |
 | Docker & Docker Compose | Latest |
 | PostgreSQL | 16 (or use Docker) |
 | Redis | 7 (or use Docker) |
@@ -54,7 +55,7 @@ and storage credentials are stored unencrypted. See
 
 To stop the stack: `make docker-down`
 
-**Local development only:** If you want only the infrastructure services (postgres, redis, minio) and intend to run the API and frontend locally, run `docker compose up -d postgres redis minio` directly, then use `make run-api` and `cd web && pnpm dev`.
+**Local development only:** If you want only the infrastructure services (postgres, redis, minio) and intend to run the API and frontend locally, run `make docker-infra` — it layers `docker-compose.dev.yml` over the base file to publish 5432/6379/9000/9001 on the host, which the base file deliberately does not. Then use `make run-api` and `cd web && pnpm dev`.
 
 ## Environment Configuration
 
@@ -76,7 +77,7 @@ See [Configuration](/docs/getting-started/configuration) for all available optio
 make migrate-up
 ```
 
-This applies all 43 database migrations, creating tables for users, organizations, teams, domains, inboxes, emails, attachments, webhooks, API keys, audit logs, sessions, SSO, analytics, and more.
+This applies all 46 database migrations, creating tables for users, organizations, teams, domains, inboxes, emails, attachments, webhooks, API keys, audit logs, sessions, SSO, analytics, and more.
 
 ## Install Frontend Dependencies
 
