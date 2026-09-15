@@ -16,12 +16,12 @@ export function Footer() {
           <div className="flex items-center gap-3 sm:gap-4">
             <Link href="/docs" className="hover:text-foreground transition-colors duration-150">Docs</Link>
             <a
-              href="https://gitlab.com/amjaradat01/burnerbyte"
+              href="https://github.com/AmJaradat01/burnerbyte"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 hover:text-foreground transition-colors duration-150"
             >
-              GitLab
+              GitHub
               <ExternalLink className="h-2.5 w-2.5" />
             </a>
             <span className="text-muted-foreground/50">Apache 2.0</span>

@@ -12,10 +12,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/microcosm-cc/bluemonday"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
-	"gitlab.com/amjaradat01/burnerbyte/internal/realtime"
-	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
-	redisrepo "gitlab.com/amjaradat01/burnerbyte/internal/repository/redis"
+	"github.com/amjaradat01/burnerbyte/internal/domain"
+	"github.com/amjaradat01/burnerbyte/internal/realtime"
+	"github.com/amjaradat01/burnerbyte/internal/repository/postgres"
+	redisrepo "github.com/amjaradat01/burnerbyte/internal/repository/redis"
 )
 
 var htmlSanitizer = bluemonday.UGCPolicy()

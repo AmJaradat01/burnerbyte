@@ -8,9 +8,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/config"
-	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
-	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
+	"github.com/amjaradat01/burnerbyte/internal/config"
+	"github.com/amjaradat01/burnerbyte/internal/domain"
+	"github.com/amjaradat01/burnerbyte/internal/repository/postgres"
 )
 
 type DomainAssignmentService struct {

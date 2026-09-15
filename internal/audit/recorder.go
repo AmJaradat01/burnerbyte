@@ -8,9 +8,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/auth"
-	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
-	"gitlab.com/amjaradat01/burnerbyte/internal/service"
+	"github.com/amjaradat01/burnerbyte/internal/auth"
+	"github.com/amjaradat01/burnerbyte/internal/domain"
+	"github.com/amjaradat01/burnerbyte/internal/service"
 )
 
 // SeverityMap maps action strings to their severity classification.

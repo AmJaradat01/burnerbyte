@@ -9,8 +9,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/config"
-	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
+	"github.com/amjaradat01/burnerbyte/internal/config"
+	"github.com/amjaradat01/burnerbyte/internal/repository/postgres"
 )
 
 // newAttachmentSvcWithOwner builds an AttachmentService whose mocked database

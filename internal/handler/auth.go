@@ -15,11 +15,11 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/auth"
-	"gitlab.com/amjaradat01/burnerbyte/internal/config"
-	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
-	"gitlab.com/amjaradat01/burnerbyte/internal/middleware"
-	"gitlab.com/amjaradat01/burnerbyte/internal/service"
+	"github.com/amjaradat01/burnerbyte/internal/auth"
+	"github.com/amjaradat01/burnerbyte/internal/config"
+	"github.com/amjaradat01/burnerbyte/internal/domain"
+	"github.com/amjaradat01/burnerbyte/internal/middleware"
+	"github.com/amjaradat01/burnerbyte/internal/service"
 )
 
 type AuthHandler struct {

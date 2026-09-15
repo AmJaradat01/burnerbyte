@@ -9,10 +9,15 @@ upgrade before reporting — the issue may already be fixed.
 
 **Please do not open a public issue for a security problem.**
 
-Report it privately through GitLab's confidential issue flow:
+Use GitHub's private vulnerability reporting:
 
-1. Open a new issue on the project.
-2. Tick **This issue is confidential** before submitting.
+1. Go to the **Security** tab on the repository.
+2. Choose **Report a vulnerability**.
+
+That opens a private advisory visible only to you and the maintainer. If the tab
+is not available to you, open a normal issue saying only that you have a
+security report — with no detail — and you will be invited to a private
+advisory.
 
 Include as much of the following as you can:
 

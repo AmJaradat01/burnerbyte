@@ -4,8 +4,8 @@ import (
 	"context"
 	"log/slog"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/realtime"
-	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
+	"github.com/amjaradat01/burnerbyte/internal/realtime"
+	"github.com/amjaradat01/burnerbyte/internal/repository/postgres"
 )
 
 // AdminStatsJob periodically fetches system stats and broadcasts to connected admin WebSocket clients.

@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/config"
+	"github.com/amjaradat01/burnerbyte/internal/config"
 )
 
 // Server wraps the SMTP inbound processing pipeline.
