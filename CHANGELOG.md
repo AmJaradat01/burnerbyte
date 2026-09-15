@@ -5,6 +5,17 @@ All notable changes to this project are documented here. The format follows
 uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html): `feat:` work
 takes a minor bump, `fix:` / `docs:` / `test:` a patch.
 
+## v1.14.0 (September 2026) — Setup wizard validates the real password policy; managed databases under Docker
+
+### Fixed
+- **The setup wizard let you past step 1 with a password the server would reject.** `canNext()` checked only that the field was non-empty, so a policy-violating password was caught four screens later by `POST /setup/complete`, with the whole form still to re-confirm. The wizard now reads the live policy from the public `GET /auth/sso-status` — the same endpoint `/register` uses — gates Next on it, and validates the email shape.
+- The wizard's requirement checklist was hardcoded while the policy is admin-configurable, so its hints could disagree with what the server enforced. Both it and the strength meter are now policy-driven, and `/register` has been refactored onto the same `lib/password-policy.ts`; the two surfaces previously carried separate copies of this logic and had already drifted.
+- **A managed database could not be used with Docker.** `docker-compose.yml` hardcoded the internal DSN on `api`, `smtpd` and the `migrate` job, so setting `DATABASE_URL` in `.env` was silently ignored and the only route was editing the compose file.
+
+### Added
+- `EXTERNAL_DATABASE_URL` and `EXTERNAL_REDIS_URL` point the Docker stack at managed instances; `api`, `smtpd` and the one-shot `migrate` job all honour them, so the schema is applied to the right database. They are deliberately *not* named `DATABASE_URL` / `REDIS_URL`: `.env` is shared with host-mode `make run-api`, where those point at `localhost`, and `localhost` inside a container is the container itself.
+- `GET /setup/status` reports the datastore connection targets with credentials stripped, and the wizard shows them above the admin form. Database and Redis are the two settings the wizard cannot change, and nothing previously said where they came from — so there was no way to confirm you were configuring the intended instance rather than a local Postgres left over from an earlier run. The field is withheld once setup completes, matching the `test-*` endpoints.
+
 ## v1.13.0 (September 2026) — Config env bindings completed; /docs synced to the code
 
 ### Fixed
