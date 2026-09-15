@@ -498,7 +498,7 @@ function AboutSection() {
       <SectionHeading
         icon={Info}
         title="About"
-        description="Version and project information"
+        description="Version and authorship"
       />
       <CardContent className="space-y-2">
         <div className="flex items-center justify-between gap-4">
@@ -506,22 +506,14 @@ function AboutSection() {
           <span className="font-mono text-sm tabular-nums">{data?.version ?? "—"}</span>
         </div>
         <div className="flex items-center justify-between gap-4">
-          <span className="text-sm text-muted-foreground">License</span>
-          <span className="text-sm">Apache 2.0</span>
-        </div>
-        <div className="flex items-center justify-between gap-4">
           <span className="text-sm text-muted-foreground">Created by</span>
-          <span className="text-sm">Ali Jaradat</span>
-        </div>
-        <div className="flex items-center justify-between gap-4">
-          <span className="text-sm text-muted-foreground">Source</span>
           <a
-            href="https://gitlab.com/burnerbyte/burnerbyte"
+            href="https://x.com/AmJaradat01"
             target="_blank"
             rel="noreferrer noopener"
             className="text-sm text-primary underline-offset-4 hover:underline"
           >
-            gitlab.com/burnerbyte/burnerbyte
+            Ali Jaradat
           </a>
         </div>
       </CardContent>
