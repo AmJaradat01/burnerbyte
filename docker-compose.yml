@@ -105,12 +105,16 @@ services:
       # Optional but strongly recommended: encrypts SSO/SMTP/storage secrets at
       # rest. When empty they are stored in plaintext. Generate: openssl rand -hex 32
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
-      API_BASE_URL: ${API_BASE_URL:-http://localhost:8080}
+      # These fall through FRONTEND_PORT / API_PORT for the same reason the
+      # frontend build args do: setting a port alone used to leave these on
+      # 3000/8080, and since CORS derives from FRONTEND_URL, changing the
+      # frontend port silently blocked every browser request with a CORS error.
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:${FRONTEND_PORT:-3000}}
+      API_BASE_URL: ${API_BASE_URL:-http://localhost:${API_PORT:-8080}}
       # Browser origins allowed for CORS and WebSocket. Defaults to FRONTEND_URL,
       # so a custom domain works by setting FRONTEND_URL alone; set
       # CORS_ALLOWED_ORIGINS (comma-separated) to allow more than one origin.
-      BB_CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-${FRONTEND_URL:-http://localhost:3000}}
+      BB_CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-${FRONTEND_URL:-http://localhost:${FRONTEND_PORT:-3000}}}
       # The API — not smtpd — verifies domains, comparing each domain's MX and
       # SPF records against this exact hostname. Setting it only on smtpd left
       # the API on the "localhost" default, so no domain could ever verify.
