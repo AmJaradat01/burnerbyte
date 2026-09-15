@@ -5,6 +5,15 @@ All notable changes to this project are documented here. The format follows
 uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html): `feat:` work
 takes a minor bump, `fix:` / `docs:` / `test:` a patch.
 
+## v1.14.1 (September 2026) — Documentation catch-up for v1.14.0
+
+### Changed
+- `EXTERNAL_DATABASE_URL` / `EXTERNAL_REDIS_URL` are now in the README's configuration section, not only in `.env.example` and the Docker page, along with an explanation of why database and Redis are the one pair that cannot be configured from inside the app.
+- `monitoring.mdx` documents the per-dependency fields `/readyz` returns, not just the aggregate status.
+- The `datastores` object on `GET /setup/status` is documented in `installation.mdx` (with its response shape and rationale) and noted in the API reference, including that it is withheld once setup completes.
+
+Re-verified the rest against the tree: 46 migrations, 36 tables, 74 indexes, 7 workers, five built-in roles, all 27 frontend routes covered, and every pinned version matching `go.mod` and `package.json`.
+
 ## v1.14.0 (September 2026) — Setup wizard validates the real password policy; managed databases under Docker
 
 ### Fixed
