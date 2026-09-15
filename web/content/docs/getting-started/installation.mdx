@@ -37,6 +37,27 @@ cp config.example.yaml config.yaml
 to load it from elsewhere. For Docker Compose, environment variables are the
 normal route — see [Configuration](/docs/getting-started/configuration).
 
+## Which Database Am I Configuring?
+
+Database and Redis are the only settings the setup wizard cannot change — its own
+state (the owner account, the organization, `setup_state`, `system_configs`) is
+stored *in* that database, so the connection has to be resolved before the API
+can serve step one. They come from the environment, `config.yaml`, or the
+first-run installer.
+
+So that you can confirm you are configuring the intended instance,
+`GET /api/v1/setup/status` reports the connection targets with credentials
+stripped, and the wizard shows them above the admin form:
+
+```json
+{
+  "completed": false,
+  "datastores": { "postgres": "postgres:5432/burnerbyte", "redis": "redis:6379" }
+}
+```
+
+The `datastores` field is withheld once setup completes.
+
 ## Start the Stack
 
 `make docker-up` starts the **full stack** — PostgreSQL 16, Redis 7, MinIO, the API server, SMTP server, and the Next.js frontend — via `docker compose up -d`.
