@@ -8,6 +8,8 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+  # Lets the suite be re-run from the Actions tab without an empty commit.
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
