@@ -5,6 +5,26 @@ All notable changes to this project are documented here. The format follows
 uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html): `feat:` work
 takes a minor bump, `fix:` / `docs:` / `test:` a patch.
 
+## v1.13.0 (September 2026) — Config env bindings completed; /docs synced to the code
+
+### Fixed
+- **Thirteen more documented `BB_*` variables were silently ignored** — the same viper failure mode fixed for MinIO/SMTP in v1.12.0. `BB_MAILER_{HOST,USERNAME,PASSWORD,FROM}`, all ten `BB_SSO_*`, `BB_RATE_LIMIT_TRUSTED_PROXIES`, `BB_PASSWORD_POLICY_BCRYPT_COST`, `BB_DEFAULTS_{WEBHOOK_MAX_RETRIES,ANALYTICS_DEFAULT_DAYS,TIMEZONE,DATE_FORMAT,TIME_FORMAT}` and `BB_EMAIL_VERIFICATION_TTL` are all registered and reachable now. Nothing crashed before — consumers defended with `<= 0` fallbacks — but an operator configuring the mailer purely from the environment got silence.
+- **No domain could verify under Docker.** `BB_SMTP_HOSTNAME` was set on `smtpd` only, but the API is what runs verification, comparing each domain's MX and SPF records against `smtp.hostname` with an exact match. The API ran on the `localhost` default. Now set on both services.
+- **The setup wizard's infrastructure panel never worked.** It read `data.postgres` / `data.redis` from `/readyz`, which returned only `{"status":"ok"}`, and it fetched a relative `/readyz` that hit the Next.js server and 404'd. `/readyz` now probes both dependencies without an early return and reports them individually; the frontend gained `API_ORIGIN` for the root-level health endpoints.
+- **Service worker threw on every page load.** It passed browser-extension requests to the Cache API, which only accepts http(s), producing an unhandled `Request scheme 'chrome-extension' is unsupported` rejection.
+- `shortcut-help.tsx` advertised a `d` "delete selected email" shortcut with no handler anywhere in the app.
+- `openapi.json` declared three operations that do not exist: `DELETE` on an org member (only `PATCH` and a deactivate `POST` are registered), plus `/healthz` and `/readyz`, which are served at the root and therefore 404 under the spec's `/api/v1` server entry.
+
+### Changed
+- **`/docs` fact-checked against the source across all 27 files** — roughly 100 corrections. 56 endpoint paths were missing the `/api/v1` prefix the router mounts them under. Counts corrected (46 migrations, 74 indexes, 27 pages, 20 handlers, 23 repositories). Genuinely wrong behaviour fixed: webhook retries (3 attempts at 0s/5s/25s, and no retry limit disables a webhook), the `webhook_retry` and `dns_recheck` and `invite_expiry` worker descriptions, the attachment storage path, inbox privacy (a service-layer ownership check, not a repository filter), and the email iframe sandbox. Two copy-paste snippets that would have failed — the `setup_state` SQL used `gen_random_uuid()` against a BOOLEAN singleton key, and an API-key example passed `"90d"` to a Go duration parser with no day unit.
+- `frontend/theming.mdx` had four fabricated token values — including a `--background` on hue 75 (warm amber) where the system is hue 265 (cool indigo) — and an entirely invented elevation table. Both now carry the real values from `globals.css`.
+- Documented what was missing: auth cookie, demo mode, `BB_CONFIG_PATH`, the `/metrics` access restriction, and i18n (next-intl ships one locale and no routing middleware).
+- `DESIGN.md`'s type scale had drifted from `globals.css` (headline 1.75rem/700 against the shipped 2rem/800) and omitted the display and subhead roles.
+- `docker-compose.yml` frontend build args now fall through `API_PORT` / `FRONTEND_PORT`, so changing a port no longer leaves the browser bundle calling the old one.
+
+### Added
+- `pnpm typecheck` and `make web-test`. `next build` only typechecks files in its build graph, so type errors confined to `*.test.tsx` passed both lint and the image build.
+
 ## v1.12.1 (September 2026) — MinIO bucket-creation race
 
 ### Fixed
