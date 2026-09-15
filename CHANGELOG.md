@@ -5,6 +5,17 @@ All notable changes to this project are documented here. The format follows
 uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html): `feat:` work
 takes a minor bump, `fix:` / `docs:` / `test:` a patch.
 
+## v1.17.0 (September 2026) — Version stamping in Docker; tighter CI gates
+
+### Fixed
+- **Every Docker build reported `dev`** — the sidebar badge read "vdev". Only the Jenkinsfile passed `-ldflags`, and only for the api binary, so the documented primary install path could never report what it was running. Both binaries now take a `VERSION` build arg; `make build` and `make docker-up` derive it from `git describe --tags --always --dirty`. A bare `docker compose up` still reports `dev`, which is accurate for an unstamped source build.
+- `cmd/smtpd` had no version variable at all, so a deployed SMTP server could not say what it was. It now has one and logs it at startup.
+- **Jenkinsfile:** `bin/smtpd` was built without the version stamp; the migration step was `|| true`, letting the integration suite run against a stale schema and report a missing column as a code fault; the frontend stage ran `pnpm test` but neither `pnpm lint` nor `pnpm typecheck` (which matters — `next build` only typechecks files in its build graph); and the production hostname was hardcoded inline while `NEXT_PUBLIC_SITE_URL` was never set at all.
+
+### Changed
+- Jenkins now runs `go vet` and `go test -race`, matching the Makefile, and checks for `golang-migrate` before migrating so a missing tool names itself instead of surfacing as a confusing test failure. **This fails the pipeline if the agent does not have golang-migrate installed.**
+- Versioning is documented in `CONTRIBUTING.md` and in the self-hosting monitoring page; neither mentioned it.
+
 ## v1.16.1 (September 2026) — Analytics rendering fixes
 
 ### Fixed
