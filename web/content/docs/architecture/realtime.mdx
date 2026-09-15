@@ -9,19 +9,19 @@ BurnerByte uses three separate WebSocket hubs:
 
 ### Inbox Hub
 
-Endpoint: `GET /ws/inboxes/{inboxId}?ticket=<ticket>`
+Endpoint: `GET /api/v1/ws/inboxes/{inboxId}?ticket=<ticket>`
 
 Streams new emails to a specific inbox in real-time. When the SMTP handler stores a new email, it pushes a notification to the inbox hub, which broadcasts to all connected clients.
 
 ### Notification Hub
 
-Endpoint: `GET /ws/notifications?ticket=<ticket>`
+Endpoint: `GET /api/v1/ws/notifications?ticket=<ticket>`
 
 Streams all notifications for the authenticated user. Powers the notification bell in the top-right corner of the UI.
 
 ### Admin Stats Hub
 
-Endpoint: `GET /ws/admin-stats?ticket=<ticket>`
+Endpoint: `GET /api/v1/ws/admin-stats?ticket=<ticket>`
 
 Streams real-time platform statistics to system admins. The admin stats worker pushes updated counts (emails, inboxes, domains, users, teams, storage) at regular intervals. Used by the dashboard when auto-refresh is enabled.
 
@@ -31,7 +31,7 @@ WebSocket connections do not accept the JWT directly. The client first calls `PO
 
 ## Connection Lifecycle
 
-1. Client calls `POST /ws/ticket` (Bearer auth) and receives a 30-second one-time ticket
+1. Client calls `POST /api/v1/ws/ticket` (Bearer auth) and receives a 30-second one-time ticket
 2. Client opens the WebSocket with `?ticket=<ticket>`; the server validates and consumes it, then registers the connection
 3. Ping/pong frames maintain the connection (54s ping interval, 60s read deadline)
 4. Write deadline of 10s prevents slow clients from blocking

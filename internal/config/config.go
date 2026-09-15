@@ -348,8 +348,31 @@ func Load() (*Config, error) {
 	v.SetDefault("minio.secret_key", "")
 	v.SetDefault("minio.bucket", "burnerbyte")
 	v.SetDefault("minio.use_ssl", false)
+	// Outbound mailer. host/username/password/from are deployment-specific and
+	// stay empty, but they must still be registered: viper drops a BB_* override
+	// for any nested key it does not already know, so .env.example's
+	// BB_MAILER_HOST and friends were silently discarded and the only way to
+	// configure the mailer was config.yaml or the setup wizard.
+	v.SetDefault("mailer.host", "")
 	v.SetDefault("mailer.port", 587)
+	v.SetDefault("mailer.username", "")
+	v.SetDefault("mailer.password", "")
+	v.SetDefault("mailer.from", "")
 	v.SetDefault("mailer.tls", true)
+
+	// SSO/OIDC. Same reason as the mailer: the admin UI is the normal way to set
+	// these (they persist to system_config and are overlaid at boot), but the
+	// documented BB_SSO_* variables have to resolve for an env-only deployment.
+	v.SetDefault("sso.provider", "")
+	v.SetDefault("sso.client_id", "")
+	v.SetDefault("sso.client_secret", "")
+	v.SetDefault("sso.redirect_url", "")
+	v.SetDefault("sso.tenant_id", "")
+	v.SetDefault("sso.issuer_url", "")
+	v.SetDefault("sso.auto_provision", false)
+	v.SetDefault("sso.default_org_role", "")
+	v.SetDefault("sso.default_team_role", "")
+	v.SetDefault("sso.allowed_domains", "")
 
 	// CORS
 	v.SetDefault("cors.allowed_origins", []string{"http://localhost:3000"})
@@ -363,6 +386,8 @@ func Load() (*Config, error) {
 	v.SetDefault("rate_limit.unauthenticated", 60)
 	v.SetDefault("rate_limit.login", 10)
 	v.SetDefault("rate_limit.forgot_password", 3)
+	// CIDRs whose X-Forwarded-For is trusted for client-IP resolution.
+	v.SetDefault("rate_limit.trusted_proxies", []string{})
 
 	// Account lockout
 	v.SetDefault("lockout.max_attempts", 5)
@@ -374,6 +399,10 @@ func Load() (*Config, error) {
 	v.SetDefault("password_policy.require_lowercase", true)
 	v.SetDefault("password_policy.require_number", true)
 	v.SetDefault("password_policy.require_special", true)
+	// bcrypt.DefaultCost. auth.HashPassword already falls back to it when the
+	// value is out of range, so this only makes BB_PASSWORD_POLICY_BCRYPT_COST
+	// actually reachable.
+	v.SetDefault("password_policy.bcrypt_cost", 10)
 
 	// Platform defaults / limits
 	v.SetDefault("defaults.attachments_enabled", true)
@@ -391,8 +420,17 @@ func Load() (*Config, error) {
 	v.SetDefault("defaults.presigned_url_ttl", "15m")
 	v.SetDefault("defaults.webhook_timeout", "10s")
 	v.SetDefault("defaults.analytics_cache_ttl", "2h")
+	// The consumers of these three already fall back when they read zero, so
+	// registering them changes no behaviour — it only makes the documented
+	// BB_DEFAULTS_* overrides take effect at all.
+	v.SetDefault("defaults.webhook_max_retries", 3)
+	v.SetDefault("defaults.analytics_default_days", 30)
+	v.SetDefault("defaults.timezone", "UTC")
+	v.SetDefault("defaults.date_format", "YYYY-MM-DD")
+	v.SetDefault("defaults.time_format", "24h")
 
 	v.SetDefault("email_verification.enabled", true)
+	v.SetDefault("email_verification.ttl", "24h")
 
 	// Logging / metrics
 	v.SetDefault("logging.level", "info")

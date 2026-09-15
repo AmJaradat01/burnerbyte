@@ -32,12 +32,15 @@ vi.mock("@/stores/org-store", () => ({
 // Mock next/dynamic to avoid SSR-related hanging in tests
 vi.mock("next/dynamic", async () => {
   const React = await import("react");
-  type LoadedModule = { default?: React.ComponentType<unknown> } | React.ComponentType<unknown>;
+  // next/dynamic loaders resolve to either the component itself or a module
+  // namespace with it on `default`; both React function and class components
+  // are callable, so typeof narrows the union cleanly.
+  type LoadedModule = React.ComponentType<unknown> | { default: React.ComponentType<unknown> };
   return {
     default: (loader: () => Promise<LoadedModule>) => {
       let Comp: React.ComponentType<unknown> | null = null;
       const promise = loader().then((mod) => {
-        Comp = ("default" in mod ? mod.default : mod) ?? null;
+        Comp = typeof mod === "function" ? mod : mod.default;
       });
       return function DynamicWrapper(props: Record<string, unknown>) {
         const [, setReady] = React.useState(false);

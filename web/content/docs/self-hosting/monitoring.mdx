@@ -8,7 +8,8 @@ description: Prometheus metrics, health endpoints, and logging.
 | Endpoint | Description |
 |---|---|
 | `GET /healthz` | Liveness — always returns 200 if the process is running |
-| `GET /readyz` | Readiness — verifies PostgreSQL and Redis connectivity |
+| `GET /readyz` | Readiness — pings PostgreSQL and Redis (2s timeout); 503 with a `detail` naming the failed dependency |
+| `GET /metrics` | Prometheus exposition — **loopback and private IPs only** |
 
 ## Prometheus Metrics
 
@@ -43,4 +44,6 @@ JSON format is recommended for production (parseable by Loki, ELK, Datadog).
 
 ## Admin Dashboard
 
-System admins can view aggregate stats at `/admin`: total users, orgs, teams, domains, active/total inboxes, and total emails. Also available via `GET /admin/stats`.
+System admins can view aggregate stats on the `/admin` page: total users, teams, domains, emails, total/active inboxes, sessions, lifetime inboxes created, storage used, webhooks and API keys. Also available via `GET /api/v1/admin/stats` (system admin only). The `admin_stats` worker refreshes the cached payload every 10 seconds and streams it over `/api/v1/ws/admin-stats`.
+
+`GET /api/v1/admin/health` (system admin only) reports per-dependency status and latency for `postgres`, `redis`, and `storage` (the last only when S3/MinIO is the active backend), plus process uptime.

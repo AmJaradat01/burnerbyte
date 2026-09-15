@@ -3,7 +3,7 @@
   "info": {
     "title": "BurnerByte API",
     "description": "Self-hosted temporary email platform API",
-    "version": "1.12.1",
+    "version": "1.13.0",
     "license": {
       "name": "Apache 2.0",
       "url": "https://www.apache.org/licenses/LICENSE-2.0"
@@ -670,7 +670,7 @@
             "description": "Invalid credentials"
           },
           "409": {
-            "description": "Session limit reached — returns pending token and active sessions list",
+            "description": "Session limit reached \u2014 returns pending token and active sessions list",
             "content": {
               "application/json": {
                 "schema": {
@@ -720,7 +720,7 @@
             "description": "Invalid or expired pending login token"
           },
           "409": {
-            "description": "Session limit still exceeded (race condition) — returns new pending token and updated sessions",
+            "description": "Session limit still exceeded (race condition) \u2014 returns new pending token and updated sessions",
             "content": {
               "application/json": {
                 "schema": {
@@ -1258,25 +1258,6 @@
         "responses": {
           "200": {
             "description": "Role updated"
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "Members"
-        ],
-        "summary": "Remove member",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          },
-          {
-            "$ref": "#/components/parameters/userId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Member removed"
           }
         }
       }
@@ -2156,7 +2137,7 @@
           "Audit"
         ],
         "summary": "List platform-level audit events (system admin)",
-        "description": "Audit events that have no owning organization — registration, login, password reset, account deletion, and session revocation. Requires a system administrator.",
+        "description": "Audit events that have no owning organization \u2014 registration, login, password reset, account deletion, and session revocation. Requires a system administrator.",
         "parameters": [
           {
             "$ref": "#/components/parameters/page"
@@ -2205,7 +2186,11 @@
             "description": "Filter by inbox status",
             "schema": {
               "type": "string",
-              "enum": ["active", "expired", "all"],
+              "enum": [
+                "active",
+                "expired",
+                "all"
+              ],
               "default": "active"
             }
           },
@@ -3135,19 +3120,6 @@
         }
       }
     },
-    "/healthz": {
-      "get": {
-        "tags": [
-          "Health"
-        ],
-        "summary": "Healthz",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
     "/inboxes/{inboxId}/emails/mark-all-read": {
       "post": {
         "tags": [
@@ -3964,19 +3936,6 @@
           },
           "404": {
             "description": "Not found"
-          }
-        }
-      }
-    },
-    "/readyz": {
-      "get": {
-        "tags": [
-          "Health"
-        ],
-        "summary": "Readyz",
-        "responses": {
-          "200": {
-            "description": "OK"
           }
         }
       }

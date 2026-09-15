@@ -825,28 +825,37 @@ func healthz(w http.ResponseWriter, _ *http.Request) {
 	w.Write([]byte(`{"status":"ok"}`))
 }
 
+// readyz reports readiness per dependency. Both are probed even when the first
+// fails: returning early hid which one was actually down, and the setup
+// wizard's infrastructure panel reads the individual `postgres` and `redis`
+// fields to show them separately. `status` is retained for existing callers.
 func readyz(pool *pgxpool.Pool, rdb *redis.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 		defer cancel()
 
+		body := map[string]string{"postgres": "ok", "redis": "ok", "status": "ok"}
+		var failed []string
+
 		if err := pool.Ping(ctx); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusServiceUnavailable)
-			w.Write([]byte(`{"status":"error","detail":"database unavailable"}`))
-			return
+			body["postgres"] = "error"
+			failed = append(failed, "database unavailable")
+		}
+		if err := rdb.Ping(ctx).Err(); err != nil {
+			body["redis"] = "error"
+			failed = append(failed, "redis unavailable")
 		}
 
-		if err := rdb.Ping(ctx).Err(); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusServiceUnavailable)
-			w.Write([]byte(`{"status":"error","detail":"redis unavailable"}`))
-			return
+		code := http.StatusOK
+		if len(failed) > 0 {
+			body["status"] = "error"
+			body["detail"] = strings.Join(failed, "; ")
+			code = http.StatusServiceUnavailable
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"status":"ok"}`))
+		w.WriteHeader(code)
+		_ = json.NewEncoder(w).Encode(body)
 	}
 }
 

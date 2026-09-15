@@ -1,6 +1,12 @@
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
 export const WS_BASE = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8080/api/v1/ws";
 
+/** The API server's origin, without the /api/v1 prefix. The health endpoints
+ *  (/healthz, /readyz) and /metrics are served at the root, not under the API
+ *  version prefix, so they cannot be reached through API_BASE. A relative
+ *  fetch("/readyz") hits the Next.js server instead and 404s. */
+export const API_ORIGIN = API_BASE.replace(/\/api\/v1\/?$/, "");
+
 // Access token is kept in memory only — never persisted to localStorage.
 // This mitigates XSS token theft. The refresh token lives in an httpOnly
 // cookie set by the backend (use_cookie mode), so no credential survives in

@@ -6,11 +6,11 @@ description: Scoped API keys for programmatic access.
 ## Creating a Key
 
 ```bash
-POST /orgs/{orgId}/teams/{teamId}/api-keys
+POST /api/v1/orgs/{orgId}/teams/{teamId}/api-keys
 {
   "name": "CI Pipeline",
   "scopes": ["team.inboxes.create", "team.inboxes.view", "team.emails.view"],
-  "expires_in": "90d",
+  "expires_in": "2160h",
   "allowed_ips": ["203.0.113.0/24"]
 }
 ```
@@ -19,7 +19,7 @@ The response includes the `raw_key` field — **shown only once** (on creation a
 
 ## Key Format
 
-API keys use the prefix `bb_` followed by a random string. The raw key is never stored; the database keeps a SHA-256 hash of the full key (used for verification) plus a short key prefix (used for display and identification).
+API keys are `bb_` followed by 64 hex characters (32 bytes of CSPRNG output). The raw key is never stored: the database keeps a SHA-256 hash of the full key plus an 11-character prefix (`bb_` and the first 8 hex chars) for display. The raw key is never stored; the database keeps a SHA-256 hash of the full key (used for verification) plus a short key prefix (used for display and identification).
 
 ## Available Scopes
 
@@ -60,13 +60,13 @@ The auth middleware detects the `bb_` prefix and validates against the API key t
 ### Get a Single Key
 
 ```
-GET /orgs/{orgId}/teams/{teamId}/api-keys/{keyId}
+GET /api/v1/orgs/{orgId}/teams/{teamId}/api-keys/{keyId}
 ```
 
 ### Update a Key
 
 ```bash
-PATCH /orgs/{orgId}/teams/{teamId}/api-keys/{keyId}
+PATCH /api/v1/orgs/{orgId}/teams/{teamId}/api-keys/{keyId}
 {
   "name": "Updated Name",
   "scopes": ["team.inboxes.view", "team.emails.view"],
@@ -75,12 +75,12 @@ PATCH /orgs/{orgId}/teams/{teamId}/api-keys/{keyId}
 }
 ```
 
-Setting `is_active` to `false` performs a soft-revoke — the key still exists but is rejected on use.
+Setting `is_active` to `false` performs a soft-revoke — the key still exists but is rejected on use. `DELETE` is also a soft revoke: it stamps `revoked_at`/`revoked_by` and the row survives for audit. Rows are hard-deleted only once expired, by the cleanup worker.
 
 ### Key Rotation
 
 ```
-POST /orgs/{orgId}/teams/{teamId}/api-keys/{keyId}/rotate
+POST /api/v1/orgs/{orgId}/teams/{teamId}/api-keys/{keyId}/rotate
 ```
 
 Generates a new secret for an existing key. The old secret is immediately invalidated. The response includes the new `raw_key`.
@@ -88,13 +88,13 @@ Generates a new secret for an existing key. The old secret is immediately invali
 ### Revoke a Key
 
 ```
-DELETE /orgs/{orgId}/teams/{teamId}/api-keys/{keyId}
+DELETE /api/v1/orgs/{orgId}/teams/{teamId}/api-keys/{keyId}
 ```
 
 ### Bulk Revoke
 
 ```bash
-POST /orgs/{orgId}/teams/{teamId}/api-keys/bulk-revoke
+POST /api/v1/orgs/{orgId}/teams/{teamId}/api-keys/bulk-revoke
 {
   "key_ids": ["uuid-1", "uuid-2"]
 }

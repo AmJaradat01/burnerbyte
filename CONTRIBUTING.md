@@ -48,7 +48,12 @@ make lint                     # golangci-lint
 
 cd web && pnpm test           # vitest
 cd web && pnpm lint           # eslint
+cd web && pnpm typecheck      # tsc --noEmit
 ```
+
+`make web-test` runs all three. `pnpm typecheck` is not redundant with the
+build: `next build` only typechecks files in its build graph, so type errors
+confined to `*.test.tsx` pass both the build and lint.
 
 Go tests include [`rapid`](https://github.com/flyingmutant/rapid) property
 tests. When one fails it writes a reproduction file under `testdata/rapid/`;

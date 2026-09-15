@@ -5,10 +5,9 @@ description: Running BurnerByte with Docker Compose.
 
 ## Full Stack with Docker Compose
 
-The included `docker-compose.yml` runs the entire stack. First create `config.yaml` (the images copy it in at build time):
+The included `docker-compose.yml` runs the entire stack with no configuration file at all — every setting has a working default and the images boot purely from environment variables:
 
 ```bash
-cp config.example.yaml config.yaml
 docker compose up -d
 ```
 
@@ -63,7 +62,9 @@ FRONTEND_PORT=3000
 JWT_SECRET=change-me-to-a-random-64-char-string
 FRONTEND_URL=http://localhost:3000
 API_BASE_URL=http://localhost:8080   # baked into the frontend image at build time
-SMTP_HOSTNAME=mail.example.com        # mapped to BB_SMTP_HOSTNAME for the api/smtpd
+SMTP_HOSTNAME=mail.example.com        # BB_SMTP_HOSTNAME on both api and smtpd
+WS_BASE_URL=ws://localhost:8080       # baked into the frontend image; wss:// behind TLS
+CORS_ALLOWED_ORIGINS=http://localhost:3000  # CORS + WebSocket origins; defaults to FRONTEND_URL
 ```
 
 ## Infrastructure Only
@@ -87,7 +88,7 @@ Then run the API and frontend locally with `make run-api` and `cd web && pnpm de
 
 ## Health Checks
 
-All Docker services include health checks. The API and SMTP servers wait for healthy database, Redis, and MinIO before starting.
+Postgres, Redis, MinIO and the API define health checks. The API and SMTP servers wait for healthy database, Redis and MinIO **and** for the one-shot `migrate` job to complete successfully; the frontend waits for a healthy `api`.
 
 Verify everything is running:
 
@@ -109,5 +110,6 @@ Data is persisted in Docker volumes:
 - `pgdata` — PostgreSQL data
 - `redisdata` — Redis data
 - `miniodata` — MinIO object storage
+- `attachments` — local-filesystem attachment fallback, used when MinIO is unreachable at boot
 
 To reset everything: `docker compose down -v`

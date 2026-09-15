@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { api, ApiError, setAccessToken, setSessionHint } from "@/lib/api";
+import { api, ApiError, API_ORIGIN, setAccessToken, setSessionHint } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -87,7 +87,7 @@ export default function SetupPage() {
   // Check infrastructure health on mount
   useEffect(() => {
     if (!checking) {
-      fetch("/readyz").then((r) => r.json()).then((data) => {
+      fetch(`${API_ORIGIN}/readyz`).then((r) => r.json()).then((data) => {
         setHealthStatus({ postgres: data.postgres === "ok", redis: data.redis === "ok" });
       }).catch(() => setHealthStatus(null));
     }
