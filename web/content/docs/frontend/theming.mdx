@@ -24,13 +24,13 @@ All colors use the **OKLCH color space** for perceptual uniformity. The palette 
 
 | Token | Value (`:root`) | Usage |
 |---|---|---|
-| `--primary` | `oklch(0.55 0.20 260)` — deep indigo | Primary actions, focus rings |
+| `--primary` | `oklch(0.52 0.215 264)` — deep indigo | Primary actions, focus rings |
 | `--destructive` | `oklch(0.577 0.245 27.325)` — red | Errors, delete actions |
 | `--success` | `oklch(0.60 0.17 155)` — green | Success states (always paired with icon) |
 | `--warning` | `oklch(0.75 0.16 70)` — amber | Warning states (always paired with icon) |
 | `--info` | `oklch(0.60 0.15 245)` — blue | Informational states |
-| `--muted` | `oklch(0.955 0.005 260)` — light indigo-gray | Secondary surfaces |
-| `--background` | `oklch(0.985 0.003 75)` — warm paper | Page background |
+| `--muted` | `oklch(0.965 0.006 265)` — light indigo-gray | Secondary surfaces |
+| `--background` | `oklch(0.984 0.004 265)` — cool indigo-tinted paper | Page background |
 
 ### Overriding Colors
 
@@ -38,8 +38,8 @@ Override CSS custom properties in `globals.css`. Because the app is light-only, 
 
 ```css
 :root {
-  --primary: oklch(0.55 0.20 260);
-  --primary-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.52 0.215 264);
+  --primary-foreground: oklch(0.99 0.002 265);
 }
 ```
 
@@ -51,33 +51,42 @@ Override CSS custom properties in `globals.css`. Because the app is light-only, 
 
 ## Typography
 
-Single sans family: **Geist Sans** (with system-ui fallback); **Geist Mono** for code, email addresses, and monospace values. Hierarchy through weight (400–700) and size (0.75rem–1.5rem).
+Single sans family: **Geist Sans** (with system-ui fallback); **Geist Mono** for code, email addresses, and monospace values. Hierarchy through weight (400–800) and size (0.75rem–3.25rem).
 
-| Role | Size | Weight | Usage |
-|---|---|---|---|
-| Headline | 1.5rem | 700 | Page titles (one per view) |
-| Title | 1.125rem | 600 | Section headings, card titles |
-| Body | 0.875rem | 400 | Running text, form content |
-| Label | 0.75rem | 500 | Metadata, timestamps, badges |
-| Mono | 0.8125rem | 400 | Email addresses, IDs, code |
+| Role | Utility | Size | Weight | Usage |
+|---|---|---|---|---|
+| Display | `.text-display` | `clamp(2.25rem, 5vw, 3.25rem)` | 800 | Landing hero, marketing moments |
+| Headline | `.text-headline` | 2rem | 800 | Page titles (one per view) |
+| Subhead | `.text-subhead` | 1.25rem | 650 | Card titles, dialog headers |
+| Title | `.text-title` | 1.125rem | 600 | Section headings |
+| Body | Tailwind `text-sm` | 0.875rem | 400 | Running text, form content |
+| Label | `.text-label` | 0.75rem | 500 | Metadata, timestamps, badges |
+| Mono | `font-mono` | 0.8125rem | 400 | Email addresses, IDs, code |
 
 All numeric displays use `font-variant-numeric: tabular-nums`.
 
 ## Elevation
 
-Flat by default. Shadows appear only as state feedback:
+Restrained but real. Tailwind's `shadow-*` tokens are overridden in the
+`@theme inline` block of `globals.css` with soft, two-layer shadows tinted to the
+indigo axis (`rgb(30 27 75 / …)`) — never flat black — so every elevated element
+reads as the same material:
 
-| Level | Value | Usage |
+| Token | Value | Usage |
 |---|---|---|
-| Ambient | `0 1px 3px rgba(0,0,0,0.04)` | Cards at rest |
-| Hover | `0 4px 12px rgba(0,0,0,0.06)` | Interactive cards on hover |
-| Elevated | `0 8px 24px rgba(0,0,0,0.08)` | Popovers, dropdowns |
-| Inset | `inset 0 1px 2px rgba(0,0,0,0.04)` | Input fields |
+| `shadow-xs` | `0 1px 2px -1px rgb(30 27 75 / 0.08), 0 1px 3px -1px rgb(30 27 75 / 0.05)` | Cards at rest |
+| `shadow-sm` | `0 2px 4px -2px rgb(30 27 75 / 0.08), 0 2px 8px -2px rgb(30 27 75 / 0.06)` | `.lift-on-hover` |
+| `shadow-md` | `0 6px 16px -4px rgb(30 27 75 / 0.12), 0 2px 6px -2px rgb(30 27 75 / 0.07)` | Clickable cards on hover |
+| `shadow-lg` | `0 16px 36px -10px rgb(30 27 75 / 0.16), 0 4px 12px -4px rgb(30 27 75 / 0.09)` | Popovers, dropdowns |
+| `shadow-xl` | `0 24px 56px -16px rgb(30 27 75 / 0.22), 0 8px 20px -8px rgb(30 27 75 / 0.12)` | Dialogs, command palette |
+
+The corner-radius scale derives from `--radius: 0.7rem`, from
+`radius-sm` = `calc(var(--radius) - 4px)` to `radius-4xl` = `calc(var(--radius) + 16px)`.
 
 ## Accessibility
 
 - WCAG AA compliance across all surfaces
-- `prefers-reduced-motion` respected (all animations disabled)
+- `prefers-reduced-motion` respected — entrance and scroll-reveal animations are gated behind `no-preference` and never start; everything else is clamped to `0.01ms` with `scroll-behavior: auto`
 - Color-blind safe status indicators (icon + text, never color alone)
 - Skip-to-content link (internationalized)
 - `aria-label` on all icon-only buttons

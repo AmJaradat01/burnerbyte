@@ -56,12 +56,24 @@ typography:
     fontWeight: 600
     lineHeight: 1.3
     letterSpacing: "-0.01em"
+  subhead:
+    fontFamily: "Geist Sans, system-ui, -apple-system, sans-serif"
+    fontSize: "1.25rem"
+    fontWeight: 650
+    lineHeight: 1.25
+    letterSpacing: "-0.015em"
   headline:
     fontFamily: "Geist Sans, system-ui, -apple-system, sans-serif"
-    fontSize: "1.75rem"
-    fontWeight: 700
-    lineHeight: 1.15
-    letterSpacing: "-0.025em"
+    fontSize: "2rem"
+    fontWeight: 800
+    lineHeight: 1.1
+    letterSpacing: "-0.03em"
+  display:
+    fontFamily: "Geist Sans, system-ui, -apple-system, sans-serif"
+    fontSize: "clamp(2.25rem, 5vw, 3.25rem)"
+    fontWeight: 800
+    lineHeight: 1.05
+    letterSpacing: "-0.035em"
   mono:
     fontFamily: "Geist Mono, ui-monospace, monospace"
     fontSize: "0.8125rem"
@@ -211,15 +223,17 @@ Five series, deliberately not in a single hue family. Used in `recharts` visuali
 **Character:** A single sans-serif family carries every role, hierarchy emerging from weight and size contrast rather than family switching. Geist Sans's even rhythm and tabular figures keep it comfortable in dense data tables and spacious headings. The mono face appears only where character width carries meaning: email addresses, inbox IDs, countdowns, code.
 
 ### Hierarchy
-- **Headline** (700, 1.75rem / 1.15, `-0.025em` tracking). Page titles. One per view. Used via the `text-headline` utility.
-- **Title** (600, 1.125rem / 1.3). Section headings, card titles, dialog headers. `text-title` utility.
+- **Display** (800, `clamp(2.25rem, 5vw, 3.25rem)` / 1.05, `-0.035em` tracking). Landing hero and marketing moments only — never a product surface. `text-display` utility.
+- **Headline** (800, 2rem / 1.1, `-0.03em` tracking). Page titles. One per view. `text-headline` utility.
+- **Subhead** (650, 1.25rem / 1.25, `-0.015em` tracking). Card titles and dialog headers. `text-subhead` utility.
+- **Title** (600, 1.125rem / 1.3). Section headings. `text-title` utility.
 - **Body** (400, 0.875rem / 1.5). All running text. Cap line length at 65–75ch for prose; tables and dense UI may run wider.
 - **Label** (500, 0.75rem / 1.4, `0.01em` tracking). Form labels, metadata, timestamps, badge text. `text-label` utility.
 - **Mono** (400, 0.8125rem / 1.5). Email addresses, inbox IDs, countdowns, code snippets, copyable values.
 
 ### Named Rules
 
-**The One Family Rule.** Geist Sans carries everything. No display font, no decorative pairing, no display-only weight. Hierarchy is achieved through weight (400→700) and size (0.75rem→1.75rem), never through family switching.
+**The One Family Rule.** Geist Sans carries everything. No display font, no decorative pairing, no display-only weight. Hierarchy is achieved through weight (400→800) and size (0.75rem→3.25rem), never through family switching.
 
 **The Tabular Figures Rule.** All numeric displays (countdowns, statistics, table columns, IDs) use `font-variant-numeric: tabular-nums` via the `tabular-nums` utility so digits do not shift width during updates.
 

@@ -31,13 +31,21 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
   if (request.url.includes("/ws/")) return;
 
+  // The Cache API only accepts http(s). Browser extensions issue requests
+  // through this worker under chrome-extension:// (and moz-extension://), and
+  // cache.put() on one rejects with "Request scheme 'chrome-extension' is
+  // unsupported" — an unhandled rejection in the console on every page load,
+  // for traffic that was never ours to cache.
+  const scheme = new URL(request.url).protocol;
+  if (scheme !== "http:" && scheme !== "https:") return;
+
   // Stale-while-revalidate for inbox list API (offline-first for key data)
   if (request.url.includes("/api/") && request.url.includes("/inboxes")) {
     event.respondWith(
       caches.open(CACHE_NAME).then((cache) =>
         cache.match(request).then((cached) => {
           const fetchPromise = fetch(request).then((response) => {
-            if (response.ok) cache.put(request, response.clone());
+            if (response.ok) cache.put(request, response.clone()).catch(() => {});
             return response;
           }).catch(() => cached || new Response(JSON.stringify({ data: [], total: 0, page: 1, per_page: 12, total_pages: 0 }), { status: 200, headers: { "Content-Type": "application/json" } }));
           return cached || fetchPromise;
@@ -68,7 +76,7 @@ self.addEventListener("fetch", (event) => {
         return fetch(request).then((response) => {
           if (response.ok) {
             const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone)).catch(() => {});
           }
           return response;
         });

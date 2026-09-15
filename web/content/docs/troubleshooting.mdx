@@ -14,7 +14,7 @@ description: Common issues and solutions when running BurnerByte.
 3. **Domain verified?** — Go to **Domains** and check that both MX and TXT show green checkmarks
 4. **Inbox active?** — Expired inboxes stop receiving. Check the TTL countdown
 5. **Port forwarding?** — If running behind a firewall, port 25 must be forwarded to 2525. See [Reverse Proxy](/docs/self-hosting/reverse-proxy)
-6. **Redis running?** — The SMTP router uses Redis for fast inbox lookups. Check `GET /readyz`
+6. **Redis running?** — The SMTP router looks inboxes up in Redis first and falls back to Postgres on a miss, so Redis being down slows ingest rather than stopping it. `GET /readyz` covers the **API** process; `smtpd` exposes no HTTP endpoint, so check its logs.
 
 ```bash
 # Test SMTP directly
@@ -30,7 +30,7 @@ curl http://localhost:8080/readyz
 
 1. **Reverse proxy configured for WebSocket?** — Nginx needs `proxy_http_version 1.1` and `Upgrade` headers. See [Reverse Proxy](/docs/self-hosting/reverse-proxy)
 2. **CORS origins correct?** — `BB_CORS_ALLOWED_ORIGINS` must include your frontend URL
-3. **JWT valid?** — WebSocket connections authenticate via `?token=<jwt>` query parameter
+3. **Auth failing?** — The UI authenticates WebSockets with a short-lived one-time ticket: it calls `POST /api/v1/ws/ticket` and connects with `?ticket=<ticket>`. A 401 on that POST means the access token has expired. Non-browser clients may still pass `?token=<jwt>` directly.
 
 ## Setup Wizard Loops
 
@@ -39,13 +39,14 @@ curl http://localhost:8080/readyz
 The setup state is stored in the `setup_state` database table. If the table is empty or the `completed` flag is false:
 
 ```sql
--- Check setup state
+-- Check setup state (a singleton table — always exactly one row, id = true)
 SELECT * FROM setup_state;
 
 -- Force completion (if setup was done manually)
-INSERT INTO setup_state (id, completed, completed_at)
-VALUES (gen_random_uuid(), true, now())
-ON CONFLICT DO NOTHING;
+UPDATE setup_state
+   SET completed = true,
+       completed_at = now()
+ WHERE id = true;
 ```
 
 ## Database Connection Errors
@@ -75,8 +76,8 @@ openssl rand -hex 32
 **Symptoms:** Emails arrive but attachments are missing.
 
 1. **Attachments enabled?** — Check org settings (`attachments_enabled`) and domain assignment settings
-2. **MinIO running?** — Check `GET /admin/health` for MinIO status
-3. **Bucket exists?** — The bucket specified in `BB_MINIO_BUCKET` must exist. MinIO auto-creates it on first use if permissions allow
+2. **MinIO running?** — Check `GET /api/v1/admin/health` for MinIO status
+3. **Bucket exists?** — `BB_MINIO_BUCKET` (default `burnerbyte`) is created automatically at **boot**, not on first upload. If creation fails — typically `AccessDenied` — the process falls back to local-filesystem attachments at `/data/attachments`. Check the startup logs.
 4. **File size limit?** — Check `BB_DEFAULTS_MAX_ATTACHMENT_SIZE_MB` (default: 25 MB)
 
 ## Rate Limiting
@@ -84,10 +85,13 @@ openssl rand -hex 32
 **Symptoms:** 429 Too Many Requests errors.
 
 Default limits:
-- Authenticated: 100 requests/minute
-- Unauthenticated: 20 requests/minute
-- Login: 5 attempts/minute per IP
+- Authenticated: 300 requests/minute
+- Unauthenticated: 60 requests/minute
+- Login: 10 attempts/minute per IP
 - Password reset: 3 requests/hour per IP
+
+Note that `.env.example` ships 100 / 20 / 5 for the first three — if you copied it,
+those are your effective limits rather than the defaults above.
 
 Adjust via config:
 
@@ -108,8 +112,8 @@ After 5 failed login attempts (configurable), the account is locked for 15 minut
 
 **Symptoms:** Slow page loads, high API latency.
 
-1. **Check health endpoint** — `GET /admin/health` shows service latencies
-2. **Database indexes** — Ensure all migrations are applied (52+ indexes)
+1. **Check health endpoint** — `GET /api/v1/admin/health` shows service latencies
+2. **Database indexes** — Ensure all 46 migrations are applied (74 indexes)
 3. **Redis cache** — Analytics and inbox routing are cached in Redis. Verify Redis is running
 4. **Connection pool** — Increase `BB_DATABASE_MAX_OPEN_CONNS` for high-traffic deployments
 5. **Worker intervals** — The analytics worker pre-computes stats every 5 minutes. Reduce `BB_WORKERS_ANALYTICS_INTERVAL` for fresher data
@@ -118,4 +122,4 @@ After 5 failed login attempts (configurable), the account is locked for 15 minut
 
 - **GitLab Issues:** [gitlab.com/burnerbyte/burnerbyte/-/issues](https://gitlab.com/burnerbyte/burnerbyte/-/issues)
 - **API Docs:** [/docs/api](/docs/api) — Full endpoint reference
-- **Health Check:** `GET /admin/health` — Service status and latencies
+- **Health Check:** `GET /api/v1/admin/health` — Service status and latencies

@@ -2,6 +2,8 @@
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
+// Only shortcuts with a real handler belong here. "d" (delete selected email)
+// was advertised for a keybinding that was never implemented.
 const shortcutGroups: Record<string, { key: string; description: string }[]> = {
   Navigation: [
     { key: "j", description: "Next email in list" },
@@ -9,12 +11,11 @@ const shortcutGroups: Record<string, { key: string; description: string }[]> = {
   ],
   Actions: [
     { key: "n", description: "Create new inbox" },
-    { key: "d", description: "Delete selected email" },
   ],
   General: [
     { key: "⌘K", description: "Open command palette" },
     { key: "?", description: "Show this help" },
-    { key: "Esc", description: "Close modal / deselect" },
+    { key: "Esc", description: "Close modal / deselect email" },
   ],
 };
 

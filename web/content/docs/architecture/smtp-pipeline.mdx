@@ -20,7 +20,7 @@ The SMTP server (`cmd/smtpd`) is a custom implementation that handles inbound em
 
 The router checks each recipient address against:
 
-1. **Domain lookup** — Is the domain registered and verified in the database?
+1. **Domain lookup** — Is the domain registered in the database? (Verification is enforced earlier — when the domain is assigned to a team, and again when an inbox is created — not at delivery time.)
 2. **Redis inbox lookup** — Is there an active inbox for this address?
 3. **PostgreSQL fallback** — If not in Redis, check the database directly
 
@@ -38,7 +38,7 @@ Attachments are processed through the settings resolver which checks the inherit
 2. Are attachments enabled for this domain assignment?
 3. Does the file size exceed the configured maximum?
 
-If allowed, attachments are uploaded to MinIO with a path of `{inbox_id}/{email_id}/{attachment_id}/{filename}` and metadata is stored in PostgreSQL.
+If allowed, attachments are uploaded to object storage (MinIO/S3, or the local-filesystem fallback) under `attachments/{email_id}/{random_uuid}/{sanitized_filename}`, and the key is recorded in `attachments.storage_key`.
 
 ## Fan-out
 

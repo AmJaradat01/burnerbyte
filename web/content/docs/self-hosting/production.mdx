@@ -6,7 +6,7 @@ description: Hardening BurnerByte for production use.
 ## Checklist
 
 - Set a strong, random `JWT_SECRET` (64+ characters)
-- Set `BB_ENCRYPTION_KEY` to a 32-byte hex key (`openssl rand -hex 32`), required to encrypt SSO secrets and SMTP passwords at rest
+- Set `ENCRYPTION_KEY` to a 32-byte hex key (`openssl rand -hex 32`) — encrypts SSO secrets, SMTP passwords and storage credentials at rest. (`BB_ENCRYPTION_KEY` works too when running the binary directly, but Docker Compose forwards only the unprefixed name.)
 - Change default database and MinIO passwords
 - Configure `FRONTEND_URL` and `API_BASE_URL` with your actual domain
 - Set `BB_CORS_ALLOWED_ORIGINS` to your frontend domain only
@@ -14,7 +14,7 @@ description: Hardening BurnerByte for production use.
 - Configure outbound SMTP (mailer) for invites and password resets
 - Set up DNS records for your email domain (MX + TXT)
 - Review rate limiting settings
-- Enable Prometheus metrics for monitoring
+- Prometheus metrics are already on by default at `/metrics`; the endpoint answers only loopback and RFC1918-private clients, so scrape it from inside your network and make sure your proxy overwrites inbound `X-Forwarded-For` / `X-Real-IP`
 - Set `LOG_LEVEL=info` and `LOG_FORMAT=json`
 
 ## Minimal Production Environment
@@ -23,7 +23,7 @@ description: Hardening BurnerByte for production use.
 DATABASE_URL=postgres://user:pass@db:5432/burnerbyte?sslmode=require
 REDIS_URL=redis://:password@redis:6379/0
 JWT_SECRET=<random-64-char-string>
-BB_ENCRYPTION_KEY=<64-char-hex-string>
+ENCRYPTION_KEY=<64-char-hex-string>
 FRONTEND_URL=https://app.example.com
 API_BASE_URL=https://api.example.com
 BB_SMTP_HOSTNAME=mail.example.com
@@ -36,7 +36,7 @@ BB_SERVER_MAX_BODY_SIZE=5242880
 
 - **API server** — Stateless, can run multiple instances behind a load balancer
 - **SMTP server** — Stateless, can run multiple instances (each needs port 25/2525)
-- **Frontend** — Static Next.js output, can be served from CDN
+- **Frontend** — Next.js `output: 'standalone'`: a Node server (`node server.js`, port 3000), not a static export. Run several instances behind a load balancer; only `.next/static` can be fronted by a CDN.
 - **Workers** — Run on only one API instance to avoid duplicate work
 
 ## Backups

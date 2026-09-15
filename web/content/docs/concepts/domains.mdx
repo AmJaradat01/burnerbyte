@@ -8,11 +8,11 @@ description: Domain lifecycle, DNS verification, and team assignment.
 Domains are added at the org level via the API:
 
 ```bash
-POST /orgs/{orgId}/domains
+POST /api/v1/orgs/{orgId}/domains
 {"domain_name": "test.example.com"}
 ```
 
-The server generates a unique TXT verification record (e.g., `burnerbyte-verify=abc123`).
+The TXT verification value is derived from the domain's UUID and returned as `verification_record`: `burnerbyte-verify=<domain-uuid>`.
 
 ## DNS Verification
 
@@ -32,19 +32,19 @@ test.example.com.  TXT  "burnerbyte-verify=abc123"
 
 ## Verification Flow
 
-1. **Manual trigger** — Click "Re-verify DNS" or call `POST /orgs/{orgId}/domains/{domainId}/verify`
+1. **Manual trigger** — Click "Re-verify DNS" or call `POST /api/v1/orgs/{orgId}/domains/{domainId}/verify`
 2. **Auto-polling** — The frontend polls every 30 seconds while verification is pending
 3. **Background worker** — The DNS recheck worker re-verifies all unverified domains every hour
 
-Both MX and TXT must be verified before the domain can receive emails. The server also checks SPF and records the result, but SPF is informational only and does not gate verification.
+Both MX and TXT must be verified before the domain can be assigned to a team — which is the prerequisite for creating any inbox on it. Inbox creation separately re-checks that MX is still verified. The server also checks SPF and records the result, but SPF is informational only and gates nothing.
 
 ## Team Assignment
 
 After verification, assign the domain to teams:
 
 ```bash
-POST /orgs/{orgId}/teams/{teamId}/domains
+POST /api/v1/orgs/{orgId}/teams/{teamId}/domains
 {"domain_id": "...", "access_level": "full"}
 ```
 
-Access levels: `full` (manage the assignment + create inboxes), `create_inbox` (create inboxes only), or `read_only` (view only). Each assignment can override org and domain settings (attachments, max size, inbox TTL).
+Access levels: `full` (manage the assignment + create inboxes), `create_inbox` (create inboxes only), or `read_only` (view only). Each assignment can override two settings: `attachments_enabled` and `max_inbox_ttl`. Maximum attachment size is an org-level setting only.

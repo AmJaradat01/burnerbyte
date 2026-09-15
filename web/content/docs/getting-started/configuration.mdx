@@ -5,21 +5,29 @@ description: All configuration options — config.yaml, environment variables, a
 
 ## Configuration Sources
 
-BurnerByte loads configuration from three sources (in priority order):
+BurnerByte layers configuration, each source overriding the one before it:
 
-1. **Environment variables** — Highest priority. Prefixed with `BB_` (e.g., `BB_SERVER_PORT`)
-2. **`config.yaml`** — File-based config, searched in `.` and `/etc/burnerbyte/`
-3. **Database overrides** — Runtime config stored in `system_configs` table (mailer + storage only)
+1. **Built-in defaults** — registered in `internal/config/config.go`
+2. **`config.yaml`** — optional, searched in `.` and `/etc/burnerbyte/`, or at `BB_CONFIG_PATH`
+3. **Environment variables** — prefixed with `BB_`, where the prefix replaces the dots in the key path (`BB_SERVER_PORT` → `server.port`, `BB_SMTP_HOSTNAME` → `smtp.hostname`)
+4. **Database overrides** — applied at startup from the `system_configs` table for the `mailer`, `storage`, `sso` and `platform` groups, so setup-wizard and admin-UI values take precedence over the environment for *those* keys
 
-Common variables like `DATABASE_URL`, `REDIS_URL`, `JWT_SECRET` are mapped directly without the `BB_` prefix.
+`DATABASE_URL`, `REDIS_URL`, `JWT_SECRET` and `ENCRYPTION_KEY` are read without the `BB_` prefix.
+
+<Callout type="info">
+A `BB_*` variable only works for a key the binary has registered. Every key in
+this reference is registered and covered by `TestEnvOverridesReachNestedKeys`; if
+you add a new config key, register it with `SetDefault` (or `BindEnv`) or its
+environment override will be silently discarded.
+</Callout>
 
 ## Server
 
 | Key | Env Var | Default | Description |
 |---|---|---|---|
 | `server.port` | `API_PORT` | `8080` | HTTP listen port |
-| `server.base_url` | `API_BASE_URL` | — | Public API URL |
-| `server.frontend_url` | `FRONTEND_URL` | — | Frontend URL (for email links) |
+| `server.base_url` | `API_BASE_URL` | `http://localhost:8080` | Public API URL |
+| `server.frontend_url` | `FRONTEND_URL` | `http://localhost:3000` | Frontend URL (for email links) |
 | `server.read_timeout` | `BB_SERVER_READ_TIMEOUT` | `30s` | HTTP read timeout |
 | `server.write_timeout` | `BB_SERVER_WRITE_TIMEOUT` | `30s` | HTTP write timeout |
 | `server.idle_timeout` | `BB_SERVER_IDLE_TIMEOUT` | `120s` | HTTP idle timeout |
@@ -55,7 +63,7 @@ Common variables like `DATABASE_URL`, `REDIS_URL`, `JWT_SECRET` are mapped direc
 | Key | Env Var | Default | Description |
 |---|---|---|---|
 | `smtp.listen` | `BB_SMTP_LISTEN` | `0.0.0.0:2525` | SMTP listen address |
-| `smtp.hostname` | `BB_SMTP_HOSTNAME` | — | SMTP hostname (for EHLO) |
+| `smtp.hostname` | `BB_SMTP_HOSTNAME` | `localhost` | Hostname in the SMTP greeting **and** the MX/SPF target the API compares domains against during verification — set it on the API process too, or no domain will verify |
 | `smtp.max_size` | `BB_SMTP_MAX_SIZE` | `26214400` | Max message size (25 MB) |
 | `smtp.queue_size` | `BB_SMTP_QUEUE_SIZE` | `1000` | Processing queue buffer |
 | `smtp.workers` | `BB_SMTP_WORKERS` | `4` | Worker goroutines |
@@ -91,7 +99,7 @@ Mailer config can be overridden at runtime via the setup wizard. Values are stor
 
 | Key | Env Var | Default | Description |
 |---|---|---|---|
-| `encryption.key` | `BB_ENCRYPTION_KEY` | — | **Required.** 32-byte hex-encoded key for encrypting sensitive data (SSO secrets, etc.) |
+| `encryption.key` | `ENCRYPTION_KEY` (or `BB_ENCRYPTION_KEY`) | — | **Strongly recommended.** 32-byte hex-encoded (64-char) AES-256-GCM key. When empty, SSO client secrets, SMTP passwords and storage credentials are written to the database in **plaintext** — the API still boots. Docker Compose forwards only the unprefixed name. |
 
 ## SSO / OIDC
 
@@ -196,3 +204,30 @@ Mailer config can be overridden at runtime via the setup wizard. Values are stor
 | `logging.format` | `LOG_FORMAT` | `json` | Log format (json, text) |
 | `metrics.enabled` | `BB_METRICS_ENABLED` | `true` | Enable Prometheus metrics |
 | `metrics.path` | `BB_METRICS_PATH` | `/metrics` | Metrics endpoint path |
+
+## Auth Cookie
+
+| Key | Env Var | Default | Description |
+|---|---|---|---|
+| `auth_cookie.same_site` | `BB_AUTH_COOKIE_SAME_SITE` | `lax` | `lax`, `strict`, or `none`. `none` forces `Secure` and therefore requires HTTPS — use it only when the frontend and API sit on unrelated domains. |
+
+## Public Demo Inbox
+
+Off by default. When enabled, logged-out visitors can create a real short-lived
+inbox from the landing page. See [Demo Mode](/docs/concepts/demo-mode).
+
+| Key | Env Var | Default | Description |
+|---|---|---|---|
+| `demo.enabled` | `DEMO_ENABLED` | `false` | Enable the public "try it" inbox |
+| `demo.assignment_id` | `DEMO_ASSIGNMENT_ID` | — | Domain assignment the demo user's team owns |
+| `demo.user_id` | `DEMO_USER_ID` | — | Demo account that owns created inboxes |
+| `demo.ttl` | `DEMO_TTL` | `10m` | Lifetime of each demo inbox |
+
+A malformed UUID in either ID logs a warning and leaves the demo disabled rather
+than failing the boot.
+
+## Config File Location
+
+`BB_CONFIG_PATH` overrides the search path entirely and points at a single file.
+It is also where the first-run web installer writes, so reads and writes stay
+consistent. Without it, `config.yaml` is searched in `.` then `/etc/burnerbyte/`.

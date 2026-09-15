@@ -23,7 +23,7 @@ During inbox creation, `default_inbox_ttl` resolves through an additional team t
 | `max_inbox_ttl` | Org, Domain, Assignment | Maximum inbox lifetime |
 | `max_domains` | Org | Maximum domains per org |
 | `max_teams` | Org | Maximum teams per org |
-| `max_inboxes_per_domain` | Org, Domain | Maximum inboxes per domain |
+| `max_inboxes_per_domain` | Org, Domain, Team | Maximum active inboxes per domain (the team value is an additional cap applied on top of the domain/org value) |
 | `enforce_sso` | Org | Require SSO for all members |
 
 ## Example

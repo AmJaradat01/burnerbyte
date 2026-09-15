@@ -6,7 +6,7 @@ description: Event-driven notifications with HMAC signing and retry logic.
 ## Creating a Webhook
 
 ```bash
-POST /orgs/{orgId}/teams/{teamId}/webhooks
+POST /api/v1/orgs/{orgId}/teams/{teamId}/webhooks
 {
   "url": "https://example.com/webhook",
   "events": ["email.received", "inbox.created", "inbox.expired"]
@@ -39,15 +39,17 @@ X-BurnerByte-Delivery-ID: <delivery-uuid>
 
 Failed deliveries (non-2xx or timeout) are retried with exponential backoff:
 
-| Attempt | Delay |
+| Attempt | Delay before it |
 |---|---|
 | 1 | Immediate |
-| 2 | 1 second |
-| 3 | 5 seconds |
-| 4 | 25 seconds |
+| 2 | 5 seconds |
+| 3 | 25 seconds |
 
-After the retry limit, the webhook's failure count increments. The `webhook_retry` background worker periodically resets failure counts, so a webhook that hit its limit automatically recovers on the next event.
+The attempt count comes from `defaults.webhook_max_retries` (default 3). Each
+attempt is bounded by `defaults.webhook_timeout` (default 10s).
+
+After all attempts fail, the webhook's `failure_count` is incremented. That counter is bookkeeping only — it does not disable the webhook, and every subsequent event is still dispatched. The `webhook_retry` background worker clears the counter for active webhooks sitting at 1 or 2 failures.
 
 ## Delivery Logs
 
-Every attempt is logged with HTTP status, response time, success/failure, attempt number, and timestamp. View via the UI or `GET /orgs/{orgId}/teams/{teamId}/webhooks/{webhookId}/deliveries`.
+Every attempt is logged with HTTP status, response time, success/failure, attempt number, and timestamp. View via the UI or `GET /api/v1/orgs/{orgId}/teams/{teamId}/webhooks/{webhookId}/deliveries`.
