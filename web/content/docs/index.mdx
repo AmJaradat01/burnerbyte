@@ -18,7 +18,7 @@ BurnerByte is open-source under the Apache 2.0 license. Source code is available
   <Card title="Quick Start" description="Run BurnerByte and receive your first email in minutes" href="/docs/getting-started/quick-start" />
   <Card title="Docker Setup" description="Run the full stack with Docker Compose" href="/docs/getting-started/docker" />
   <Card title="Configuration" description="All config options, env vars, and runtime overrides" href="/docs/getting-started/configuration" />
-  <Card title="First-Run Installer" description="Boot with no database configured and set it up from the browser" href="/docs/getting-started/installation" />
+  <Card title="First-Run Installer" description="Boot with no database configured and set it up from the browser" href="/docs/getting-started/installation#first-run-web-installer" />
 </Cards>
 
 ## Core Concepts
@@ -31,7 +31,7 @@ BurnerByte is open-source under the Apache 2.0 license. Source code is available
   <Card title="Webhooks" description="HMAC-SHA256 signed events with retry and delivery logs" href="/docs/concepts/webhooks" />
   <Card title="API Keys" description="Scoped programmatic access with SHA-256 hashing and IP allowlists" href="/docs/concepts/api-keys" />
   <Card title="SSO" description="Multi-provider OIDC integration with auto-provisioning and domain mappings" href="/docs/concepts/sso" />
-  <Card title="Settings Cascade" description="Policy inheritance from platform defaults → org → domain assignment" href="/docs/concepts/settings-cascade" />
+  <Card title="Settings Cascade" description="Policy inheritance across platform defaults, org, domain, assignment and team" href="/docs/concepts/settings-cascade" />
 </Cards>
 
 ## Architecture
@@ -56,7 +56,7 @@ BurnerByte is open-source under the Apache 2.0 license. Source code is available
 ## API & Frontend
 
 <Cards>
-  <Card title="API Reference" description="Authentication, pagination, errors, and 100+ endpoints" href="/docs/api" />
+  <Card title="API Reference" description="Authentication, pagination, errors, and 162 endpoints across 122 paths" href="/docs/api" />
   <Card title="Frontend Overview" description="Next.js architecture, keyboard shortcuts, and UX patterns" href="/docs/frontend/overview" />
   <Card title="Theming" description="CSS variables, color customization, and component library" href="/docs/frontend/theming" />
   <Card title="Troubleshooting" description="Common issues and solutions" href="/docs/troubleshooting" />
@@ -94,7 +94,7 @@ Two separate Go binaries scale independently:
 | **Multi-team** | Single org with teams scoped to specific domains |
 | **Full RBAC** | 5 roles across org and team levels, DB-backed permissions |
 | **Real-time** | WebSocket streaming for instant email and notification delivery |
-| **Attachments** | Configurable policies with org → domain assignment inheritance |
+| **Attachments** | Configurable policies inherited across org, domain and assignment |
 | **Webhooks** | HMAC-SHA256 signed with exponential backoff retry |
 | **API Keys** | Scoped programmatic access with SHA-256 hashing and IP allowlists |
 | **Audit Log** | Full activity trail with filtering, search, and CSV export |
@@ -112,7 +112,7 @@ Two separate Go binaries scale independently:
 | Docs | Fumadocs (MDX, full-text search, syntax highlighting) |
 | Database | PostgreSQL 16 (47 migrations, 74 indexes, 7 triggers) |
 | Cache | Redis 7 (inbox routing, analytics cache, rate limiting) |
-| Storage | MinIO (S3-compatible object storage for attachments) |
+| Storage | MinIO or any S3-compatible store for attachments, with a local-filesystem fallback |
 | Infrastructure | Docker, Docker Compose |
 | CI/CD | Jenkins (`Jenkinsfile`) — test, build Go + frontend, tag-driven deploy |
 | Testing | `pgregory.net/rapid` for property-based testing |

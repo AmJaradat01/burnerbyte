@@ -2,19 +2,12 @@
   "root": true,
   "pages": [
     "index",
-    "---Getting Started---",
     "getting-started",
-    "---Architecture---",
     "architecture",
-    "---Concepts---",
     "concepts",
-    "---Self-Hosting---",
     "self-hosting",
-    "---API Reference---",
     "api",
-    "---Frontend---",
     "frontend",
-    "---Help---",
     "troubleshooting"
   ]
 }
