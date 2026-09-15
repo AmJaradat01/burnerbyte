@@ -127,18 +127,21 @@ components:
     rounded: "9999px"
     padding: "2px 8px"
   badge-success:
-    backgroundColor: "{colors.success}"
+    backgroundColor: "{colors.success}/10"
     textColor: "{colors.success}"
+    borderColor: "{colors.success}/20"
     rounded: "9999px"
     padding: "2px 8px"
   badge-warning:
-    backgroundColor: "{colors.warning}"
+    backgroundColor: "{colors.warning}/10"
     textColor: "{colors.warning}"
+    borderColor: "{colors.warning}/20"
     rounded: "9999px"
     padding: "2px 8px"
   badge-info:
-    backgroundColor: "{colors.info}"
+    backgroundColor: "{colors.info}/10"
     textColor: "{colors.info}"
+    borderColor: "{colors.info}/20"
     rounded: "9999px"
     padding: "2px 8px"
 ---
@@ -151,7 +154,7 @@ components:
 
 BurnerByte is honest infrastructure laid out the way an experienced operator would lay out a workbench: every tool visible, every tool within reach, nothing hidden behind chrome, nothing decorative. The system is calm because the work is serious, not because it is precious. Density appears where the work needs it (audit logs, settings tables, inbox lists); breathing room appears where attention needs it (destructive confirmations, primary actions, real-time updates). Neither is the default.
 
-The aesthetic rejects four neighbours by name. Generic SaaS dashboards (Intercom, HubSpot) lean on marketing chrome and competing colors; BurnerByte is infrastructure, not a funnel. Over-designed dev tools (Vercel clones) use dark mode as a fashion statement and gradients as decoration; BurnerByte chooses light by default and reserves color for meaning. Enterprise admin panels (AWS Console, Jira) drown the operator in undifferentiated density; BurnerByte ranks information visibly. Disposable email competitors (Guerrilla Mail, TempMail) are visually cheap; BurnerByte is something a security team can defend in a procurement review.
+The aesthetic rejects four neighbouring patterns. Marketing-led SaaS dashboards lean on promotional chrome and competing colors; BurnerByte is infrastructure, not a funnel. Screenshot-driven dev tools use dark mode as a fashion statement and gradients as decoration; BurnerByte chooses light and reserves color for meaning. Undifferentiated enterprise consoles deliver everything at one weight; BurnerByte ranks information visibly. Ad-supported disposable inbox services surround the mailbox with ad units and offer no access control; BurnerByte should be something a security team can defend in a procurement review.
 
 The system is light only: the app is locked to the light theme via the theme provider (`forcedTheme="light"`), and a dark theme is intentionally not shipped at this time. Color is restrained: a single indigo accent for primary actions and focus states, a warm amber reserved exclusively for sidebar active state and chart accents. Everything else is a tinted neutral on the indigo hue axis. Visual intensity is rationed.
 
@@ -171,7 +174,7 @@ A cool-tinted neutral palette built on a single indigo accent, with a warm amber
 - **Indigo Accent** (`oklch(0.52 0.215 264)`). Primary actions, focus rings, active selection indicators, links. The single dominant accent, deep and confident. Used on ≤10% of any given screen; its rarity is the point.
 
 ### Secondary
-- **Sidebar Amber** (`oklch(0.65 0.19 45)`, light / `oklch(0.70 0.17 45)`, dark). Sidebar active background tint, chart-1 series only. Reserved. Never competes with indigo on the same surface; never used for buttons, badges, links, or general accent.
+- **Sidebar Amber** (`oklch(0.65 0.19 45)`). Sidebar active background tint, chart-1 series only. Reserved. Never competes with indigo on the same surface; never used for buttons, badges, links, or general accent.
 
 ### Neutral
 - **Ink** (`oklch(0.16 0.028 265)`). Primary text. Indigo-tinted near-black, never pure black.
@@ -327,7 +330,7 @@ A consistent shape across all variants; differentiation through fill and border,
 - **Don't** use `border-left` or `border-right` greater than 1px as a colored accent on cards, list items, callouts, or alerts. The sidebar's 2px active indicator is rendered as an absolutely-positioned `<span>` for this reason; it is the one approved exception.
 - **Don't** use `background-clip: text` with gradients. Gradient text is decorative and never meaningful. Emphasis comes from weight or size.
 - **Don't** use glassmorphism (`backdrop-blur` plus transparency) decoratively. If blur appears, it must serve a function (e.g. sticky header over scrolling content).
-- **Don't** use dark mode as a fashion statement: no purple gradients, no neon accents, no glow effects. Dark mode is a parallel functional theme, not a visual posture.
+- **Don't** reach for dark-mode styling cues as decoration: no purple gradients, no neon accents, no glow effects. The system is light-only; if a dark theme is ever added it must be a parallel functional theme, not a visual posture.
 - **Don't** create identical card grids (same-sized cards with icon + heading + text repeated endlessly). Vary sizes, use asymmetric layouts, or choose a different structure entirely.
 - **Don't** use hero-metric templates inside the product (big number + small label + supporting stats + gradient accent). That pattern belongs to a marketing page, not a dashboard.
 - **Don't** add cute illustrated empty states. No hand-drawn characters, no pastel scenes, no mascots. A single sentence and (where useful) a primary action.

@@ -1,3 +1,13 @@
+# pnpm 10+ blocks dependency build scripts unless they are listed here. None of
+# these need their postinstall to run: sharp, esbuild, @swc/core, unrs-resolver
+# and @parcel/watcher all ship prebuilt platform binaries as optional
+# dependencies, and msw's script only writes an optional browser mock worker.
+# Listing them explicitly keeps `pnpm install` non-interactive and stops newer
+# pnpm releases from failing the Docker build with ERR_PNPM_IGNORED_BUILDS.
 ignoredBuiltDependencies:
+  - '@parcel/watcher'
+  - '@swc/core'
+  - esbuild
+  - msw
   - sharp
   - unrs-resolver

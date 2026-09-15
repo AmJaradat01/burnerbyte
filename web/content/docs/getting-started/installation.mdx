@@ -16,19 +16,25 @@ description: Prerequisites and initial setup for BurnerByte.
 ## Clone the Repository
 
 ```bash
-git clone git@gitlab.com:burnerbyte/burnerbyte.git
+git clone https://gitlab.com/burnerbyte/burnerbyte.git
 cd burnerbyte
 ```
 
-## Copy Configuration File
+## Configuration (optional)
 
-The Docker images (`Dockerfile` and `Dockerfile.smtpd`) copy `config.yaml` into the image at build time. A fresh clone does not include this file, so you must create it before any Docker build:
+No configuration file is required. The images boot entirely from environment
+variables, and every operational key has a default, so a fresh clone runs as-is.
+
+If you would rather configure by file — running the binaries directly, for
+instance — copy the example and mount or point at it:
 
 ```bash
 cp config.example.yaml config.yaml
 ```
 
-Edit `config.yaml` if you need to change defaults. For Docker Compose deployments most settings are overridden by environment variables — see [Configuration](/docs/getting-started/configuration).
+`config.yaml` is gitignored and never baked into an image; set `BB_CONFIG_PATH`
+to load it from elsewhere. For Docker Compose, environment variables are the
+normal route — see [Configuration](/docs/getting-started/configuration).
 
 ## Start the Stack
 
@@ -39,7 +45,11 @@ make docker-up
 ```
 
 <Callout type="warn">
-App containers (`api`, `smtpd`) will crash-loop if required secrets are not set. At minimum, set `JWT_SECRET` (and `BB_ENCRYPTION_KEY` for SSO/SMTP-password encryption) in a `.env` file before running. See [Docker Setup](/docs/getting-started/docker) for a full variable list.
+The stack starts with development-grade defaults. Before exposing it to anything
+beyond localhost, copy `.env.example` to `.env` and set `JWT_SECRET` (32+ chars,
+or the API refuses to boot) and `ENCRYPTION_KEY` — without the latter, SSO, SMTP
+and storage credentials are stored unencrypted. See
+[Docker Setup](/docs/getting-started/docker) for the full variable list.
 </Callout>
 
 To stop the stack: `make docker-down`

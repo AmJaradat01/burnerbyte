@@ -1,234 +1,280 @@
 # BurnerByte
 
-[![Pipeline](https://gitlab.com/burnerbyte/burnerbyte/badges/main/pipeline.svg)](https://gitlab.com/burnerbyte/burnerbyte/-/pipelines)
-[![Release](https://gitlab.com/burnerbyte/burnerbyte/-/badges/release.svg)](https://gitlab.com/burnerbyte/burnerbyte/-/releases)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.25-00ADD8?logo=go&logoColor=white)](https://go.dev/)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js&logoColor=white)](https://nextjs.org/)
 [![Docker](https://img.shields.io/badge/self--hosted-docker-2496ED?logo=docker&logoColor=white)](docker-compose.yml)
 
-Self-hosted, open-source temporary email platform with multi-team, multi-domain architecture.
+Self-hosted temporary email platform. Your own domains, your own database, your
+own disposable inboxes — with teams, roles, audit logs and webhooks around them.
 
-## Architecture
+Most disposable-inbox services are someone else's server holding your test mail.
+BurnerByte is the same idea run on infrastructure you control: point a domain's
+MX at it, and any address on that domain becomes an inbox you can create, read,
+and expire under organization and team permissions.
 
 ```
-┌─────────────┐     ┌──────────────┐     ┌───────────┐
-│  Next.js UI │────▶│   Go API     │────▶│ PostgreSQL│
-│  (port 3000)│     │  (port 8080) │     └───────────┘
-└─────────────┘     │              │────▶┌───────────┐
-                    │  Chi Router  │     │   Redis   │
-┌─────────────┐     │  + Workers   │     └───────────┘
-│ Mail Server │────▶│              │────▶┌───────────┐
-│  (external) │     └──────────────┘     │   MinIO   │
-└─────────────┘                          └───────────┘
-       │
-       ▼
-┌──────────────┐
-│  Go SMTPD    │
-│  (port 2525) │
-└──────────────┘
+                          ┌────────────┐
+   Browser ──────────────▶│ Next.js UI │  :3000
+                          └─────┬──────┘
+                                │ REST + WebSocket
+                          ┌─────▼──────┐     ┌────────────┐
+                          │   Go API   │────▶│ PostgreSQL │
+                          │   :8080    │     ├────────────┤
+                          │ Chi router │────▶│   Redis    │
+                          │ + 7 workers│     ├────────────┤
+                          └─────┬──────┘     │ MinIO / S3 │
+                                │            └─────▲──────┘
+   Inbound mail ──────────▶┌────▼───────┐          │
+   (MX record)             │  Go SMTPD  │──────────┘
+                           │   :2525    │  attachments
+                           └────────────┘
 ```
 
-Two separate binaries scale independently:
-- `cmd/api` — HTTP API server + background workers
-- `cmd/smtpd` — SMTP inbound server
+Two binaries that scale independently and share the same database:
+
+- **`cmd/api`** — HTTP API, WebSocket hub, and seven background workers
+- **`cmd/smtpd`** — SMTP ingest server that accepts inbound mail
+
+## Quick start
+
+```bash
+git clone https://gitlab.com/burnerbyte/burnerbyte.git
+cd burnerbyte
+docker compose up -d
+```
+
+Open <http://localhost:3000> and the setup wizard walks you through creating the
+platform owner account, the organization, outbound SMTP, and your first domain.
+
+That works on a clean checkout with no configuration at all — every value has a
+working default, Postgres/Redis/MinIO come up alongside the app, schema
+migrations run automatically, and the object-storage bucket is created on first
+boot. The defaults are development-grade, so before putting this anywhere other
+than localhost:
+
+```bash
+cp .env.example .env
+# then set at least:
+#   JWT_SECRET=$(openssl rand -hex 32)      # < 32 chars and the API refuses to boot
+#   ENCRYPTION_KEY=$(openssl rand -hex 32)  # without it, stored secrets are plaintext
+docker compose up -d --build
+```
+
+To receive real mail from the internet, point a domain's MX record at the host
+and set `SMTPD_PORT=25` in `.env` (binding port 25 may require root).
+
+### Running from source
+
+```bash
+make docker-infra   # postgres + redis + minio, ports published to the host
+cp .env.example .env
+make migrate-up     # needs the golang-migrate CLI
+
+make run-api                          # :8080
+make run-smtp                         # :2525   (separate terminal)
+cd web && pnpm install && pnpm dev    # :3000   (separate terminal)
+```
+
+Prerequisites: Go 1.25+, Node 20.9+ with pnpm, Docker, and
+[golang-migrate](https://github.com/golang-migrate/migrate) for the `migrate-*`
+targets.
+
+### First-run web installer
+
+Starting the API binary with no database configured (`DATABASE_URL` unset and no
+`config.yaml`) boots a token-gated installer instead of exiting. It collects the
+database URL, Redis URL, JWT secret and optional encryption key, verifies the
+connections, writes `config.yaml`, and restarts into normal operation.
+
+```bash
+make build
+./bin/api          # logs print: open http://<host>:8080/install?token=<token>
+```
+
+`BB_CONFIG_PATH` changes where `config.yaml` is written. Database and Redis are
+the only settings that must be supplied this way — everything else is configured
+from inside the app. Docker and systemd deployments set `DATABASE_URL` and
+`REDIS_URL` in the environment, which skips the installer entirely.
 
 ## Features
 
-- One-time setup wizard (admin, org, SMTP, domain, team, branding, invites)
-- Forced onboarding gate — users without an organization are server-authoritatively redirected to `/onboarding` (not dismissable)
-- Platform admin without an org — system admins can manage SSO, roles, system settings, and platform audit without belonging to an organization
-- Single-org architecture with multi-team, multi-domain hierarchy
-- Full RBAC with 6 roles across org and team levels
-- Real-time email delivery via WebSocket
-- Configurable attachment policies with inheritance cascade
-- Webhooks with HMAC-SHA256 signing, retry, and delivery logs
-- Scoped API keys
-- Audit logging with filtering, plus a system-admin platform audit view
-- Analytics dashboard with time-series charts
-- SSO via OIDC
-- Private inboxes — only the creator can access
-- Inbox search and status filtering (active / expired / all)
-- Built-in documentation site at `/docs`
+**Accounts and access**
+
+- One-time setup wizard: owner account, organization, outbound SMTP, first
+  domain, and optionally a team, branding, and invites
+- Email/password auth with refresh tokens, optional httpOnly refresh cookies,
+  email verification, and password reset
+- SSO via OIDC — providers configured at runtime by a system admin, with
+  email-domain mappings that route users to the right provider automatically
+- Session management: list active sessions, revoke one or all, and a
+  configurable per-user session cap with conflict resolution at login
+- Role-based access control: five built-in roles (org **owner**, **admin**,
+  **member**; team **lead**, **member**) over 33 permissions, plus custom roles
+  a system admin can define
+- System admins operate the platform without belonging to any organization;
+  everyone else without one is redirected into `/onboarding`
+- Org invites, including bulk invites and direct team assignment on accept
+- Scoped, rotatable API keys per team
+
+**Mail**
+
+- Inbound SMTP server with a bounded worker queue and configurable max size
+- Inboxes with TTLs, extension, and custom aliases — only the creator can read
+  an inbox, enforced in the service layer
+- Real-time email delivery over WebSocket, fanned out across API instances via
+  Redis pub/sub
+- Attachments in MinIO or any S3-compatible store, with automatic fallback to
+  local filesystem storage, presigned download URLs, and size/enable policies
+  that cascade from platform to org to team
+- Domain management with DNS verification, re-verification on a schedule, and a
+  recorded verification history
+- Inbox search and active / expired / all filtering
+
+**Operations**
+
+- Webhooks with HMAC-SHA256 signatures, automatic retry, delivery logs and stats
+- Audit logging with filtering and CSV export, plus a platform-wide audit view
+- Analytics dashboard with time-series charts, backed by rollup tables and a
+  cached aggregation worker
+- Prometheus metrics at `/metrics`, restricted to loopback and private addresses
+- Rate limiting, account lockout, and a configurable password policy
+- AES-256-GCM encryption at rest for SSO, SMTP and storage credentials
+- Runtime configuration from the database with hot reload across processes via
+  Redis pub/sub — no restart to change mailer, storage, SSO or platform settings
+- Seven background workers: `cleanup`, `reconciler`, `dns_recheck`,
+  `webhook_retry`, `analytics`, `invite_expiry`, `admin_stats`
+- Optional public demo mode (`/try`), disabled by default
+
+**Interface**
+
 - Command palette with keyboard shortcuts and recent actions
-- Persistent notifications with real-time delivery via Redis pub/sub
-- Timezone and date-format user preferences
-- Single-org enforcement (4-layer protection)
-- Contextual empty states (`NoOrgState`, `NoTeamState`) with actionable CTAs on all org/team-scoped pages
-- Light-only interface by design (a dark theme is intentionally not shipped)
-- OKLCH semantic color tokens with WCAG AA accessibility
-- Reduced-motion support and screen reader accessibility
+- Persistent notifications delivered in real time
+- Per-user timezone and date/time format preferences
+- Contextual empty states on every org- and team-scoped page
+- Light-only by design — a dark theme is intentionally not shipped
+- OKLCH semantic color tokens, WCAG AA contrast, reduced-motion support
 - Pull-to-refresh on mobile
+- Built-in documentation site at `/docs`
+- Localization scaffolding via `next-intl` (English is the only bundled locale)
 
-## Quick Start
+## API
 
-### Prerequisites
+Everything lives under `/api/v1` except `/healthz`, `/readyz` and `/metrics`,
+which are served at the root. Roughly 164 endpoints in these groups:
 
-- Go 1.25+
-- Node.js 20+ with pnpm
-- Docker & Docker Compose
-- PostgreSQL 16 (or use Docker)
-- Redis 7 (or use Docker)
-
-### Option A — Full stack in Docker (simplest)
-
-Brings up Postgres, Redis, MinIO, the API, the SMTP ingest server, and the
-frontend. Schema migrations run automatically (the `migrate` service) and the
-MinIO bucket is created on first boot.
-
-```bash
-git clone git@gitlab.com:burnerbyte/burnerbyte.git
-cd burnerbyte
-
-# Optional but recommended: set real secrets (otherwise insecure dev defaults
-# are used). At minimum set JWT_SECRET (>= 32 chars) and ENCRYPTION_KEY.
-cp .env.example .env
-#   JWT_SECRET=$(openssl rand -hex 32)
-#   ENCRYPTION_KEY=$(openssl rand -hex 32)
-
-docker compose up -d        # or: make docker-up
-```
-
-Then open `http://localhost:3000`. To receive real inbound mail, set
-`SMTPD_PORT=25` in `.env` (binding port 25 on the host may require root).
-
-### Option B — Local development (hot reload)
-
-Runs only the infrastructure in Docker; the API, SMTP server, and frontend run
-on the host.
-
-```bash
-git clone git@gitlab.com:burnerbyte/burnerbyte.git
-cd burnerbyte
-
-make docker-infra           # postgres + redis + minio only
-cp .env.example .env
-make migrate-up             # apply schema
-
-make run-api                # API on :8080
-make run-smtp               # SMTP ingest (separate terminal)
-cd web && pnpm install && pnpm dev   # frontend on :3000 (separate terminal)
-```
-
-### Option C — First-run web installer (no env/config)
-
-If you start the API binary with **no database configured** (`DATABASE_URL`
-unset and no `config.yaml`), it boots into a token-gated web installer instead
-of exiting. It collects the database URL, Redis URL, JWT secret, and (optional)
-encryption key, verifies the connections, writes `config.yaml`, and restarts
-into normal operation.
-
-```bash
-./bin/api
-# logs print: open http://<host>:8080/install?token=<token>
-```
-
-Open that URL (the token is in the logs), fill in the form, and complete setup.
-The installer writes `./config.yaml` by default; set `BB_CONFIG_PATH` to change
-where. The database and Redis are the only settings that must be provided this
-way (everything else is configured later from inside the app); for Docker and
-systemd deployments, prefer setting `DATABASE_URL`/`REDIS_URL` in the
-environment, which skips the installer entirely.
-
-On first launch, navigate to `http://localhost:3000` — the setup wizard will guide you through:
-1. Creating the platform owner account
-2. Setting up your organization
-3. Configuring outbound SMTP
-4. Adding your first domain
-5. (Optional) Creating a team, branding, inviting users
-
-After setup completes, any user who registers but has no organization is
-automatically redirected to `/onboarding` to create or join one (system admins
-are exempt and can manage the platform without an org).
-
-### API Endpoints
-
-| Group | Endpoints |
+| Group | Base path |
 |---|---|
-| Setup | `GET /setup/status`, `POST /setup/complete` |
-| Auth | `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `GET /auth/me`, `PATCH /auth/me`, `PUT /auth/me/password`, `DELETE /auth/me`, `POST /auth/forgot-password`, `POST /auth/reset-password`, `GET /auth/verify-email/:token` |
-| Sessions | `GET /auth/sessions`, `DELETE /auth/sessions/:id`, `DELETE /auth/sessions` |
-| SSO | `GET /auth/sso/:provider`, `GET /auth/sso/:provider/callback` |
-| Orgs | `POST /orgs`, `GET /orgs`, `GET /orgs/:id`, `PATCH /orgs/:id`, `DELETE /orgs/:id`, `GET /orgs/:id/settings`, `PATCH /orgs/:id/settings`, `PUT /orgs/:id/settings` |
-| Members | `POST /orgs/:id/members`, `GET /orgs/:id/members`, `PATCH /orgs/:id/members/:uid`, `DELETE /orgs/:id/members/:uid` |
-| Invites | `POST /orgs/:id/invites`, `POST /invites/:token/accept` |
-| Domains | `POST /orgs/:id/domains`, `GET /orgs/:id/domains`, `GET /orgs/:id/domains/:did`, `PATCH /orgs/:id/domains/:did`, `DELETE /orgs/:id/domains/:did`, `POST /orgs/:id/domains/:did/verify` |
-| Teams | `POST /orgs/:id/teams`, `GET /orgs/:id/teams`, `GET /orgs/:id/teams/:tid`, `PATCH /orgs/:id/teams/:tid`, `DELETE /orgs/:id/teams/:tid` |
-| Team Members | `POST /orgs/:id/teams/:tid/members`, `GET /orgs/:id/teams/:tid/members`, `PATCH .../members/:uid`, `DELETE .../members/:uid` |
-| Domain Assignments | `POST /orgs/:id/teams/:tid/domains`, `GET /orgs/:id/teams/:tid/domains`, `PATCH .../domains/:did`, `DELETE .../domains/:did` |
-| Inboxes | `POST /inboxes`, `GET /inboxes`, `GET /inboxes/:id`, `POST /inboxes/:id/extend`, `DELETE /inboxes/:id`, `GET /orgs/:id/teams/:tid/inboxes` |
-| Emails | `GET /inboxes/:id/emails`, `GET /emails/:id`, `PATCH /emails/:id`, `DELETE /emails/:id`, `GET /emails/:id/attachments/:aid` |
-| Webhooks | `POST /orgs/:id/teams/:tid/webhooks`, `GET .../webhooks`, `PATCH .../webhooks/:wid`, `DELETE .../webhooks/:wid`, `GET .../webhooks/:wid/deliveries` |
-| API Keys | `POST /orgs/:id/teams/:tid/api-keys`, `GET .../api-keys`, `DELETE .../api-keys/:kid` |
-| Audit | `GET /orgs/:id/audit`, `GET /orgs/:id/audit/export`, `GET /admin/audit` (system admin) |
-| Analytics | `GET /orgs/:id/analytics`, `GET /orgs/:id/analytics/emails-per-day`, `GET /orgs/:id/teams/:tid/analytics`, `GET .../emails-per-day` |
-| Admin | `GET /admin/stats`, `GET /admin/orgs`, `GET /admin/health` |
-| WebSocket | `GET /ws/inboxes/:id`, `GET /ws/notifications` |
-| Docs | `GET /docs`, `GET /docs/openapi.json` |
-| Health | `GET /healthz`, `GET /readyz`, `GET /metrics` |
+| Setup | `/setup/status`, `/setup/complete`, `/setup/test-smtp`, `/setup/test-storage` |
+| Auth | `/auth/register`, `/auth/login`, `/auth/login/resolve`, `/auth/refresh`, `/auth/logout`, `/auth/me`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/verify-email/{token}` |
+| Sessions | `/auth/sessions`, `/auth/sessions/{id}` |
+| SSO | `/auth/sso/{provider}`, `/auth/sso/{provider}/callback`, `/auth/sso/exchange`, `/auth/sso-status`, `/auth/me/sso` |
+| Orgs | `/orgs`, `/orgs/{orgId}`, `/orgs/{orgId}/settings` |
+| Members | `/orgs/{orgId}/members`, `.../members/me`, `.../members/search`, `.../members/{userId}` |
+| Invites | `/orgs/{orgId}/invites`, `.../invites/bulk`, `/invites/{token}/preview`, `/invites/{token}/accept` |
+| Domains | `/orgs/{orgId}/domains`, `.../{domainId}/verify`, `.../{domainId}/impact`, `.../{domainId}/verification-history`, `.../bulk-verify`, `.../bulk-delete` |
+| Teams | `/orgs/{orgId}/teams`, `.../{teamId}/archive`, `.../{teamId}/restore`, `.../{teamId}/leave`, `.../{teamId}/members` |
+| Domain assignments | `/my/domains`, `/orgs/{orgId}/teams/{teamId}/domains` |
+| Inboxes | `/inboxes`, `/inboxes/{id}`, `/inboxes/{id}/extend` |
+| Emails | `/inboxes/{id}/emails`, `/emails/{id}`, `/emails/{id}/attachments/{aid}` |
+| Webhooks | `/orgs/{orgId}/teams/{teamId}/webhooks`, `.../{webhookId}/deliveries`, `.../{webhookId}/stats` |
+| API keys | `/orgs/{orgId}/teams/{teamId}/api-keys`, `.../{keyId}/rotate`, `.../bulk-revoke` |
+| Analytics | `/orgs/{orgId}/analytics`, `.../emails-per-day`, `.../insights`, `.../domain-series` |
+| Audit | `/orgs/{orgId}/audit`, `/orgs/{orgId}/audit/export` |
+| Notifications | `/notifications`, `/notifications/mark-all-read`, `/notifications/{id}/read` |
+| Roles | `/roles` |
+| Demo | `/try/status`, `/try/inbox`, `/try/inbox/{id}/emails` |
+| Admin | `/admin/stats`, `/admin/orgs`, `/admin/users`, `/admin/health`, `/admin/audit`, `/admin/version`, `/admin/platform`, `/admin/roles`, `/admin/config/{mailer,storage}`, `/admin/infra/test-{smtp,storage}`, `/admin/sso/*` |
+| WebSocket | `/ws/ticket`, `/ws/inboxes/{id}`, `/ws/notifications`, `/ws/admin-stats` |
+| Docs | `/docs`, `/docs/openapi.json` |
+| Health | `/healthz`, `/readyz`, `/metrics` (root, not under `/api/v1`) |
 
-### Frontend Pages
+The served OpenAPI document at `/api/v1/docs/openapi.json` is the authoritative
+per-endpoint reference.
+
+## Frontend routes
 
 | Route | Description |
 |---|---|
+| `/` | Landing page |
+| `/try` | Public demo inbox (only when demo mode is enabled) |
 | `/setup` | One-time setup wizard |
-| `/login` | Sign in |
-| `/register` | Create account |
-| `/forgot-password` | Password reset request |
-| `/reset-password` | Set new password via token |
-| `/verify-email` | Email verification |
-| `/invite` | Accept org invitation |
-| `/onboarding` | Mandatory org-creation flow (forced redirect for users without an org) |
-| `/dashboard` | Org overview with analytics |
-| `/inboxes` | List & create inboxes |
-| `/inboxes/[id]` | Email reader with WebSocket |
-| `/email/[emailId]` | Email detail view |
-| `/domains` | Domain management |
-| `/domains/[domainId]` | Domain detail & DNS verification |
-| `/teams` | Team management + domain assignments |
-| `/webhooks` | Webhook configuration |
-| `/api-keys` | API key management |
-| `/audit` | Audit log viewer |
-| `/analytics` | Analytics dashboard |
-| `/settings` | Org settings + members |
-| `/profile` | User profile & password change |
-| `/profile/sessions` | Session management |
-| `/profile/delete` | Account deletion |
-| `/admin` | System admin stats |
-| `/docs` | Documentation site (Fumadocs) |
+| `/login`, `/register` | Authentication |
+| `/forgot-password`, `/reset-password`, `/verify-email` | Account recovery and verification |
+| `/invite` | Accept an organization invitation |
+| `/onboarding` | Create or join an organization |
+| `/dashboard` | Organization overview |
+| `/inboxes`, `/inboxes/[id]` | Inbox list and live email reader |
+| `/email/[emailId]` | Email detail |
+| `/domains`, `/domains/[domainId]` | Domains and DNS verification |
+| `/teams` | Teams and domain assignments |
+| `/webhooks`, `/api-keys` | Integrations |
+| `/audit`, `/analytics` | Audit log and analytics |
+| `/settings` | Organization settings, members, roles, SSO, system config |
+| `/profile`, `/profile/sessions`, `/profile/delete` | Account management |
+| `/admin` | Platform administration |
+| `/docs` | Documentation site |
 
-## Tech Stack
+## Tech stack
 
-- **Backend**: Go 1.25, Chi, pgxpool, go-redis, MinIO
-- **Frontend**: Next.js 16, shadcn/ui, Tailwind CSS 4, Zustand, TanStack Query, Recharts
-- **Design System**: OKLCH color tokens, semantic theming (light-only), PRODUCT.md + DESIGN.md (Stitch format)
-- **Docs**: Fumadocs (MDX, full-text search)
-- **Infrastructure**: PostgreSQL 16 (28 migrations, 28 tables), Redis 7, MinIO, Docker
-- **CI/CD**: GitLab CI (lint, build, test, Docker registry)
+- **Backend** — Go 1.25, Chi v5, pgx/pgxpool, go-redis, minio-go, Prometheus
+- **Frontend** — Next.js 16.1, React 19.2, Tailwind CSS 4, shadcn/ui, Zustand,
+  TanStack Query, Recharts, next-intl
+- **Docs** — Fumadocs (MDX with full-text search), served at `/docs`
+- **Storage** — PostgreSQL 16, Redis 7, MinIO or any S3-compatible store
+- **Tests** — Go `testing` with `rapid` property tests; Vitest and Testing
+  Library on the frontend
 
 ## Database
 
-28 migrations, 52+ indexes, 7 triggers. 28 tables: users, organizations, org_memberships, teams, team_memberships, domains, domain_assignments, inboxes, emails, attachments, webhooks, webhook_delivery_logs, api_keys, audit_logs, invites, sessions, setup_state, password_reset_tokens, system_configs, roles, permissions, role_permissions, user_preferences, notifications, notification_subscriptions, email_domain_stats, org_settings, user_settings.
+46 migrations produce 36 tables, 74 indexes and 7 triggers. Migrations are
+applied by the `migrate` service in Docker, or by `make migrate-up` locally.
+
+<details>
+<summary>Tables</summary>
+
+`users`, `organizations`, `org_memberships`, `teams`, `team_memberships`,
+`domains`, `domain_assignments`, `domain_verification_history`, `inboxes`,
+`emails`, `attachments`, `webhooks`, `webhook_delivery_logs`, `api_keys`,
+`audit_logs`, `invites`, `invite_team_assignments`, `sessions`, `setup_state`,
+`password_reset_tokens`, `email_verification_tokens`, `system_configs`, `roles`,
+`permissions`, `role_permissions`, `notifications`, `sso_providers`,
+`sso_domain_mappings`, `user_sso_identities`, `hourly_email_stats`,
+`daily_email_stats`, `daily_team_email_stats`, `daily_domain_email_stats`,
+`daily_sender_domain_stats`, `org_analytics_counters`, `team_analytics_counters`
+
+</details>
+
+## Configuration
+
+Configuration resolves in this order: defaults → `config.yaml` (optional) →
+environment variables → values stored in the database by the admin UI.
+
+Every key can be set from the environment: `BB_`-prefixed variables map onto the
+config tree (`BB_SMTP_HOSTNAME` → `smtp.hostname`), and `DATABASE_URL`,
+`REDIS_URL`, `JWT_SECRET` and `ENCRYPTION_KEY` are read unprefixed. See
+[`.env.example`](.env.example) for the full list and
+[`config.example.yaml`](config.example.yaml) for the file form. Mailer, storage,
+SSO and platform settings can also be changed at runtime from the admin UI and
+take effect without a restart.
 
 ## Documentation
 
-Full documentation is available at `/docs` when running the frontend. Built with [Fumadocs](https://fumadocs.vercel.app/), it covers:
+The running frontend serves full documentation at `/docs` — installation,
+Docker, configuration reference, architecture, RBAC, domains, inboxes, webhooks,
+API keys, SSO, the settings cascade, production hardening, reverse proxy, DNS
+setup, monitoring, and troubleshooting. The source lives in
+[`web/content/docs`](web/content/docs).
 
-- **Getting Started** — Installation, quick start, Docker, configuration reference
-- **Architecture** — Two-binary design, SMTP pipeline, WebSocket, database schema, workers
-- **Concepts** — RBAC, domains, inboxes, emails, webhooks, API keys, SSO, settings cascade
-- **Self-Hosting** — Production hardening, reverse proxy (Nginx/Caddy), DNS setup, monitoring
-- **API Reference** — Authentication, pagination, errors, all 50+ endpoints
-- **Frontend** — Tech stack, keyboard shortcuts, UX patterns, theming, design system
+Design documentation lives in [`PRODUCT.md`](PRODUCT.md) (users, principles) and
+[`DESIGN.md`](DESIGN.md) (palette, typography, components).
 
-### Design System Files
+## Contributing
 
-| File | Purpose |
-|---|---|
-| `PRODUCT.md` | Strategic context: users, brand personality, anti-references, design principles |
-| `DESIGN.md` | Visual spec: OKLCH palette, typography, elevation, components, do's/don'ts |
-| `.impeccable/design.json` | Machine-readable sidecar: tonal ramps, motion tokens, component snippets |
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the development setup and branching
+model, and [SECURITY.md](SECURITY.md) to report a vulnerability. Participation is
+governed by the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## License
 
-Apache 2.0 — see [LICENSE](LICENSE)
+Apache 2.0 — see [LICENSE](LICENSE).

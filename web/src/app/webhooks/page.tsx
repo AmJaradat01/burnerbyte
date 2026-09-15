@@ -24,7 +24,7 @@ import { NoTeamState } from "@/components/no-team-state";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import {
   AlertCircle, AlertTriangle, CheckCircle2, ChevronDown, ChevronRight,
-  Clock, Code2, Copy, ExternalLink, Inbox, Link2, Mail, Pencil,
+  Clock, Code2, Copy, Inbox, Link2, Mail, Pencil,
   Plus, Trash2, Webhook as WebhookIcon, XCircle,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
