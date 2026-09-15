@@ -5,6 +5,39 @@ All notable changes to this project are documented here. The format follows
 uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html): `feat:` work
 takes a minor bump, `fix:` / `docs:` / `test:` a patch.
 
+## v1.12.0 (September 2026) — Docker works on a clean checkout; repo prepared for open source
+
+### Fixed
+- **The compose stack could not start.** `minio/minio` no longer exists on Docker Hub. Repointed at quay.io, MinIO's official registry, and pinned a release rather than tracking `latest`.
+- **The frontend image failed to build.** `pnpm-workspace.yaml` carries the build-script policy but was never copied into the deps stage, so pnpm 10+ aborted with `ERR_PNPM_IGNORED_BUILDS`; the `2>/dev/null || pnpm install` fallback then hid the real error. The workspace file is copied, the fallback is gone, and `packageManager` pins pnpm to the version that produced the lockfile.
+- **`BB_MINIO_*` and `BB_SMTP_HOSTNAME` were silently ignored.** Viper's `AutomaticEnv` only populates a nested key it already knows, and neither group was registered. Object storage never engaged under Docker — it fell back to local-filesystem attachments without surfacing an error — and the SMTP greeting went out as `220  ESMTP BurnerByte`, malformed under RFC 5321.
+- **`docker compose up` failed on hosts already running Postgres, Redis or MinIO.** Those services are only reached over the compose network, so the base file no longer publishes 5432/6379/9000 on the host.
+- **smtpd's local-storage fallback could not write.** The image never created `/data/attachments`, so the fallback failed as a non-root user.
+
+### Added
+- `docker-compose.dev.yml`, an overlay that publishes the infrastructure ports for local development; `make docker-infra` uses it.
+- A persistent volume for the local attachment fallback, so those files survive a container recreate.
+- `make test`, `make docker-logs`, and `make migrate-test-db`.
+- `SECURITY.md`, `CODE_OF_CONDUCT.md`, and `.editorconfig`.
+- `TestEnvOverridesReachNestedKeys`, guarding the unregistered-viper-key failure mode.
+
+### Changed
+- The frontend image moves to the Node 22 LTS line; Node 20 is end-of-life.
+- Integration tests now compare `schema_migrations` against `migrations/` and name the fix, instead of failing deep in a query as `column ... does not exist`.
+- README rewritten against the source: endpoint paths carry their `/api/v1` prefix, the Notifications, demo and admin groups are documented, `/` and `/try` are listed, the database figures are corrected to 46 migrations / 36 tables / 74 indexes, RBAC is described as the five seeded roles over 33 permissions, and the GitLab CI claim and dead pipeline badge are replaced with the Jenkins reality.
+- CHANGELOG backfilled from v1.2.7 to v1.11.2.
+- CONTRIBUTING corrected (Go 1.25, `make docker-infra`, golang-migrate) and given a fork-and-merge-request path for outside contributors.
+- `installation.mdx` no longer instructs readers to create a `config.yaml` for a `COPY` removed in v1.0.6.
+- DESIGN.md badge tokens no longer specify identical background and text colors, and its dark-theme leftovers are gone. PRODUCT.md and DESIGN.md describe the design patterns they reject rather than naming competitors.
+- The landing page reads `prefers-reduced-motion` via `useSyncExternalStore` instead of seeding it from an effect, which rendered once with the wrong value and flashed animation at users who asked for none.
+- eslint is clean (was 8 errors, 10 warnings).
+
+### Removed
+- `Dockerfile.smtpd`, redundant with the multi-stage `smtpd` target.
+- Local tooling from version control — `.kiro/` specs, vendored `.agents/` skills, `.impeccable/`, `skills-lock.json`, and the live-deployment test scripts `.gitignore` already intended to exclude. All remain on disk.
+- `.mailmap`, which mapped the commit author to an unrelated employer address and changed nothing else, and the stale `rapid` failure corpora.
+- The real production IPv4 and IPv6 printed by `deploy/hetzner-setup.sh`; it now reads the addresses off the host it runs on.
+
 ## v1.11.2 (July 2026) — Expired-inbox race on the home page
 
 ### Fixed
