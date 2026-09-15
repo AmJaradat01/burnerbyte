@@ -171,10 +171,14 @@ services:
       # NEXT_PUBLIC_* are baked into the client bundle at build time, so they are
       # passed as build args (a runtime `environment:` entry would have no effect).
       # Rebuild the frontend image after changing these.
+      # These fall back through API_PORT / FRONTEND_PORT so that changing a port
+      # alone keeps the baked-in URLs pointing at it. Setting API_PORT=9090 while
+      # these hardcoded 8080 produced a frontend that called a port nothing was
+      # listening on — ERR_CONNECTION_REFUSED with the stack otherwise healthy.
       args:
-        NEXT_PUBLIC_API_URL: ${API_BASE_URL:-http://localhost:8080}/api/v1
-        NEXT_PUBLIC_WS_URL: ${WS_BASE_URL:-ws://localhost:8080}/api/v1/ws
-        NEXT_PUBLIC_SITE_URL: ${FRONTEND_URL:-http://localhost:3000}
+        NEXT_PUBLIC_API_URL: ${API_BASE_URL:-http://localhost:${API_PORT:-8080}}/api/v1
+        NEXT_PUBLIC_WS_URL: ${WS_BASE_URL:-ws://localhost:${API_PORT:-8080}}/api/v1/ws
+        NEXT_PUBLIC_SITE_URL: ${FRONTEND_URL:-http://localhost:${FRONTEND_PORT:-3000}}
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
     depends_on:
