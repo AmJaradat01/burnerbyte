@@ -18,6 +18,11 @@ pipeline {
     environment {
         APP_NAME    = 'burnerbyte'
         DEPLOY_HOST = credentials('burnerbyte-deploy-host')
+        // Baked into the frontend bundle at build time, so they must be the
+        // public URLs of the target deployment, not localhost.
+        PUBLIC_API_URL  = 'https://burnerbyte.com'
+        PUBLIC_WS_URL   = 'wss://burnerbyte.com'
+        PUBLIC_SITE_URL = 'https://burnerbyte.com'
         PATH        = "/usr/local/go/bin:${env.PATH}"
     }
 
@@ -37,10 +42,18 @@ pipeline {
         stage('Test Backend') {
             steps {
                 sh '''
-                    # Apply migrations to test database before running integration tests
+                    # Apply migrations before the integration tests. This used to be
+                    # "|| true", which let the suite run against a stale schema and
+                    # report a missing column as a code fault.
                     TEST_DB="${TEST_DATABASE_URL:-postgres://postgres:password@localhost:5432/burnerbyte_test?sslmode=disable}"
-                    migrate -database "$TEST_DB" -path migrations up 2>/dev/null || true
-                    go test ./...
+                    command -v migrate >/dev/null || {
+                        echo "golang-migrate is not installed on this agent; integration tests need it."
+                        echo "Install: https://github.com/golang-migrate/migrate (the deploy scripts pin v4.18.3)"
+                        exit 1
+                    }
+                    migrate -database "$TEST_DB" -path migrations up
+                    go vet ./...
+                    go test -race ./...
                 '''
             }
         }
@@ -50,7 +63,7 @@ pipeline {
                 sh '''
                     go version
                     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-X main.Version=${TAG}" -o bin/api ./cmd/api
-                    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/smtpd ./cmd/smtpd
+                    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-X main.Version=${TAG}" -o bin/smtpd ./cmd/smtpd
                 '''
             }
         }
@@ -60,8 +73,13 @@ pipeline {
                 dir('web') {
                     sh '''
                         pnpm install --frozen-lockfile
+                        pnpm lint
+                        pnpm typecheck
                         pnpm test
-                        NEXT_PUBLIC_API_URL=https://burnerbyte.com/api/v1 NEXT_PUBLIC_WS_URL=wss://burnerbyte.com/api/v1/ws pnpm build
+                        NEXT_PUBLIC_API_URL="${PUBLIC_API_URL}/api/v1" \
+                        NEXT_PUBLIC_WS_URL="${PUBLIC_WS_URL}/api/v1/ws" \
+                        NEXT_PUBLIC_SITE_URL="${PUBLIC_SITE_URL}" \
+                        pnpm build
                     '''
                 }
             }

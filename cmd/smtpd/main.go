@@ -20,6 +20,9 @@ import (
 	"gitlab.com/burnerbyte/burnerbyte/internal/webhook"
 )
 
+// Version is stamped at build time via -ldflags "-X main.Version=...".
+var Version = "dev"
+
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
@@ -130,6 +133,7 @@ func main() {
 	}()
 
 	slog.Info("smtpd started",
+		"version", Version,
 		"listen", cfg.SMTP.Listen,
 		"hostname", cfg.SMTP.Hostname,
 		"max_size", cfg.SMTP.MaxSize,

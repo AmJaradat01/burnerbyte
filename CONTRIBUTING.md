@@ -138,6 +138,12 @@ before opening a merge request.
 - **Migrations** — created with `make migrate-create`; always write a matching
   `.down.sql`, and verify with `make migrate-test`. A new permission also needs
   its `role_permissions` grants, or the scope it gates becomes unreachable.
+- **Versioning** — both binaries carry `main.Version`, stamped at build time with
+  `-ldflags`. `make build` and `make docker-up` derive it from
+  `git describe --tags --always --dirty`; a plain `docker compose up` or a bare
+  `go build` reports `dev`, which is what an unstamped source build is. It
+  surfaces in the sidebar badge, Settings → System, `GET /api/v1/admin/version`,
+  and the smtpd startup log.
 - **Editors** — an `.editorconfig` is provided; enable EditorConfig support.
 
 ## Maintainer
