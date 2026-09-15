@@ -10,7 +10,7 @@ import (
 
 	yaml "go.yaml.in/yaml/v3"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/config"
+	"github.com/amjaradat01/burnerbyte/internal/config"
 )
 
 func TestNeeded(t *testing.T) {

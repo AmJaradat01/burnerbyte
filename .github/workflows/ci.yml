@@ -1,0 +1,93 @@
+# The gates a contributor's pull request must pass. Jenkins still owns
+# deployment (it needs credentials no fork has); this owns verification, and
+# needs no secrets at all.
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Go
+    runs-on: ubuntu-latest
+    services:
+      # The repository suite includes integration tests that need a real
+      # database; without one they skip, which would hide regressions.
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: burnerbyte_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgres://postgres:password@localhost:5432/burnerbyte_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install golang-migrate
+        run: |
+          curl -fsSL https://github.com/golang-migrate/migrate/releases/download/v4.18.3/migrate.linux-amd64.tar.gz \
+            | tar xz -C /usr/local/bin migrate
+          migrate -version
+
+      # Applied before the tests: the repository suite compares
+      # schema_migrations against migrations/ and fails if the schema is behind.
+      - name: Apply migrations
+        run: migrate -database "$TEST_DATABASE_URL" -path migrations up
+
+      - run: go build ./...
+      - run: go vet ./...
+      - run: go test -race ./...
+
+  frontend:
+    name: Web
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      # Not redundant with the build: next build only typechecks files in its
+      # build graph, so errors confined to *.test.tsx pass both lint and build.
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+
+  docker:
+    name: Docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Proves a clean checkout still produces all three images — the failure
+      # mode that made the stack unusable before v1.12.0.
+      - run: docker compose build

@@ -5,10 +5,22 @@ All notable changes to this project are documented here. The format follows
 uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html): `feat:` work
 takes a minor bump, `fix:` / `docs:` / `test:` a patch.
 
-## v1.18.0 (September 2026) — Moved to gitlab.com/amjaradat01/burnerbyte; brand marks
+## v1.19.0 (September 2026) — Migrated to GitHub; public CI
 
 ### Changed
-- **The Go module path is now `gitlab.com/amjaradat01/burnerbyte`.** The project moved out of the `burnerbyte` group into a personal namespace. GitLab redirects the old path, so nothing was broken — but the redirect only holds while the old group exists, and a module path should not point at a namespace someone else could later claim. Rewritten across 106 Go files plus `go.mod`, `.golangci.yml`, the Jenkins checkout URL, `package.json`, README, CONTRIBUTING and the docs: 118 files, 279 references.
+- **The canonical home is now `github.com/AmJaradat01/burnerbyte`.** The Go module path follows as `github.com/amjaradat01/burnerbyte` — deliberately all-lowercase, because module paths are case-sensitive and the module proxy encodes uppercase as `!x`. GitHub resolves either case. Rewritten across 119 files; display URLs use the real `AmJaradat01` casing.
+- **Platform wording, not just links.** "GitLab" appeared as prose where re-pointing a URL would not have helped: the landing nav and footer render it as UI text from `en.json`, the landing page imported lucide's `Gitlab` icon, the docs sidebar linked it by name, `CONTRIBUTING.md` said "merge request" throughout, and troubleshooting still carried a GitLab-style `/-/issues` path.
+- `SECURITY.md` was rewritten rather than re-pointed: GitHub has no confidential issues, so it now describes private vulnerability reporting and what to do when the Security tab is unavailable.
+- Jenkins keeps deployment and now clones from GitHub. Its `credentialsId` still reads `gitlab-ssh-key` and needs a GitHub deploy key configured in Jenkins itself — server-side config, not a repository change.
+
+### Added
+- **`.github/workflows/ci.yml`** — the project has never had CI a contributor could run, because Jenkins needs maintainer credentials. The workflow runs `go build`, `go vet` and `go test -race` against real Postgres and Redis services, then `pnpm lint`, `pnpm typecheck`, `pnpm test` and `pnpm build`, then `docker compose build` to prove a clean checkout still produces all three images. No secrets, so it runs on forks. Free and unlimited on public repositories.
+- A CI status badge in the README.
+
+## v1.18.0 (September 2026) — Moved to github.com/amjaradat01/burnerbyte; brand marks
+
+### Changed
+- **The Go module path is now `github.com/amjaradat01/burnerbyte`.** The project moved out of the `burnerbyte` group into a personal namespace. GitLab redirects the old path, so nothing was broken — but the redirect only holds while the old group exists, and a module path should not point at a namespace someone else could later claim. Rewritten across 106 Go files plus `go.mod`, `.golangci.yml`, the Jenkins checkout URL, `package.json`, README, CONTRIBUTING and the docs: 118 files, 279 references.
 - `web/public/favicon.svg` used `#4F46E5` (Tailwind's indigo) rather than the product's `#2459E2`, and `web/public/manifest.json` set a warm `#fafaf8` background where the token is the cool `#F8FAFD` — the same warm/cool inversion already corrected in DESIGN.md.
 
 ### Added

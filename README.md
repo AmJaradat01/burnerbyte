@@ -4,6 +4,7 @@
 
 # BurnerByte
 
+[![CI](https://github.com/AmJaradat01/burnerbyte/actions/workflows/ci.yml/badge.svg)](https://github.com/AmJaradat01/burnerbyte/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.25-00ADD8?logo=go&logoColor=white)](https://go.dev/)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js&logoColor=white)](https://nextjs.org/)
@@ -45,7 +46,7 @@ Two binaries that scale independently and share the same database:
 ## Quick start
 
 ```bash
-git clone https://gitlab.com/amjaradat01/burnerbyte.git
+git clone https://github.com/AmJaradat01/burnerbyte.git
 cd burnerbyte
 docker compose up -d
 ```
@@ -305,7 +306,7 @@ governed by the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Maintainer
 
-Built and maintained by **Ali Jaradat** ([@amjaradat01](https://gitlab.com/amjaradat01)).
+Built and maintained by **Ali Jaradat** ([@amjaradat01](https://github.com/AmJaradat01)).
 See [AUTHORS](AUTHORS) for the full list of contributors.
 
 ## License

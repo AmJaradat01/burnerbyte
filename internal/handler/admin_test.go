@@ -12,8 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/config"
-	"gitlab.com/amjaradat01/burnerbyte/internal/mailer"
+	"github.com/amjaradat01/burnerbyte/internal/config"
+	"github.com/amjaradat01/burnerbyte/internal/mailer"
 )
 
 // mustMailer builds a Mailer for tests (templates parse from the embedded FS).

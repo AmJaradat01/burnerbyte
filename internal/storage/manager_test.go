@@ -11,7 +11,7 @@ import (
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/config"
+	"github.com/amjaradat01/burnerbyte/internal/config"
 )
 
 // fakeBackend records calls so delegation can be asserted without real storage.

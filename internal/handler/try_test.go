@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/config"
+	"github.com/amjaradat01/burnerbyte/internal/config"
 )
 
 // TestTryHandler_DisabledByDefault verifies the public demo endpoints are inert

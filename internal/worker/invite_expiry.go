@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"time"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
+	"github.com/amjaradat01/burnerbyte/internal/repository/postgres"
 )
 
 // emailSender is the subset of *mailer.Mailer that the expiry worker depends

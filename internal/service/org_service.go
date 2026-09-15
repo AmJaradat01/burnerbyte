@@ -16,10 +16,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/auth/rbac"
-	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
-	"gitlab.com/amjaradat01/burnerbyte/internal/mailer"
-	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
+	"github.com/amjaradat01/burnerbyte/internal/auth/rbac"
+	"github.com/amjaradat01/burnerbyte/internal/domain"
+	"github.com/amjaradat01/burnerbyte/internal/mailer"
+	"github.com/amjaradat01/burnerbyte/internal/repository/postgres"
 )
 
 // DNS resolution hooks for invite email-domain validation. They are package

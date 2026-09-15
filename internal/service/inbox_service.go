@@ -10,11 +10,11 @@ import (
 
 	"github.com/google/uuid"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/config"
-	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
-	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
-	redisrepo "gitlab.com/amjaradat01/burnerbyte/internal/repository/redis"
-	"gitlab.com/amjaradat01/burnerbyte/pkg/randaddr"
+	"github.com/amjaradat01/burnerbyte/internal/config"
+	"github.com/amjaradat01/burnerbyte/internal/domain"
+	"github.com/amjaradat01/burnerbyte/internal/repository/postgres"
+	redisrepo "github.com/amjaradat01/burnerbyte/internal/repository/redis"
+	"github.com/amjaradat01/burnerbyte/pkg/randaddr"
 )
 
 type InboxService struct {

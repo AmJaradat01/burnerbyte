@@ -3,14 +3,14 @@
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { ArrowRight, Gitlab, Inbox, Users, Zap, Webhook, KeyRound, Server } from "lucide-react";
+import { ArrowRight, Github, Inbox, Users, Zap, Webhook, KeyRound, Server } from "lucide-react";
 import { api, tryGetStatus } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/logo";
 import { LiveInboxDemo } from "./live-inbox-demo";
 
-/** Canonical repository, from the go.mod module path (gitlab.com/amjaradat01/burnerbyte). */
-const REPO_URL = "https://gitlab.com/amjaradat01/burnerbyte";
+/** Canonical repository, from the go.mod module path (github.com/amjaradat01/burnerbyte). */
+const REPO_URL = "https://github.com/AmJaradat01/burnerbyte";
 const APACHE_URL = "https://www.apache.org/licenses/LICENSE-2.0";
 
 interface SSOStatus {
@@ -95,7 +95,7 @@ export function LandingPage() {
               rel="noreferrer"
               className="hidden items-center gap-1.5 rounded-md px-3 py-2 text-muted-foreground transition-colors duration-150 hover:text-foreground sm:inline-flex"
             >
-              <Gitlab className="h-4 w-4" />
+              <Github className="h-4 w-4" />
               {t("nav.repo")}
             </a>
             <Link href="/login" className="rounded-md px-3 py-2 font-medium transition-colors duration-150 hover:bg-muted">

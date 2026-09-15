@@ -9,7 +9,7 @@ import (
 
 	"github.com/minio/minio-go/v7"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/config"
+	"github.com/amjaradat01/burnerbyte/internal/config"
 )
 
 // Backend is the subset of object-storage operations the app uses. Both

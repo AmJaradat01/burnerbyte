@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/crypto"
-	"gitlab.com/amjaradat01/burnerbyte/internal/database"
+	"github.com/amjaradat01/burnerbyte/internal/crypto"
+	"github.com/amjaradat01/burnerbyte/internal/database"
 )
 
 // sensitiveKeys are system_config keys that contain credentials and should be

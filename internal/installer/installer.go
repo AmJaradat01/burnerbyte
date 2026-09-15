@@ -29,8 +29,8 @@ import (
 
 	yaml "go.yaml.in/yaml/v3"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/config"
-	"gitlab.com/amjaradat01/burnerbyte/internal/database"
+	"github.com/amjaradat01/burnerbyte/internal/config"
+	"github.com/amjaradat01/burnerbyte/internal/database"
 )
 
 // Needed reports whether the first-run installer should run: no database URL has

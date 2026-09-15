@@ -12,9 +12,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/auth"
-	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
-	"gitlab.com/amjaradat01/burnerbyte/internal/realtime"
+	"github.com/amjaradat01/burnerbyte/internal/auth"
+	"github.com/amjaradat01/burnerbyte/internal/domain"
+	"github.com/amjaradat01/burnerbyte/internal/realtime"
 )
 
 const (
