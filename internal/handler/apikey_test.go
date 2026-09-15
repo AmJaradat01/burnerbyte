@@ -12,7 +12,7 @@ import (
 	"github.com/google/uuid"
 	"pgregory.net/rapid"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
+	"github.com/amjaradat01/burnerbyte/internal/domain"
 )
 
 // Feature: enhanced-api-keys, Property 3: Update Field Persistence

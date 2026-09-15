@@ -12,7 +12,7 @@ import (
 
 	"github.com/minio/minio-go/v7"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/storage"
+	"github.com/amjaradat01/burnerbyte/internal/storage"
 )
 
 func TestLocalFS_PutAndServe(t *testing.T) {
