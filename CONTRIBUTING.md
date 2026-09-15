@@ -124,11 +124,20 @@ before opening a merge request.
 - **TypeScript** — the ESLint config in `web/`.
 - **API responses** use `snake_case` JSON; timestamps are RFC 3339.
 - **Configuration** — every new config key needs a `SetDefault` (or `BindEnv`)
-  registration in `internal/config/config.go`. Viper silently ignores a `BB_*`
-  environment override for a nested key it does not already know, so an
-  unregistered key means the documented value is never applied.
+  registration in `internal/config/config.go`, plus a line in **both**
+  `config.example.yaml` and `.env.example`. Viper silently ignores a `BB_*`
+  override for a nested key it does not already know, so an unregistered key
+  means the documented value is never applied — and a key absent from the
+  examples is effectively undocumented. Tests in `internal/config` diff all
+  three against each other in both directions and will fail if any drifts.
+- **Routes** — a new endpoint needs a matching entry in
+  `internal/handler/docs/openapi.json`. `TestOpenAPIMatchesRouter` diffs the
+  document against the route registrations and fails on a missing or phantom
+  operation. Bump `info.version` in the release commit; a test checks it against
+  the newest `CHANGELOG.md` heading.
 - **Migrations** — created with `make migrate-create`; always write a matching
-  `.down.sql`, and verify with `make migrate-test`.
+  `.down.sql`, and verify with `make migrate-test`. A new permission also needs
+  its `role_permissions` grants, or the scope it gates becomes unreachable.
 - **Editors** — an `.editorconfig` is provided; enable EditorConfig support.
 
 ## License
