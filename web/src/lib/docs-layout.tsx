@@ -6,11 +6,12 @@ export function baseOptions(): BaseLayoutProps {
       title: 'BurnerByte Docs',
       url: '/docs',
     },
+    // Only destinations the page tree does not already carry. Getting Started,
+    // API Reference and Self-Hosting used to live here too, so each appeared
+    // three times in the sidebar: once as a link, once as a separator, and once
+    // as its folder.
     links: [
       { text: 'App', url: '/' },
-      { text: 'Getting Started', url: '/docs/getting-started/quick-start' },
-      { text: 'API Reference', url: '/docs/api' },
-      { text: 'Self-Hosting', url: '/docs/self-hosting/production' },
       {
         text: 'GitLab',
         url: 'https://gitlab.com/burnerbyte/burnerbyte',
