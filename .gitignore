@@ -53,4 +53,18 @@ tmp/
 # Config (contains secrets — use config.example.yaml as template)
 config.yaml
 config.yml
+
+# Local integration scripts (point at a live deployment; not part of the build)
 scripts/test-*.sh
+
+# Agent / spec tooling — local developer aids, not part of the product. Kept out
+# of the repo so the published tree is just the application and its docs.
+.kiro/
+.agents/
+.impeccable/
+.claude/
+skills-lock.json
+
+# rapid property-test failure corpora — regenerated on demand, never committed
+testdata/rapid/**/*.fail
+**/testdata/rapid/**/*.fail

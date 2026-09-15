@@ -29,6 +29,9 @@ ENTRYPOINT ["api"]
 FROM alpine:3.20 AS smtpd
 RUN apk add --no-cache ca-certificates tzdata && adduser -D -H appuser
 COPY --from=builder /bin/smtpd /usr/local/bin/smtpd
+# Same local-storage fallback as the api image: if MinIO is unreachable at boot
+# the binary falls back to ./data/attachments, which must be writable by appuser.
+RUN mkdir -p /data/attachments && chown appuser:appuser /data/attachments
 USER appuser
 EXPOSE 2525
 ENTRYPOINT ["smtpd"]

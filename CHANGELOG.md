@@ -1,5 +1,211 @@
 # Changelog
 
+All notable changes to this project are documented here. The format follows
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely, and the project
+uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html): `feat:` work
+takes a minor bump, `fix:` / `docs:` / `test:` a patch.
+
+## v1.12.0 (September 2026) — Docker works on a clean checkout; repo prepared for open source
+
+### Fixed
+- **The compose stack could not start.** `minio/minio` no longer exists on Docker Hub. Repointed at quay.io, MinIO's official registry, and pinned a release rather than tracking `latest`.
+- **The frontend image failed to build.** `pnpm-workspace.yaml` carries the build-script policy but was never copied into the deps stage, so pnpm 10+ aborted with `ERR_PNPM_IGNORED_BUILDS`; the `2>/dev/null || pnpm install` fallback then hid the real error. The workspace file is copied, the fallback is gone, and `packageManager` pins pnpm to the version that produced the lockfile.
+- **`BB_MINIO_*` and `BB_SMTP_HOSTNAME` were silently ignored.** Viper's `AutomaticEnv` only populates a nested key it already knows, and neither group was registered. Object storage never engaged under Docker — it fell back to local-filesystem attachments without surfacing an error — and the SMTP greeting went out as `220  ESMTP BurnerByte`, malformed under RFC 5321.
+- **`docker compose up` failed on hosts already running Postgres, Redis or MinIO.** Those services are only reached over the compose network, so the base file no longer publishes 5432/6379/9000 on the host.
+- **smtpd's local-storage fallback could not write.** The image never created `/data/attachments`, so the fallback failed as a non-root user.
+
+### Added
+- `docker-compose.dev.yml`, an overlay that publishes the infrastructure ports for local development; `make docker-infra` uses it.
+- A persistent volume for the local attachment fallback, so those files survive a container recreate.
+- `make test`, `make docker-logs`, and `make migrate-test-db`.
+- `SECURITY.md`, `CODE_OF_CONDUCT.md`, and `.editorconfig`.
+- `TestEnvOverridesReachNestedKeys`, guarding the unregistered-viper-key failure mode.
+
+### Changed
+- The frontend image moves to the Node 22 LTS line; Node 20 is end-of-life.
+- Integration tests now compare `schema_migrations` against `migrations/` and name the fix, instead of failing deep in a query as `column ... does not exist`.
+- README rewritten against the source: endpoint paths carry their `/api/v1` prefix, the Notifications, demo and admin groups are documented, `/` and `/try` are listed, the database figures are corrected to 46 migrations / 36 tables / 74 indexes, RBAC is described as the five seeded roles over 33 permissions, and the GitLab CI claim and dead pipeline badge are replaced with the Jenkins reality.
+- CHANGELOG backfilled from v1.2.7 to v1.11.2.
+- CONTRIBUTING corrected (Go 1.25, `make docker-infra`, golang-migrate) and given a fork-and-merge-request path for outside contributors.
+- `installation.mdx` no longer instructs readers to create a `config.yaml` for a `COPY` removed in v1.0.6.
+- DESIGN.md badge tokens no longer specify identical background and text colors, and its dark-theme leftovers are gone. PRODUCT.md and DESIGN.md describe the design patterns they reject rather than naming competitors.
+- The landing page reads `prefers-reduced-motion` via `useSyncExternalStore` instead of seeding it from an effect, which rendered once with the wrong value and flashed animation at users who asked for none.
+- eslint is clean (was 8 errors, 10 warnings).
+
+### Removed
+- `Dockerfile.smtpd`, redundant with the multi-stage `smtpd` target.
+- Local tooling from version control — `.kiro/` specs, vendored `.agents/` skills, `.impeccable/`, `skills-lock.json`, and the live-deployment test scripts `.gitignore` already intended to exclude. All remain on disk.
+- `.mailmap`, which mapped the commit author to an unrelated employer address and changed nothing else, and the stale `rapid` failure corpora.
+- The real production IPv4 and IPv6 printed by `deploy/hetzner-setup.sh`; it now reads the addresses off the host it runs on.
+
+## v1.11.2 (July 2026) — Expired-inbox race on the home page
+
+### Fixed
+- Handle the race where an inbox expires between the home page listing it and the user opening it, instead of surfacing a dead link.
+
+## v1.11.1 (July 2026) — Webhook validation and stats
+
+### Added
+- Delivery stats surfaced on the webhooks list.
+
+### Fixed
+- Frontend webhook URL validation now matches what the backend accepts, so valid URLs stop being rejected client-side.
+
+## v1.11.0 (July 2026) — Webhooks as a table
+
+### Changed
+- Rebuilt the webhooks page from a card grid into a table-based layout, with the UX improvements that come with scanning rows rather than cards.
+
+## v1.10.3 (July 2026) — Footer position
+
+### Fixed
+- Footer now sits consistently between the admin and regular layouts.
+
+## v1.10.2 (July 2026) — DNS record guidance
+
+### Changed
+- Domain detail uses a "Host" label with the full domain name and an `@` hint, matching how DNS providers actually label the field.
+
+## v1.10.1 (July 2026) — Domain detail polish
+
+### Fixed
+- Hide the verify button once a domain is verified, correct the DNS Name field, and general UX cleanup on the domain detail page.
+
+## v1.10.0 (July 2026) — Teams as a table
+
+### Changed
+- Rebuilt the teams list from a card grid into a table-based view.
+
+### Fixed
+- Domain detail page polish and unused-import cleanup.
+
+## v1.9.0 (July 2026) — Domains as a table
+
+### Changed
+- Rebuilt the domains list from a card grid into a table-based list view.
+
+## v1.8.0 (July 2026) — UX review pass
+
+### Changed
+- Dashboard cards, a copy-first inbox layout, an animated address input, and a row-based list treatment, from a full UX review.
+
+## v1.7.0 (July 2026) — Dashboard and analytics polish
+
+### Changed
+- Consistency pass across dashboard and analytics surfaces.
+
+### Security
+- Fixes carried in the same review; see the commit range for detail.
+
+## v1.6.0 (July 2026) — Analytics enhancement
+
+### Added
+- Storage trends, team insights, webhook metrics, and domain drill-down on the analytics dashboard.
+
+## v1.5.0 (July 2026) — UX enhancement batch
+
+### Changed
+- Eleven separate UX improvements shipped together across the product surfaces.
+
+## v1.4.7 (July 2026) — Home page i18n
+
+### Changed
+- Moved the remaining hardcoded home-page strings into translations.
+
+### Fixed
+- Mobile responsive fix on the home page.
+
+## v1.4.6 (July 2026) — Non-admin layout fixes
+
+### Fixed
+- Empty space for non-admin users, breadcrumb behavior, and the dashboard redirect.
+
+## v1.4.5 (July 2026) — Address preview
+
+### Added
+- Animated address preview, domain chip, keyboard shortcut, and a success pulse on inbox creation.
+
+## v1.4.4 (July 2026) — QuickCreate layout
+
+### Changed
+- Redesigned QuickCreate into an inline chips layout and added inbox time display.
+
+## v1.4.3 (July 2026) — Post-login redirect
+
+### Fixed
+- Default post-login redirect goes to `/` instead of `/dashboard`.
+
+## v1.4.2 (July 2026) — Home filters
+
+### Changed
+- Removed the filter tabs and improved the customize accordion on the home page.
+
+## v1.4.1 (July 2026) — CI fixes
+
+### Fixed
+- Resolved CI test failures and health-check timing in the deploy pipeline.
+
+## v1.4.0 (July 2026) — Inbox renewal policy
+
+### Added
+- Admin-configurable inbox renewal policy.
+
+## v1.3.4 (July 2026) — Inbox card states
+
+### Changed
+- Inbox cards are visually differentiated by state.
+
+## v1.3.3 (July 2026) — TTL validation
+
+### Added
+- Client-side TTL validation with inline error messages.
+
+## v1.3.2 (July 2026) — Landing grid heights
+
+### Fixed
+- Equal-height cards in the landing lifecycle and capabilities grids.
+
+## v1.3.1 (July 2026) — Expired filter removal
+
+### Removed
+- The expired filter tab on the home page — expired inboxes are auto-purged, so the tab was always empty.
+
+## v1.3.0 (July 2026) — Bold pass, second half
+
+### Changed
+- Strengthened the remaining page surfaces: inbox, auth, profile, and domain/team cards.
+
+## v1.2.9 (July 2026) — Bold pass, first half
+
+### Changed
+- Visual overhaul: typography scale, stronger hierarchy, and more component presence.
+
+## v1.2.8 (July 2026) — Interaction polish
+
+### Added
+- `EmptyState` gained an icon prop, a variant system, and visual composition; contextual icons added to every remaining usage.
+- Micro-interactions and press feedback on shared components.
+
+### Changed
+- Project-wide transition consistency; step-indicator transitions in the wizards; explicit transition timing on auth pages.
+- Analytics progress-bar tracks replaced with inline data rows; dashboard card overload reduced; landing hero depth and section variety improved.
+- Profile danger zone, connected-accounts hover, and password strength display.
+
+## v1.2.7 (July 2026) — Teams review fixes and profile rebuild
+
+### Changed
+- Rebuilt the profile page against the design system, after reverting an earlier redesign attempt.
+- Teams: audit severity corrections, migration cleanup, `BulkRemove` optimization, and full test coverage.
+- Settings: Demo Mode section and Save button, Object Storage section, About card removed.
+
+### Fixed
+- Render-during-render bug in settings, plus an `enforce_sso` safety warning.
+- Profile edge cases: initials, alt text, `fetchMe` error handling, and revoke-all logout.
+- Connected Accounts only renders when SSO is enabled and providers exist.
+
+### Security
+- Block password changes when SSO is enforced.
+
 ## v1.2.6 (June 2026) — Setup wizard polish + SMTP timeout fix
 
 ### Fixed
@@ -130,7 +336,7 @@ Object storage (S3/MinIO) can now be edited from the admin UI after setup, and t
 - **The stored `storage` config is now encrypted at rest.** `storage` was missing from the `system_config` encrypted-key set, so the S3 secret key was stored in plaintext; it is now encrypted (backward-compatible with existing plaintext rows).
 
 ### Notes
-- The bucket is read-only at runtime (changing it would strand existing attachments); set it via `BB_MINIO_BUCKET` at deploy time. DB and Redis connection settings remain env/config-only. Remaining from the infrastructure-setup plan: the guarded first-run web installer.
+- The bucket is read-only at runtime (changing it would strand existing attachments); set it via `BB_MINIO_BUCKET` at deploy time. DB and Redis connection settings remain env/config-only. Remaining from the infrastructure-setup work: the guarded first-run web installer.
 
 ## v1.0.8 (June 2026) — Runtime mailer editor with hot-reload
 
@@ -145,7 +351,7 @@ Outbound SMTP can now be changed after setup, from the admin UI, and the change 
 - `POST /admin/infra/test-smtp` now tests the live mailer config (`Mailer.Config()`), so it reflects unsaved-then-saved edits rather than only the boot-time value.
 
 ### Notes
-- Storage (S3/MinIO) is next: it is written by both the API and the SMTP ingest server, so its runtime editor needs a cross-process reload signal (and `storage` should be added to the encrypted-config key set, which it is not yet). DB and Redis remain env/config-only by design. See the infrastructure-setup plan.
+- Storage (S3/MinIO) is next: it is written by both the API and the SMTP ingest server, so its runtime editor needs a cross-process reload signal (and `storage` should be added to the encrypted-config key set, which it is not yet). DB and Redis remain env/config-only by design.
 
 ## v1.0.7 (June 2026) — Post-setup SMTP connection test
 
@@ -156,7 +362,7 @@ First slice of the infrastructure-setup work. The admin System tab already shows
 - Unlike the setup wizard's test (which is unauthenticated and refuses private IPs to prevent SSRF), the admin test dials directly: a system admin is trusted and may legitimately point the mailer at an internal relay. The shared `smtpDialTest` helper is now used by both paths.
 
 ### Notes
-- This is the read-only / verification half of the infrastructure-setup discussion. Still planned: a runtime editor + hot-reload for storage and SMTP config (today they are set once during setup and loaded at boot), and a guarded first-run web installer for the DB/Redis bootstrap. DB and Redis connection settings remain env/config-only by design (they are required before the app, and the wizard's own state, can exist).
+- This is the read-only / verification half of the infrastructure-setup work. Still planned: a runtime editor + hot-reload for storage and SMTP config (today they are set once during setup and loaded at boot), and a guarded first-run web installer for the DB/Redis bootstrap. DB and Redis connection settings remain env/config-only by design (they are required before the app, and the wizard's own state, can exist).
 
 ## v1.0.6 (June 2026) — Docker stack made runnable
 
