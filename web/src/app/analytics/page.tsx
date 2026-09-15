@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from "recharts";
 import { ErrorState } from "@/components/error-state";
-import { BarChart3, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronUp, Globe } from "lucide-react";
+import { BarChart3, TrendingUp, TrendingDown, ChevronDown, ChevronUp, Globe } from "lucide-react";
 import { ChartTooltip } from "./chart-tooltip";
 import { DomainDetailChart } from "./domain-detail-chart";
 
@@ -459,7 +459,9 @@ function AnalyticsSkeleton({ columns }: { columns: 1 | 2 }) {
 }
 
 function EmailChart({ data, average }: { data: TimeSeriesPoint[]; average?: number }) {
-  if (data.length === 0) return <Card><CardContent className="py-12 text-center text-sm text-muted-foreground">No email data for this period.</CardContent></Card>;
+  if (data.length === 0 || data.every((d) => d.count === 0)) {
+    return <Card><CardContent className="py-12 text-center text-sm text-muted-foreground">No email data for this period.</CardContent></Card>;
+  }
 
   const avg = average ?? Math.round(data.reduce((s, d) => s + d.count, 0) / data.length);
 
@@ -472,7 +474,9 @@ function EmailChart({ data, average }: { data: TimeSeriesPoint[]; average?: numb
             <XAxis dataKey="date" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickFormatter={(v) => v.slice(5)} />
             <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} allowDecimals={false} />
             <Tooltip content={<ChartTooltip average={avg} unit="emails" labelFormatter={(v) => `Date: ${v}`} />} />
-            <ReferenceLine y={avg} stroke="var(--muted-foreground)" strokeDasharray="6 4" label={{ value: `Avg: ${avg}`, position: "insideTopRight", fontSize: 11, fill: "var(--muted-foreground)" }} />
+            {avg > 0 && (
+              <ReferenceLine y={avg} stroke="var(--muted-foreground)" strokeDasharray="6 4" label={{ value: `Avg: ${avg}`, position: "insideTopRight", fontSize: 11, fill: "var(--muted-foreground)" }} />
+            )}
             <Bar dataKey="count" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
@@ -486,13 +490,8 @@ function MetricCard({ label, value, trend }: { label: string; value: string; tre
     <div className="border-t pt-4 space-y-1">
       <span className="text-label text-muted-foreground">{label}</span>
       <p className="text-lg font-semibold tabular-nums">{value}</p>
-      <div className="flex items-center gap-1">
-        {trend === null ? (
-          <span className="flex items-center gap-1 text-muted-foreground">
-            <Minus className="h-3 w-3" aria-hidden="true" />
-            <span className="text-xs tabular-nums">--</span>
-          </span>
-        ) : trend > 0 ? (
+      <div className="flex h-4 items-center gap-1">
+        {trend === null ? null : trend > 0 ? (
           <span className="flex items-center gap-1 text-[oklch(0.45_0.15_145)]">
             <TrendingUp className="h-3 w-3" aria-hidden="true" />
             <span className="text-xs tabular-nums">+{Math.min(trend, 999).toFixed(1)}%</span>
