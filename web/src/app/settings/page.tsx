@@ -20,7 +20,7 @@ import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ErrorState } from "@/components/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Activity, AlertTriangle, Check, CheckCircle2, Clock, Copy, Database, HardDrive, Key, Loader2, Lock, Mail, Monitor, Paperclip, Pencil, Play, Plus, RefreshCw, Save, Search, Settings, Shield, Trash2, Users, XCircle } from "lucide-react";
+import { Activity, AlertTriangle, Check, CheckCircle2, Clock, Copy, Database, HardDrive, Info, Key, Loader2, Lock, Mail, Monitor, Paperclip, Pencil, Play, Plus, RefreshCw, Save, Search, Settings, Shield, Trash2, Users, XCircle } from "lucide-react";
 import Link from "next/link";
 import { UnifiedUsersTab } from "@/components/settings/unified-users-tab";
 import { RolesTab } from "@/components/settings/roles-tab";
@@ -477,7 +477,55 @@ function OverviewTab() {
       <HealthSection />
       <MailerConfigSection />
       <StorageConfigSection />
+      <AboutSection />
     </div>
+  );
+}
+
+// AboutSection answers "what is this and who made it" where an operator would
+// look for it, rather than putting attribution in the product chrome every user
+// of every deployment has to see. Version comes from the API (ldflags at build
+// time, "dev" for a local build).
+function AboutSection() {
+  const { data } = useQuery({
+    queryKey: ["admin-version"],
+    queryFn: () => api.get<{ version: string }>("/admin/version"),
+    staleTime: Infinity,
+  });
+
+  return (
+    <Card>
+      <SectionHeading
+        icon={Info}
+        title="About"
+        description="Version and project information"
+      />
+      <CardContent className="space-y-2">
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-sm text-muted-foreground">Version</span>
+          <span className="font-mono text-sm tabular-nums">{data?.version ?? "—"}</span>
+        </div>
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-sm text-muted-foreground">License</span>
+          <span className="text-sm">Apache 2.0</span>
+        </div>
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-sm text-muted-foreground">Created by</span>
+          <span className="text-sm">Ali Jaradat</span>
+        </div>
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-sm text-muted-foreground">Source</span>
+          <a
+            href="https://gitlab.com/burnerbyte/burnerbyte"
+            target="_blank"
+            rel="noreferrer noopener"
+            className="text-sm text-primary underline-offset-4 hover:underline"
+          >
+            gitlab.com/burnerbyte/burnerbyte
+          </a>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

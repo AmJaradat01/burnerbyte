@@ -13,6 +13,8 @@ BurnerByte is the same idea run on infrastructure you control: point a domain's
 MX at it, and any address on that domain becomes an inbox you can create, read,
 and expire under organization and team permissions.
 
+![Inbox reader — live email delivered over WebSocket, with HTML, plain-text and raw-header views](web/public/screenshots/email.png)
+
 ```
                           ┌────────────┐
    Browser ──────────────▶│ Next.js UI │  :3000
@@ -216,6 +218,14 @@ per-endpoint reference.
 | `/admin` | Platform administration |
 | `/docs` | Documentation site |
 
+## Screenshots
+
+| | |
+|---|---|
+| ![Dashboard](web/public/screenshots/dashboard.png) **Dashboard** — volume, activity and storage at a glance | ![Inbox](web/public/screenshots/inbox.png) **Inbox** — live list with TTL countdown and renew |
+| ![Domains](web/public/screenshots/domains.png) **Domains** — DNS verification state per domain | ![Teams](web/public/screenshots/teams.png) **Teams** — members, domains and inbox counts |
+| ![Analytics](web/public/screenshots/analytics.png) **Analytics** — time series, peak hours, top senders | ![Audit log](web/public/screenshots/audit.png) **Audit log** — filterable trail with CSV export |
+
 ## Tech stack
 
 - **Backend** — Go 1.25, Chi v5, pgx/pgxpool, go-redis, minio-go, Prometheus
@@ -288,6 +298,11 @@ Design documentation lives in [`PRODUCT.md`](PRODUCT.md) (users, principles) and
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the development setup and branching
 model, and [SECURITY.md](SECURITY.md) to report a vulnerability. Participation is
 governed by the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+## Maintainer
+
+Built and maintained by **Ali Jaradat** ([@amjaradat01](https://gitlab.com/amjaradat01)).
+See [AUTHORS](AUTHORS) for the full list of contributors.
 
 ## License
 

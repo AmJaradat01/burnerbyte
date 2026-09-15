@@ -2,6 +2,13 @@
   "name": "web",
   "version": "0.26.4",
   "private": true,
+  "author": "Ali Jaradat <amjaradat01@gmail.com>",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://gitlab.com/burnerbyte/burnerbyte.git",
+    "directory": "web"
+  },
   "packageManager": "pnpm@10.30.3",
   "scripts": {
     "dev": "next dev",
