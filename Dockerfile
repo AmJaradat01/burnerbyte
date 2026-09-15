@@ -8,8 +8,14 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN CGO_ENABLED=0 go build -o /bin/api ./cmd/api
-RUN CGO_ENABLED=0 go build -o /bin/smtpd ./cmd/smtpd
+
+# Stamped into main.Version and surfaced by GET /api/v1/admin/version, the
+# sidebar badge and Settings → System. .dockerignore excludes .git, so the build
+# cannot run `git describe` itself; docker-compose and the Makefile pass it in.
+# A bare `docker build` with no --build-arg reports "dev", which is accurate.
+ARG VERSION=dev
+RUN CGO_ENABLED=0 go build -ldflags "-X main.Version=${VERSION}" -o /bin/api ./cmd/api
+RUN CGO_ENABLED=0 go build -ldflags "-X main.Version=${VERSION}" -o /bin/smtpd ./cmd/smtpd
 
 # ── API image ──
 # No config.yaml is baked in: the binary boots fully from environment variables

@@ -1,5 +1,10 @@
 .PHONY: run-api run-smtp build lint test web-test docker-up docker-infra docker-down docker-logs migrate-up migrate-down migrate-create migrate-test migrate-test-db
 
+# Stamped into main.Version. `git describe` gives the exact tag on a release
+# commit and <tag>-<n>-g<sha> elsewhere, so a build always says what it is.
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
+export VERSION
+
 DATABASE_URL ?= postgres://postgres:password@localhost:5432/burnerbyte?sslmode=disable
 # Integration tests in internal/repository/postgres run against this database.
 TEST_DATABASE_URL ?= postgres://postgres:password@localhost:5432/burnerbyte_test?sslmode=disable
@@ -19,8 +24,8 @@ run-smtp:
 # ── Build ──
 
 build:
-	CGO_ENABLED=0 go build -o bin/api ./cmd/api
-	CGO_ENABLED=0 go build -o bin/smtpd ./cmd/smtpd
+	CGO_ENABLED=0 go build -ldflags "-X main.Version=$(VERSION)" -o bin/api ./cmd/api
+	CGO_ENABLED=0 go build -ldflags "-X main.Version=$(VERSION)" -o bin/smtpd ./cmd/smtpd
 
 lint:
 	golangci-lint run ./...
@@ -37,7 +42,7 @@ web-test:
 
 # Full stack (postgres, redis, minio, migrate, api, smtpd, frontend).
 docker-up:
-	docker compose up -d
+	docker compose up -d --build
 
 # Infra only — for local development where the app runs via `make run-api`.
 # The dev overlay publishes the postgres/redis/minio ports to the host, which
