@@ -260,7 +260,7 @@ describe("Bug Condition Exploration: Missing Analytics Data Not Rendered", () =>
       // that the ChartTooltip component is configured by checking the Recharts Tooltip
       // uses our custom content prop. We verify indirectly by importing and rendering
       // the ChartTooltip component directly with test data.
-      const { ChartTooltip: TooltipComp } = await import("./chart-tooltip") as { ChartTooltip: React.FC<Record<string, unknown>> };
+      const { ChartTooltip: TooltipComp } = await import("./chart-tooltip");
 
       // Render the ChartTooltip with active state to verify it outputs "% vs avg"
       const { container: tooltipContainer } = renderWithClient(

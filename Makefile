@@ -1,4 +1,4 @@
-.PHONY: run-api run-smtp build lint test docker-up docker-infra docker-down docker-logs migrate-up migrate-down migrate-create migrate-test migrate-test-db
+.PHONY: run-api run-smtp build lint test web-test docker-up docker-infra docker-down docker-logs migrate-up migrate-down migrate-create migrate-test migrate-test-db
 
 DATABASE_URL ?= postgres://postgres:password@localhost:5432/burnerbyte?sslmode=disable
 # Integration tests in internal/repository/postgres run against this database.
@@ -27,6 +27,11 @@ lint:
 
 test:
 	go test -race ./...
+
+# Frontend gates. `next build` only typechecks files in the build graph, so
+# typecheck covers the test files that lint and the image build do not.
+web-test:
+	cd web && pnpm test && pnpm lint && pnpm typecheck
 
 # ── Docker ──
 
