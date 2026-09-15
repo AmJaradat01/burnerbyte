@@ -5,6 +5,12 @@ All notable changes to this project are documented here. The format follows
 uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html): `feat:` work
 takes a minor bump, `fix:` / `docs:` / `test:` a patch.
 
+## v1.17.1 (September 2026) — About card trimmed; version shows the nearest tag
+
+### Changed
+- The About card in Settings → System links the author's name to x.com/AmJaradat01 and drops the License and Source rows — both were already one click away, leaving the two things the card is actually opened for: the version, and who made it.
+- **The version badge read `v1.17.0-1-gcc5c815`.** Accurate but noisy: git-flow tags a release on `main` and back-merges into `develop`, so develop permanently sits one commit past its own tag and `git describe` reports the distance and sha. Builds now take the nearest tag, appending `-dirty` when the tree has uncommitted changes so a modified build cannot claim to be a clean release. Jenkins still overrides `VERSION` with the exact tag it was asked to build.
+
 ## v1.17.0 (September 2026) — Version stamping in Docker; tighter CI gates
 
 ### Fixed
