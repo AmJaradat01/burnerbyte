@@ -13,6 +13,8 @@ import (
 	"net/http"
 	"net/mail"
 	"net/smtp"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -213,13 +215,49 @@ type SetupInput struct {
 	} `json:"invites,omitempty"`
 }
 
+// redactDSN reduces a connection string to "host:port/database" — enough for an
+// operator to confirm which instance they are about to write to, with the
+// credentials removed. A DSN that will not parse is reported as "(unparsable)"
+// rather than echoed back, so a malformed value can never leak its password.
+func redactDSN(dsn string) string {
+	if strings.TrimSpace(dsn) == "" {
+		return "(not configured)"
+	}
+	u, err := url.Parse(dsn)
+	if err != nil || u.Host == "" {
+		return "(unparsable)"
+	}
+	if path := strings.TrimPrefix(u.Path, "/"); path != "" {
+		return u.Host + "/" + path
+	}
+	return u.Host
+}
+
 func (h *SetupHandler) Status(w http.ResponseWriter, r *http.Request) {
 	completed, err := h.isSetupCompleted(r.Context())
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to check setup status")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]bool{"completed": completed})
+
+	body := map[string]any{"completed": completed}
+
+	// Which datastores this instance is wired to. Database and Redis are the two
+	// settings the wizard cannot change — they are resolved before the process
+	// can connect — so showing them is the only way an operator can confirm they
+	// are configuring the intended instance rather than, say, a local Postgres
+	// left over from a previous run. Credentials are stripped, and the field is
+	// withheld once setup completes, matching the test-* endpoints: before that
+	// point anyone reachable can claim the instance anyway, so a hostname is not
+	// the sensitive part.
+	if !completed {
+		body["datastores"] = map[string]string{
+			"postgres": redactDSN(h.cfg.Database.URL),
+			"redis":    redactDSN(h.cfg.Redis.URL),
+		}
+	}
+
+	writeJSON(w, http.StatusOK, body)
 }
 
 func (h *SetupHandler) Complete(w http.ResponseWriter, r *http.Request) {

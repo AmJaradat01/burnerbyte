@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useAuthStore } from "@/stores/auth-store";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { passwordRequirements, passwordStrength } from "@/lib/password-policy";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -100,21 +101,9 @@ export default function RegisterPage() {
 
   const policy = sso?.password_policy;
 
-  const requirements = policy
-    ? [
-        { met: password.length >= policy.min_length, label: `At least ${policy.min_length} characters` },
-        ...(policy.require_uppercase ? [{ met: /[A-Z]/.test(password), label: "Uppercase letter" }] : []),
-        ...(policy.require_lowercase ? [{ met: /[a-z]/.test(password), label: "Lowercase letter" }] : []),
-        ...(policy.require_number ? [{ met: /\d/.test(password), label: "Number" }] : []),
-        ...(policy.require_special ? [{ met: /[^A-Za-z0-9]/.test(password), label: "Special character" }] : []),
-      ]
-    : [];
-
-  const metCount = requirements.filter((r) => r.met).length;
-  const total = requirements.length;
-  const strengthPct = total > 0 ? (metCount / total) * 100 : 0;
-  const strengthColor = strengthPct <= 33 ? "bg-destructive/50" : strengthPct <= 66 ? "bg-warning/50" : "bg-success/50";
-  const strengthLabel = strengthPct <= 33 ? "Weak" : strengthPct <= 66 ? "Fair" : "Strong";
+  const requirements = passwordRequirements(password, policy);
+  const { pct: strengthPct, label: strengthLabel, colorClass: strengthColor } =
+    passwordStrength(requirements);
 
   const passwordsMismatch = confirmTouched && confirmPassword !== password;
   const passwordsMatch = confirmTouched && confirmPassword.length > 0 && confirmPassword === password;

@@ -3,6 +3,9 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError, API_ORIGIN, setAccessToken, setSessionHint } from "@/lib/api";
+import {
+  type PasswordPolicy, passwordRequirements, passwordMeetsPolicy, passwordStrength,
+} from "@/lib/password-policy";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +20,8 @@ import {
   Loader2, Mail, Paintbrush, Plus, RefreshCw, Shield, SkipForward,
   Trash2, UserPlus, Users, X, XCircle,
 } from "lucide-react";
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const STEPS = [
   { key: "admin", label: "Admin Account", icon: Shield, required: true },
@@ -52,37 +57,38 @@ const initialData: SetupData = {
   invites: [],
 };
 
-function passwordStrength(pw: string): { pct: number; label: string; color: string } {
-  let score = 0;
-  if (pw.length >= 8) score++;
-  if (/[A-Z]/.test(pw)) score++;
-  if (/[a-z]/.test(pw)) score++;
-  if (/\d/.test(pw)) score++;
-  if (/[^A-Za-z0-9]/.test(pw)) score++;
-  const pct = (score / 5) * 100;
-  if (pct <= 40) return { pct, label: "Weak", color: "bg-destructive/50" };
-  if (pct <= 60) return { pct, label: "Fair", color: "bg-warning/50" };
-  return { pct, label: "Strong", color: "bg-success/50" };
-}
-
 export default function SetupPage() {
   const router = useRouter();
   const [checking, setChecking] = useState(true);
+  const [passwordPolicy, setPasswordPolicy] = useState<PasswordPolicy | undefined>(undefined);
   const [step, setStep] = useState(0);
   const [data, setData] = useState<SetupData>(initialData);
   const [submitting, setSubmitting] = useState(false);
   const [healthStatus, setHealthStatus] = useState<{ postgres: boolean; redis: boolean } | null>(null);
+  const [datastores, setDatastores] = useState<{ postgres: string; redis: string } | null>(null);
   const [smtpTest, setSmtpTest] = useState<{ testing: boolean; result: { success: boolean; message: string; response_time: string } | null }>({ testing: false, result: null });
   const [storageTest, setStorageTest] = useState<{ testing: boolean; result: { success: boolean; message: string; response_time: string } | null }>({ testing: false, result: null });
 
   useEffect(() => {
-    api.get<{ completed: boolean }>("/setup/status")
+    api.get<{ completed: boolean; datastores?: { postgres: string; redis: string } }>("/setup/status")
       .then((res) => {
         if (res.completed) router.replace("/login");
-        else setChecking(false);
+        else {
+          setDatastores(res.datastores ?? null);
+          setChecking(false);
+        }
       })
       .catch(() => setChecking(false));
   }, [router]);
+
+  // The active password policy is admin-configurable, so read it rather than
+  // assuming the defaults. This endpoint is public and works before setup.
+  useEffect(() => {
+    api
+      .get<{ password_policy?: PasswordPolicy }>("/auth/sso-status")
+      .then((res) => setPasswordPolicy(res.password_policy))
+      .catch(() => setPasswordPolicy(undefined));
+  }, []);
 
   // Check infrastructure health on mount
   useEffect(() => {
@@ -108,7 +114,12 @@ export default function SetupPage() {
 
   const canNext = (): boolean => {
     switch (currentStep.key) {
-      case "admin": return !!(data.admin.email && data.admin.password && data.admin.display_name);
+      case "admin":
+        return !!(
+          data.admin.display_name &&
+          EMAIL_RE.test(data.admin.email) &&
+          passwordMeetsPolicy(data.admin.password, passwordPolicy)
+        );
       case "org": return !!data.org.name;
       case "smtp": return !!(data.smtp.host && data.smtp.port && data.smtp.from_address);
       case "domain": return !!data.domain.domain_name;
@@ -262,8 +273,20 @@ export default function SetupPage() {
                           {healthStatus.redis ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />} Redis
                         </span>
                       </div>
+                      {datastores && (
+                        <p className="text-[11px] text-muted-foreground mt-1.5 font-mono break-all">
+                          {datastores.postgres} &middot; {datastores.redis}
+                        </p>
+                      )}
                     </div>
                   </div>
+                )}
+                {datastores && (
+                  <p className="text-xs text-muted-foreground -mt-1">
+                    Database and Redis are set before this point and cannot be changed here — they
+                    come from the environment, <code className="font-mono">config.yaml</code>, or the
+                    first-run installer. Everything below is stored in that database.
+                  </p>
                 )}
                 <div className="space-y-1.5">
                   <Label htmlFor="admin-name">Display name</Label>
@@ -283,18 +306,17 @@ export default function SetupPage() {
                     <div className="space-y-1.5">
                       <div className="flex items-center gap-2">
                         <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
-                          <div className={`h-full rounded-full transition-all ${passwordStrength(data.admin.password).color}`} style={{ width: `${passwordStrength(data.admin.password).pct}%` }} />
+                          <div
+                            className={`h-full rounded-full transition-all ${passwordStrength(passwordRequirements(data.admin.password, passwordPolicy)).colorClass}`}
+                            style={{ width: `${passwordStrength(passwordRequirements(data.admin.password, passwordPolicy)).pct}%` }}
+                          />
                         </div>
-                        <span className="text-[10px] text-muted-foreground w-10">{passwordStrength(data.admin.password).label}</span>
+                        <span className="text-[10px] text-muted-foreground w-10">
+                          {passwordStrength(passwordRequirements(data.admin.password, passwordPolicy)).label}
+                        </span>
                       </div>
                       <div className="flex flex-wrap gap-x-3 gap-y-0.5">
-                        {[
-                          { met: data.admin.password.length >= 8, label: "8+ chars" },
-                          { met: /[A-Z]/.test(data.admin.password), label: "Uppercase" },
-                          { met: /[a-z]/.test(data.admin.password), label: "Lowercase" },
-                          { met: /\d/.test(data.admin.password), label: "Number" },
-                          { met: /[^A-Za-z0-9]/.test(data.admin.password), label: "Special" },
-                        ].map((r) => (
+                        {passwordRequirements(data.admin.password, passwordPolicy).map((r) => (
                           <span key={r.label} className={`text-[10px] flex items-center gap-0.5 ${r.met ? "text-success" : "text-muted-foreground"}`}>
                             {r.met ? <Check className="h-2.5 w-2.5" /> : <span className="h-2.5 w-2.5 rounded-full border border-current inline-block" />} {r.label}
                           </span>

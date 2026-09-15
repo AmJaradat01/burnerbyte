@@ -86,6 +86,28 @@ Then run the API and frontend locally with `make run-api` and `cd web && pnpm de
 `make docker-up` / `make docker-down` map to `docker compose up -d` / `down` and start or stop the **entire** stack (api, smtpd, and frontend included), not just infrastructure.
 </Callout>
 
+## Using a Managed Database
+
+The bundled `postgres` and `redis` services are a convenience, not a requirement.
+To run against a managed instance, set these in `.env`:
+
+```bash
+EXTERNAL_DATABASE_URL=postgres://user:pass@db.example.com:5432/burnerbyte?sslmode=require
+EXTERNAL_REDIS_URL=rediss://:password@cache.example.com:6380
+```
+
+`api`, `smtpd` and the one-shot `migrate` job all honour them, so the schema is
+applied to your database rather than the bundled one. The bundled containers then
+go unused — start only what you need with
+`docker compose up -d api smtpd frontend`.
+
+<Callout type="warn">
+These are deliberately **not** called `DATABASE_URL` / `REDIS_URL`. That pair is
+read by the binaries when you run them directly (`make run-api`) and points at
+`localhost`; `.env` is shared between both modes, and `localhost` inside a
+container resolves to the container itself.
+</Callout>
+
 ## Health Checks
 
 Postgres, Redis, MinIO and the API define health checks. The API and SMTP servers wait for healthy database, Redis and MinIO **and** for the one-shot `migrate` job to complete successfully; the frontend waits for a healthy `api`.
