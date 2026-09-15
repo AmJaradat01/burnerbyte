@@ -47,3 +47,22 @@ JSON format is recommended for production (parseable by Loki, ELK, Datadog).
 System admins can view aggregate stats on the `/admin` page: total users, teams, domains, emails, total/active inboxes, sessions, lifetime inboxes created, storage used, webhooks and API keys. Also available via `GET /api/v1/admin/stats` (system admin only). The `admin_stats` worker refreshes the cached payload every 10 seconds and streams it over `/api/v1/ws/admin-stats`.
 
 `GET /api/v1/admin/health` (system admin only) reports per-dependency status and latency for `postgres`, `redis`, and `storage` (the last only when S3/MinIO is the active backend), plus process uptime.
+
+## Version
+
+Both binaries carry a version stamped in at build time. It appears in the
+sidebar badge, in Settings → System, in the `smtpd` startup log, and at:
+
+```
+GET /api/v1/admin/version     # system admin only
+```
+
+`make docker-up` and `make build` derive it from
+`git describe --tags --always --dirty`, so a release build reports its tag and a
+working build reports the tag plus commit. A plain `docker compose up -d`, or an
+image built with no `--build-arg VERSION=...`, reports `dev` — the build context
+excludes `.git`, so the value has to be passed in:
+
+```bash
+docker compose build --build-arg VERSION=v1.16.1
+```
