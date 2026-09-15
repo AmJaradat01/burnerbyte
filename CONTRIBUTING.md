@@ -140,6 +140,11 @@ before opening a merge request.
   its `role_permissions` grants, or the scope it gates becomes unreachable.
 - **Editors** — an `.editorconfig` is provided; enable EditorConfig support.
 
+## Maintainer
+
+BurnerByte is maintained by Ali Jaradat, who reviews merge requests. Open an
+issue first for anything large so the approach can be agreed before you build it.
+
 ## License
 
 By contributing, you agree that your contributions are licensed under the

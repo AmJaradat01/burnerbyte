@@ -5,6 +5,17 @@ All notable changes to this project are documented here. The format follows
 uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html): `feat:` work
 takes a minor bump, `fix:` / `docs:` / `test:` a patch.
 
+## v1.16.0 (September 2026) — Attribution, product screenshots, and a CORS port fix
+
+### Added
+- **Screenshots** of nine pages, captured from a real instance with mail actually delivered over SMTP. A hero shot of the inbox reader in the README and on the docs home, a gallery in the README, and per-page shots through the docs.
+- **Attribution** in the places people look for it: `LICENSE` names the copyright holder, a new `AUTHORS` file, Maintainer sections in `README.md` and `CONTRIBUTING.md`, and the `author` / `license` / `repository` fields `web/package.json` was missing.
+- An **About card** at the foot of Settings → System showing version, licence, author and source link — the one place in the product where attribution belongs. Not in the sidebar, login or app chrome: BurnerByte is self-hosted, so the product UI belongs to whoever deploys it.
+
+### Fixed
+- **Setting `FRONTEND_PORT` alone broke CORS.** The API's `FRONTEND_URL` stayed on `localhost:3000` and `BB_CORS_ALLOWED_ORIGINS` derives from it, so changing the frontend port silently blocked every browser request. The frontend build args already fell through `FRONTEND_PORT`/`API_PORT`; the api service environment did not. Both do now, with defaults unchanged.
+- `LICENSE` said "Copyright 2024" while the first commit is February 2026.
+
 ## v1.15.1 (September 2026) — Documentation navigation and contributor guidance
 
 ### Fixed
