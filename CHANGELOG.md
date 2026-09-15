@@ -5,6 +5,11 @@ All notable changes to this project are documented here. The format follows
 uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html): `feat:` work
 takes a minor bump, `fix:` / `docs:` / `test:` a patch.
 
+## v1.12.1 (September 2026) — MinIO bucket-creation race
+
+### Fixed
+- **api and smtpd could end up on different storage backends.** Both boot at once and both create the bucket on a first run against an empty MinIO; the process that lost that race read `BucketAlreadyOwnedByYou` as a failure and fell back to local-filesystem attachments while its sibling used MinIO, so mail ingested by one was unreadable by the other. The bucket exists and belongs to us, so that response is now treated as success. Genuine failures such as `AccessDenied` still propagate. Latent until `BB_MINIO_*` binding was fixed in v1.12.0 — before that the endpoint was always empty, so nothing reached the create path.
+
 ## v1.12.0 (September 2026) — Docker works on a clean checkout; repo prepared for open source
 
 ### Fixed
