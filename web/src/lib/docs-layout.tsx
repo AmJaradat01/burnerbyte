@@ -13,8 +13,8 @@ export function baseOptions(): BaseLayoutProps {
     links: [
       { text: 'App', url: '/' },
       {
-        text: 'GitLab',
-        url: 'https://gitlab.com/amjaradat01/burnerbyte',
+        text: 'GitHub',
+        url: 'https://github.com/AmJaradat01/burnerbyte',
         external: true,
       },
     ],

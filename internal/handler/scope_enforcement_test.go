@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/auth"
+	"github.com/amjaradat01/burnerbyte/internal/auth"
 )
 
 // reqWithScopes builds a request authenticated as an API key carrying the given

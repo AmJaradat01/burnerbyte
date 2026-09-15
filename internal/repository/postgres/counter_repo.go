@@ -6,8 +6,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/database"
-	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
+	"github.com/amjaradat01/burnerbyte/internal/database"
+	"github.com/amjaradat01/burnerbyte/internal/domain"
 )
 
 type CounterRepo struct {

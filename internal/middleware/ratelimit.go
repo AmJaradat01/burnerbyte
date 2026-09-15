@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
-	"gitlab.com/amjaradat01/burnerbyte/internal/auth"
-	"gitlab.com/amjaradat01/burnerbyte/internal/config"
+	"github.com/amjaradat01/burnerbyte/internal/auth"
+	"github.com/amjaradat01/burnerbyte/internal/config"
 )
 
 type visitor struct {

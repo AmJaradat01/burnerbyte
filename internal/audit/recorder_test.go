@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 	"pgregory.net/rapid"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
+	"github.com/amjaradat01/burnerbyte/internal/domain"
 )
 
 func TestGetSeverity(t *testing.T) {

@@ -7,8 +7,8 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/auth"
-	"gitlab.com/amjaradat01/burnerbyte/internal/realtime"
+	"github.com/amjaradat01/burnerbyte/internal/auth"
+	"github.com/amjaradat01/burnerbyte/internal/realtime"
 )
 
 type AdminWSHandler struct {

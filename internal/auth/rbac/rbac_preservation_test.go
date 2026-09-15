@@ -8,8 +8,8 @@ import (
 	"github.com/google/uuid"
 	"pgregory.net/rapid"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/auth"
-	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
+	"github.com/amjaradat01/burnerbyte/internal/auth"
+	"github.com/amjaradat01/burnerbyte/internal/domain"
 )
 
 // Feature: rbac-permission-overhaul, Property 2: Preservation — System Admin Bypass and Membership Checks

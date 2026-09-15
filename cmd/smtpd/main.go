@@ -7,17 +7,17 @@ import (
 	"os/signal"
 	"syscall"
 
-	"gitlab.com/amjaradat01/burnerbyte/internal/audit"
-	"gitlab.com/amjaradat01/burnerbyte/internal/cfgsync"
-	"gitlab.com/amjaradat01/burnerbyte/internal/config"
-	"gitlab.com/amjaradat01/burnerbyte/internal/database"
-	"gitlab.com/amjaradat01/burnerbyte/internal/realtime"
-	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
-	redisrepo "gitlab.com/amjaradat01/burnerbyte/internal/repository/redis"
-	"gitlab.com/amjaradat01/burnerbyte/internal/service"
-	"gitlab.com/amjaradat01/burnerbyte/internal/smtp"
-	"gitlab.com/amjaradat01/burnerbyte/internal/storage"
-	"gitlab.com/amjaradat01/burnerbyte/internal/webhook"
+	"github.com/amjaradat01/burnerbyte/internal/audit"
+	"github.com/amjaradat01/burnerbyte/internal/cfgsync"
+	"github.com/amjaradat01/burnerbyte/internal/config"
+	"github.com/amjaradat01/burnerbyte/internal/database"
+	"github.com/amjaradat01/burnerbyte/internal/realtime"
+	"github.com/amjaradat01/burnerbyte/internal/repository/postgres"
+	redisrepo "github.com/amjaradat01/burnerbyte/internal/repository/redis"
+	"github.com/amjaradat01/burnerbyte/internal/service"
+	"github.com/amjaradat01/burnerbyte/internal/smtp"
+	"github.com/amjaradat01/burnerbyte/internal/storage"
+	"github.com/amjaradat01/burnerbyte/internal/webhook"
 )
 
 // Version is stamped at build time via -ldflags "-X main.Version=...".

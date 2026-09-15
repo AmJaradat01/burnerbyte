@@ -20,7 +20,7 @@ issue.
 ### Getting started
 
 ```bash
-git clone https://gitlab.com/amjaradat01/burnerbyte.git
+git clone https://github.com/AmJaradat01/burnerbyte.git
 cd burnerbyte
 
 # Infrastructure only — postgres, redis and minio, with their ports published
@@ -63,14 +63,14 @@ those are local debugging artifacts and are not committed.
 
 External contributors work through a fork:
 
-1. Fork the project on GitLab and clone your fork.
+1. Fork the project on GitHub and clone your fork.
 2. Branch from `develop`, never from `main`:
    `git checkout -b feature/short-description develop`
 3. Commit using the conventional-commit prefixes below.
-4. Push to your fork and open a **merge request against `develop`**, describing
+4. Push to your fork and open a **pull request against `develop`**, describing
    what changed and how you verified it.
 
-Please keep a merge request to one coherent change, and include tests for
+Please keep a pull request to one coherent change, and include tests for
 behavior you add or fix.
 
 ### Commit messages
@@ -112,11 +112,18 @@ git push origin main develop vX.Y.Z
 
 ## Continuous integration
 
-CI runs on Jenkins from the `Jenkinsfile` in the repository root. It builds both
-Go binaries and the frontend, runs the Go and frontend test suites, and deploys
-tagged builds. The pipeline depends on maintainer-held credentials, so it does
-not run against forks — run `make test`, `make lint` and `pnpm test` locally
-before opening a merge request.
+Every pull request runs `.github/workflows/ci.yml` on GitHub Actions: `go build`,
+`go vet` and `go test -race` against real Postgres and Redis services, then
+`pnpm lint`, `pnpm typecheck`, `pnpm test` and `pnpm build`, and finally a
+`docker compose build` to prove a clean checkout still produces all three
+images. It needs no secrets, so it runs on forks too.
+
+Deployment is separate: Jenkins builds tagged releases from the `Jenkinsfile`
+and ships them to the server. It depends on maintainer-held credentials and does
+not run against forks.
+
+Run `make test`, `make web-test` and `make lint` locally and CI should be a
+formality.
 
 ## Code style
 
@@ -148,7 +155,7 @@ before opening a merge request.
 
 ## Maintainer
 
-BurnerByte is maintained by Ali Jaradat, who reviews merge requests. Open an
+BurnerByte is maintained by Ali Jaradat, who reviews pull requests. Open an
 issue first for anything large so the approach can be agreed before you build it.
 
 ## License
