@@ -43,24 +43,24 @@ sso:
   allowed_domains: example.com,corp.example.com
 ```
 
-If database providers are also configured, both the file-based provider and database providers are loaded.
+Database providers are loaded first and take precedence: the file-based provider is merged in only if no database provider shares its name, and only when `provider`, `client_id` and `client_secret` are all set.
 
 ## Authentication Flow
 
 1. User clicks "Sign in with SSO" on the login page
-2. Frontend redirects to `GET /auth/sso/{provider}`
+2. Frontend redirects to `GET /api/v1/auth/sso/{provider}`
 3. Server generates a state cookie (600s TTL) and redirects to the OIDC provider with `prompt=select_account` to force the account picker on every login
 4. User authenticates with the provider
-5. Provider redirects back to `GET /auth/sso/{provider}/callback`
+5. Provider redirects back to `GET /api/v1/auth/sso/{provider}/callback`
 6. Server validates the state, exchanges the code for tokens, and extracts user info
 7. If the user exists, they're logged in. If not and auto-provisioning is enabled, a new account is created
-8. Server redirects to the frontend login page with a one-time `sso_code` (60s TTL), which the frontend exchanges for tokens via `POST /auth/sso/exchange` — the web UI requests the refresh token as an httpOnly cookie
+8. Server redirects to the frontend login page with a one-time `sso_code` (60s TTL), which the frontend exchanges for tokens via `POST /api/v1/auth/sso/exchange` — the web UI requests the refresh token as an httpOnly cookie
 
-The same flow supports **account linking** — authenticated users can link additional SSO identities by initiating the flow with `?intent=link`. Linked identities are listed at `GET /auth/me/sso` and can be removed with `DELETE /auth/me/sso/{provider}`.
+The same flow supports **account linking** — authenticated users can link additional SSO identities by initiating the flow with `?intent=link`. Linked identities are listed at `GET /api/v1/auth/me/sso` and can be removed with `DELETE /api/v1/auth/me/sso/{provider}`.
 
 ## Auto-Provisioning
 
-When `auto_provision` is enabled on a provider, new users are created automatically on first SSO login. The provider configuration controls the defaults:
+New users are created on first SSO login whenever public registration is allowed. The `auto_provision` flag controls what happens *next* — whether the new user is automatically given an org membership (and optionally a team membership). With `auto_provision` off, the account is created but has no org, and the user is sent to the onboarding flow. The provider configuration controls the defaults:
 
 | Field | Description |
 |---|---|
@@ -68,7 +68,7 @@ When `auto_provision` is enabled on a provider, new users are created automatica
 | `default_team_role` | Team role when assigned to a default team |
 | `default_team_id` | Team to add the user to on first login (optional) |
 
-If domain mappings exist for the user's email domain, those take precedence over the default team and role settings.
+Domain mappings are consulted **only when public registration is disabled** (invite-only mode) and **only for users who do not yet exist**. In that case a matching mapping lets the user in without an invite and provisions them into every mapped team; archived teams are skipped. They do not replace the provider's `default_org_role` / `default_team_id`, which are still applied afterwards when `auto_provision` is on. Mappings are never re-evaluated for existing users.
 
 ## Domain Mappings
 
@@ -88,7 +88,7 @@ Domain mappings route users from specific email domains to teams automatically d
 Before creating mappings, you can preview what would happen for a given email:
 
 ```bash
-POST /admin/sso/domain-mappings/preview
+POST /api/v1/admin/sso/domain-mappings/preview
 {
   "email": "alice@example.com",
   "provider": "google"
@@ -111,7 +111,7 @@ Claim mappings let you map IdP claims to BurnerByte role and team assignments. E
 }
 ```
 
-Claim mappings are configured per provider via the `claim_mappings` field. The `custom_claims` field on the provider specifies which additional claims to request from the IdP. Note that `org_role` must be a valid org role (`owner`, `admin`, `member`) and `team_role` must be a valid team role (`lead` or `member`).
+Claim mappings are configured per provider via the `claim_mappings` field. The `custom_claims` field on the provider specifies which additional claims to request from the IdP. Claim mappings are applied on a user's **first** SSO login only, and only when `auto_provision` is enabled. `org_role` and `team_role` must name roles that exist in the `roles` table (`GET /api/v1/roles` lists them); values are not validated at write time, so an unknown role silently fails and is only logged. A team assignment requires **both** `team_id` and `team_role` — omitting `team_role` skips the assignment rather than defaulting to `member`.
 
 ## Allowed Domains
 
@@ -122,7 +122,7 @@ Each provider can restrict which email domains are permitted to authenticate. Se
 Org admins can enforce SSO for all members via org settings:
 
 ```bash
-PUT /orgs/{orgId}/settings
+PUT /api/v1/orgs/{orgId}/settings
 {"enforce_sso": true}
 ```
 
@@ -140,30 +140,30 @@ Each user has an optional `auth_method_lock` field that restricts which authenti
 | `"sso"` | Only SSO login permitted |
 | `"password"` | Only password login permitted |
 
-Platform admins can set the lock via `PATCH /admin/users/:id` with the `auth_method_lock` field.
+Platform admins can set the lock via `PATCH /api/v1/admin/users/:id` with the `auth_method_lock` field.
 
 ### Auth Migration
 
 Platform admins can migrate users between authentication methods:
 
 ```bash
-POST /admin/users/{userId}/migrate-auth
+POST /api/v1/admin/users/{userId}/migrate-auth
 {"target": "sso"}
 ```
 
 ```bash
-POST /admin/users/{userId}/migrate-auth
+POST /api/v1/admin/users/{userId}/migrate-auth
 {"target": "password", "new_password": "securePassword123"}
 ```
 
-Migrating to SSO clears the user's password hash and sets the auth method lock to `sso`. Migrating to password requires a `new_password` and sets the lock to `password`.
+Migrating to SSO requires the user to already have at least one linked SSO identity — otherwise the call fails with `400`. It clears the password hash, sets the auth method lock to `sso`, and revokes all of the user's sessions. Migrating to password requires a `new_password` satisfying the active password policy and sets the lock to `password`; existing sessions are left intact.
 
 ## SSO Status
 
 Check whether SSO is configured and available:
 
 ```bash
-GET /auth/sso-status
+GET /api/v1/auth/sso-status
 ```
 
 Returns the current SSO status including:
@@ -180,7 +180,7 @@ No secrets are exposed.
 Platform admins can test an SSO provider's connectivity before saving:
 
 ```bash
-POST /admin/sso/test
+POST /api/v1/admin/sso/test
 {
   "name": "google",
   "provider_type": "google",
@@ -197,27 +197,27 @@ Returns success/failure, the discovered endpoint, HTTP status code, response tim
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/admin/sso/providers` | List all SSO providers |
-| `POST` | `/admin/sso/providers` | Create a new provider |
-| `GET` | `/admin/sso/providers/:pid` | Get a single provider |
-| `PUT` | `/admin/sso/providers/:pid` | Update a provider |
-| `DELETE` | `/admin/sso/providers/:pid` | Delete a provider |
-| `POST` | `/admin/sso/test` | Test provider connectivity |
+| `GET` | `/api/v1/admin/sso/providers` | List all SSO providers |
+| `POST` | `/api/v1/admin/sso/providers` | Create a new provider |
+| `GET` | `/api/v1/admin/sso/providers/:pid` | Get a single provider |
+| `PUT` | `/api/v1/admin/sso/providers/:pid` | Update a provider |
+| `DELETE` | `/api/v1/admin/sso/providers/:pid` | Delete a provider |
+| `POST` | `/api/v1/admin/sso/test` | Test provider connectivity |
 
 ### Domain Mappings
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/admin/sso/providers/:pid/domain-mappings` | Create a domain mapping |
-| `GET` | `/admin/sso/providers/:pid/domain-mappings` | List mappings for a provider |
-| `PUT` | `/admin/sso/providers/:pid/domain-mappings/:mid` | Update a domain mapping |
-| `DELETE` | `/admin/sso/providers/:pid/domain-mappings/:mid` | Delete a domain mapping |
-| `POST` | `/admin/sso/domain-mappings/preview` | Preview mapping results (dry-run) |
+| `POST` | `/api/v1/admin/sso/providers/:pid/domain-mappings` | Create a domain mapping |
+| `GET` | `/api/v1/admin/sso/providers/:pid/domain-mappings` | List mappings for a provider |
+| `PUT` | `/api/v1/admin/sso/providers/:pid/domain-mappings/:mid` | Update a domain mapping |
+| `DELETE` | `/api/v1/admin/sso/providers/:pid/domain-mappings/:mid` | Delete a domain mapping |
+| `POST` | `/api/v1/admin/sso/domain-mappings/preview` | Preview mapping results (dry-run) |
 
 ### Auth Migration
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/admin/users/:id/migrate-auth` | Migrate user auth method (`target`: `sso` or `password`) |
+| `POST` | `/api/v1/admin/users/:id/migrate-auth` | Migrate user auth method (`target`: `sso` or `password`) |
 
 All admin endpoints require the `SystemAdmin` role.

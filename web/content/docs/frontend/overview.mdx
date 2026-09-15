@@ -13,42 +13,55 @@ description: Next.js frontend architecture, pages, components, and keyboard shor
 | Tailwind CSS 4 | Utility-first styling with OKLCH color tokens |
 | Zustand | Client state (auth, org/team selection) |
 | TanStack Query v5 | Server state, caching, optimistic updates |
-| Recharts | Analytics charts and sparklines |
+| Recharts 3 | Dashboard and analytics charts |
 | Sonner | Toast notifications with severity icons |
 | Fumadocs | Documentation site (MDX, full-text search) |
-| next-intl | Internationalization |
+| next-intl 4 | Internationalization scaffolding (English is the only bundled locale) |
 
 ## Pages
 
 | Route | Description |
 |---|---|
-| `/` | Home — inbox creation hero + active inbox grid |
+| `/` | Landing page for signed-out visitors; inbox creation hero + active inbox grid once signed in |
+| `/try` | Public demo inbox — no account required, gated on the `demo_enabled` platform setting |
 | `/dashboard` | Admin dashboard — stats, charts, activity, quick links |
+| `/inboxes` | Redirect to `/` |
 | `/domains` | Domain management with DNS verification |
-| `/domains/[id]` | Domain detail with team assignments |
+| `/domains/[domainId]` | Domain detail with team assignments |
 | `/teams` | Team list with member/domain/inbox counts |
 | `/webhooks` | Webhook management with delivery logs |
 | `/api-keys` | Scoped API key management with permission picker |
 | `/audit` | Timeline audit log with filters and CSV export |
 | `/analytics` | Org/team analytics with charts and insights |
 | `/settings` | Org settings, users, roles, SSO, system config |
-| `/profile` | User profile, connected accounts, sessions |
-| `/inboxes/[id]` | Inbox detail with real-time email list |
-| `/docs` | Documentation site (Fumadocs) |
+| `/admin` | Redirect to `/settings` |
+| `/profile` | User profile and connected accounts |
+| `/profile/sessions` | Active session list with per-session revoke |
+| `/profile/delete` | Account deletion flow |
+| `/inboxes/[id]` | Inbox detail with real-time email list (WebSocket) |
+| `/email/[emailId]` | Standalone email detail with headers and spam score |
+| `/docs/[[...slug]]` | Documentation site (Fumadocs) |
 | `/login` | Sign in with password or SSO |
 | `/register` | Account creation with password strength |
+| `/forgot-password` | Password reset request |
+| `/reset-password` | Password reset with emailed token |
+| `/verify-email` | Email address verification |
+| `/invite` | Organization invitation acceptance |
 | `/setup` | First-run setup wizard |
 | `/onboarding` | Mandatory org-creation flow — forced redirect for users without an org (system admins exempt) |
 
 ## Keyboard Shortcuts
 
-| Key | Action |
-|---|---|
-| `⌘K` / `Ctrl+K` | Open command palette |
-| `?` | Show keyboard shortcuts help |
-| `j` / `↓` | Next email in list |
-| `k` / `↑` | Previous email in list |
-| `Esc` | Close modal / deselect |
+| Key | Action | Scope |
+|---|---|---|
+| `⌘K` / `Ctrl+K` | Open command palette | Global |
+| `?` | Show keyboard shortcuts help | Global (outside inputs) |
+| `n` | Create a new inbox | Home (`/`), outside inputs |
+| `j` / `↓` | Next email in list | Inbox detail (`/inboxes/[id]`) |
+| `k` / `↑` | Previous email in list | Inbox detail (`/inboxes/[id]`) |
+| `Esc` | Deselect the current email | Inbox detail (`/inboxes/[id]`) |
+
+Dialogs close on `Esc` via the Radix primitive, not a registered shortcut.
 
 ## UX Patterns
 
@@ -64,7 +77,7 @@ Every data page consistently uses:
 - **Pagination** — `Pagination` component with page numbers
 - **Toast notifications** — Sonner with severity icons (success, error, warning, info)
 - **Optimistic updates** — TanStack Query mutations with rollback on error
-- **Pull-to-refresh** — Touch gesture support on list pages
+- **Pull-to-refresh** — Touch gesture on the home inbox grid (`/`)
 
 ## Key Components
 
@@ -74,7 +87,6 @@ Every data page consistently uses:
 | `Sidebar` | Collapsible navigation with Lucide icons and org card |
 | `CommandPalette` | `⌘K` quick navigation with search |
 | `NotificationCenter` | Real-time notification popover with grouping |
-| `Sparkline` | Mini area chart for stat cards |
 | `LastUpdated` | Relative time indicator for data freshness |
 | `ProviderIcon` | SSO provider logos (GitHub, Google, Azure, Okta) |
 | `Logo` | Consistent branding component with size variants |
@@ -95,7 +107,7 @@ Server state is managed with TanStack Query v5. Key patterns:
 
 - **Stale times** — 30s default, 60s for notifications, 5min for platform settings
 - **Refetch on window focus** — Enabled globally for fresh data
-- **Optimistic updates** — Webhooks, API keys, and notifications use optimistic mutations
+- **Optimistic updates** — Webhooks and API keys use `onMutate` mutations with rollback on error; the notification center writes the cache directly with `setQueryData`
 - **Cache invalidation** — WebSocket messages trigger targeted query invalidation
 
 ## Command Palette
@@ -114,4 +126,15 @@ Press `⌘K` to open the command palette for quick navigation. Features:
 - Responsive grid breakpoints (`grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`)
 - Table overflow wrappers with horizontal scroll
 - Responsive column hiding on narrow screens
-- Pull-to-refresh on touch devices
+- Pull-to-refresh on touch devices (home page only)
+
+## Internationalization
+
+Strings go through `next-intl`, but only one locale ships today:
+
+- `web/src/i18n/request.ts` declares `locales = ["en"]`, `defaultLocale = "en"`,
+  and an empty `rtlLocales` list.
+- `web/src/i18n/messages/` contains a single `en.json`, imported statically.
+- There is no `middleware.ts`, so there is no locale routing, no `/[locale]` URL
+  prefix, and no `Accept-Language` negotiation. Adding a locale means adding a
+  messages file, extending `locales`, and introducing routing middleware.

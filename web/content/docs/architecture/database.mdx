@@ -5,7 +5,7 @@ description: PostgreSQL schema overview — tables, indexes, and triggers.
 
 ## Overview
 
-BurnerByte uses PostgreSQL 16 with 43 migrations managing 36 tables, 74 indexes, and 7 triggers.
+BurnerByte uses PostgreSQL 16 with 46 migrations managing 36 tables, 74 indexes, and 7 triggers.
 
 ## Core Tables
 
@@ -43,7 +43,7 @@ BurnerByte uses PostgreSQL 16 with 43 migrations managing 36 tables, 74 indexes,
 | Table | Purpose |
 |---|---|
 | `webhooks` | Webhook subscriptions with URL, events, HMAC secret |
-| `webhook_delivery_logs` | Delivery attempts with status, response time, retry count |
+| `webhook_delivery_logs` | Delivery attempts with event, payload, response status/body, response time, success flag, attempt number, and idempotency key |
 | `api_keys` | Scoped API keys with hashed key, prefix, scopes |
 
 ### System
@@ -55,13 +55,13 @@ BurnerByte uses PostgreSQL 16 with 43 migrations managing 36 tables, 74 indexes,
 | `invite_team_assignments` | Team + role assignments attached to a pending invite |
 | `notifications` | User notifications with type, inbox_id, read status |
 | `setup_state` | One-time setup wizard completion state |
-| `system_configs` | Runtime config overrides (mailer, storage) |
+| `system_configs` | Runtime config overrides (`mailer`, `storage`, `sso`, `platform`); the first three are encrypted at rest |
 
 ### RBAC
 
 | Table | Purpose |
 |---|---|
-| `roles` | Named roles with description and scope (platform, org, team) |
+| `roles` | Named roles with label, description, rank and scope (`org` or `team`) |
 | `permissions` | Individual permission definitions (e.g., `inboxes.create`) |
 | `role_permissions` | Role ↔ permission mapping |
 
