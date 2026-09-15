@@ -8,7 +8,7 @@ description: Prometheus metrics, health endpoints, and logging.
 | Endpoint | Description |
 |---|---|
 | `GET /healthz` | Liveness — always returns 200 if the process is running |
-| `GET /readyz` | Readiness — pings PostgreSQL and Redis (2s timeout); 503 with a `detail` naming the failed dependency |
+| `GET /readyz` | Readiness — pings PostgreSQL and Redis (2s timeout) and reports each individually as `{"postgres":"ok","redis":"ok","status":"ok"}`; 503 with a `detail` naming every failed dependency |
 | `GET /metrics` | Prometheus exposition — **loopback and private IPs only** |
 
 ## Prometheus Metrics

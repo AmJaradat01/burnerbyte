@@ -258,6 +258,19 @@ config tree (`BB_SMTP_HOSTNAME` → `smtp.hostname`), and `DATABASE_URL`,
 SSO and platform settings can also be changed at runtime from the admin UI and
 take effect without a restart.
 
+The bundled Postgres and Redis containers are a convenience, not a requirement.
+To run against managed instances, set `EXTERNAL_DATABASE_URL` and
+`EXTERNAL_REDIS_URL` in `.env` — the API, the SMTP server and the migration job
+all honour them, so the schema is applied to your database. They are named
+distinctly because `.env` is shared with the from-source workflow, where
+`DATABASE_URL` points at `localhost` — which inside a container is the container
+itself.
+
+Database and Redis are the only settings that cannot be changed from inside the
+app: the setup wizard's own state lives in that database, so the connection has
+to be resolved before the process can serve anything. The wizard shows which
+instance it is connected to, with credentials stripped.
+
 ## Documentation
 
 The running frontend serves full documentation at `/docs` — installation,

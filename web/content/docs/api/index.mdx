@@ -120,7 +120,7 @@ X-RateLimit-Reset: 1709251200
 
 | Group | Endpoints |
 |---|---|
-| Setup | `GET /setup/status`, `POST /setup/complete`, `POST /setup/test-smtp`, `POST /setup/test-storage` |
+| Setup | `GET /setup/status` (adds a credential-stripped `datastores` object while setup is incomplete), `POST /setup/complete`, `POST /setup/test-smtp`, `POST /setup/test-storage` |
 | Demo (Try It) | `GET /try/status`, `POST /try/inbox`, `GET /try/inbox/:inboxId/emails` — public, see [Demo Mode](/docs/concepts/demo-mode) |
 | Auth | `POST /auth/register`, `POST /auth/login`, `POST /auth/login/resolve`, `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me`, `PATCH /auth/me`, `PUT /auth/me/password`, `DELETE /auth/me`, `POST /auth/forgot-password`, `POST /auth/reset-password`, `GET /auth/verify-email/:token`, `GET /auth/sso-status`, `GET /auth/datetime-settings`, `GET /auth/login/pending-sessions`, `POST /auth/sso/exchange` |
 | Sessions | `GET /auth/sessions`, `DELETE /auth/sessions/:id`, `DELETE /auth/sessions` |
