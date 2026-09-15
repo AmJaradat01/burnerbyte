@@ -1,0 +1,21 @@
+# Local-development overlay: publishes the infrastructure ports to the host so
+# the API, SMTP server and frontend can run from source against the containers.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres redis minio
+#
+# or simply `make docker-infra`, which passes both files for you. Override any
+# port in .env (POSTGRES_PORT, REDIS_PORT, MINIO_PORT, MINIO_CONSOLE_PORT) if it
+# collides with something already running.
+services:
+  postgres:
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+
+  redis:
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+
+  minio:
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"

@@ -323,9 +323,31 @@ func Load() (*Config, error) {
 
 	// SMTP ingest (cmd/smtpd)
 	v.SetDefault("smtp.listen", "0.0.0.0:2525")
+	// hostname is announced in the 220 greeting and every HELO/EHLO reply, which
+	// RFC 5321 requires to carry a domain. Left unregistered it unmarshalled to
+	// "", emitting a malformed "220  ESMTP BurnerByte" that strict MTAs reject;
+	// "localhost" is a valid placeholder that deployments override via
+	// BB_SMTP_HOSTNAME (docker-compose sets it) or smtp.hostname in config.yaml.
+	v.SetDefault("smtp.hostname", "localhost")
 	v.SetDefault("smtp.max_size", 26214400) // 25 MB
 	v.SetDefault("smtp.queue_size", 1000)
 	v.SetDefault("smtp.workers", 4)
+	v.SetDefault("smtp.tls_cert", "")
+	v.SetDefault("smtp.tls_key", "")
+
+	// Object storage (MinIO / S3-compatible). Registered purely so BB_MINIO_*
+	// overrides are honoured: viper's AutomaticEnv ignores any BB_* value whose
+	// nested key it does not already know, so before these were registered an
+	// env-only deployment (docker-compose included) silently ran with an empty
+	// endpoint and fell back to local-filesystem attachments. endpoint and the
+	// credentials stay empty by default — an unset endpoint is the deliberate
+	// signal to use local storage, and pointing it at localhost:9000 would turn
+	// that into a dial timeout on every boot.
+	v.SetDefault("minio.endpoint", "")
+	v.SetDefault("minio.access_key", "")
+	v.SetDefault("minio.secret_key", "")
+	v.SetDefault("minio.bucket", "burnerbyte")
+	v.SetDefault("minio.use_ssl", false)
 	v.SetDefault("mailer.port", 587)
 	v.SetDefault("mailer.tls", true)
 

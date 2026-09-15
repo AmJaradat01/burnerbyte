@@ -12,16 +12,25 @@ cp config.example.yaml config.yaml
 docker compose up -d
 ```
 
-This starts 6 services:
+This starts seven services — three published to the host, three internal, plus a
+one-shot migration job:
 
-| Service | Port | Description |
+| Service | Host port | Description |
 |---|---|---|
-| `postgres` | 5432 | PostgreSQL 16 database |
-| `redis` | 6379 | Redis 7 cache |
-| `minio` | 9000 / 9001 | S3-compatible object storage |
+| `frontend` | 3000 | Next.js UI |
 | `api` | 8080 | Go API server + workers |
 | `smtpd` | 2525 | SMTP inbound server |
-| `frontend` | 3000 | Next.js UI |
+| `postgres` | — | PostgreSQL 16 database |
+| `redis` | — | Redis 7 cache |
+| `minio` | — | S3-compatible object storage |
+| `migrate` | — | Applies schema migrations, then exits |
+
+<Callout>
+Postgres, Redis and MinIO publish no host ports. `api` and `smtpd` reach them
+over the compose network, and binding 5432, 6379 or 9000 on the host would make
+`docker compose up` fail for anyone already running those locally. Use the dev
+overlay below when you need them reachable from the host.
+</Callout>
 
 ## Customizing Ports and Credentials
 
@@ -62,8 +71,13 @@ SMTP_HOSTNAME=mail.example.com        # mapped to BB_SMTP_HOSTNAME for the api/s
 To run just the infrastructure (database, cache, storage) while developing locally:
 
 ```bash
-docker compose up -d postgres redis minio   # infrastructure only
+make docker-infra
+# equivalently:
+# docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres redis minio
 ```
+
+`docker-compose.dev.yml` is the overlay that publishes the infrastructure ports
+to the host; without it those services stay on the internal network only.
 
 Then run the API and frontend locally with `make run-api` and `cd web && pnpm dev`.
 
@@ -84,7 +98,7 @@ curl http://localhost:8080/healthz
 # Readiness (checks DB + Redis)
 curl http://localhost:8080/readyz
 
-# MinIO console
+# MinIO console (requires the dev overlay — see "Infrastructure Only")
 open http://localhost:9001
 ```
 

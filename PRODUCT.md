@@ -1,9 +1,5 @@
 # Product
 
-## Register
-
-product
-
 ## Users
 
 Two distinct personas share one self-hosted platform:
@@ -28,10 +24,10 @@ Three words: **precise, capable, trustworthy.**
 
 ## Anti-references
 
-- **Generic SaaS dashboards** (Intercom, HubSpot). Too many competing colors, marketing-heavy chrome, upsell patterns everywhere. BurnerByte is infrastructure, not a funnel.
-- **Over-designed dev tools** (Vercel-aesthetic clones). Dark mode as fashion statement, gratuitous gradients, blur effects for their own sake. Aesthetics serve clarity, not screenshots.
-- **Enterprise admin panels** (AWS Console, Jira). Information overload, dated component patterns, overwhelming density without hierarchy. Density is fine; chaos is not.
-- **Disposable email competitors** (Guerrilla Mail, TempMail). Ad-riddled, visually cheap, zero trust signals. The opposite of what a security team can adopt.
+- **Marketing-led SaaS dashboards.** Competing accent colors, promotional chrome, and upsell prompts woven into the product surface. BurnerByte is infrastructure, not a funnel.
+- **Screenshot-driven dev tools.** Dark mode as a fashion statement, gradients and blur applied for their own sake. Aesthetics serve clarity, not screenshots.
+- **Undifferentiated enterprise consoles.** Information delivered at uniform weight, so nothing reads as more important than anything else. Density is fine; chaos is not.
+- **Ad-supported disposable inbox services.** Ad units around the mailbox, no access control, no audit trail. BurnerByte should be something a security team can defend in a procurement review.
 - **Cute illustrated empty states.** Hand-drawn characters, pastel scenes, friendly mascots saying "Nothing here yet!" Patronizing to expert users and inappropriate for governance surfaces. Empty states should be a single line of useful text and, where it helps, a primary action. No characters, no decoration.
 - **Marketing-page patterns inside the product.** Hero-metric templates, identical feature-grid card layouts, gradient text headlines, and other landing-page furniture do not belong on product surfaces. If a pattern would feel at home on a homepage, it does not feel at home on a dashboard.
 

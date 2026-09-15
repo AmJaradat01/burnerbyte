@@ -11,7 +11,7 @@
  * Uses fast-check for property-based testing with arbitrary data generation.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { screen, waitFor, within } from "@testing-library/react";
+import { waitFor } from "@testing-library/react";
 import { renderWithClient } from "@/test/query";
 import fc from "fast-check";
 
@@ -30,13 +30,16 @@ vi.mock("@/stores/org-store", () => ({
 }));
 
 // Mock next/dynamic to avoid SSR-related hanging in tests
-vi.mock("next/dynamic", () => {
-  const React = require("react");
+vi.mock("next/dynamic", async () => {
+  const React = await import("react");
+  type LoadedModule = { default?: React.ComponentType<unknown> } | React.ComponentType<unknown>;
   return {
-    default: (loader: () => Promise<any>, _opts?: any) => {
-      let Comp: any = null;
-      const promise = loader().then((mod: any) => { Comp = mod.default || mod; });
-      return function DynamicWrapper(props: any) {
+    default: (loader: () => Promise<LoadedModule>) => {
+      let Comp: React.ComponentType<unknown> | null = null;
+      const promise = loader().then((mod) => {
+        Comp = ("default" in mod ? mod.default : mod) ?? null;
+      });
+      return function DynamicWrapper(props: Record<string, unknown>) {
         const [, setReady] = React.useState(false);
         React.useEffect(() => { promise.then(() => setReady(true)); }, []);
         return Comp ? React.createElement(Comp, props) : null;
@@ -115,21 +118,6 @@ const topSenderDomainsArb = fc.array(
   }),
   { minLength: 1, maxLength: 10 }
 );
-
-/** Generate OrgStats with top_sender_domains */
-const orgStatsWithSendersArb = topSenderDomainsArb.map((domains) => ({
-  total_emails: 5000,
-  total_inboxes: 150,
-  active_inboxes: 89,
-  total_domains: 12,
-  total_teams: 4,
-  total_members: 12,
-  storage_used_bytes: 1073741824,
-  total_emails_received: 45230,
-  total_inboxes_created: 312,
-  total_storage_bytes: 5368709120,
-  top_sender_domains: domains,
-}));
 
 // --- Helper ---
 
@@ -413,8 +401,8 @@ describe("Preservation Property Tests: Existing Charts and Navigation Unchanged"
         const insightsCalls = calls.filter(([path]) => path.includes("/insights"));
 
         // On initial render, these endpoints should be called
-        expect(emailsPerDayCalls.length).toBeGreaterThan(0);
-        expect(insightsCalls.length).toBeGreaterThan(0);
+        expect(emailsPerDayCalls.length, `days=${days}`).toBeGreaterThan(0);
+        expect(insightsCalls.length, `days=${days}`).toBeGreaterThan(0);
 
         unmount();
       }

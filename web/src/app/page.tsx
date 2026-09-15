@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
@@ -307,21 +307,35 @@ function randomLocal(len: number): string {
   return Array.from(arr, (b) => chars[b % chars.length]).join("");
 }
 
+const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
+
+function subscribeToReducedMotion(onChange: () => void) {
+  const mq = window.matchMedia(REDUCED_MOTION_QUERY);
+  mq.addEventListener("change", onChange);
+  return () => mq.removeEventListener("change", onChange);
+}
+
+/** Reads the prefers-reduced-motion media query as an external store rather than
+ *  mirroring it into state from an effect. Seeding state in an effect renders
+ *  once with the wrong value and then immediately again, which is both a
+ *  cascading render and a flash of animation for users who asked for none.
+ *  The server snapshot is `false`: the query is unknowable while rendering on
+ *  the server, and animation is the markup the client hydrates against. */
+function usePrefersReducedMotion() {
+  return useSyncExternalStore(
+    subscribeToReducedMotion,
+    () => window.matchMedia(REDUCED_MOTION_QUERY).matches,
+    () => false,
+  );
+}
+
 /** Shows a cycling random string preview (e.g. "a7k2x9") that updates every
  *  2.5 seconds with a smooth entrance animation. Respects prefers-reduced-motion
  *  (shows static text instead). When the user has typed an alias, shows that instead. */
 function AnimatedLocalPart({ alias, fallbackText }: { alias: string; fallbackText: string }) {
   const [preview, setPreview] = useState(() => randomLocal(6));
   const [animKey, setAnimKey] = useState(0);
-  const [reduced, setReduced] = useState(false);
-
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReduced(mq.matches);
-    const handler = () => setReduced(mq.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, []);
+  const reduced = usePrefersReducedMotion();
 
   useEffect(() => {
     if (reduced || alias) return;
