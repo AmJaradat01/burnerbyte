@@ -55,7 +55,6 @@ func applyUpdate(original domain.APIKey, input domain.UpdateAPIKeyInput) domain.
 	return updated
 }
 
-
 // validScopes mirrors the service-layer valid scopes for generator use.
 var testValidScopes = []string{
 	"team.inboxes.create", "team.inboxes.view", "team.emails.view",
@@ -1083,9 +1082,13 @@ var endpointScopeMapping = []struct {
 	// Email endpoints
 	{"EmailListEmails", "team.emails.view"},
 	{"EmailGetEmail", "team.emails.view"},
-	{"EmailMarkAllRead", "team.emails.view"},
-	{"EmailMarkReadUnread", "team.emails.view"},
-	{"EmailDeleteEmail", "team.emails.view"},
+	// Writes require the manage scope, not view — internal/handler/email.go.
+	// This table said "view" while the handlers said "manage"; because the table
+	// is a static mapping and never exercises a handler, it passed anyway and the
+	// mismatch hid the fact that team.emails.manage was not a seeded permission.
+	{"EmailMarkAllRead", "team.emails.manage"},
+	{"EmailMarkReadUnread", "team.emails.manage"},
+	{"EmailDeleteEmail", "team.emails.manage"},
 	// Webhook endpoints
 	{"WebhookCreate", "team.webhooks.manage"},
 	{"WebhookUpdate", "team.webhooks.manage"},

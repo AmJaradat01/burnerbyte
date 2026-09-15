@@ -5,6 +5,30 @@ All notable changes to this project are documented here. The format follows
 uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html): `feat:` work
 takes a minor bump, `fix:` / `docs:` / `test:` a patch.
 
+## v1.15.0 (September 2026) — `team.emails.manage` seeded; documentation fully reconciled with the code
+
+### Fixed
+- **Three email endpoints were unreachable with any API key.** `mark-all-read`, mark read/unread and delete-email gate key callers on the scope `team.emails.manage`, but that permission was never seeded — so no key could hold it and all three answered `403`. Session auth was unaffected. Migration `000047` seeds it and grants it to team lead and member. The scope table in `apikey_test.go` claimed `view` where the handlers said `manage`; because it is a static mapping that never exercises a handler, it passed and hid the gap.
+- **`config.example.yaml` was missing 16 registered keys and `.env.example` 28**, including the entire auth-cookie and demo-mode groups — which is how the unregistered-key bugs stayed invisible. Both are now exhaustive.
+- **The OpenAPI document was missing six real routes** (all three `/try` endpoints, analytics `domain-series` and team `insights`, webhook `stats`) and marked seven public routes as requiring a bearer token, so generated clients demanded auth for endpoints that take none.
+
+### Added
+- Three tests keep the config examples honest: every `SetDefault`/`BindEnv` key in `Load()` is compared against `config.example.yaml` and `.env.example` in both directions, and the example file is loaded to prove it still parses.
+- Two tests keep the API reference honest: one diffs the OpenAPI document against the router (162 operations across 122 paths, zero missing, zero phantom), one catches `info.version` going stale as it did for nine releases.
+
+### Changed — documentation reconciled with source across all 27 pages
+- `realtime.mdx` claimed the notification centre keeps an in-memory list; it is server-backed. Added the 5-connection per-user cap, the origin checks, the inbox socket's 403/410 ownership and expiry checks, and the Redis cross-process bridge — without which nothing explained how mail received by smtpd reaches a socket held by the API.
+- `smtp-pipeline.mdx` placed MIME parsing in the worker pool; it happens in the listener before the queue. Added the 16-extension executable blocklist, the sanitize and spam-score steps, the audit entry, and the protocol limits.
+- `workers.mdx` omitted that every job runs once at startup, that a zero interval is skipped, that panics are recovered, and that `admin_stats` short-circuits with no clients.
+- `production.mdx` called the frontend a static export and advised running "workers on one instance" — there is no leader election and no flag to start an API without them. Object storage was also missing from the minimal environment.
+- `dns.mdx` gave an SPF example that can never pass the check, leaving the indicator permanently red. Documented the exact MX match and the preserve-on-lookup-error behaviour.
+- `reverse-proxy.mdx` omitted `X-Forwarded-Proto` on the WebSocket block, and neither sample config cleared `True-Client-IP` — which chi's `RealIP` consults first and which the `/metrics` guard and rate limiter both read. Also documented that `NEXT_PUBLIC_*` are build-time inlined, so TLS needs a frontend rebuild.
+- The first-run installer was documented only in the README, though a clean checkout boots straight into it; `installation.mdx` is now its home.
+- `troubleshooting.mdx` gained "Domain never verifies", the likeliest setup failure.
+- Smaller corrections across settings-cascade, domains, emails, inboxes, api-keys and webhooks; README gained the Files group and the missing Auth/Teams/Analytics/Domains rows, and states the exact endpoint count.
+
+Counts re-derived and consistent everywhere: 47 migrations, 36 tables, 74 indexes, 7 triggers, 7 workers, 5 roles, 34 permissions, 27 frontend routes.
+
 ## v1.14.1 (September 2026) — Documentation catch-up for v1.14.0
 
 ### Changed

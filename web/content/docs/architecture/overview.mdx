@@ -30,7 +30,7 @@ External MTA → SMTPD (port 2525) → Router (domain lookup) → Handler (MIME 
                                                                                   → Webhook Dispatcher
 ```
 
-The SMTP server accepts connections, validates the recipient domain against the database, parses MIME content with enmime, stores the email and attachments, then fans out to WebSocket and webhook subscribers. A Redis pub/sub bridge enables real-time notifications from SMTPD to the API server.
+The SMTP server accepts connections, validates the recipient domain against the database, parses MIME content with enmime, stores the email and attachments, then fans out to WebSocket and webhook subscribers. A Redis pub/sub bridge carries inbox events from SMTPD to the API server, which broadcasts them to the WebSocket hubs, persists the notification row, and increments the analytics counters.
 
 ## Key Components
 
@@ -53,7 +53,7 @@ The SMTP server accepts connections, validates the recipient domain against the 
 
 ## Database
 
-36 tables across 46 migrations (including SSO and analytics tables). Key tables: `users`, `organizations`, `org_memberships`, `teams`, `team_memberships`, `domains`, `domain_assignments`, `inboxes`, `emails`, `attachments`, `webhooks`, `webhook_delivery_logs`, `api_keys`, `audit_logs`, `invites`, `sessions`, `setup_state`, `password_reset_tokens`, `system_configs`, `email_verification_tokens`, `roles`, `permissions`, `role_permissions`, `notifications`.
+36 tables across 47 migrations (including SSO and analytics tables). Key tables: `users`, `organizations`, `org_memberships`, `teams`, `team_memberships`, `domains`, `domain_assignments`, `inboxes`, `emails`, `attachments`, `webhooks`, `webhook_delivery_logs`, `api_keys`, `audit_logs`, `invites`, `sessions`, `setup_state`, `password_reset_tokens`, `system_configs`, `email_verification_tokens`, `roles`, `permissions`, `role_permissions`, `notifications`.
 
 74 indexes keep lookups fast, and 7 triggers maintain automatic `updated_at` timestamps (six tables) plus the full-text `search_vector` on `emails`. Cascading deletes are enforced by foreign-key `ON DELETE CASCADE` constraints, not triggers.
 

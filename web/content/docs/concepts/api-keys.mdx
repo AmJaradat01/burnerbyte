@@ -19,7 +19,7 @@ The response includes the `raw_key` field — **shown only once** (on creation a
 
 ## Key Format
 
-API keys are `bb_` followed by 64 hex characters (32 bytes of CSPRNG output). The raw key is never stored: the database keeps a SHA-256 hash of the full key plus an 11-character prefix (`bb_` and the first 8 hex chars) for display. The raw key is never stored; the database keeps a SHA-256 hash of the full key (used for verification) plus a short key prefix (used for display and identification).
+API keys are `bb_` followed by 64 hex characters (32 bytes of CSPRNG output). The raw key is never stored: the database keeps a SHA-256 hash of the full key plus an 11-character prefix (`bb_` and the first 8 hex chars) for display.
 
 ## Available Scopes
 
@@ -53,7 +53,21 @@ curl -H "Authorization: Bearer bb_your-key-here" \
   https://your-instance.com/api/v1/inboxes
 ```
 
-The auth middleware detects the `bb_` prefix and validates against the API key table instead of JWT. Each request checks that the key's scopes include the permission required by the endpoint.
+The auth middleware detects the `bb_` prefix and validates against the API key table instead of JWT. A request is rejected when:
+
+| Condition | Status |
+|---|---|
+| The hash matches no key | `401 invalid API key` |
+| `expires_at` is in the past | `401 API key expired` |
+| The key has been revoked | `401 API key revoked` |
+| The key is deactivated (`is_active = false`) | `401 API key disabled` |
+| The caller's IP falls outside `allowed_ips` | `403 IP not allowed for this API key` |
+| The endpoint's required scope is not in the key's scopes | `403 insufficient scope` |
+
+A valid key acts **as the user who created it** — the same org and team
+memberships apply — but never carries system-admin rights, even when its creator
+is a system admin. Every accepted request updates `request_count`,
+`last_used_at` and `last_used_ip`. Each request checks that the key's scopes include the permission required by the endpoint.
 
 ## Key Management
 

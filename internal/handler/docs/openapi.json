@@ -3,7 +3,7 @@
   "info": {
     "title": "BurnerByte API",
     "description": "Self-hosted temporary email platform API",
-    "version": "1.14.1",
+    "version": "1.15.0",
     "license": {
       "name": "Apache 2.0",
       "url": "https://www.apache.org/licenses/LICENSE-2.0"
@@ -554,1583 +554,6 @@
     }
   ],
   "paths": {
-    "/setup/status": {
-      "get": {
-        "tags": [
-          "Setup"
-        ],
-        "summary": "Get setup status",
-        "security": [],
-        "responses": {
-          "200": {
-            "description": "Setup status"
-          }
-        }
-      }
-    },
-    "/setup/complete": {
-      "post": {
-        "tags": [
-          "Setup"
-        ],
-        "summary": "Complete setup wizard",
-        "security": [],
-        "responses": {
-          "200": {
-            "description": "Setup completed"
-          }
-        }
-      }
-    },
-    "/auth/register": {
-      "post": {
-        "tags": [
-          "Auth"
-        ],
-        "summary": "Register new user",
-        "security": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "email",
-                  "password",
-                  "display_name"
-                ],
-                "properties": {
-                  "email": {
-                    "type": "string"
-                  },
-                  "password": {
-                    "type": "string"
-                  },
-                  "display_name": {
-                    "type": "string"
-                  },
-                  "use_cookie": {
-                    "type": "boolean",
-                    "description": "Browser clients: store the refresh token in an httpOnly cookie and omit it from the JSON response."
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "User created"
-          },
-          "409": {
-            "description": "Email exists"
-          }
-        }
-      }
-    },
-    "/auth/login": {
-      "post": {
-        "tags": [
-          "Auth"
-        ],
-        "summary": "Login",
-        "security": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "email",
-                  "password"
-                ],
-                "properties": {
-                  "email": {
-                    "type": "string"
-                  },
-                  "password": {
-                    "type": "string"
-                  },
-                  "use_cookie": {
-                    "type": "boolean",
-                    "description": "Browser clients: store the refresh token in an httpOnly cookie and omit it from the JSON response."
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Login successful"
-          },
-          "401": {
-            "description": "Invalid credentials"
-          },
-          "409": {
-            "description": "Session limit reached \u2014 returns pending token and active sessions list",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SessionLimitError"
-                }
-              }
-            }
-          },
-          "423": {
-            "description": "Account locked"
-          }
-        }
-      }
-    },
-    "/auth/login/resolve": {
-      "post": {
-        "tags": [
-          "Auth"
-        ],
-        "summary": "Resolve session conflict",
-        "description": "Complete a pending login by revoking the chosen session. Called after POST /auth/login returns 409.",
-        "security": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ResolveLoginInput",
-                "properties": {
-                  "use_cookie": {
-                    "type": "boolean",
-                    "description": "Browser clients: store the refresh token in an httpOnly cookie and omit it from the JSON response."
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Login successful after session revocation"
-          },
-          "400": {
-            "description": "Missing pending_token or revoke_session_id"
-          },
-          "401": {
-            "description": "Invalid or expired pending login token"
-          },
-          "409": {
-            "description": "Session limit still exceeded (race condition) \u2014 returns new pending token and updated sessions",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SessionLimitError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/auth/login/pending-sessions": {
-      "get": {
-        "tags": [
-          "Auth"
-        ],
-        "summary": "Get pending login sessions",
-        "description": "Returns the active sessions for a pending login token without consuming it. Used by the SSO conflict flow to fetch session list for display.",
-        "security": [],
-        "parameters": [
-          {
-            "name": "token",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "The pending login token from the SSO session conflict redirect"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Sessions and limit for the pending login",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "sessions": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Session"
-                      }
-                    },
-                    "limit": {
-                      "type": "integer"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Missing token parameter"
-          },
-          "401": {
-            "description": "Invalid or expired pending login token"
-          }
-        }
-      }
-    },
-    "/auth/refresh": {
-      "post": {
-        "tags": [
-          "Auth"
-        ],
-        "summary": "Refresh tokens",
-        "description": "Rotates the refresh token. The token is read from the request body or, when absent, from the httpOnly refresh cookie (cookie mode). In cookie mode the rotated token is returned via Set-Cookie and omitted from the JSON body.",
-        "security": [],
-        "requestBody": {
-          "required": false,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "refresh_token": {
-                    "type": "string",
-                    "description": "Optional when the httpOnly refresh cookie is present."
-                  },
-                  "use_cookie": {
-                    "type": "boolean",
-                    "description": "Browser clients: store the refresh token in an httpOnly cookie and omit it from the JSON response."
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Tokens refreshed"
-          },
-          "401": {
-            "description": "Missing, invalid, expired, or reused refresh token"
-          }
-        }
-      }
-    },
-    "/auth/logout": {
-      "post": {
-        "tags": [
-          "Auth"
-        ],
-        "summary": "Logout",
-        "description": "Revokes the session chain identified by the refresh token (request body or httpOnly cookie) and expires the cookie. Idempotent; requires no access token.",
-        "security": [],
-        "requestBody": {
-          "required": false,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "refresh_token": {
-                    "type": "string",
-                    "description": "Optional when the httpOnly refresh cookie is present."
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Logged out"
-          }
-        }
-      }
-    },
-    "/auth/forgot-password": {
-      "post": {
-        "tags": [
-          "Auth"
-        ],
-        "summary": "Request password reset",
-        "security": [],
-        "responses": {
-          "200": {
-            "description": "Reset email sent if account exists"
-          }
-        }
-      }
-    },
-    "/auth/reset-password": {
-      "post": {
-        "tags": [
-          "Auth"
-        ],
-        "summary": "Reset password with token",
-        "security": [],
-        "responses": {
-          "200": {
-            "description": "Password reset successful"
-          }
-        }
-      }
-    },
-    "/auth/verify-email/{token}": {
-      "get": {
-        "tags": [
-          "Auth"
-        ],
-        "summary": "Verify email address",
-        "security": [],
-        "parameters": [
-          {
-            "name": "token",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Email verified"
-          }
-        }
-      }
-    },
-    "/auth/sso/{provider}": {
-      "get": {
-        "tags": [
-          "Auth"
-        ],
-        "summary": "SSO redirect",
-        "security": [],
-        "parameters": [
-          {
-            "name": "provider",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "302": {
-            "description": "Redirect to OIDC provider"
-          }
-        }
-      }
-    },
-    "/auth/sso/{provider}/callback": {
-      "get": {
-        "tags": [
-          "Auth"
-        ],
-        "summary": "SSO callback",
-        "security": [],
-        "parameters": [
-          {
-            "name": "provider",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "302": {
-            "description": "Redirect to frontend with tokens, or redirect to /login#session_conflict=true&pending_token=...&limit=N when session limit is reached"
-          }
-        }
-      }
-    },
-    "/auth/me": {
-      "get": {
-        "tags": [
-          "Auth"
-        ],
-        "summary": "Get current user",
-        "responses": {
-          "200": {
-            "description": "Current user"
-          }
-        }
-      },
-      "patch": {
-        "tags": [
-          "Auth"
-        ],
-        "summary": "Update profile",
-        "responses": {
-          "200": {
-            "description": "Profile updated"
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "Auth"
-        ],
-        "summary": "Delete account",
-        "responses": {
-          "200": {
-            "description": "Account deleted"
-          }
-        }
-      }
-    },
-    "/auth/me/password": {
-      "put": {
-        "tags": [
-          "Auth"
-        ],
-        "summary": "Change password",
-        "responses": {
-          "200": {
-            "description": "Password changed"
-          }
-        }
-      }
-    },
-    "/auth/sessions": {
-      "get": {
-        "tags": [
-          "Sessions"
-        ],
-        "summary": "List sessions",
-        "responses": {
-          "200": {
-            "description": "Sessions list"
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "Sessions"
-        ],
-        "summary": "Revoke all sessions",
-        "responses": {
-          "200": {
-            "description": "All sessions revoked"
-          }
-        }
-      }
-    },
-    "/auth/sessions/{sessionId}": {
-      "delete": {
-        "tags": [
-          "Sessions"
-        ],
-        "summary": "Revoke a session",
-        "parameters": [
-          {
-            "name": "sessionId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Session revoked"
-          }
-        }
-      }
-    },
-    "/orgs": {
-      "post": {
-        "tags": [
-          "Organizations"
-        ],
-        "summary": "Create organization",
-        "responses": {
-          "201": {
-            "description": "Org created"
-          }
-        }
-      },
-      "get": {
-        "tags": [
-          "Organizations"
-        ],
-        "summary": "List user organizations",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/page"
-          },
-          {
-            "$ref": "#/components/parameters/perPage"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Org list"
-          }
-        }
-      }
-    },
-    "/orgs/{orgId}": {
-      "get": {
-        "tags": [
-          "Organizations"
-        ],
-        "summary": "Get organization",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Organization details"
-          }
-        }
-      },
-      "patch": {
-        "tags": [
-          "Organizations"
-        ],
-        "summary": "Update organization",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Org updated"
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "Organizations"
-        ],
-        "summary": "Delete organization",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Org deleted"
-          }
-        }
-      }
-    },
-    "/orgs/{orgId}/settings": {
-      "get": {
-        "tags": [
-          "Organizations"
-        ],
-        "summary": "Get org settings",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Settings"
-          }
-        }
-      },
-      "patch": {
-        "tags": [
-          "Organizations"
-        ],
-        "summary": "Partial update org settings",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Settings updated"
-          }
-        }
-      },
-      "put": {
-        "tags": [
-          "Organizations"
-        ],
-        "summary": "Replace org settings",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Settings updated"
-          }
-        }
-      }
-    },
-    "/orgs/{orgId}/members": {
-      "post": {
-        "tags": [
-          "Members"
-        ],
-        "summary": "Invite member",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "Invite sent"
-          }
-        }
-      },
-      "get": {
-        "tags": [
-          "Members"
-        ],
-        "summary": "List members",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          },
-          {
-            "$ref": "#/components/parameters/page"
-          },
-          {
-            "$ref": "#/components/parameters/perPage"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Members list"
-          }
-        }
-      }
-    },
-    "/orgs/{orgId}/members/me": {
-      "get": {
-        "tags": [
-          "Members"
-        ],
-        "summary": "Get own membership",
-        "description": "Returns the authenticated caller's own membership (role) in the organization, so the caller's role can be resolved without listing every member.",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "The caller's membership"
-          },
-          "404": {
-            "description": "Not a member of this organization"
-          }
-        }
-      }
-    },
-    "/orgs/{orgId}/members/{userId}": {
-      "patch": {
-        "tags": [
-          "Members"
-        ],
-        "summary": "Change member role",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          },
-          {
-            "$ref": "#/components/parameters/userId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Role updated"
-          }
-        }
-      }
-    },
-    "/orgs/{orgId}/invites": {
-      "post": {
-        "tags": [
-          "Invites"
-        ],
-        "summary": "Invite member to org",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "Invite sent"
-          }
-        }
-      },
-      "get": {
-        "tags": [
-          "Members"
-        ],
-        "summary": "List pending invites",
-        "parameters": [
-          {
-            "name": "orgId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "404": {
-            "description": "Not found"
-          }
-        }
-      }
-    },
-    "/invites/{token}/accept": {
-      "post": {
-        "tags": [
-          "Invites"
-        ],
-        "summary": "Accept invite",
-        "parameters": [
-          {
-            "name": "token",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Invite accepted"
-          }
-        }
-      }
-    },
-    "/orgs/{orgId}/domains": {
-      "post": {
-        "tags": [
-          "Domains"
-        ],
-        "summary": "Add domain",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "Domain added"
-          }
-        }
-      },
-      "get": {
-        "tags": [
-          "Domains"
-        ],
-        "summary": "List domains",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          },
-          {
-            "$ref": "#/components/parameters/page"
-          },
-          {
-            "$ref": "#/components/parameters/perPage"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Domain list"
-          }
-        }
-      }
-    },
-    "/orgs/{orgId}/domains/{domainId}": {
-      "get": {
-        "tags": [
-          "Domains"
-        ],
-        "summary": "Get domain",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          },
-          {
-            "$ref": "#/components/parameters/domainId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Domain details"
-          }
-        }
-      },
-      "patch": {
-        "tags": [
-          "Domains"
-        ],
-        "summary": "Update domain",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          },
-          {
-            "$ref": "#/components/parameters/domainId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Domain updated"
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "Domains"
-        ],
-        "summary": "Delete domain",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          },
-          {
-            "$ref": "#/components/parameters/domainId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Domain deleted"
-          }
-        }
-      }
-    },
-    "/orgs/{orgId}/domains/{domainId}/verify": {
-      "post": {
-        "tags": [
-          "Domains"
-        ],
-        "summary": "Trigger DNS verification",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          },
-          {
-            "$ref": "#/components/parameters/domainId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Verification triggered"
-          }
-        }
-      }
-    },
-    "/orgs/{orgId}/teams": {
-      "post": {
-        "tags": [
-          "Teams"
-        ],
-        "summary": "Create team",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "Team created"
-          }
-        }
-      },
-      "get": {
-        "tags": [
-          "Teams"
-        ],
-        "summary": "List teams",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          },
-          {
-            "$ref": "#/components/parameters/page"
-          },
-          {
-            "$ref": "#/components/parameters/perPage"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Team list"
-          }
-        }
-      }
-    },
-    "/orgs/{orgId}/teams/{teamId}": {
-      "get": {
-        "tags": [
-          "Teams"
-        ],
-        "summary": "Get team",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          },
-          {
-            "$ref": "#/components/parameters/teamId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Team details"
-          }
-        }
-      },
-      "patch": {
-        "tags": [
-          "Teams"
-        ],
-        "summary": "Update team",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          },
-          {
-            "$ref": "#/components/parameters/teamId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Team updated"
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "Teams"
-        ],
-        "summary": "Delete team",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          },
-          {
-            "$ref": "#/components/parameters/teamId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Team deleted"
-          }
-        }
-      }
-    },
-    "/orgs/{orgId}/teams/{teamId}/members": {
-      "post": {
-        "tags": [
-          "Team Members"
-        ],
-        "summary": "Add team member",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          },
-          {
-            "$ref": "#/components/parameters/teamId"
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "Member added"
-          }
-        }
-      },
-      "get": {
-        "tags": [
-          "Team Members"
-        ],
-        "summary": "List team members",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          },
-          {
-            "$ref": "#/components/parameters/teamId"
-          },
-          {
-            "$ref": "#/components/parameters/page"
-          },
-          {
-            "$ref": "#/components/parameters/perPage"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Members list"
-          }
-        }
-      }
-    },
-    "/orgs/{orgId}/teams/{teamId}/members/{userId}": {
-      "patch": {
-        "tags": [
-          "Team Members"
-        ],
-        "summary": "Change team member role",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          },
-          {
-            "$ref": "#/components/parameters/teamId"
-          },
-          {
-            "$ref": "#/components/parameters/userId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Role updated"
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "Team Members"
-        ],
-        "summary": "Remove team member",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          },
-          {
-            "$ref": "#/components/parameters/teamId"
-          },
-          {
-            "$ref": "#/components/parameters/userId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Member removed"
-          }
-        }
-      }
-    },
-    "/orgs/{orgId}/teams/{teamId}/domains": {
-      "post": {
-        "tags": [
-          "Domain Assignments"
-        ],
-        "summary": "Assign domain to team",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          },
-          {
-            "$ref": "#/components/parameters/teamId"
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "Domain assigned"
-          }
-        }
-      },
-      "get": {
-        "tags": [
-          "Domain Assignments"
-        ],
-        "summary": "List domain assignments",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          },
-          {
-            "$ref": "#/components/parameters/teamId"
-          },
-          {
-            "$ref": "#/components/parameters/page"
-          },
-          {
-            "$ref": "#/components/parameters/perPage"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Assignment list"
-          }
-        }
-      }
-    },
-    "/orgs/{orgId}/teams/{teamId}/domains/{domainId}": {
-      "patch": {
-        "tags": [
-          "Domain Assignments"
-        ],
-        "summary": "Update domain assignment",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          },
-          {
-            "$ref": "#/components/parameters/teamId"
-          },
-          {
-            "$ref": "#/components/parameters/domainId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Assignment updated"
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "Domain Assignments"
-        ],
-        "summary": "Unassign domain from team",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          },
-          {
-            "$ref": "#/components/parameters/teamId"
-          },
-          {
-            "$ref": "#/components/parameters/domainId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Domain unassigned"
-          }
-        }
-      }
-    },
-    "/orgs/{orgId}/teams/{teamId}/inboxes": {
-      "get": {
-        "tags": [
-          "Inboxes"
-        ],
-        "summary": "List team inboxes",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          },
-          {
-            "$ref": "#/components/parameters/teamId"
-          },
-          {
-            "$ref": "#/components/parameters/page"
-          },
-          {
-            "$ref": "#/components/parameters/perPage"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Inbox list"
-          }
-        }
-      }
-    },
-    "/orgs/{orgId}/teams/{teamId}/webhooks": {
-      "post": {
-        "tags": [
-          "Webhooks"
-        ],
-        "summary": "Create webhook",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          },
-          {
-            "$ref": "#/components/parameters/teamId"
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "Webhook created"
-          }
-        }
-      },
-      "get": {
-        "tags": [
-          "Webhooks"
-        ],
-        "summary": "List webhooks",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          },
-          {
-            "$ref": "#/components/parameters/teamId"
-          },
-          {
-            "$ref": "#/components/parameters/page"
-          },
-          {
-            "$ref": "#/components/parameters/perPage"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Webhook list"
-          }
-        }
-      }
-    },
-    "/orgs/{orgId}/teams/{teamId}/webhooks/{webhookId}": {
-      "patch": {
-        "tags": [
-          "Webhooks"
-        ],
-        "summary": "Update webhook",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          },
-          {
-            "$ref": "#/components/parameters/teamId"
-          },
-          {
-            "$ref": "#/components/parameters/webhookId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Webhook updated"
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "Webhooks"
-        ],
-        "summary": "Delete webhook",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          },
-          {
-            "$ref": "#/components/parameters/teamId"
-          },
-          {
-            "$ref": "#/components/parameters/webhookId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Webhook deleted"
-          }
-        }
-      }
-    },
-    "/orgs/{orgId}/teams/{teamId}/webhooks/{webhookId}/deliveries": {
-      "get": {
-        "tags": [
-          "Webhooks"
-        ],
-        "summary": "List delivery logs",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          },
-          {
-            "$ref": "#/components/parameters/teamId"
-          },
-          {
-            "$ref": "#/components/parameters/webhookId"
-          },
-          {
-            "$ref": "#/components/parameters/page"
-          },
-          {
-            "$ref": "#/components/parameters/perPage"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Delivery logs"
-          }
-        }
-      }
-    },
-    "/orgs/{orgId}/teams/{teamId}/api-keys": {
-      "post": {
-        "tags": [
-          "API Keys"
-        ],
-        "summary": "Create API key",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          },
-          {
-            "$ref": "#/components/parameters/teamId"
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "Key created"
-          }
-        }
-      },
-      "get": {
-        "tags": [
-          "API Keys"
-        ],
-        "summary": "List API keys",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          },
-          {
-            "$ref": "#/components/parameters/teamId"
-          },
-          {
-            "$ref": "#/components/parameters/page"
-          },
-          {
-            "$ref": "#/components/parameters/perPage"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Key list"
-          }
-        }
-      }
-    },
-    "/orgs/{orgId}/teams/{teamId}/api-keys/{keyId}": {
-      "delete": {
-        "tags": [
-          "API Keys"
-        ],
-        "summary": "Revoke API key",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          },
-          {
-            "$ref": "#/components/parameters/teamId"
-          },
-          {
-            "$ref": "#/components/parameters/keyId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Key revoked"
-          }
-        }
-      },
-      "get": {
-        "tags": [
-          "API Keys"
-        ],
-        "summary": "Get",
-        "parameters": [
-          {
-            "name": "orgId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "teamId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "keyId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "404": {
-            "description": "Not found"
-          }
-        }
-      },
-      "patch": {
-        "tags": [
-          "API Keys"
-        ],
-        "summary": "Update",
-        "parameters": [
-          {
-            "name": "orgId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "teamId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "keyId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "404": {
-            "description": "Not found"
-          }
-        }
-      }
-    },
-    "/orgs/{orgId}/analytics": {
-      "get": {
-        "tags": [
-          "Analytics"
-        ],
-        "summary": "Get org analytics",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Analytics data"
-          }
-        }
-      }
-    },
-    "/orgs/{orgId}/analytics/emails-per-day": {
-      "get": {
-        "tags": [
-          "Analytics"
-        ],
-        "summary": "Org emails per day",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Time series data"
-          }
-        }
-      }
-    },
-    "/orgs/{orgId}/teams/{teamId}/analytics": {
-      "get": {
-        "tags": [
-          "Analytics"
-        ],
-        "summary": "Get team analytics",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          },
-          {
-            "$ref": "#/components/parameters/teamId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Team analytics"
-          }
-        }
-      }
-    },
-    "/orgs/{orgId}/teams/{teamId}/analytics/emails-per-day": {
-      "get": {
-        "tags": [
-          "Analytics"
-        ],
-        "summary": "Team emails per day",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          },
-          {
-            "$ref": "#/components/parameters/teamId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Time series data"
-          }
-        }
-      }
-    },
-    "/orgs/{orgId}/audit": {
-      "get": {
-        "tags": [
-          "Audit"
-        ],
-        "summary": "List audit logs",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/orgId"
-          },
-          {
-            "$ref": "#/components/parameters/page"
-          },
-          {
-            "$ref": "#/components/parameters/perPage"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Audit log entries"
-          }
-        }
-      }
-    },
     "/admin/audit": {
       "get": {
         "tags": [
@@ -2152,268 +575,6 @@
           },
           "403": {
             "description": "Not a system administrator"
-          }
-        }
-      }
-    },
-    "/inboxes": {
-      "post": {
-        "tags": [
-          "Inboxes"
-        ],
-        "summary": "Create inbox",
-        "responses": {
-          "201": {
-            "description": "Inbox created"
-          }
-        }
-      },
-      "get": {
-        "tags": [
-          "Inboxes"
-        ],
-        "summary": "List my inboxes",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/page"
-          },
-          {
-            "$ref": "#/components/parameters/perPage"
-          },
-          {
-            "name": "status",
-            "in": "query",
-            "description": "Filter by inbox status",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "active",
-                "expired",
-                "all"
-              ],
-              "default": "active"
-            }
-          },
-          {
-            "name": "search",
-            "in": "query",
-            "description": "Filter by inbox address (case-insensitive substring match)",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Inbox list"
-          }
-        }
-      }
-    },
-    "/inboxes/{inboxId}": {
-      "get": {
-        "tags": [
-          "Inboxes"
-        ],
-        "summary": "Get inbox",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/inboxId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Inbox details"
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "Inboxes"
-        ],
-        "summary": "Delete inbox",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/inboxId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Inbox deleted"
-          }
-        }
-      }
-    },
-    "/inboxes/{inboxId}/extend": {
-      "post": {
-        "tags": [
-          "Inboxes"
-        ],
-        "summary": "Extend inbox TTL",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/inboxId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "TTL extended"
-          }
-        }
-      }
-    },
-    "/inboxes/{inboxId}/emails": {
-      "get": {
-        "tags": [
-          "Emails"
-        ],
-        "summary": "List emails in inbox",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/inboxId"
-          },
-          {
-            "$ref": "#/components/parameters/page"
-          },
-          {
-            "$ref": "#/components/parameters/perPage"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Email list"
-          }
-        }
-      }
-    },
-    "/emails/{emailId}": {
-      "get": {
-        "tags": [
-          "Emails"
-        ],
-        "summary": "Get email",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/emailId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Email details"
-          }
-        }
-      },
-      "patch": {
-        "tags": [
-          "Emails"
-        ],
-        "summary": "Mark read/unread",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/emailId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Email updated"
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "Emails"
-        ],
-        "summary": "Delete email",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/emailId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Email deleted"
-          }
-        }
-      }
-    },
-    "/emails/{emailId}/attachments/{attachmentId}": {
-      "get": {
-        "tags": [
-          "Emails"
-        ],
-        "summary": "Download attachment",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/emailId"
-          },
-          {
-            "$ref": "#/components/parameters/attachmentId"
-          }
-        ],
-        "responses": {
-          "302": {
-            "description": "Redirect to presigned URL"
-          }
-        }
-      }
-    },
-    "/admin/stats": {
-      "get": {
-        "tags": [
-          "Admin"
-        ],
-        "summary": "System statistics",
-        "responses": {
-          "200": {
-            "description": "System stats"
-          }
-        }
-      }
-    },
-    "/admin/orgs": {
-      "get": {
-        "tags": [
-          "Admin"
-        ],
-        "summary": "List all organizations",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/page"
-          },
-          {
-            "$ref": "#/components/parameters/perPage"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "All orgs"
-          }
-        }
-      }
-    },
-    "/admin/health": {
-      "get": {
-        "tags": [
-          "Admin"
-        ],
-        "summary": "System health check",
-        "responses": {
-          "200": {
-            "description": "Health status"
-          }
-        }
-      }
-    },
-    "/admin/infra/test-smtp": {
-      "post": {
-        "tags": [
-          "Admin"
-        ],
-        "summary": "Test the configured outbound SMTP connection (system admin)",
-        "description": "Opens a connection to the currently configured mailer (and authenticates if credentials are set), then closes it. Returns success/false with a message and round-trip time; does not send an email.",
-        "responses": {
-          "200": {
-            "description": "Test result: { success, message, response_time }"
           }
         }
       }
@@ -2447,20 +608,6 @@
         }
       }
     },
-    "/admin/infra/test-storage": {
-      "post": {
-        "tags": [
-          "Admin"
-        ],
-        "summary": "Test the configured object storage (system admin)",
-        "description": "Checks that the live S3/MinIO backend is reachable and the configured bucket exists. Returns success/false with a message and round-trip time.",
-        "responses": {
-          "200": {
-            "description": "Test result: { success, message, response_time }"
-          }
-        }
-      }
-    },
     "/admin/config/storage": {
       "get": {
         "tags": [
@@ -2490,33 +637,64 @@
         }
       }
     },
-    "/ws/inboxes/{inboxId}": {
+    "/admin/health": {
       "get": {
         "tags": [
-          "WebSocket"
+          "Admin"
         ],
-        "summary": "Real-time inbox updates",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/inboxId"
-          }
-        ],
+        "summary": "System health check",
         "responses": {
-          "101": {
-            "description": "WebSocket upgrade"
+          "200": {
+            "description": "Health status"
           }
         }
       }
     },
-    "/ws/notifications": {
+    "/admin/infra/test-smtp": {
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Test the configured outbound SMTP connection (system admin)",
+        "description": "Opens a connection to the currently configured mailer (and authenticates if credentials are set), then closes it. Returns success/false with a message and round-trip time; does not send an email.",
+        "responses": {
+          "200": {
+            "description": "Test result: { success, message, response_time }"
+          }
+        }
+      }
+    },
+    "/admin/infra/test-storage": {
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Test the configured object storage (system admin)",
+        "description": "Checks that the live S3/MinIO backend is reachable and the configured bucket exists. Returns success/false with a message and round-trip time.",
+        "responses": {
+          "200": {
+            "description": "Test result: { success, message, response_time }"
+          }
+        }
+      }
+    },
+    "/admin/orgs": {
       "get": {
         "tags": [
-          "WebSocket"
+          "Admin"
         ],
-        "summary": "Real-time user notifications",
+        "summary": "List all organizations",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/perPage"
+          }
+        ],
         "responses": {
-          "101": {
-            "description": "WebSocket upgrade"
+          "200": {
+            "description": "All orgs"
           }
         }
       }
@@ -2848,6 +1026,19 @@
         }
       }
     },
+    "/admin/stats": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "System statistics",
+        "responses": {
+          "200": {
+            "description": "System stats"
+          }
+        }
+      }
+    },
     "/admin/users": {
       "get": {
         "tags": [
@@ -2989,6 +1180,252 @@
         }
       }
     },
+    "/auth/forgot-password": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Request password reset",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Reset email sent if account exists"
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Login",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "password"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  },
+                  "use_cookie": {
+                    "type": "boolean",
+                    "description": "Browser clients: store the refresh token in an httpOnly cookie and omit it from the JSON response."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful"
+          },
+          "401": {
+            "description": "Invalid credentials"
+          },
+          "409": {
+            "description": "Session limit reached \u2014 returns pending token and active sessions list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionLimitError"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Account locked"
+          }
+        }
+      }
+    },
+    "/auth/login/pending-sessions": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Get pending login sessions",
+        "description": "Returns the active sessions for a pending login token without consuming it. Used by the SSO conflict flow to fetch session list for display.",
+        "security": [],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The pending login token from the SSO session conflict redirect"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sessions and limit for the pending login",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "sessions": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Session"
+                      }
+                    },
+                    "limit": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing token parameter"
+          },
+          "401": {
+            "description": "Invalid or expired pending login token"
+          }
+        }
+      }
+    },
+    "/auth/login/resolve": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Resolve session conflict",
+        "description": "Complete a pending login by revoking the chosen session. Called after POST /auth/login returns 409.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveLoginInput",
+                "properties": {
+                  "use_cookie": {
+                    "type": "boolean",
+                    "description": "Browser clients: store the refresh token in an httpOnly cookie and omit it from the JSON response."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful after session revocation"
+          },
+          "400": {
+            "description": "Missing pending_token or revoke_session_id"
+          },
+          "401": {
+            "description": "Invalid or expired pending login token"
+          },
+          "409": {
+            "description": "Session limit still exceeded (race condition) \u2014 returns new pending token and updated sessions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionLimitError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Logout",
+        "description": "Revokes the session chain identified by the refresh token (request body or httpOnly cookie) and expires the cookie. Idempotent; requires no access token.",
+        "security": [],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "refresh_token": {
+                    "type": "string",
+                    "description": "Optional when the httpOnly refresh cookie is present."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Logged out"
+          }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Get current user",
+        "responses": {
+          "200": {
+            "description": "Current user"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Update profile",
+        "responses": {
+          "200": {
+            "description": "Profile updated"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Delete account",
+        "responses": {
+          "200": {
+            "description": "Account deleted"
+          }
+        }
+      }
+    },
+    "/auth/me/password": {
+      "put": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Change password",
+        "responses": {
+          "200": {
+            "description": "Password changed"
+          }
+        }
+      }
+    },
     "/auth/me/sso": {
       "get": {
         "tags": [
@@ -3028,6 +1465,153 @@
         }
       }
     },
+    "/auth/refresh": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Refresh tokens",
+        "description": "Rotates the refresh token. The token is read from the request body or, when absent, from the httpOnly refresh cookie (cookie mode). In cookie mode the rotated token is returned via Set-Cookie and omitted from the JSON body.",
+        "security": [],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "refresh_token": {
+                    "type": "string",
+                    "description": "Optional when the httpOnly refresh cookie is present."
+                  },
+                  "use_cookie": {
+                    "type": "boolean",
+                    "description": "Browser clients: store the refresh token in an httpOnly cookie and omit it from the JSON response."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tokens refreshed"
+          },
+          "401": {
+            "description": "Missing, invalid, expired, or reused refresh token"
+          }
+        }
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Register new user",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "password",
+                  "display_name"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  },
+                  "display_name": {
+                    "type": "string"
+                  },
+                  "use_cookie": {
+                    "type": "boolean",
+                    "description": "Browser clients: store the refresh token in an httpOnly cookie and omit it from the JSON response."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User created"
+          },
+          "409": {
+            "description": "Email exists"
+          }
+        }
+      }
+    },
+    "/auth/reset-password": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Reset password with token",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Password reset successful"
+          }
+        }
+      }
+    },
+    "/auth/sessions": {
+      "get": {
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "List sessions",
+        "responses": {
+          "200": {
+            "description": "Sessions list"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "Revoke all sessions",
+        "responses": {
+          "200": {
+            "description": "All sessions revoked"
+          }
+        }
+      }
+    },
+    "/auth/sessions/{sessionId}": {
+      "delete": {
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "Revoke a session",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session revoked"
+          }
+        }
+      }
+    },
     "/auth/sso-status": {
       "get": {
         "tags": [
@@ -3038,7 +1622,8 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "security": []
       }
     },
     "/auth/sso/exchange": {
@@ -3081,6 +1666,78 @@
         }
       }
     },
+    "/auth/sso/{provider}": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "SSO redirect",
+        "security": [],
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirect to OIDC provider"
+          }
+        }
+      }
+    },
+    "/auth/sso/{provider}/callback": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "SSO callback",
+        "security": [],
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirect to frontend with tokens, or redirect to /login#session_conflict=true&pending_token=...&limit=N when session limit is reached"
+          }
+        }
+      }
+    },
+    "/auth/verify-email/{token}": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Verify email address",
+        "security": [],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Email verified"
+          }
+        }
+      }
+    },
     "/docs": {
       "get": {
         "tags": [
@@ -3091,7 +1748,8 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "security": []
       }
     },
     "/docs/openapi.json": {
@@ -3103,6 +1761,78 @@
         "responses": {
           "200": {
             "description": "OK"
+          }
+        },
+        "security": []
+      }
+    },
+    "/emails/{emailId}": {
+      "get": {
+        "tags": [
+          "Emails"
+        ],
+        "summary": "Get email",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/emailId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Email details"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Emails"
+        ],
+        "summary": "Mark read/unread",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/emailId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Email updated"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Emails"
+        ],
+        "summary": "Delete email",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/emailId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Email deleted"
+          }
+        }
+      }
+    },
+    "/emails/{emailId}/attachments/{attachmentId}": {
+      "get": {
+        "tags": [
+          "Emails"
+        ],
+        "summary": "Download attachment",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/emailId"
+          },
+          {
+            "$ref": "#/components/parameters/attachmentId"
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirect to presigned URL"
           }
         }
       }
@@ -3116,6 +1846,118 @@
         "responses": {
           "200": {
             "description": "OK"
+          }
+        }
+      }
+    },
+    "/inboxes": {
+      "post": {
+        "tags": [
+          "Inboxes"
+        ],
+        "summary": "Create inbox",
+        "responses": {
+          "201": {
+            "description": "Inbox created"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Inboxes"
+        ],
+        "summary": "List my inboxes",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/perPage"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Filter by inbox status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "active",
+                "expired",
+                "all"
+              ],
+              "default": "active"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Filter by inbox address (case-insensitive substring match)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Inbox list"
+          }
+        }
+      }
+    },
+    "/inboxes/{inboxId}": {
+      "get": {
+        "tags": [
+          "Inboxes"
+        ],
+        "summary": "Get inbox",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/inboxId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Inbox details"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Inboxes"
+        ],
+        "summary": "Delete inbox",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/inboxId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Inbox deleted"
+          }
+        }
+      }
+    },
+    "/inboxes/{inboxId}/emails": {
+      "get": {
+        "tags": [
+          "Emails"
+        ],
+        "summary": "List emails in inbox",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/inboxId"
+          },
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/perPage"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Email list"
           }
         }
       }
@@ -3146,6 +1988,47 @@
         }
       }
     },
+    "/inboxes/{inboxId}/extend": {
+      "post": {
+        "tags": [
+          "Inboxes"
+        ],
+        "summary": "Extend inbox TTL",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/inboxId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "TTL extended"
+          }
+        }
+      }
+    },
+    "/invites/{token}/accept": {
+      "post": {
+        "tags": [
+          "Invites"
+        ],
+        "summary": "Accept invite",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invite accepted"
+          }
+        }
+      }
+    },
     "/invites/{token}/preview": {
       "get": {
         "tags": [
@@ -3169,7 +2052,8 @@
           "404": {
             "description": "Not found"
           }
-        }
+        },
+        "security": []
       }
     },
     "/my/domains": {
@@ -3274,6 +2158,148 @@
         }
       }
     },
+    "/orgs": {
+      "post": {
+        "tags": [
+          "Organizations"
+        ],
+        "summary": "Create organization",
+        "responses": {
+          "201": {
+            "description": "Org created"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Organizations"
+        ],
+        "summary": "List user organizations",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/perPage"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Org list"
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}": {
+      "get": {
+        "tags": [
+          "Organizations"
+        ],
+        "summary": "Get organization",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Organization details"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Organizations"
+        ],
+        "summary": "Update organization",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Org updated"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Organizations"
+        ],
+        "summary": "Delete organization",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Org deleted"
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/analytics": {
+      "get": {
+        "tags": [
+          "Analytics"
+        ],
+        "summary": "Get org analytics",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Analytics data"
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/analytics/domain-series": {
+      "get": {
+        "summary": "Per-domain email time series for an organization",
+        "tags": [
+          "Analytics"
+        ],
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/analytics/emails-per-day": {
+      "get": {
+        "tags": [
+          "Analytics"
+        ],
+        "summary": "Org emails per day",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Time series data"
+          }
+        }
+      }
+    },
     "/orgs/{orgId}/analytics/insights": {
       "get": {
         "tags": [
@@ -3300,6 +2326,30 @@
         }
       }
     },
+    "/orgs/{orgId}/audit": {
+      "get": {
+        "tags": [
+          "Audit"
+        ],
+        "summary": "List audit logs",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/perPage"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Audit log entries"
+          }
+        }
+      }
+    },
     "/orgs/{orgId}/audit/export": {
       "get": {
         "tags": [
@@ -3322,6 +2372,46 @@
           },
           "404": {
             "description": "Not found"
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/domains": {
+      "post": {
+        "tags": [
+          "Domains"
+        ],
+        "summary": "Add domain",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Domain added"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Domains"
+        ],
+        "summary": "List domains",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/perPage"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Domain list"
           }
         }
       }
@@ -3374,6 +2464,65 @@
           },
           "404": {
             "description": "Not found"
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/domains/{domainId}": {
+      "get": {
+        "tags": [
+          "Domains"
+        ],
+        "summary": "Get domain",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/domainId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Domain details"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Domains"
+        ],
+        "summary": "Update domain",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/domainId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Domain updated"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Domains"
+        ],
+        "summary": "Delete domain",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/domainId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Domain deleted"
           }
         }
       }
@@ -3480,6 +2629,69 @@
         }
       }
     },
+    "/orgs/{orgId}/domains/{domainId}/verify": {
+      "post": {
+        "tags": [
+          "Domains"
+        ],
+        "summary": "Trigger DNS verification",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/domainId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Verification triggered"
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/invites": {
+      "post": {
+        "tags": [
+          "Invites"
+        ],
+        "summary": "Invite member to org",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Invite sent"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Members"
+        ],
+        "summary": "List pending invites",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      }
+    },
     "/orgs/{orgId}/invites/bulk": {
       "post": {
         "tags": [
@@ -3540,6 +2752,46 @@
         }
       }
     },
+    "/orgs/{orgId}/members": {
+      "post": {
+        "tags": [
+          "Members"
+        ],
+        "summary": "Invite member",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Invite sent"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Members"
+        ],
+        "summary": "List members",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/perPage"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Members list"
+          }
+        }
+      }
+    },
     "/orgs/{orgId}/members/add": {
       "post": {
         "tags": [
@@ -3566,6 +2818,28 @@
         }
       }
     },
+    "/orgs/{orgId}/members/me": {
+      "get": {
+        "tags": [
+          "Members"
+        ],
+        "summary": "Get own membership",
+        "description": "Returns the authenticated caller's own membership (role) in the organization, so the caller's role can be resolved without listing every member.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The caller's membership"
+          },
+          "404": {
+            "description": "Not a member of this organization"
+          }
+        }
+      }
+    },
     "/orgs/{orgId}/members/search": {
       "get": {
         "tags": [
@@ -3588,6 +2862,27 @@
           },
           "404": {
             "description": "Not found"
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/members/{userId}": {
+      "patch": {
+        "tags": [
+          "Members"
+        ],
+        "summary": "Change member role",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/userId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Role updated"
           }
         }
       }
@@ -3626,6 +2921,276 @@
         }
       }
     },
+    "/orgs/{orgId}/settings": {
+      "get": {
+        "tags": [
+          "Organizations"
+        ],
+        "summary": "Get org settings",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Settings"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Organizations"
+        ],
+        "summary": "Partial update org settings",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Settings updated"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Organizations"
+        ],
+        "summary": "Replace org settings",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Settings updated"
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/teams": {
+      "post": {
+        "tags": [
+          "Teams"
+        ],
+        "summary": "Create team",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Team created"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Teams"
+        ],
+        "summary": "List teams",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/perPage"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Team list"
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/teams/{teamId}": {
+      "get": {
+        "tags": [
+          "Teams"
+        ],
+        "summary": "Get team",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Team details"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Teams"
+        ],
+        "summary": "Update team",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Team updated"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Teams"
+        ],
+        "summary": "Delete team",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Team deleted"
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/teams/{teamId}/analytics": {
+      "get": {
+        "tags": [
+          "Analytics"
+        ],
+        "summary": "Get team analytics",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Team analytics"
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/teams/{teamId}/analytics/emails-per-day": {
+      "get": {
+        "tags": [
+          "Analytics"
+        ],
+        "summary": "Team emails per day",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Time series data"
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/teams/{teamId}/analytics/insights": {
+      "get": {
+        "summary": "Team analytics insights",
+        "tags": [
+          "Analytics"
+        ],
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/teams/{teamId}/api-keys": {
+      "post": {
+        "tags": [
+          "API Keys"
+        ],
+        "summary": "Create API key",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Key created"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "API Keys"
+        ],
+        "summary": "List API keys",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          },
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/perPage"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Key list"
+          }
+        }
+      }
+    },
     "/orgs/{orgId}/teams/{teamId}/api-keys/bulk-revoke": {
       "post": {
         "tags": [
@@ -3643,6 +3208,110 @@
           },
           {
             "name": "teamId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/teams/{teamId}/api-keys/{keyId}": {
+      "delete": {
+        "tags": [
+          "API Keys"
+        ],
+        "summary": "Revoke API key",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          },
+          {
+            "$ref": "#/components/parameters/keyId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Key revoked"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "API Keys"
+        ],
+        "summary": "Get",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "keyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "API Keys"
+        ],
+        "summary": "Update",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "keyId",
             "in": "path",
             "required": true,
             "schema": {
@@ -3736,6 +3405,98 @@
         }
       }
     },
+    "/orgs/{orgId}/teams/{teamId}/domains": {
+      "post": {
+        "tags": [
+          "Domain Assignments"
+        ],
+        "summary": "Assign domain to team",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Domain assigned"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Domain Assignments"
+        ],
+        "summary": "List domain assignments",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          },
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/perPage"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Assignment list"
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/teams/{teamId}/domains/{domainId}": {
+      "patch": {
+        "tags": [
+          "Domain Assignments"
+        ],
+        "summary": "Update domain assignment",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          },
+          {
+            "$ref": "#/components/parameters/domainId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Assignment updated"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Domain Assignments"
+        ],
+        "summary": "Unassign domain from team",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          },
+          {
+            "$ref": "#/components/parameters/domainId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Domain unassigned"
+          }
+        }
+      }
+    },
     "/orgs/{orgId}/teams/{teamId}/impact": {
       "get": {
         "tags": [
@@ -3770,6 +3531,33 @@
         }
       }
     },
+    "/orgs/{orgId}/teams/{teamId}/inboxes": {
+      "get": {
+        "tags": [
+          "Inboxes"
+        ],
+        "summary": "List team inboxes",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          },
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/perPage"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Inbox list"
+          }
+        }
+      }
+    },
     "/orgs/{orgId}/teams/{teamId}/leave": {
       "post": {
         "tags": [
@@ -3800,6 +3588,52 @@
           },
           "404": {
             "description": "Not found"
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/teams/{teamId}/members": {
+      "post": {
+        "tags": [
+          "Team Members"
+        ],
+        "summary": "Add team member",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Member added"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Team Members"
+        ],
+        "summary": "List team members",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          },
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/perPage"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Members list"
           }
         }
       }
@@ -3872,6 +3706,52 @@
         }
       }
     },
+    "/orgs/{orgId}/teams/{teamId}/members/{userId}": {
+      "patch": {
+        "tags": [
+          "Team Members"
+        ],
+        "summary": "Change team member role",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          },
+          {
+            "$ref": "#/components/parameters/userId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Role updated"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Team Members"
+        ],
+        "summary": "Remove team member",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          },
+          {
+            "$ref": "#/components/parameters/userId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Member removed"
+          }
+        }
+      }
+    },
     "/orgs/{orgId}/teams/{teamId}/restore": {
       "post": {
         "tags": [
@@ -3940,6 +3820,170 @@
         }
       }
     },
+    "/orgs/{orgId}/teams/{teamId}/webhooks": {
+      "post": {
+        "tags": [
+          "Webhooks"
+        ],
+        "summary": "Create webhook",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Webhook created"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Webhooks"
+        ],
+        "summary": "List webhooks",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          },
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/perPage"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Webhook list"
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/teams/{teamId}/webhooks/{webhookId}": {
+      "patch": {
+        "tags": [
+          "Webhooks"
+        ],
+        "summary": "Update webhook",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          },
+          {
+            "$ref": "#/components/parameters/webhookId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Webhook updated"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Webhooks"
+        ],
+        "summary": "Delete webhook",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          },
+          {
+            "$ref": "#/components/parameters/webhookId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Webhook deleted"
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/teams/{teamId}/webhooks/{webhookId}/deliveries": {
+      "get": {
+        "tags": [
+          "Webhooks"
+        ],
+        "summary": "List delivery logs",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/orgId"
+          },
+          {
+            "$ref": "#/components/parameters/teamId"
+          },
+          {
+            "$ref": "#/components/parameters/webhookId"
+          },
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/perPage"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Delivery logs"
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/teams/{teamId}/webhooks/{webhookId}/stats": {
+      "get": {
+        "summary": "Aggregate delivery success/failure stats for a webhook",
+        "tags": [
+          "Webhooks"
+        ],
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "webhookId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
     "/roles": {
       "get": {
         "tags": [
@@ -3949,6 +3993,35 @@
         "responses": {
           "200": {
             "description": "OK"
+          }
+        },
+        "security": []
+      }
+    },
+    "/setup/complete": {
+      "post": {
+        "tags": [
+          "Setup"
+        ],
+        "summary": "Complete setup wizard",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Setup completed"
+          }
+        }
+      }
+    },
+    "/setup/status": {
+      "get": {
+        "tags": [
+          "Setup"
+        ],
+        "summary": "Get setup status",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Setup status"
           }
         }
       }
@@ -3963,7 +4036,8 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "security": []
       }
     },
     "/setup/test-storage": {
@@ -3975,6 +4049,72 @@
         "responses": {
           "200": {
             "description": "OK"
+          }
+        },
+        "security": []
+      }
+    },
+    "/try/inbox": {
+      "post": {
+        "summary": "Create a public demo inbox (no account required)",
+        "tags": [
+          "Demo"
+        ],
+        "security": [],
+        "responses": {
+          "201": {
+            "description": "Inbox created"
+          },
+          "404": {
+            "description": "Demo mode is disabled or not configured"
+          },
+          "429": {
+            "description": "Rate limited (shares the login bucket)"
+          }
+        }
+      }
+    },
+    "/try/inbox/{inboxId}/emails": {
+      "get": {
+        "summary": "List emails in a demo inbox",
+        "tags": [
+          "Demo"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "inboxId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Emails"
+          },
+          "404": {
+            "description": "Demo mode disabled, or the inbox is not a demo inbox"
+          },
+          "429": {
+            "description": "Rate limited (60/min per IP)"
+          }
+        }
+      }
+    },
+    "/try/status": {
+      "get": {
+        "summary": "Whether the public demo inbox is enabled",
+        "tags": [
+          "Demo"
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Always 200; `{\"enabled\": false}` when the demo is off"
           }
         }
       }
@@ -3988,6 +4128,37 @@
         "responses": {
           "200": {
             "description": "OK"
+          }
+        }
+      }
+    },
+    "/ws/inboxes/{inboxId}": {
+      "get": {
+        "tags": [
+          "WebSocket"
+        ],
+        "summary": "Real-time inbox updates",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/inboxId"
+          }
+        ],
+        "responses": {
+          "101": {
+            "description": "WebSocket upgrade"
+          }
+        }
+      }
+    },
+    "/ws/notifications": {
+      "get": {
+        "tags": [
+          "WebSocket"
+        ],
+        "summary": "Real-time user notifications",
+        "responses": {
+          "101": {
+            "description": "WebSocket upgrade"
           }
         }
       }
