@@ -13,6 +13,12 @@ Points email delivery to your SMTP server:
 test.example.com.  IN  MX  10  mail.yourserver.com.
 ```
 
+The MX target must equal the **API** process's `smtp.hostname`
+(`BB_SMTP_HOSTNAME`) exactly — a case-insensitive comparison with the trailing
+dot stripped, and no suffix or subdomain fallback. `mail.yourserver.com` in DNS
+against a `smtp.hostname` of `yourserver.com`, or against the `localhost`
+default, will never verify. Note it is the API that runs the check, not smtpd.
+
 ### TXT Verification Record
 
 BurnerByte generates a unique token for each domain:
@@ -21,13 +27,26 @@ BurnerByte generates a unique token for each domain:
 test.example.com.  IN  TXT  "burnerbyte-verify=<your-token>"
 ```
 
-## Optional Records
+The token is the domain's UUID, shown on the domain detail page. Matching is a
+substring test against every TXT record on the name, so the value may sit inside
+a longer record. Deleting and re-adding a domain mints a new token.
+
+## Additional Records
 
 ### SPF
 
+SPF is checked on every verification pass and shown on the domain page, but it
+gates nothing — only MX and TXT decide the verified state. The check is
+satisfied only by a `v=spf1` record that contains the configured `smtp.hostname`
+as a literal substring; a mechanism like `mx` that merely *resolves* to your
+host does not count:
+
 ```
-test.example.com.  IN  TXT  "v=spf1 mx -all"
+test.example.com.  IN  TXT  "v=spf1 a:mail.yourserver.com mx -all"
 ```
+
+A bare `"v=spf1 mx -all"` is perfectly valid SPF but leaves BurnerByte's SPF
+indicator red, because the hostname string is absent.
 
 ### DKIM
 
@@ -71,3 +90,13 @@ dig TXT test.example.com
 # Send a test email
 swaks --to test@test.example.com --server mail.yourserver.com:2525
 ```
+
+<Callout type="info">
+A failed DNS lookup — timeout, SERVFAIL, resolver outage — never downgrades an
+already-verified record: the previous value is kept when the lookup itself
+errored, so a transient blip cannot flip a domain to unverified. It also means a
+record you deleted stays green until a lookup succeeds and returns no match. The
+one exception is the automatic check right after adding a domain: it has no
+previous value, so a lookup error there records "not verified" and you should
+re-verify once DNS is answering.
+</Callout>

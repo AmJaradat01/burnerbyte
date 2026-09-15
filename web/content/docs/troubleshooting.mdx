@@ -24,6 +24,34 @@ swaks --to test@yourdomain.com --server localhost:2525
 curl http://localhost:8080/readyz
 ```
 
+## Domain Never Verifies
+
+**Symptoms:** MX and/or TXT stay red on the domain detail page no matter how many
+times you click **Re-verify DNS**.
+
+1. **Is `BB_SMTP_HOSTNAME` set on the API process?** — The API, not `smtpd`, runs
+   DNS verification. Setting it only on the SMTP container leaves the API on the
+   `localhost` default, which no real MX record matches. Docker Compose sets it
+   on both services for exactly this reason.
+2. **Does the MX target match it exactly?** — The comparison is case-insensitive
+   equality with the trailing dot stripped; there is no suffix or subdomain
+   fallback. An MX of `mail.example.com` against a `BB_SMTP_HOSTNAME` of
+   `example.com` does not verify.
+   ```bash
+   dig +short MX yourdomain.com                     # must equal BB_SMTP_HOSTNAME
+   docker compose exec api printenv BB_SMTP_HOSTNAME
+   ```
+3. **Is the TXT token current?** — The value is `burnerbyte-verify=<domain UUID>`.
+   Deleting and re-adding a domain mints a new one, so the old record stops matching.
+4. **SPF stuck red?** — SPF is informational and gates nothing, but the check
+   needs a `v=spf1` record containing `BB_SMTP_HOSTNAME` as a literal substring.
+   `"v=spf1 mx -all"` is valid SPF and will still read red; use
+   `"v=spf1 a:mail.yourserver.com mx -all"`.
+5. **Was it green and went red?** — That is not a transient lookup failure: a
+   lookup error preserves the previous status. Red after green means a successful
+   lookup returned no match, so the record really did change.
+
+
 ## WebSocket Not Connecting
 
 **Symptoms:** Real-time updates don't work, inbox page shows "Disconnected".
@@ -113,7 +141,7 @@ After 5 failed login attempts (configurable), the account is locked for 15 minut
 **Symptoms:** Slow page loads, high API latency.
 
 1. **Check health endpoint** — `GET /api/v1/admin/health` shows service latencies
-2. **Database indexes** — Ensure all 46 migrations are applied (74 indexes)
+2. **Database indexes** — Ensure all 47 migrations are applied (74 indexes)
 3. **Redis cache** — Analytics and inbox routing are cached in Redis. Verify Redis is running
 4. **Connection pool** — Increase `BB_DATABASE_MAX_OPEN_CONNS` for high-traffic deployments
 5. **Worker intervals** — The analytics worker pre-computes stats every 5 minutes. Reduce `BB_WORKERS_ANALYTICS_INTERVAL` for fresher data

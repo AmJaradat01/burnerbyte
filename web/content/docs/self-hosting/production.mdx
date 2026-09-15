@@ -30,14 +30,29 @@ BB_SMTP_HOSTNAME=mail.example.com
 BB_CORS_ALLOWED_ORIGINS=https://app.example.com
 BB_RATE_LIMIT_ENABLED=true
 BB_SERVER_MAX_BODY_SIZE=5242880
+
+BB_MINIO_ENDPOINT=s3.example.com
+BB_MINIO_ACCESS_KEY=<access-key>
+BB_MINIO_SECRET_KEY=<secret-key>
+BB_MINIO_BUCKET=burnerbyte
+BB_MINIO_USE_SSL=true
 ```
+
+<Callout type="warn">
+Object storage is not optional above one replica. With `BB_MINIO_ENDPOINT`
+unset, the process falls back to local-filesystem attachments under
+`./data/attachments` and the only signal is a `minio unavailable, using local
+filesystem for attachments` warning in the log. Each API and smtpd instance then
+has its own private copy, so an attachment written by one replica is a 404 from
+another.
+</Callout>
 
 ## Scaling
 
-- **API server** — Stateless, can run multiple instances behind a load balancer
+- **API server** — Request handling is stateless and horizontally scalable, but read the worker note below before running more than one instance
 - **SMTP server** — Stateless, can run multiple instances (each needs port 25/2525)
 - **Frontend** — Next.js `output: 'standalone'`: a Node server (`node server.js`, port 3000), not a static export. Run several instances behind a load balancer; only `.next/static` can be fronted by a CDN.
-- **Workers** — Run on only one API instance to avoid duplicate work
+- **Workers** — Every API process starts all seven background workers (`cleanup`, `reconciler`, `dns_recheck`, `webhook_retry`, `analytics`, `invite_expiry`, `admin_stats`). There is no leader election and no flag to start an API without them, so a second replica runs a second copy of each job: duplicate DNS lookups, duplicate webhook retries, duplicate analytics rollups and duplicate expiry emails. Run exactly one API replica until leader election exists.
 
 ## Backups
 

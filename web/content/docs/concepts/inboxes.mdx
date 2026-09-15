@@ -23,7 +23,7 @@ Limits: an `alias` is 2–64 characters, and each user may hold at most **50 act
 
 1. **Created** — Inbox is active, `expires_at` is set to `now + ttl`
 2. **Active** — Receives emails via SMTP, visible in the UI
-3. **Extended** — `POST /api/v1/inboxes/{inboxId}/extend` with `{"duration": "1h"}` adds more time (still capped by max TTL)
+3. **Extended** — `POST /api/v1/inboxes/{inboxId}/extend` **sets** `expires_at` to `now + duration` (it does not add to the time remaining, so extending by less than the remaining time shortens the inbox), bounded by `created_at + max_inbox_ttl`. Omit `duration` and the org's `renewal_policy` decides: `original` (the default — reuse the TTL the inbox was created with), `default` (re-resolve the cascade), or `fixed` (use the org's `renewal_ttl`)
 4. **Expired** — After `expires_at`, the inbox stops receiving emails
 5. **Cleaned up** — The cleanup worker emits `inbox.expired` (webhook, audit entry, and notification), then deletes the inbox, its emails, and their stored attachments
 
@@ -40,3 +40,23 @@ When an email arrives, the SMTP router checks Redis first (O(1) lookup), falling
 ## Private Inboxes
 
 All inboxes are private — only the user who created the inbox can view it, extend it, delete it, or read its emails. This is enforced in the service layer, which compares `inbox.created_by` against the authenticated user on every access (`internal/service/inbox_service.go`); the WebSocket handler applies the same check before upgrading the connection. There is no privacy flag on the table — ownership is the only rule.
+
+## Creation Constraints
+
+Creation is refused when:
+
+- The domain is not assigned to the team, or the assignment is `read_only`
+- The domain's **MX record is not verified** — mail could not be delivered
+- The domain is at its active-inbox quota (the org's `max_inboxes_per_domain`, else the system default), or at the owning team's own cap when the team sets one
+- The user already holds **50 active inboxes**
+- The alias is already taken on that domain (`409`)
+
+## Listing
+
+```
+GET /api/v1/inboxes?status=active&search=alpha&page=1&per_page=20
+GET /api/v1/orgs/{orgId}/teams/{teamId}/inboxes
+```
+
+`status` accepts `active`, `expired` or `all`; `search` is a case-insensitive
+substring match on the full address.

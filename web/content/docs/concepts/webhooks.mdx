@@ -53,3 +53,24 @@ After all attempts fail, the webhook's `failure_count` is incremented. That coun
 ## Delivery Logs
 
 Every attempt is logged with HTTP status, response time, success/failure, attempt number, and timestamp. View via the UI or `GET /api/v1/orgs/{orgId}/teams/{teamId}/webhooks/{webhookId}/deliveries`.
+
+## SSRF Protection
+
+Validating the URL at create time is not enough on its own, because DNS can be
+rebound between the check and the request. The dispatcher re-resolves the target
+host **at dial time** and refuses the connection if any resolved address is
+private (`10/8`, `172.16/12`, `192.168/16`), loopback (`127/8`, `::1`),
+link-local (`169.254/16`), unique-local (`fc00::/7`) or unspecified. It then
+dials the resolved IP directly, so the address that was checked is the address
+connected to. A refused dial is logged as a failed delivery like any other error.
+
+Create and update apply the same rules up front: `http`/`https` only, no
+`localhost`, `127.0.0.1`, `::1`, `0.0.0.0`, no `.internal`/`.local` hostname, and
+`169.254.169.254` is refused by name.
+
+Aggregate delivery health for one webhook — totals, success and failure counts,
+average response time — is available at:
+
+```
+GET /api/v1/orgs/{orgId}/teams/{teamId}/webhooks/{webhookId}/stats
+```

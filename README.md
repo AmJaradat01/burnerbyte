@@ -110,7 +110,7 @@ from inside the app. Docker and systemd deployments set `DATABASE_URL` and
 - Session management: list active sessions, revoke one or all, and a
   configurable per-user session cap with conflict resolution at login
 - Role-based access control: five built-in roles (org **owner**, **admin**,
-  **member**; team **lead**, **member**) over 33 permissions, plus custom roles
+  **member**; team **lead**, **member**) over 34 permissions, plus custom roles
   a system admin can define
 - System admins operate the platform without belonging to any organization;
   everyone else without one is redirected into `/onboarding`
@@ -161,25 +161,26 @@ from inside the app. Docker and systemd deployments set `DATABASE_URL` and
 ## API
 
 Everything lives under `/api/v1` except `/healthz`, `/readyz` and `/metrics`,
-which are served at the root. Roughly 164 endpoints in these groups:
+which are served at the root. 162 operations across 122 paths, in these groups:
 
 | Group | Base path |
 |---|---|
 | Setup | `/setup/status`, `/setup/complete`, `/setup/test-smtp`, `/setup/test-storage` |
-| Auth | `/auth/register`, `/auth/login`, `/auth/login/resolve`, `/auth/refresh`, `/auth/logout`, `/auth/me`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/verify-email/{token}` |
+| Auth | `/auth/register`, `/auth/login`, `/auth/login/resolve`, `/auth/refresh`, `/auth/logout`, `/auth/me`, `/auth/me/password`, `/auth/datetime-settings`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/verify-email/{token}` |
 | Sessions | `/auth/sessions`, `/auth/sessions/{id}` |
 | SSO | `/auth/sso/{provider}`, `/auth/sso/{provider}/callback`, `/auth/sso/exchange`, `/auth/sso-status`, `/auth/me/sso` |
 | Orgs | `/orgs`, `/orgs/{orgId}`, `/orgs/{orgId}/settings` |
 | Members | `/orgs/{orgId}/members`, `.../members/me`, `.../members/search`, `.../members/{userId}` |
 | Invites | `/orgs/{orgId}/invites`, `.../invites/bulk`, `/invites/{token}/preview`, `/invites/{token}/accept` |
-| Domains | `/orgs/{orgId}/domains`, `.../{domainId}/verify`, `.../{domainId}/impact`, `.../{domainId}/verification-history`, `.../bulk-verify`, `.../bulk-delete` |
-| Teams | `/orgs/{orgId}/teams`, `.../{teamId}/archive`, `.../{teamId}/restore`, `.../{teamId}/leave`, `.../{teamId}/members` |
+| Domains | `/orgs/{orgId}/domains`, `.../{domainId}/verify`, `.../{domainId}/impact`, `.../{domainId}/transfer`, `.../{domainId}/verification-history`, `.../bulk-verify`, `.../bulk-delete` |
+| Teams | `/orgs/{orgId}/teams`, `.../{teamId}/archive`, `.../{teamId}/restore`, `.../{teamId}/leave`, `.../{teamId}/impact`, `.../{teamId}/transfer`, `.../{teamId}/inboxes`, `.../{teamId}/members`, `.../{teamId}/members/bulk-add`, `.../{teamId}/members/bulk-remove` |
 | Domain assignments | `/my/domains`, `/orgs/{orgId}/teams/{teamId}/domains` |
 | Inboxes | `/inboxes`, `/inboxes/{id}`, `/inboxes/{id}/extend` |
-| Emails | `/inboxes/{id}/emails`, `/emails/{id}`, `/emails/{id}/attachments/{aid}` |
+| Emails | `/inboxes/{id}/emails` (`?q=` searches), `/inboxes/{id}/emails/mark-all-read`, `/emails/{id}`, `/emails/{id}/attachments/{aid}` |
+| Files | `/files?key=` — serves attachments when the local-filesystem backend is active |
 | Webhooks | `/orgs/{orgId}/teams/{teamId}/webhooks`, `.../{webhookId}/deliveries`, `.../{webhookId}/stats` |
 | API keys | `/orgs/{orgId}/teams/{teamId}/api-keys`, `.../{keyId}/rotate`, `.../bulk-revoke` |
-| Analytics | `/orgs/{orgId}/analytics`, `.../emails-per-day`, `.../insights`, `.../domain-series` |
+| Analytics | `/orgs/{orgId}/analytics`, `.../emails-per-day`, `.../insights`, `.../domain-series`, and the team-scoped `/orgs/{orgId}/teams/{teamId}/analytics{,/emails-per-day,/insights}` |
 | Audit | `/orgs/{orgId}/audit`, `/orgs/{orgId}/audit/export` |
 | Notifications | `/notifications`, `/notifications/mark-all-read`, `/notifications/{id}/read` |
 | Roles | `/roles` |
@@ -227,7 +228,7 @@ per-endpoint reference.
 
 ## Database
 
-46 migrations produce 36 tables, 74 indexes and 7 triggers. Migrations are
+47 migrations produce 36 tables, 74 indexes and 7 triggers. Migrations are
 applied by the `migrate` service in Docker, or by `make migrate-up` locally.
 
 <details>
