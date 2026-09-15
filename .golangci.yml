@@ -31,5 +31,5 @@ linters:
         # Fire-and-forget S3 cleanup — best-effort
         - (*github.com/minio/minio-go/v7.Client).RemoveObject
         # Fire-and-forget webhook logging — best-effort
-        - (*gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres.WebhookRepo).LogDelivery
-        - (*gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres.WebhookRepo).UpdateDeliveryStatus
+        - (*gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres.WebhookRepo).LogDelivery
+        - (*gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres.WebhookRepo).UpdateDeliveryStatus

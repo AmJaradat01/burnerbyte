@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="brand/icon-512.png" alt="BurnerByte" width="120" height="120">
+</p>
+
 # BurnerByte
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
@@ -41,7 +45,7 @@ Two binaries that scale independently and share the same database:
 ## Quick start
 
 ```bash
-git clone https://gitlab.com/burnerbyte/burnerbyte.git
+git clone https://gitlab.com/amjaradat01/burnerbyte.git
 cd burnerbyte
 docker compose up -d
 ```

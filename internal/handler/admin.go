@@ -16,15 +16,15 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
-	"gitlab.com/burnerbyte/burnerbyte/internal/auth"
-	"gitlab.com/burnerbyte/burnerbyte/internal/cfgsync"
-	"gitlab.com/burnerbyte/burnerbyte/internal/config"
-	appcrypto "gitlab.com/burnerbyte/burnerbyte/internal/crypto"
-	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
-	"gitlab.com/burnerbyte/burnerbyte/internal/mailer"
-	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
-	"gitlab.com/burnerbyte/burnerbyte/internal/service"
-	"gitlab.com/burnerbyte/burnerbyte/internal/storage"
+	"gitlab.com/amjaradat01/burnerbyte/internal/auth"
+	"gitlab.com/amjaradat01/burnerbyte/internal/cfgsync"
+	"gitlab.com/amjaradat01/burnerbyte/internal/config"
+	appcrypto "gitlab.com/amjaradat01/burnerbyte/internal/crypto"
+	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
+	"gitlab.com/amjaradat01/burnerbyte/internal/mailer"
+	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
+	"gitlab.com/amjaradat01/burnerbyte/internal/service"
+	"gitlab.com/amjaradat01/burnerbyte/internal/storage"
 )
 
 var startTime = time.Now()

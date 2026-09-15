@@ -20,7 +20,7 @@ issue.
 ### Getting started
 
 ```bash
-git clone https://gitlab.com/burnerbyte/burnerbyte.git
+git clone https://gitlab.com/amjaradat01/burnerbyte.git
 cd burnerbyte
 
 # Infrastructure only — postgres, redis and minio, with their ports published

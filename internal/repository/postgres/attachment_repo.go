@@ -8,8 +8,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
-	"gitlab.com/burnerbyte/burnerbyte/internal/database"
-	"gitlab.com/burnerbyte/burnerbyte/internal/domain"
+	"gitlab.com/amjaradat01/burnerbyte/internal/database"
+	"gitlab.com/amjaradat01/burnerbyte/internal/domain"
 )
 
 type AttachmentRepo struct {

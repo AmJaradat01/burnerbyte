@@ -3,10 +3,20 @@
   "short_name": "BurnerByte",
   "description": "Self-hosted temporary email platform",
   "icons": [
-    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
   ],
-  "theme_color": "#4F46E5",
-  "background_color": "#fafaf8",
+  "theme_color": "#2459E2",
+  "background_color": "#F8FAFD",
   "display": "standalone",
   "start_url": "/"
 }

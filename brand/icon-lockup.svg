@@ -1,0 +1,14 @@
+<!-- BurnerByte repo avatar / README mark.
+     Full lockup: the B over the wordmark, on the brand indigo tile. Use where it
+     renders at 64px or larger; below that the wordmark stops being legible and
+     brand/favicon.svg (the B alone) is the right mark. Colours are the product
+     tokens: --primary oklch(0.52 0.215 264) and a lightened tint for "Byte". -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="BurnerByte">
+  <rect width="512" height="512" rx="112" fill="#2459E2"/>
+  <text x="256" y="300" text-anchor="middle"
+        font-family="Geist, system-ui, -apple-system, Segoe UI, sans-serif"
+        font-size="250" font-weight="800" letter-spacing="-14" fill="#FFFFFF">B</text>
+  <text x="256" y="382" text-anchor="middle"
+        font-family="Geist, system-ui, -apple-system, Segoe UI, sans-serif"
+        font-size="58" font-weight="800" letter-spacing="-2.5" fill="#FFFFFF">Burner<tspan fill="#A9C2FF">Byte</tspan></text>
+</svg>

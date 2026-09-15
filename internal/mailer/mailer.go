@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"gitlab.com/burnerbyte/burnerbyte/internal/config"
+	"gitlab.com/amjaradat01/burnerbyte/internal/config"
 )
 
 //go:embed templates/*.html

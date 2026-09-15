@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"gitlab.com/burnerbyte/burnerbyte/internal/repository/postgres"
+	"gitlab.com/amjaradat01/burnerbyte/internal/repository/postgres"
 )
 
 // ===========================================================================

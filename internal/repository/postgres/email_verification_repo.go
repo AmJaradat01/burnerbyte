@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"gitlab.com/burnerbyte/burnerbyte/internal/database"
+	"gitlab.com/amjaradat01/burnerbyte/internal/database"
 )
 
 type EmailVerificationToken struct {
