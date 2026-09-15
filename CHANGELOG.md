@@ -5,6 +5,15 @@ All notable changes to this project are documented here. The format follows
 uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html): `feat:` work
 takes a minor bump, `fix:` / `docs:` / `test:` a patch.
 
+## v1.15.1 (September 2026) — Documentation navigation and contributor guidance
+
+### Fixed
+- **The docs sidebar listed three sections three times each.** Root `meta.json` declared a `---Label---` separator immediately before the folder of the same name, so every section rendered twice; Getting Started, API Reference and Self-Hosting were also nav links, adding a third. The sidebar drops from about twenty rows to ten.
+- The docs home had a card duplicating Installation's href with no anchor, an endpoint count still reading "100+", and two descriptions that no longer matched the code (the settings cascade omitted the team tier; storage did not mention the local-filesystem fallback).
+
+### Changed
+- `CONTRIBUTING.md` now states that a new config key needs a line in **both** `config.example.yaml` and `.env.example` (tests enforce it in both directions), that a new route needs an OpenAPI entry (`TestOpenAPIMatchesRouter` enforces it), and that a new permission needs its `role_permissions` grants — the omission that had made three email endpoints unreachable.
+
 ## v1.15.0 (September 2026) — `team.emails.manage` seeded; documentation fully reconciled with the code
 
 ### Fixed
