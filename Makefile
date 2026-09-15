@@ -1,8 +1,12 @@
 .PHONY: run-api run-smtp build lint test web-test docker-up docker-infra docker-down docker-logs migrate-up migrate-down migrate-create migrate-test migrate-test-db
 
-# Stamped into main.Version. `git describe` gives the exact tag on a release
-# commit and <tag>-<n>-g<sha> elsewhere, so a build always says what it is.
-VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
+# Stamped into main.Version. The nearest tag, not the full `git describe`:
+# git-flow back-merges each release into develop, so develop always sits one
+# commit past its tag and a plain describe reads "v1.17.0-1-gcc5c815". A "-dirty"
+# marker is appended when the tree has uncommitted changes, so a modified build
+# never claims to be a clean release. Jenkins overrides this with the exact tag
+# it was asked to build, so deployments stay precise.
+VERSION ?= $(shell git describe --tags --abbrev=0 2>/dev/null || echo dev)$(shell git diff --quiet HEAD 2>/dev/null || echo -dirty)
 export VERSION
 
 DATABASE_URL ?= postgres://postgres:password@localhost:5432/burnerbyte?sslmode=disable
