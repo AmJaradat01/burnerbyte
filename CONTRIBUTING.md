@@ -118,10 +118,6 @@ Every pull request runs `.github/workflows/ci.yml` on GitHub Actions: `go build`
 `docker compose build` to prove a clean checkout still produces all three
 images. It needs no secrets, so it runs on forks too.
 
-Deployment is separate: Jenkins builds tagged releases from the `Jenkinsfile`
-and ships them to the server. It depends on maintainer-held credentials and does
-not run against forks.
-
 Run `make test`, `make web-test` and `make lint` locally and CI should be a
 formality.
 

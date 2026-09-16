@@ -68,12 +68,24 @@ BurnerByte is open-source under the Apache 2.0 license. Source code is available
 
 <div className="grid gap-4 sm:grid-cols-2">
   <figure>
-    ![Dashboard](/screenshots/dashboard.png)
-    <figcaption>Dashboard — volume, activity and storage at a glance</figcaption>
+    ![Landing page](/screenshots/landing.png)
+    <figcaption>Landing — what a signed-out visitor sees</figcaption>
+  </figure>
+  <figure>
+    ![Sign in](/screenshots/login.png)
+    <figcaption>Sign in — email and password, or SSO when configured</figcaption>
+  </figure>
+  <figure>
+    ![Home](/screenshots/home.png)
+    <figcaption>Home — generate an inbox, then watch the grid</figcaption>
   </figure>
   <figure>
     ![Inbox list](/screenshots/inbox.png)
     <figcaption>Inbox — live list with TTL countdown and renew</figcaption>
+  </figure>
+  <figure>
+    ![Dashboard](/screenshots/dashboard.png)
+    <figcaption>Dashboard — volume, activity and storage at a glance</figcaption>
   </figure>
   <figure>
     ![Domains](/screenshots/domains.png)
@@ -82,6 +94,10 @@ BurnerByte is open-source under the Apache 2.0 license. Source code is available
   <figure>
     ![Analytics](/screenshots/analytics.png)
     <figcaption>Analytics — time series, peak hours and top senders</figcaption>
+  </figure>
+  <figure>
+    ![Settings](/screenshots/settings.png)
+    <figcaption>Settings — org, members, roles, SSO and system config</figcaption>
   </figure>
 </div>
 
@@ -137,5 +153,5 @@ Two separate Go binaries scale independently:
 | Cache | Redis 7 (inbox routing, analytics cache, rate limiting) |
 | Storage | MinIO or any S3-compatible store for attachments, with a local-filesystem fallback |
 | Infrastructure | Docker, Docker Compose |
-| CI/CD | Jenkins (`Jenkinsfile`) — test, build Go + frontend, tag-driven deploy |
+| CI | GitHub Actions (`.github/workflows/ci.yml`) — Go tests against live Postgres and Redis, frontend lint/typecheck/test/build, and a full `docker compose build` |
 | Testing | `pgregory.net/rapid` for property-based testing |
