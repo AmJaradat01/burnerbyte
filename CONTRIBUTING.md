@@ -103,7 +103,9 @@ Releases are cut with the `git flow` tool rather than by hand:
 
 ```bash
 git flow release start X.Y.Z
-# update CHANGELOG.md, commit
+# update CHANGELOG.md
+# bump info.version in internal/handler/docs/openapi.json to X.Y.Z
+# commit both
 GIT_MERGE_AUTOEDIT=no git flow release finish X.Y.Z
 git push origin main develop vX.Y.Z
 ```
