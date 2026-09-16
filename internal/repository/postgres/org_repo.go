@@ -223,7 +223,7 @@ func (r *OrgRepo) CreateInvite(ctx context.Context, inv *domain.Invite) error {
 		allowedAuth = []byte(`["any"]`)
 	}
 	_, err := r.db.Exec(ctx,
-		`INSERT INTO invites (id, org_id, team_id, email, org_role, team_role, token, invited_by, expires_at, allowed_auth)
+		`INSERT INTO invites (id, org_id, team_id, email, org_role, team_role, token_hash, invited_by, expires_at, allowed_auth)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
 		inv.ID, inv.OrgID, inv.TeamID, inv.Email, inv.OrgRole, inv.TeamRole, HashToken(inv.Token), inv.InvitedBy, inv.ExpiresAt, allowedAuth)
 	if err != nil {
@@ -236,8 +236,8 @@ func (r *OrgRepo) GetInviteByToken(ctx context.Context, token string) (*domain.I
 	var inv domain.Invite
 	var allowedAuth []byte
 	err := r.db.QueryRow(ctx,
-		`SELECT id, org_id, team_id, email, org_role, team_role, token, invited_by, accepted_at, expires_at, created_at, allowed_auth
-		 FROM invites WHERE token = $1`, HashToken(token)).
+		`SELECT id, org_id, team_id, email, org_role, team_role, token_hash, invited_by, accepted_at, expires_at, created_at, allowed_auth
+		 FROM invites WHERE token_hash = $1`, HashToken(token)).
 		Scan(&inv.ID, &inv.OrgID, &inv.TeamID, &inv.Email, &inv.OrgRole, &inv.TeamRole,
 			&inv.Token, &inv.InvitedBy, &inv.AcceptedAt, &inv.ExpiresAt, &inv.CreatedAt, &allowedAuth)
 	if err != nil {
@@ -266,7 +266,7 @@ func (r *OrgRepo) GetInviteByID(ctx context.Context, id uuid.UUID) (*domain.Invi
 	var inv domain.Invite
 	var allowedAuth []byte
 	err := r.db.QueryRow(ctx,
-		`SELECT id, org_id, team_id, email, org_role, team_role, token, invited_by, accepted_at, expires_at, created_at, allowed_auth
+		`SELECT id, org_id, team_id, email, org_role, team_role, token_hash, invited_by, accepted_at, expires_at, created_at, allowed_auth
 		 FROM invites WHERE id = $1`, id).
 		Scan(&inv.ID, &inv.OrgID, &inv.TeamID, &inv.Email, &inv.OrgRole, &inv.TeamRole,
 			&inv.Token, &inv.InvitedBy, &inv.AcceptedAt, &inv.ExpiresAt, &inv.CreatedAt, &allowedAuth)
@@ -443,7 +443,7 @@ func (r *OrgRepo) GetPendingInviteByEmail(ctx context.Context, email string) (*d
 	var inv domain.Invite
 	var allowedAuth []byte
 	err := r.db.QueryRow(ctx,
-		`SELECT id, org_id, team_id, email, org_role, team_role, token, invited_by, accepted_at, expires_at, created_at, allowed_auth
+		`SELECT id, org_id, team_id, email, org_role, team_role, token_hash, invited_by, accepted_at, expires_at, created_at, allowed_auth
 		 FROM invites
 		 WHERE email = $1 AND accepted_at IS NULL AND expires_at > NOW()
 		 ORDER BY created_at DESC

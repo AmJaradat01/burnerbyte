@@ -40,8 +40,13 @@ func (h *AuthHandler) PublicRoutes(r chi.Router, rl *middleware.RateLimiter) {
 	r.With(rl.LoginLimiter).Post("/auth/login", h.Login)
 	r.With(rl.LoginLimiter).Post("/auth/login/resolve", h.ResolveLogin)
 	r.With(rl.LoginLimiter).Get("/auth/login/pending-sessions", h.GetPendingSessions)
-	r.With(rl.LoginLimiter).Post("/auth/refresh", h.Refresh)
-	r.With(rl.LoginLimiter).Post("/auth/logout", h.Logout)
+	// These two are the only endpoints that act on the httpOnly refresh
+	// cookie, so they are the only ones a cross-site POST could drive. Under
+	// the default SameSite=Lax the browser withholds the cookie anyway; the
+	// origin check is what covers auth_cookie.same_site = "none".
+	sameOrigin := middleware.SameOrigin(h.cfg.CORS.AllowedOrigins)
+	r.With(rl.LoginLimiter, sameOrigin).Post("/auth/refresh", h.Refresh)
+	r.With(rl.LoginLimiter, sameOrigin).Post("/auth/logout", h.Logout)
 	r.With(rl.ForgotPasswordLimiter).Post("/auth/forgot-password", h.ForgotPassword)
 	r.With(rl.LoginLimiter).Post("/auth/reset-password", h.ResetPassword)
 	r.With(rl.LoginLimiter).Get("/auth/verify-email/{token}", h.VerifyEmail)
@@ -143,6 +148,17 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 				"pending_token": limitErr.PendingToken,
 				"sessions":      limitErr.Sessions,
 				"limit":         limitErr.Limit,
+			})
+			return
+		}
+		var unverified *service.EmailNotVerifiedError
+		if errors.As(err, &unverified) {
+			auditRecordEnhanced(r, uuid.Nil, "user.login_failed", "user", uuid.Nil, input.Email, map[string]any{
+				"email": input.Email, "ip_address": clientip.From(r), "reason": "email_unverified",
+			})
+			writeJSON(w, http.StatusForbidden, map[string]any{
+				"error": "verify your email address before signing in",
+				"code":  "email_unverified",
 			})
 			return
 		}
@@ -583,7 +599,7 @@ func (h *AuthHandler) SSORedirect(w http.ResponseWriter, r *http.Request) {
 		origin = h.cfg.Server.FrontendURL
 	}
 	scheme := "http"
-	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
+	if clientip.IsHTTPSFrom(r) {
 		scheme = "https"
 	}
 

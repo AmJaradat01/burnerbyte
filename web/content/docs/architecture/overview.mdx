@@ -53,9 +53,9 @@ The SMTP server accepts connections, validates the recipient domain against the 
 
 ## Database
 
-36 tables across 47 migrations (including SSO and analytics tables). Key tables: `users`, `organizations`, `org_memberships`, `teams`, `team_memberships`, `domains`, `domain_assignments`, `inboxes`, `emails`, `attachments`, `webhooks`, `webhook_delivery_logs`, `api_keys`, `audit_logs`, `invites`, `sessions`, `setup_state`, `password_reset_tokens`, `system_configs`, `email_verification_tokens`, `roles`, `permissions`, `role_permissions`, `notifications`.
+36 tables across 49 migrations (including SSO and analytics tables). Key tables: `users`, `organizations`, `org_memberships`, `teams`, `team_memberships`, `domains`, `domain_assignments`, `inboxes`, `emails`, `attachments`, `webhooks`, `webhook_delivery_logs`, `api_keys`, `audit_logs`, `invites`, `sessions`, `setup_state`, `password_reset_tokens`, `system_configs`, `email_verification_tokens`, `roles`, `permissions`, `role_permissions`, `notifications`.
 
-74 indexes keep lookups fast, and 7 triggers maintain automatic `updated_at` timestamps (six tables) plus the full-text `search_vector` on `emails`. Cascading deletes are enforced by foreign-key `ON DELETE CASCADE` constraints, not triggers.
+74 indexes keep lookups fast, and 8 triggers maintain automatic `updated_at` timestamps (six tables), the full-text `search_vector` on `emails`, and the revocation of a departing user's API keys. Cascading deletes are enforced by foreign-key `ON DELETE CASCADE` constraints, not triggers.
 
 ## Frontend
 

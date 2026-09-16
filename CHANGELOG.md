@@ -5,6 +5,28 @@ All notable changes to this project are documented here. The format follows
 uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html): `feat:` work
 takes a minor bump, `fix:` / `docs:` / `test:` a patch.
 
+## v1.22.0 (September 2026) — Remaining audit items closed; two verification gaps filled
+
+### Corrected
+- **Invite tokens were never stored in plaintext.** The v1.21.1 notes listed that as an open finding; it was wrong. Both the insert and the lookup in `OrgRepo` wrap the value in `HashToken`, so the column has always held a SHA-256 digest. The column was named `token`, which is what the review read. Migration 48 renames it to `token_hash`, matching `password_reset_tokens` and `email_verification_tokens`, so the schema stops misleading the next reader.
+
+### Security
+- **`X-Forwarded-Proto` now resolves through the trusted-proxy resolver**, alongside the client IP. The rule is deliberately looser, because the two fail in opposite directions: a forged IP picks the caller's own rate-limit bucket and allowlist entry, while a forged scheme only decides whether the refresh cookie carries `Secure` — and claiming HTTPS makes the response more restrictive, not less. Ignoring the header whenever `trusted_proxies` is unset would have stripped `Secure` from every deployment terminating TLS at an unlisted proxy, so an unlisted peer is disbelieved only once a proxy list exists. An existing cookie test caught the stricter first attempt.
+- **`?token=` on the WebSocket endpoints is off by default**, behind `security.allow_token_query_param`. The browser client uses the one-time `/ws/ticket` flow and never needed it; it stays available, rather than being deleted, because it is documented for non-browser clients, and enabling it logs why that is a poor idea.
+- **`security.require_email_verification`** refuses password logins until the address is confirmed. Off by default, since enabling it on an existing deployment would lock out every account created beforehand. The check runs after the password, never before — answering "verify your email" to a wrong password would confirm the address exists.
+- **`metrics.token`** adds an optional bearer credential to `/metrics`. The loopback/private-address gate still rests on the proxy overwriting inbound `X-Forwarded-For` and `X-Real-IP`; a token rests on nothing but itself. Prometheus sends it via `bearer_token`.
+- **A same-origin guard on `/auth/refresh` and `/auth/logout`**, the only two endpoints that act on the refresh cookie. Irrelevant under the default `SameSite=Lax` and necessary under `same_site: none`. It checks `Origin` rather than issuing a token, so non-browser clients — which send none — keep working.
+- **bcrypt cost moves from 10 to 12**, now safe to raise because the timing-equalising dummy comparison tracks the configured cost instead of being pinned to `DefaultCost`.
+- **Migration 49 revokes a user's API keys when the user is deleted.** The foreign key is `ON DELETE SET NULL`, so a key survived with a null owner and `is_active` still true. Authentication always failed closed, so this was never exploitable — the key simply read as live in any inventory built from the table.
+
+### Verification
+Both gaps the audit declared out of scope are now covered.
+- **`FuzzReadEnvelope`** exercises the MIME parser and the bluemonday chain — the most exposed untrusted surface in the product, since it runs on anything arriving over SMTP before any authentication. 2.5 million executions produced no panic and nothing that survived the sanitiser as a `<script>`. A parse error is a valid outcome; a panic or a hang would take the daemon down for every tenant.
+- **A 34-probe cross-tenant sweep** against a live two-tenant instance covered reads, mutations, inbox and message access, and privilege escalation. Every probe returned 403.
+
+### Changed
+- Schema counts in the README and the docs corrected to 49 migrations and 8 triggers. Tables (36) and indexes (74) are unchanged — the rename preserved its indexes — and both were re-counted against a live database rather than assumed.
+
 ## v1.21.1 (September 2026) — Two findings the audit missed, and one it caused
 
 ### Security
