@@ -141,7 +141,7 @@ After 5 failed login attempts (configurable), the account is locked for 15 minut
 **Symptoms:** Slow page loads, high API latency.
 
 1. **Check health endpoint** — `GET /api/v1/admin/health` shows service latencies
-2. **Database indexes** — Ensure all 47 migrations are applied (74 indexes)
+2. **Database indexes** — Ensure all 49 migrations are applied (74 indexes)
 3. **Redis cache** — Analytics and inbox routing are cached in Redis. Verify Redis is running
 4. **Connection pool** — Increase `BB_DATABASE_MAX_OPEN_CONNS` for high-traffic deployments
 5. **Worker intervals** — The analytics worker pre-computes stats every 5 minutes. Reduce `BB_WORKERS_ANALYTICS_INTERVAL` for fresher data

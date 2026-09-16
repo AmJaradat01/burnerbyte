@@ -144,7 +144,7 @@ Mailer config can be overridden at runtime via the setup wizard. Values are stor
 | `password_policy.require_lowercase` | `BB_PASSWORD_POLICY_REQUIRE_LOWERCASE` | `true` | Require lowercase letter |
 | `password_policy.require_number` | `BB_PASSWORD_POLICY_REQUIRE_NUMBER` | `true` | Require digit |
 | `password_policy.require_special` | `BB_PASSWORD_POLICY_REQUIRE_SPECIAL` | `true` | Require special character |
-| `password_policy.bcrypt_cost` | `BB_PASSWORD_POLICY_BCRYPT_COST` | `10` | bcrypt hashing cost (higher is slower and stronger) |
+| `password_policy.bcrypt_cost` | `BB_PASSWORD_POLICY_BCRYPT_COST` | `12` | bcrypt hashing cost (higher is slower and stronger). The timing-equalising dummy comparison that hides user enumeration is derived from this value, so raising it stays safe |
 
 ## Defaults
 
@@ -216,6 +216,14 @@ without them. See [Production Deployment](/docs/self-hosting/production).
 | `logging.format` | `LOG_FORMAT` | `json` | Log format (json, text) |
 | `metrics.enabled` | `BB_METRICS_ENABLED` | `true` | Enable Prometheus metrics |
 | `metrics.path` | `BB_METRICS_PATH` | `/metrics` | Metrics endpoint path |
+| `metrics.token` | `BB_METRICS_TOKEN` | *(empty)* | When set, `/metrics` also requires `Authorization: Bearer <token>`. The loopback/private-address check alone depends on your proxy overwriting inbound `X-Forwarded-For` and `X-Real-IP`; a token does not. Prometheus sends it via `bearer_token` |
+
+## Security
+
+| Key | Env Var | Default | Description |
+|---|---|---|---|
+| `security.allow_token_query_param` | `BB_SECURITY_ALLOW_TOKEN_QUERY_PARAM` | `false` | Re-enables `?token=<jwt>` on the WebSocket endpoints. The browser client uses the one-time `/ws/ticket` flow instead; a token in a URL is captured by reverse-proxy access logs and browser history |
+| `security.require_email_verification` | `BB_SECURITY_REQUIRE_EMAIL_VERIFICATION` | `false` | Refuse password logins until the address is confirmed. Off by default because enabling it on an existing deployment locks out every account created beforehand. The check runs after the password, so it never reveals whether an address exists |
 
 ## Auth Cookie
 
