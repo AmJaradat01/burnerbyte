@@ -5,6 +5,11 @@ All notable changes to this project are documented here. The format follows
 uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html): `feat:` work
 takes a minor bump, `fix:` / `docs:` / `test:` a patch.
 
+## v1.20.1 (September 2026) — OpenAPI version bump the v1.20.0 release missed
+
+### Fixed
+- `openapi.json` still declared `info.version: 1.19.1` after the v1.20.0 release, which `TestOpenAPIVersionIsCurrent` caught on CI. The release recipe in `CONTRIBUTING.md` listed only "update CHANGELOG.md"; the instruction to bump `info.version` lived thirty lines further down in the API-docs section, where nobody cutting a release would be reading. The recipe now carries the step.
+
 ## v1.20.0 (September 2026) — Private deployment tooling removed; screenshots recaptured
 
 ### Removed
