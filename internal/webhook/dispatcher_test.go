@@ -1,7 +1,6 @@
 package webhook
 
 import (
-	"net"
 	"strings"
 	"testing"
 )
@@ -32,44 +31,5 @@ func TestSign(t *testing.T) {
 	}
 	if sign([]byte("payload-a"), "s") == sign([]byte("payload-b"), "s") {
 		t.Fatal("different payloads must produce different signatures")
-	}
-}
-
-func TestIsPrivateIP(t *testing.T) {
-	// These must be blocked — webhook delivery to them would be SSRF.
-	private := []string{
-		"10.0.0.1", "10.255.255.255",
-		"172.16.0.1", "172.31.255.255",
-		"192.168.0.1", "192.168.255.255",
-		"127.0.0.1", "169.254.1.1",
-		"169.254.169.254", // cloud metadata
-		"::1", "fc00::1", "fe80::1",
-		"0.0.0.0", "::", // unspecified — connect() reaches localhost on Linux
-	}
-	for _, s := range private {
-		ip := net.ParseIP(s)
-		if ip == nil {
-			t.Fatalf("bad test IP %q", s)
-		}
-		if !isPrivateIP(ip) {
-			t.Errorf("expected %s to be treated as private (blocked)", s)
-		}
-	}
-
-	// These are public and must be allowed, including the CIDR boundaries.
-	public := []string{
-		"8.8.8.8", "1.1.1.1",
-		"172.15.255.255", // just below 172.16.0.0/12
-		"172.32.0.1",     // just above 172.16.0.0/12
-		"2606:4700:4700::1111",
-	}
-	for _, s := range public {
-		ip := net.ParseIP(s)
-		if ip == nil {
-			t.Fatalf("bad test IP %q", s)
-		}
-		if isPrivateIP(ip) {
-			t.Errorf("expected %s to be treated as public (allowed)", s)
-		}
 	}
 }

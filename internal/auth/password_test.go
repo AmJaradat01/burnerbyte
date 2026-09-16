@@ -118,5 +118,34 @@ func TestHashAndCheckPassword(t *testing.T) {
 		t.Fatal("an incorrect password must not verify")
 	}
 	// Timing-attack guard for unknown users: must run without panicking.
-	DummyCheckPassword("anything")
+	DummyCheckPassword("anything", config.PasswordConfig{BcryptCost: 10})
+}
+
+// The dummy comparison only hides user enumeration while it costs the same as
+// a real check. Pinning it to bcrypt.DefaultCost meant raising the configured
+// cost reopened the timing gap it exists to close.
+func TestDummyCheckTracksConfiguredCost(t *testing.T) {
+	for _, cost := range []int{4, 6} {
+		cfg := config.PasswordConfig{BcryptCost: cost}
+
+		real, err := HashPassword("SomeRealPassword1!", cfg)
+		if err != nil {
+			t.Fatal(err)
+		}
+		gotCost, err := bcrypt.Cost([]byte(real))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if gotCost != cost {
+			t.Fatalf("real hash cost = %d, want %d", gotCost, cost)
+		}
+
+		dummyCost, err := bcrypt.Cost([]byte(dummyHashForCost(ResolveBcryptCost(cfg))))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if dummyCost != gotCost {
+			t.Errorf("dummy hash cost = %d but real hashes cost %d; the timing equaliser no longer matches", dummyCost, gotCost)
+		}
+	}
 }

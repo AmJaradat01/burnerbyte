@@ -154,3 +154,42 @@ func TestEnvExampleCoversEveryRegisteredKey(t *testing.T) {
 		}
 	}
 }
+
+// A deployment that never writes a .env picks up the fallback in
+// docker-compose.yml, which is long enough to clear the minimum-length check.
+// Booting on it means running a signing key anyone can read in the repository.
+func TestPublishedDefaultJWTSecretsAreRejected(t *testing.T) {
+	for _, secret := range publishedDefaultJWTSecrets {
+		if len(secret) < 32 {
+			// Short secrets are already caught by the length check; these are
+			// dangerous precisely because they are not.
+			continue
+		}
+		if !IsPublishedDefaultJWTSecret(secret) {
+			t.Errorf("published default %q is not recognised", secret)
+		}
+	}
+	if IsPublishedDefaultJWTSecret("a-genuinely-random-operator-chosen-secret-value") {
+		t.Error("an operator-chosen secret was rejected as a published default")
+	}
+}
+
+// The check is only useful while the strings match what the repository
+// actually ships, so read them back out of the files.
+func TestPublishedDefaultListMatchesTheRepository(t *testing.T) {
+	for _, f := range []string{"../../docker-compose.yml", "../../.env.example"} {
+		raw, err := os.ReadFile(f)
+		if err != nil {
+			t.Fatalf("read %s: %v", f, err)
+		}
+		for _, m := range regexp.MustCompile(`JWT_SECRET[:=]\s*\$?\{?[A-Z_]*:?-?([^}\s"']+)\}?`).FindAllStringSubmatch(string(raw), -1) {
+			candidate := m[1]
+			if len(candidate) < 32 || strings.HasPrefix(candidate, "$") {
+				continue
+			}
+			if !IsPublishedDefaultJWTSecret(candidate) {
+				t.Errorf("%s ships JWT secret %q, which IsPublishedDefaultJWTSecret does not recognise; add it to publishedDefaultJWTSecrets", f, candidate)
+			}
+		}
+	}
+}

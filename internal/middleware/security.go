@@ -19,6 +19,20 @@ func SecurityHeaders(next http.Handler) http.Handler {
 		// Don't leak full request URLs (which may carry ?sso_code=, ?token=)
 		// to cross-origin destinations.
 		h.Set("Referrer-Policy", "strict-origin-when-cross-origin")
+		// The API serves JSON plus the Swagger /docs page. Nothing here needs
+		// to load a script, frame anything or submit a form off-origin, so
+		// lock it down; the SPA sets its own, looser policy in next.config.
+		h.Set("Content-Security-Policy",
+			"default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; "+
+				"script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; "+
+				"font-src 'self' data:; connect-src 'self'")
+		// Only over a connection that is already TLS. Sending HSTS over plain
+		// HTTP is ignored by browsers, and self-hosted deployments on a
+		// plain-HTTP LAN address must not be pinned to a scheme they do not
+		// serve.
+		if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
+			h.Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+		}
 		next.ServeHTTP(w, r)
 	})
 }

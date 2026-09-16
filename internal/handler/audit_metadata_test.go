@@ -89,7 +89,7 @@ func newAuthTestHandler(t *testing.T, pool *pgxpool.Pool) (*AuthHandler, *config
 		nil, nil, nil, nil, nil, nil, nil,
 		tokens, lockout, nil, cfg, nil, nil, nil,
 	)
-	return NewAuthHandler(svc, nil, cfg), cfg
+	return NewAuthHandler(svc, nil, cfg, nil), cfg
 }
 
 // installCapture swaps the package Audit recorder for a capturing fake.

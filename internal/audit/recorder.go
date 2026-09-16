@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/amjaradat01/burnerbyte/internal/auth"
+	"github.com/amjaradat01/burnerbyte/internal/clientip"
 	"github.com/amjaradat01/burnerbyte/internal/domain"
 	"github.com/amjaradat01/burnerbyte/internal/service"
 )
@@ -235,7 +236,7 @@ func (rec *Recorder) RecordFromRequest(r *http.Request, orgID uuid.UUID, action,
 	if uc != nil {
 		actorID = &uc.UserID
 	}
-	rec.Record(r.Context(), orgID, actorID, action, resourceType, resourceID, metadata, r.RemoteAddr)
+	rec.Record(r.Context(), orgID, actorID, action, resourceType, resourceID, metadata, clientip.From(r))
 }
 
 // RecordEnhanced records an audit entry with all enhanced fields populated.
@@ -252,7 +253,7 @@ func (rec *Recorder) RecordEnhanced(r *http.Request, orgID uuid.UUID, action, re
 	severity := GetSeverity(action)
 	category := GetCategory(action)
 
-	ip := stripPort(r.RemoteAddr)
+	ip := stripPort(clientip.From(r))
 	var ipPtr *string
 	if ip != "" {
 		ipPtr = &ip

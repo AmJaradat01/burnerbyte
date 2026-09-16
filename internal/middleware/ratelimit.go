@@ -6,13 +6,13 @@ import (
 	"net"
 	"net/http"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
-	"github.com/redis/go-redis/v9"
 	"github.com/amjaradat01/burnerbyte/internal/auth"
+	"github.com/amjaradat01/burnerbyte/internal/clientip"
 	"github.com/amjaradat01/burnerbyte/internal/config"
+	"github.com/redis/go-redis/v9"
 )
 
 type visitor struct {
@@ -24,12 +24,12 @@ type visitor struct {
 // It supports separate limits for authenticated, unauthenticated, login,
 // and forgot-password requests. Expired entries are cleaned up periodically.
 type RateLimiter struct {
-	mu          sync.Mutex
-	visitors    map[string]*visitor
-	cfg         config.RateLimitConfig
-	cancel      context.CancelFunc
-	trustedNets []*net.IPNet
-	rdb         *redis.Client
+	mu       sync.Mutex
+	visitors map[string]*visitor
+	cfg      config.RateLimitConfig
+	cancel   context.CancelFunc
+	clientIP *clientip.Resolver
+	rdb      *redis.Client
 }
 
 // NewRateLimiter creates a rate limiter and starts a background cleanup goroutine.
@@ -37,22 +37,11 @@ type RateLimiter struct {
 func NewRateLimiter(cfg config.RateLimitConfig) *RateLimiter {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	var trustedNets []*net.IPNet
-	for _, cidr := range cfg.TrustedProxies {
-		if !strings.Contains(cidr, "/") {
-			cidr += "/32"
-		}
-		_, ipNet, err := net.ParseCIDR(cidr)
-		if err == nil {
-			trustedNets = append(trustedNets, ipNet)
-		}
-	}
-
 	rl := &RateLimiter{
-		visitors:    make(map[string]*visitor),
-		cfg:         cfg,
-		cancel:      cancel,
-		trustedNets: trustedNets,
+		visitors: make(map[string]*visitor),
+		cfg:      cfg,
+		cancel:   cancel,
+		clientIP: clientip.New(cfg.TrustedProxies),
 	}
 	go rl.cleanup(ctx)
 	return rl
@@ -272,22 +261,16 @@ func RealIP(r *http.Request) string {
 	return extractIP(r.RemoteAddr)
 }
 
-// realIP extracts the client IP, trusting forwarded headers only from trusted proxies.
+// RealIP reports the client IP for rate-limit keying. It reads the value the
+// clientip middleware already resolved, so the limiter, the audit trail and
+// the API-key allowlist can never disagree about who the caller is.
 func (rl *RateLimiter) RealIP(r *http.Request) string {
-	remoteIP := extractIP(r.RemoteAddr)
-	if len(rl.trustedNets) > 0 && rl.isTrusted(remoteIP) {
-		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-			parts := strings.Split(xff, ",")
-			ip := strings.TrimSpace(parts[len(parts)-1])
-			if ip != "" {
-				return ip
-			}
-		}
-		if xri := r.Header.Get("X-Real-IP"); xri != "" {
-			return strings.TrimSpace(xri)
-		}
+	if ip, ok := clientip.FromContext(r.Context()); ok {
+		return ip
 	}
-	return remoteIP
+	// No resolver middleware in the chain (unit tests, embedded use): resolve
+	// with our own copy rather than silently ignoring trusted_proxies.
+	return rl.clientIP.Resolve(r)
 }
 
 func extractIP(addr string) string {
@@ -296,17 +279,4 @@ func extractIP(addr string) string {
 		return addr
 	}
 	return host
-}
-
-func (rl *RateLimiter) isTrusted(ip string) bool {
-	parsed := net.ParseIP(ip)
-	if parsed == nil {
-		return false
-	}
-	for _, n := range rl.trustedNets {
-		if n.Contains(parsed) {
-			return true
-		}
-	}
-	return false
 }
