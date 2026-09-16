@@ -11,6 +11,7 @@
   },
   "packageManager": "pnpm@10.30.3",
   "scripts": {
+    "postinstall": "fumadocs-mdx",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
