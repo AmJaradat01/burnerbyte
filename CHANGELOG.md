@@ -5,6 +5,38 @@ All notable changes to this project are documented here. The format follows
 uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html): `feat:` work
 takes a minor bump, `fix:` / `docs:` / `test:` a patch.
 
+## v1.21.0 (September 2026) — Security audit remediation
+
+A full security audit of the repository produced eighteen findings. All are addressed here; two were confirmed exploitable against a running instance before the fix and verified closed after it.
+
+### Security
+
+- **Client-supplied IP headers were trusted unconditionally.** `chi.middleware.RealIP` rewrote `r.RemoteAddr` from `True-Client-IP`, `X-Real-IP` or `X-Forwarded-For` with no trusted-proxy check — chi's own documentation warns against using it without a reverse proxy, and it carries three IP-spoofing advisories. Running second in the global chain, it handed four controls a value the caller chose: `curl -H 'True-Client-IP: 127.0.0.1' /metrics` returned the full Prometheus dump, and rotating the header per request made the login limiter never fire, so credential stuffing and password-reset mail were unbounded. The API-key IP allowlist was bypassable the same way, and the audit trail recorded whatever source IP an attacker named. The rate limiter's own trusted-proxy logic had always been correct; it simply never ran, because `RemoteAddr` was already rewritten. Resolution now happens once in `internal/clientip`, honours `trusted_proxies` (empty by default — trust nothing), and travels in the request context. `RemoteAddr` is left as the kernel reported it.
+- **Compose shipped a working default JWT signing key.** At 45 characters it cleared the `len < 32` startup check, so a deployment that never wrote a `.env` ran a signing key published in this repository and anyone could mint a token with `is_system_admin` set — with no symptom. The API now refuses to boot on it, and a drift test reads the placeholders back out of `docker-compose.yml` and `.env.example` so the list cannot fall behind the files.
+- **Demoting a system admin took up to 15 minutes to take effect.** The middleware already loaded the user row for the `password_changed_at` check and took `DisplayName` from it, but read `IsSystemAdmin` from the JWT claim. It reads the row.
+- **SSO account linking targeted a user ID held in a client cookie.** The public callback linked whichever account `sso_state` named, with no session to check against; anyone able to write that cookie could bind their own identity-provider account to someone else's. Intent and target now live in Redis keyed by the state value, starting a link requires an authenticated session, state is compared in constant time, and consuming it makes the callback single-use.
+- **The setup connectivity tests were rebindable.** Both resolved the host, validated the answer, then handed the hostname to the dialer, which resolved it again. `internal/netguard` factors out the pattern `webhook.Dispatcher` already had right — resolve once, reject internal space, dial the validated literal — and both endpoints, the MinIO transport and the webhook paths share it, along with one blocklist that adds carrier-grade NAT, the benchmarking range and IPv4-mapped IPv6. The setup routes also get the rate limiter they were registered without.
+- **The inbox WebSocket compared origin hostnames only**, so an allowlist entry of `https://app.example.com` also admitted `http://app.example.com` and any port on it. It compares full origins now, as the notification and admin sockets always did.
+- **The email CSP was spliced in before the sender's own `</head>`**, leaving it after anything already there — and a meta CSP only governs what follows it, so a stylesheet higher in the head still fetched and leaked the reader's IP while the interface reported images as blocked. It is prepended.
+- **The bcrypt timing equaliser stopped equalising above cost 10.** The dummy hash was pinned to `bcrypt.DefaultCost` while real checks used the configured cost, so raising `password_policy.bcrypt_cost` turned the defence into the user-enumeration oracle it exists to prevent. It is derived from the resolved cost, with a test asserting the two stay equal.
+- **Encryption at rest was opt-in and off by default**, writing SSO client secrets, SMTP passwords and storage credentials verbatim into columns named `*_encrypted`. The first-run installer generates a key.
+- Smaller items: `LocalFS.ServeFile` refuses keys that escape the storage root (it had no callers, but read like a supported helper); the `/ws/ticket` handler guards its nil dereference; new webhooks must use `https`; the API sets a Content-Security-Policy and, over TLS only, HSTS.
+
+### Dependencies
+
+- **Go: 18 reachable advisories to zero**, confirmed by `govulncheck`. chi v5.3.0, pgx v5.9.2 (SQL injection via dollar-quoted placeholders), x/net v0.55.0 (`html.Parse` XSS and DoS, reached from inbound SMTP — the most exposed untrusted surface the product has), x/text v0.39.0, go-jose v4.1.4 (a panic reachable from an unauthenticated SSO callback), and the toolchain to 1.26.8 for seven standard-library advisories.
+- **Frontend: 59 production advisories to two.** Next.js 16.1.6 to 16.3.5 clears two unauthenticated RCEs, three SSRF classes and six middleware/proxy bypasses; `next-intl` and `ua-parser-js` follow; seven transitive packages no direct upgrade reaches are pinned through pnpm overrides. The two that remain are `image-size`, pulled in by Fumadocs to measure images while building the docs: no patched release exists upstream, and its parser only ever sees images committed to this repository, so there is no untrusted input on that path.
+
+### Added
+
+- A fourth CI job runs `govulncheck` and a production-only `pnpm audit`, weekly as well as per-push, failing on high or critical with `image-size` recorded as a documented exception. Dependencies were the last surface that could rot silently between releases — the config, the OpenAPI spec and the docs already have drift guards.
+- Regression tests for every confirmed finding, including a suite asserting no header can change the resolved client IP.
+
+### Changed
+
+- Runtime images move from `alpine:3.20` to `3.23`, matching the builder. Every service gets `no-new-privileges`, and the images built here drop all capabilities. Postgres, Redis and MinIO keep theirs: their entrypoints need `CHOWN`/`SETUID`/`SETGID` to drop privileges, and a blanket `cap_drop` put them in a restart loop.
+- `eslint-config-next` 16.3 enables the React Compiler rules, which report 18 pre-existing patterns unrelated to this work. They are set to warn, with a comment recording why, rather than failing CI on an unscheduled refactor.
+
 ## v1.20.1 (September 2026) — OpenAPI version bump the v1.20.0 release missed
 
 ### Fixed

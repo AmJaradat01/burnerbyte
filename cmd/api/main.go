@@ -26,6 +26,7 @@ import (
 	"github.com/amjaradat01/burnerbyte/internal/auth"
 	"github.com/amjaradat01/burnerbyte/internal/auth/rbac"
 	"github.com/amjaradat01/burnerbyte/internal/cfgsync"
+	"github.com/amjaradat01/burnerbyte/internal/clientip"
 	"github.com/amjaradat01/burnerbyte/internal/config"
 	appcrypto "github.com/amjaradat01/burnerbyte/internal/crypto"
 	"github.com/amjaradat01/burnerbyte/internal/database"
@@ -67,6 +68,16 @@ func main() {
 
 	if len(cfg.JWT.Secret) < 32 {
 		slog.Error("JWT secret must be at least 32 characters", "current_length", len(cfg.JWT.Secret))
+		os.Exit(1)
+	}
+	// docker-compose.yml carries a development fallback long enough to clear
+	// the length check above, so a deployment that never wrote a .env used to
+	// boot happily on a signing key published in a public repository — and
+	// anyone could then mint a token with is_system_admin set. Fail closed.
+	if config.IsPublishedDefaultJWTSecret(cfg.JWT.Secret) {
+		slog.Error("JWT secret is the development default published in docker-compose.yml; " +
+			"anyone could forge an admin token. Set JWT_SECRET in .env to a random value " +
+			"(openssl rand -hex 32) before starting.")
 		os.Exit(1)
 	}
 
@@ -239,7 +250,10 @@ func main() {
 		slog.Warn("failed to load SSO providers from database", "error", err)
 		ssoMgr.LoadProviders(ctx, nil)
 	}
-	authHandler := handler.NewAuthHandler(authSvc, ssoMgr, cfg)
+	// The SSO link intent is held server-side against the state value rather
+	// than in a client cookie; see internal/auth/sso_state.go.
+	ssoStateStore := auth.NewSSOStateStore(rdb, 10*time.Minute)
+	authHandler := handler.NewAuthHandler(authSvc, ssoMgr, cfg, ssoStateStore)
 	orgHandler := handler.NewOrgHandler(orgSvc, userRepo)
 	domainHandler := handler.NewDomainHandler(domainSvc, inboxRepo, cfg.SMTP.Hostname)
 	teamHandler := handler.NewTeamHandler(teamSvc)
@@ -265,10 +279,16 @@ func main() {
 	rateLimiter := mw.NewRateLimiter(cfg.RateLimit)
 	rateLimiter.WithRedis(rdb)
 
+	// Client IP resolution. Deliberately NOT chi's middleware.RealIP: that
+	// rewrites r.RemoteAddr from client-supplied headers with no trusted-proxy
+	// check, which handed the /metrics gate, every rate limiter, the API-key IP
+	// allowlist and the audit trail's source IP to the caller.
+	clientIPs := clientip.New(cfg.RateLimit.TrustedProxies)
+
 	// Router
 	r := chi.NewRouter()
 	r.Use(chimw.RequestID)
-	r.Use(chimw.RealIP)
+	r.Use(clientIPs.Middleware)
 	r.Use(requestLogger(logger))
 	r.Use(chimw.Recoverer)
 	r.Use(mw.SecurityHeaders)
@@ -295,11 +315,9 @@ func main() {
 	r.Get("/readyz", readyz(pool, rdb))
 	if cfg.Metrics.Enabled {
 		r.Handle(cfg.Metrics.Path, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ip := r.RemoteAddr
-			if h, _, err := net.SplitHostPort(ip); err == nil {
-				ip = h
-			}
-			parsed := net.ParseIP(ip)
+			// clientip.From, not r.RemoteAddr: the caller must not be able to
+			// name its own source address and read the metrics.
+			parsed := net.ParseIP(clientip.From(r))
 			if parsed == nil || (!parsed.IsLoopback() && !parsed.IsPrivate()) {
 				http.Error(w, "forbidden", http.StatusForbidden)
 				return
@@ -311,7 +329,7 @@ func main() {
 	// API v1
 	r.Route("/api/v1", func(r chi.Router) {
 		// Public routes (no auth)
-		setupHandler.Routes(r)
+		setupHandler.Routes(r, rateLimiter)
 		authHandler.PublicRoutes(r, rateLimiter)
 		tryHandler.Routes(r, rateLimiter)
 		r.Get("/invites/{token}/preview", orgHandler.PreviewInvite)
@@ -752,6 +770,12 @@ func main() {
 			// WebSocket ticket endpoint - generates a short-lived ticket for WS auth
 			r.Post("/ws/ticket", func(w http.ResponseWriter, r *http.Request) {
 				uc := auth.GetUser(r.Context())
+				if uc == nil {
+					// Unreachable inside the authenticated group, but the
+					// dereference below is one route-move from a panic.
+					http.Error(w, "unauthorized", http.StatusUnauthorized)
+					return
+				}
 				ticket := uuid.New().String()
 				rdb.Set(r.Context(), "ws_ticket:"+ticket, uc.UserID.String(), 30*time.Second)
 				w.Header().Set("Content-Type", "application/json")
@@ -894,7 +918,7 @@ func requestLogger(logger *slog.Logger) func(http.Handler) http.Handler {
 				"status", ww.Status(),
 				"duration_ms", time.Since(start).Milliseconds(),
 				"request_id", chimw.GetReqID(r.Context()),
-				"remote_addr", r.RemoteAddr,
+				"remote_addr", clientip.From(r),
 			)
 		})
 	}

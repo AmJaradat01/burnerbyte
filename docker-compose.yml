@@ -38,6 +38,8 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
 
   redis:
     image: redis:7-alpine
@@ -50,6 +52,8 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
 
   minio:
     # MinIO no longer publishes to Docker Hub; quay.io is the official
@@ -67,6 +71,8 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
 
   # One-shot schema migration. Runs golang-migrate against postgres and exits;
   # api and smtpd wait for it to complete successfully. "up" is idempotent (a
@@ -104,7 +110,9 @@ services:
       REDIS_URL: ${EXTERNAL_REDIS_URL:-redis://:${REDIS_PASSWORD:-burnerbyte-redis}@redis:6379}
       # Must be >= 32 chars or the API refuses to start. This default is for a
       # local stack only: generate a real one (openssl rand -hex 32) and set
-      # JWT_SECRET in .env before exposing this anywhere.
+      # JWT_SECRET in .env before exposing this anywhere. The API refuses to
+      # start on the placeholder below, so this fails loudly rather than
+      # quietly running a signing key that is published in this repository.
       JWT_SECRET: ${JWT_SECRET:-dev-insecure-jwt-secret-change-me-min-32-chars}
       # Optional but strongly recommended: encrypts SSO/SMTP/storage secrets at
       # rest. When empty they are stored in plaintext. Generate: openssl rand -hex 32
@@ -147,6 +155,12 @@ services:
       retries: 5
       start_period: 20s
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    # A single static binary running as a non-root user: no capability is
+    # needed. (smtpd listens on 2525, so not even NET_BIND_SERVICE.)
+    cap_drop:
+      - ALL
 
   smtpd:
     build:
@@ -187,6 +201,12 @@ services:
       migrate:
         condition: service_completed_successfully
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    # A single static binary running as a non-root user: no capability is
+    # needed. (smtpd listens on 2525, so not even NET_BIND_SERVICE.)
+    cap_drop:
+      - ALL
 
   frontend:
     build:
@@ -209,6 +229,12 @@ services:
       api:
         condition: service_healthy
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    # A single static binary running as a non-root user: no capability is
+    # needed. (smtpd listens on 2525, so not even NET_BIND_SERVICE.)
+    cap_drop:
+      - ALL
 
 volumes:
   pgdata:

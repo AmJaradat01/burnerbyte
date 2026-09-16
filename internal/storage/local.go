@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/minio/minio-go/v7"
@@ -86,8 +87,22 @@ func (l *LocalFS) GetObject(_ context.Context, bucket, key string, _ minio.GetOb
 	return io.NopCloser(bytes.NewReader(data)), nil
 }
 
-// ServeFile reads and returns the file bytes for a given key.
+// ServeFile reads the file bytes for a given key, refusing any key that
+// escapes the storage root. It previously joined the key onto basePath with
+// no containment check, so "../../etc/passwd" read whatever it liked. It had
+// no callers — the /files route builds its own check — but it read like a
+// supported helper, which is how that kind of hole gets reintroduced.
 func (l *LocalFS) ServeFile(key string) ([]byte, error) {
-	fullPath := filepath.Join(l.basePath, key)
-	return os.ReadFile(fullPath)
+	base, err := filepath.Abs(l.basePath)
+	if err != nil {
+		return nil, err
+	}
+	resolved, err := filepath.Abs(filepath.Join(base, filepath.Clean("/"+key)))
+	if err != nil {
+		return nil, err
+	}
+	if resolved != base && !strings.HasPrefix(resolved, base+string(filepath.Separator)) {
+		return nil, fmt.Errorf("storage key escapes the storage root")
+	}
+	return os.ReadFile(resolved)
 }
