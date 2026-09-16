@@ -5,6 +5,15 @@ All notable changes to this project are documented here. The format follows
 uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html): `feat:` work
 takes a minor bump, `fix:` / `docs:` / `test:` a patch.
 
+## v1.21.1 (September 2026) — Two findings the audit missed, and one it caused
+
+### Security
+- **CSV formula injection in the audit export.** Every field was written raw. `encoding/csv` quotes a value so it parses back as CSV, but a spreadsheet still reads a leading `=`, `+`, `-` or `@` as a formula — and four exported columns carry attacker-supplied text. `user_agent` is the raw request header, so anyone who can reach the API could plant `=HYPERLINK(...)` or a DDE payload and wait for an administrator to open the export. Fields starting with a formula sigil are now prefixed with an apostrophe, discounting leading whitespace so a tab cannot hide the sigil from a reviewer while Excel still parses it.
+- **Swagger UI loaded an unpinned CDN bundle.** `swagger-ui-dist@5` from unpkg, a floating major range with no subresource integrity: the CDN served whatever `@5` resolved to at request time, and a compromised release would have executed arbitrary JavaScript on the API's own origin. Pinned to 5.29.0 with SHA-384 integrity on both the script and the stylesheet.
+
+### Fixed
+- The API-wide Content-Security-Policy added in v1.21.0 blocked the Swagger UI's own assets, so `/api/v1/docs` rendered an empty page. The policy is narrowed for that single route rather than loosened everywhere: the CDN is permitted only for the two integrity-pinned assets, and `connect-src` stays `'self'`.
+
 ## v1.21.0 (September 2026) — Security audit remediation
 
 A full security audit of the repository produced eighteen findings. All are addressed here; two were confirmed exploitable against a running instance before the fix and verified closed after it.
