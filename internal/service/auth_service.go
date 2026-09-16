@@ -278,6 +278,34 @@ func (s *AuthService) Login(ctx context.Context, input domain.LoginInput, ip, us
 		return nil, nil, fmt.Errorf("SSO login required for your organization")
 	}
 
+	// The check above joins through org_memberships, so it never evaluates a
+	// system admin who belongs to no organisation — and that is the account
+	// that can grant is_system_admin, transfer teams and read every audit
+	// trail. This closes that gap without depending on org membership.
+	//
+	// Only enforced once the admin has a linked SSO identity: refusing the
+	// password before they can possibly sign in another way would lock the
+	// only administrator out of their own deployment.
+	if s.cfg.Security.EnforceSSOForSystemAdmins && user.IsSystemAdmin && s.ssoIdentityRepo != nil {
+		identities, idErr := s.ssoIdentityRepo.ListByUser(ctx, user.ID)
+		if idErr != nil {
+			// Fail closed. If we cannot tell whether this admin has an SSO
+			// identity, we cannot tell whether the password path is supposed
+			// to be shut, and guessing wrong in the permissive direction
+			// leaves the most privileged account on a password. The detail
+			// goes to the log, not to the caller.
+			slog.Error("could not check SSO identities for system admin; refusing password login",
+				"error", idErr, "user_id", user.ID)
+			return nil, nil, fmt.Errorf("SSO login required for system administrators")
+		}
+		if len(identities) > 0 {
+			return nil, nil, fmt.Errorf("SSO login required for system administrators")
+		}
+		slog.Warn("system admin signed in with a password while enforce_sso_for_system_admins is on; "+
+			"no SSO identity is linked to this account, so the password path is still open",
+			"user_id", user.ID, "email", user.Email, "ip", ip)
+	}
+
 	// ── Session limit check (interactive for password login) ──
 	proceed, limitErr := s.enforceSessionLimit(ctx, user, ip, userAgent)
 	if !proceed {
@@ -449,9 +477,6 @@ func (s *AuthService) UpdateProfile(ctx context.Context, userID uuid.UUID, input
 			return nil, err
 		}
 		user.DisplayName = *input.DisplayName
-	}
-	if input.AvatarURL != nil {
-		user.AvatarURL = input.AvatarURL
 	}
 	if input.Timezone != nil {
 		user.Timezone = input.Timezone
@@ -780,9 +805,6 @@ func (s *AuthService) SSOLogin(ctx context.Context, result *domain.SSOCallbackRe
 					IsSystemAdmin: false, EmailVerified: true,
 					PasswordChangedAt: func() *time.Time { t := time.Now(); return &t }(),
 				}
-				if result.AvatarURL != "" {
-					user.AvatarURL = &result.AvatarURL
-				}
 				if err := s.userRepo.Create(ctx, user); err != nil {
 					return nil, nil, fmt.Errorf("create SSO user: %w", err)
 				}
@@ -822,12 +844,6 @@ func (s *AuthService) SSOLogin(ctx context.Context, result *domain.SSOCallbackRe
 			// Ignore conflict — identity may already exist from migration
 			_ = s.ssoIdentityRepo.Create(ctx, identity)
 		}
-	}
-
-	// Set avatar from picture claim only when user has no existing avatar
-	if result.AvatarURL != "" && (user.AvatarURL == nil || *user.AvatarURL == "") {
-		user.AvatarURL = &result.AvatarURL
-		_ = s.userRepo.Update(ctx, user)
 	}
 
 	// Auto-provision into org
@@ -972,16 +988,13 @@ func (s *AuthService) DeleteUser(ctx context.Context, userID uuid.UUID) error {
 	return s.userRepo.Delete(ctx, userID)
 }
 
-func (s *AuthService) AdminUpdateUser(ctx context.Context, userID uuid.UUID, displayName, avatarURL *string, isSystemAdmin, emailVerified *bool, maxSessions *int) (*domain.User, error) {
+func (s *AuthService) AdminUpdateUser(ctx context.Context, userID uuid.UUID, displayName *string, isSystemAdmin, emailVerified *bool, maxSessions *int) (*domain.User, error) {
 	user, err := s.userRepo.GetByID(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 	if displayName != nil {
 		user.DisplayName = *displayName
-	}
-	if avatarURL != nil {
-		user.AvatarURL = avatarURL
 	}
 	if isSystemAdmin != nil {
 		user.IsSystemAdmin = *isSystemAdmin
@@ -1382,9 +1395,6 @@ func (s *AuthService) createAndProvisionFromMappings(ctx context.Context, result
 		IsSystemAdmin:     false,
 		EmailVerified:     true,
 		PasswordChangedAt: func() *time.Time { t := time.Now(); return &t }(),
-	}
-	if result.AvatarURL != "" {
-		user.AvatarURL = &result.AvatarURL
 	}
 
 	if err := userRepoTx.Create(ctx, user); err != nil {

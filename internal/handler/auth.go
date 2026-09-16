@@ -373,8 +373,8 @@ func (h *AuthHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 
 	meta := map[string]any{}
 	if beforeUser != nil {
-		before := map[string]any{"display_name": beforeUser.DisplayName, "avatar_url": beforeUser.AvatarURL, "timezone": beforeUser.Timezone, "date_format": beforeUser.DateFormat, "time_format": beforeUser.TimeFormat}
-		after := map[string]any{"display_name": user.DisplayName, "avatar_url": user.AvatarURL, "timezone": user.Timezone, "date_format": user.DateFormat, "time_format": user.TimeFormat}
+		before := map[string]any{"display_name": beforeUser.DisplayName, "timezone": beforeUser.Timezone, "date_format": beforeUser.DateFormat, "time_format": beforeUser.TimeFormat}
+		after := map[string]any{"display_name": user.DisplayName, "timezone": user.Timezone, "date_format": user.DateFormat, "time_format": user.TimeFormat}
 		meta["before"] = before
 		meta["after"] = after
 	}

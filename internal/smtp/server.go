@@ -12,10 +12,10 @@ import (
 
 // Server wraps the SMTP inbound processing pipeline.
 type Server struct {
-	cfg      config.SMTPConfig
-	handler  *Handler
-	queue    chan *InboundEmail
-	stopped  atomic.Bool
+	cfg     config.SMTPConfig
+	handler *Handler
+	queue   chan *InboundEmail
+	stopped atomic.Bool
 }
 
 func NewServer(cfg config.SMTPConfig, handler *Handler) *Server {

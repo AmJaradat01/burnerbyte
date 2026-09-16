@@ -2,7 +2,6 @@ export interface User {
   id: string;
   email: string;
   display_name: string;
-  avatar_url?: string;
   sso_provider?: string;
   is_system_admin: boolean;
   email_verified: boolean;

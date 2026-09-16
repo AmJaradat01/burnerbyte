@@ -43,7 +43,9 @@ func (r *WebhookRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Webhoo
 		Scan(&w.ID, &w.TeamID, &w.CreatedBy, &w.URL, &w.Secret, &events, &w.Active,
 			&w.LastStatus, &w.LastAttemptAt, &w.FailureCount, &w.CreatedAt, &w.UpdatedAt)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) { return nil, ErrNotFound }
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
 		return nil, err
 	}
 	_ = json.Unmarshal(events, &w.Events)
@@ -60,7 +62,9 @@ func (r *WebhookRepo) ListByTeam(ctx context.Context, teamID uuid.UUID, page, pe
 		`SELECT id, team_id, created_by, url, secret, events, active, last_status,
 		        last_attempt_at, failure_count, created_at, updated_at
 		 FROM webhooks WHERE team_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`, teamID, perPage, offset)
-	if err != nil { return nil, 0, err }
+	if err != nil {
+		return nil, 0, err
+	}
 	defer rows.Close()
 	var webhooks []domain.Webhook
 	for rows.Next() {
@@ -82,7 +86,9 @@ func (r *WebhookRepo) ListActiveByTeamAndEvent(ctx context.Context, teamID uuid.
 		        last_attempt_at, failure_count, created_at, updated_at
 		 FROM webhooks WHERE team_id = $1 AND active = TRUE AND events @> $2::jsonb`,
 		teamID, fmt.Sprintf(`["%s"]`, event))
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 	defer rows.Close()
 	var webhooks []domain.Webhook
 	for rows.Next() {
@@ -138,7 +144,9 @@ func (r *WebhookRepo) ListDeliveryLogs(ctx context.Context, webhookID uuid.UUID,
 	rows, err := r.db.Query(ctx,
 		`SELECT id, webhook_id, event, response_status, response_time_ms, success, attempt, created_at
 		 FROM webhook_delivery_logs WHERE webhook_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`, webhookID, perPage, offset)
-	if err != nil { return nil, 0, err }
+	if err != nil {
+		return nil, 0, err
+	}
 	defer rows.Close()
 	var logs []domain.WebhookDeliveryLog
 	for rows.Next() {

@@ -6,8 +6,8 @@ import (
 	"encoding/hex"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/amjaradat01/burnerbyte/internal/database"
+	"github.com/google/uuid"
 )
 
 type PasswordResetToken struct {

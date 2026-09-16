@@ -110,32 +110,56 @@ func (r *AnalyticsRepo) GetTeamStats(ctx context.Context, teamID uuid.UUID) (*do
 
 func (r *AnalyticsRepo) GetSystemStats(ctx context.Context) (*domain.SystemStats, error) {
 	stats := &domain.SystemStats{}
-	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM users`).Scan(&stats.TotalUsers); err != nil { return nil, err }
-	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM teams`).Scan(&stats.TotalTeams); err != nil { return nil, err }
-	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM domains`).Scan(&stats.TotalDomains); err != nil { return nil, err }
+	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM users`).Scan(&stats.TotalUsers); err != nil {
+		return nil, err
+	}
+	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM teams`).Scan(&stats.TotalTeams); err != nil {
+		return nil, err
+	}
+	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM domains`).Scan(&stats.TotalDomains); err != nil {
+		return nil, err
+	}
 	// Use cumulative counters for emails (emails table gets cleaned up as inboxes expire)
 	if err := r.db.QueryRow(ctx, `SELECT COALESCE(SUM(total_emails_received), 0) FROM org_analytics_counters`).Scan(&stats.TotalEmails); err != nil {
 		// Fallback to current emails table if counters table doesn't exist
-		if err2 := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM emails`).Scan(&stats.TotalEmails); err2 != nil { return nil, err2 }
+		if err2 := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM emails`).Scan(&stats.TotalEmails); err2 != nil {
+			return nil, err2
+		}
 	}
-	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM inboxes`).Scan(&stats.TotalInboxes); err != nil { return nil, err }
-	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM inboxes WHERE is_active = TRUE AND expires_at > NOW()`).Scan(&stats.ActiveInboxes); err != nil { return nil, err }
-	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM sessions WHERE revoked = FALSE AND expires_at > NOW()`).Scan(&stats.TotalSessions); err != nil { return nil, err }
-	if err := r.db.QueryRow(ctx, `SELECT COALESCE(SUM(inboxes_created_count), 0) FROM domains`).Scan(&stats.TotalInboxesCreated); err != nil { return nil, err }
+	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM inboxes`).Scan(&stats.TotalInboxes); err != nil {
+		return nil, err
+	}
+	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM inboxes WHERE is_active = TRUE AND expires_at > NOW()`).Scan(&stats.ActiveInboxes); err != nil {
+		return nil, err
+	}
+	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM sessions WHERE revoked = FALSE AND expires_at > NOW()`).Scan(&stats.TotalSessions); err != nil {
+		return nil, err
+	}
+	if err := r.db.QueryRow(ctx, `SELECT COALESCE(SUM(inboxes_created_count), 0) FROM domains`).Scan(&stats.TotalInboxesCreated); err != nil {
+		return nil, err
+	}
 	// Use cumulative counters for storage (emails table gets cleaned up)
 	if err := r.db.QueryRow(ctx, `SELECT COALESCE(SUM(total_storage_bytes), 0) FROM org_analytics_counters`).Scan(&stats.StorageUsedBytes); err != nil {
 		// Fallback to current emails table if counters table doesn't exist
-		if err2 := r.db.QueryRow(ctx, `SELECT COALESCE(SUM(size_bytes), 0) FROM emails`).Scan(&stats.StorageUsedBytes); err2 != nil { return nil, err2 }
+		if err2 := r.db.QueryRow(ctx, `SELECT COALESCE(SUM(size_bytes), 0) FROM emails`).Scan(&stats.StorageUsedBytes); err2 != nil {
+			return nil, err2
+		}
 	}
-	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM webhooks`).Scan(&stats.TotalWebhooks); err != nil { return nil, err }
-	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM api_keys WHERE (expires_at IS NULL OR expires_at > NOW())`).Scan(&stats.TotalAPIKeys); err != nil { return nil, err }
+	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM webhooks`).Scan(&stats.TotalWebhooks); err != nil {
+		return nil, err
+	}
+	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM api_keys WHERE (expires_at IS NULL OR expires_at > NOW())`).Scan(&stats.TotalAPIKeys); err != nil {
+		return nil, err
+	}
 	return stats, nil
 }
 
 // GetOrgEmailsPerDay reads from persistent daily_email_stats (survives email deletion).
 func (r *AnalyticsRepo) GetOrgEmailsPerDay(ctx context.Context, orgID uuid.UUID, days ...int) ([]domain.TimeSeriesPoint, error) {
 	d := 30
-	if len(days) > 0 && days[0] > 0 { d = days[0] }
+	if len(days) > 0 && days[0] > 0 {
+		d = days[0]
+	}
 	rows, err := r.db.Query(ctx,
 		`SELECT d::date, COALESCE(sub.emails_received, 0) FROM generate_series(
 		  (NOW() - make_interval(days => $2))::date, NOW()::date, '1 day'::interval
@@ -166,7 +190,9 @@ func (r *AnalyticsRepo) GetOrgEmailsPerDay(ctx context.Context, orgID uuid.UUID,
 // GetOrgInboxesPerDay reads from persistent daily_email_stats (survives inbox deletion).
 func (r *AnalyticsRepo) GetOrgInboxesPerDay(ctx context.Context, orgID uuid.UUID, days ...int) ([]domain.TimeSeriesPoint, error) {
 	d := 30
-	if len(days) > 0 && days[0] > 0 { d = days[0] }
+	if len(days) > 0 && days[0] > 0 {
+		d = days[0]
+	}
 	rows, err := r.db.Query(ctx,
 		`SELECT d::date, COALESCE(sub.inboxes_created, 0) FROM generate_series(
 		  (NOW() - make_interval(days => $2))::date, NOW()::date, '1 day'::interval
@@ -194,7 +220,9 @@ func (r *AnalyticsRepo) GetOrgInboxesPerDay(ctx context.Context, orgID uuid.UUID
 // GetOrgPeakHours reads from persistent hourly_email_stats (survives email deletion).
 func (r *AnalyticsRepo) GetOrgPeakHours(ctx context.Context, orgID uuid.UUID, days ...int) ([]domain.HourlyPoint, error) {
 	d := 30
-	if len(days) > 0 && days[0] > 0 { d = days[0] }
+	if len(days) > 0 && days[0] > 0 {
+		d = days[0]
+	}
 	rows, err := r.db.Query(ctx,
 		`SELECT hour, SUM(emails_received) AS cnt
 		 FROM hourly_email_stats
@@ -278,7 +306,9 @@ func (r *AnalyticsRepo) GetOrgStoragePerDay(ctx context.Context, orgID uuid.UUID
 // GetTeamInboxesPerDay reads from persistent daily_team_email_stats (survives inbox deletion).
 func (r *AnalyticsRepo) GetTeamInboxesPerDay(ctx context.Context, teamID uuid.UUID, days ...int) ([]domain.TimeSeriesPoint, error) {
 	d := 30
-	if len(days) > 0 && days[0] > 0 { d = days[0] }
+	if len(days) > 0 && days[0] > 0 {
+		d = days[0]
+	}
 	rows, err := r.db.Query(ctx,
 		`SELECT d::date, COALESCE(sub.inboxes_created, 0) FROM generate_series(
 		  (NOW() - make_interval(days => $2))::date, NOW()::date, '1 day'::interval
@@ -306,7 +336,9 @@ func (r *AnalyticsRepo) GetTeamInboxesPerDay(ctx context.Context, teamID uuid.UU
 // GetTeamStoragePerDay reads from persistent daily_team_email_stats (survives email deletion).
 func (r *AnalyticsRepo) GetTeamStoragePerDay(ctx context.Context, teamID uuid.UUID, days ...int) ([]domain.StoragePoint, error) {
 	d := 30
-	if len(days) > 0 && days[0] > 0 { d = days[0] }
+	if len(days) > 0 && days[0] > 0 {
+		d = days[0]
+	}
 	rows, err := r.db.Query(ctx,
 		`SELECT d::date, COALESCE(sub.storage_bytes, 0) FROM generate_series(
 		  (NOW() - make_interval(days => $2))::date, NOW()::date, '1 day'::interval
@@ -373,7 +405,9 @@ func (r *AnalyticsRepo) OrgHasDomain(ctx context.Context, orgID uuid.UUID, domai
 // GetTeamEmailsPerDay reads from persistent daily_team_email_stats (survives email deletion).
 func (r *AnalyticsRepo) GetTeamEmailsPerDay(ctx context.Context, teamID uuid.UUID, days ...int) ([]domain.TimeSeriesPoint, error) {
 	d := 30
-	if len(days) > 0 && days[0] > 0 { d = days[0] }
+	if len(days) > 0 && days[0] > 0 {
+		d = days[0]
+	}
 	rows, err := r.db.Query(ctx,
 		`SELECT d::date, COALESCE(sub.emails_received, 0) FROM generate_series(
 		  (NOW() - make_interval(days => $2))::date, NOW()::date, '1 day'::interval

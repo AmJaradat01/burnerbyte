@@ -29,8 +29,8 @@ func (r *TeamRepo) WithTx(tx database.DBTX) *TeamRepo {
 func (r *TeamRepo) Create(ctx context.Context, t *domain.Team) error {
 	settings, _ := json.Marshal(t.Settings)
 	_, err := r.db.Exec(ctx,
-		`INSERT INTO teams (id, org_id, name, slug, description, avatar_url, settings) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-		t.ID, t.OrgID, t.Name, t.Slug, t.Description, t.AvatarURL, settings)
+		`INSERT INTO teams (id, org_id, name, slug, description, settings) VALUES ($1, $2, $3, $4, $5, $6)`,
+		t.ID, t.OrgID, t.Name, t.Slug, t.Description, settings)
 	if err != nil {
 		if isUniqueViolation(err) {
 			return ErrConflict
@@ -44,8 +44,8 @@ func (r *TeamRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Team, err
 	var t domain.Team
 	var settings []byte
 	err := r.db.QueryRow(ctx,
-		`SELECT id, org_id, name, slug, description, avatar_url, is_archived, archived_at, settings, created_at, updated_at FROM teams WHERE id = $1`, id).
-		Scan(&t.ID, &t.OrgID, &t.Name, &t.Slug, &t.Description, &t.AvatarURL, &t.IsArchived, &t.ArchivedAt, &settings, &t.CreatedAt, &t.UpdatedAt)
+		`SELECT id, org_id, name, slug, description, is_archived, archived_at, settings, created_at, updated_at FROM teams WHERE id = $1`, id).
+		Scan(&t.ID, &t.OrgID, &t.Name, &t.Slug, &t.Description, &t.IsArchived, &t.ArchivedAt, &settings, &t.CreatedAt, &t.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNotFound
@@ -75,7 +75,7 @@ func (r *TeamRepo) GetDetail(ctx context.Context, id uuid.UUID) (*domain.TeamDet
 	var td domain.TeamDetail
 	var settings []byte
 	err := r.db.QueryRow(ctx,
-		`SELECT t.id, t.org_id, t.name, t.slug, t.description, t.avatar_url, t.is_archived, t.archived_at, t.settings, t.created_at, t.updated_at,
+		`SELECT t.id, t.org_id, t.name, t.slug, t.description, t.is_archived, t.archived_at, t.settings, t.created_at, t.updated_at,
 		        (SELECT COUNT(*) FROM team_memberships tm WHERE tm.team_id = t.id),
 		        (SELECT COUNT(DISTINCT da.domain_id) FROM domain_assignments da WHERE da.team_id = t.id),
 		        (SELECT COUNT(*) FROM inboxes i JOIN domain_assignments da ON i.domain_assignment_id = da.id WHERE da.team_id = t.id AND i.is_active = TRUE),
@@ -84,7 +84,7 @@ func (r *TeamRepo) GetDetail(ctx context.Context, id uuid.UUID) (*domain.TeamDet
 		        (SELECT COUNT(*) FROM webhooks wh WHERE wh.team_id = t.id),
 		        (SELECT COUNT(*) FROM api_keys ak WHERE ak.team_id = t.id AND ak.revoked_at IS NULL)
 		 FROM teams t WHERE t.id = $1`, id).
-		Scan(&td.ID, &td.OrgID, &td.Name, &td.Slug, &td.Description, &td.AvatarURL, &td.IsArchived, &td.ArchivedAt, &settings, &td.CreatedAt, &td.UpdatedAt,
+		Scan(&td.ID, &td.OrgID, &td.Name, &td.Slug, &td.Description, &td.IsArchived, &td.ArchivedAt, &settings, &td.CreatedAt, &td.UpdatedAt,
 			&td.MemberCount, &td.DomainCount, &td.ActiveInboxes,
 			&td.TotalInboxes, &td.EmailCount, &td.WebhookCount, &td.APIKeyCount)
 	if err != nil {
@@ -142,7 +142,7 @@ func (r *TeamRepo) ListByOrg(ctx context.Context, orgID uuid.UUID, opts ListTeam
 	// Data query
 	offset := (opts.Page - 1) * opts.PerPage
 	dataQuery := fmt.Sprintf(
-		`SELECT t.id, t.org_id, t.name, t.slug, t.description, t.avatar_url, t.is_archived, t.archived_at, t.settings, t.created_at, t.updated_at,
+		`SELECT t.id, t.org_id, t.name, t.slug, t.description, t.is_archived, t.archived_at, t.settings, t.created_at, t.updated_at,
 		        (SELECT COUNT(*) FROM team_memberships tm WHERE tm.team_id = t.id),
 		        (SELECT COUNT(DISTINCT da.domain_id) FROM domain_assignments da WHERE da.team_id = t.id),
 		        (SELECT COUNT(*) FROM inboxes i JOIN domain_assignments da ON i.domain_assignment_id = da.id WHERE da.team_id = t.id AND i.is_active = TRUE)
@@ -159,7 +159,7 @@ func (r *TeamRepo) ListByOrg(ctx context.Context, orgID uuid.UUID, opts ListTeam
 	for rows.Next() {
 		var t domain.Team
 		var settings []byte
-		if err := rows.Scan(&t.ID, &t.OrgID, &t.Name, &t.Slug, &t.Description, &t.AvatarURL, &t.IsArchived, &t.ArchivedAt, &settings, &t.CreatedAt, &t.UpdatedAt,
+		if err := rows.Scan(&t.ID, &t.OrgID, &t.Name, &t.Slug, &t.Description, &t.IsArchived, &t.ArchivedAt, &settings, &t.CreatedAt, &t.UpdatedAt,
 			&t.MemberCount, &t.DomainCount, &t.ActiveInboxes); err != nil {
 			return nil, 0, err
 		}
@@ -205,7 +205,7 @@ func (r *TeamRepo) ListByUserMembership(ctx context.Context, orgID, userID uuid.
 	// Data query
 	offset := (opts.Page - 1) * opts.PerPage
 	dataQuery := fmt.Sprintf(
-		`SELECT t.id, t.org_id, t.name, t.slug, t.description, t.avatar_url, t.is_archived, t.archived_at, t.settings, t.created_at, t.updated_at,
+		`SELECT t.id, t.org_id, t.name, t.slug, t.description, t.is_archived, t.archived_at, t.settings, t.created_at, t.updated_at,
 		        (SELECT COUNT(*) FROM team_memberships tm2 WHERE tm2.team_id = t.id),
 		        (SELECT COUNT(DISTINCT da.domain_id) FROM domain_assignments da WHERE da.team_id = t.id),
 		        (SELECT COUNT(*) FROM inboxes i JOIN domain_assignments da ON i.domain_assignment_id = da.id WHERE da.team_id = t.id AND i.is_active = TRUE)
@@ -222,7 +222,7 @@ func (r *TeamRepo) ListByUserMembership(ctx context.Context, orgID, userID uuid.
 	for rows.Next() {
 		var t domain.Team
 		var settings []byte
-		if err := rows.Scan(&t.ID, &t.OrgID, &t.Name, &t.Slug, &t.Description, &t.AvatarURL, &t.IsArchived, &t.ArchivedAt, &settings, &t.CreatedAt, &t.UpdatedAt,
+		if err := rows.Scan(&t.ID, &t.OrgID, &t.Name, &t.Slug, &t.Description, &t.IsArchived, &t.ArchivedAt, &settings, &t.CreatedAt, &t.UpdatedAt,
 			&t.MemberCount, &t.DomainCount, &t.ActiveInboxes); err != nil {
 			return nil, 0, err
 		}
@@ -235,8 +235,8 @@ func (r *TeamRepo) ListByUserMembership(ctx context.Context, orgID, userID uuid.
 func (r *TeamRepo) Update(ctx context.Context, t *domain.Team) error {
 	settings, _ := json.Marshal(t.Settings)
 	_, err := r.db.Exec(ctx,
-		`UPDATE teams SET name=$1, slug=$2, description=$3, avatar_url=$4, settings=$5 WHERE id=$6`,
-		t.Name, t.Slug, t.Description, t.AvatarURL, settings, t.ID)
+		`UPDATE teams SET name=$1, slug=$2, description=$3, settings=$4 WHERE id=$5`,
+		t.Name, t.Slug, t.Description, settings, t.ID)
 	return err
 }
 

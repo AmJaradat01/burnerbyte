@@ -56,7 +56,9 @@ func (h *NotifHub) Unregister(c *NotifClient) {
 
 func (h *NotifHub) Notify(userID uuid.UUID, msg Message) {
 	data, err := json.Marshal(msg)
-	if err != nil { return }
+	if err != nil {
+		return
+	}
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	for c := range h.clients[userID] {

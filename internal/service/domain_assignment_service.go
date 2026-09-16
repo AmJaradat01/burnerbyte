@@ -81,8 +81,12 @@ func (s *DomainAssignmentService) ListByUser(ctx context.Context, userID uuid.UU
 }
 
 func (s *DomainAssignmentService) ListByTeam(ctx context.Context, teamID uuid.UUID, page, perPage int) ([]domain.DomainAssignment, int, error) {
-	if page < 1 { page = 1 }
-	if perPage < 1 || perPage > 100 { perPage = 20 }
+	if page < 1 {
+		page = 1
+	}
+	if perPage < 1 || perPage > 100 {
+		perPage = 20
+	}
 	return s.assignmentRepo.ListByTeam(ctx, teamID, page, perPage)
 }
 

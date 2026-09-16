@@ -321,7 +321,7 @@ func (r *OrgRepo) SearchMembers(ctx context.Context, orgID uuid.UUID, query stri
 	var args []any
 
 	if excludeTeamID != nil {
-		sql = `SELECT u.id, u.email, u.display_name, u.avatar_url
+		sql = `SELECT u.id, u.email, u.display_name
 		       FROM org_memberships om
 		       JOIN users u ON om.user_id = u.id
 		       WHERE om.org_id = $1
@@ -335,7 +335,7 @@ func (r *OrgRepo) SearchMembers(ctx context.Context, orgID uuid.UUID, query stri
 		       LIMIT $5`
 		args = []any{orgID, pattern, *excludeTeamID, query, limit}
 	} else {
-		sql = `SELECT u.id, u.email, u.display_name, u.avatar_url
+		sql = `SELECT u.id, u.email, u.display_name
 		       FROM org_memberships om
 		       JOIN users u ON om.user_id = u.id
 		       WHERE om.org_id = $1
@@ -358,7 +358,7 @@ func (r *OrgRepo) SearchMembers(ctx context.Context, orgID uuid.UUID, query stri
 	var results []domain.OrgMemberSuggestion
 	for rows.Next() {
 		var s domain.OrgMemberSuggestion
-		if err := rows.Scan(&s.UserID, &s.Email, &s.DisplayName, &s.AvatarURL); err != nil {
+		if err := rows.Scan(&s.UserID, &s.Email, &s.DisplayName); err != nil {
 			return nil, fmt.Errorf("scan member suggestion: %w", err)
 		}
 		results = append(results, s)
