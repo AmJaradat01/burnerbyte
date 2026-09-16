@@ -4,7 +4,6 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -50,25 +49,19 @@ func NewWSHandler(hub *realtime.Hub, inboxGetter InboxGetter, allowedOrigins []s
 	}
 }
 
+// checkOrigin compares the whole origin — scheme, host and port — not just
+// the hostname. Matching on hostname alone let an allowlist entry of
+// https://app.example.com also admit http://app.example.com and
+// http://app.example.com:1337, and this is the socket that carries email
+// content. The notification and admin sockets already compared in full;
+// this one was the odd on out.
 func (h *WSHandler) checkOrigin(r *http.Request) bool {
 	origin := r.Header.Get("Origin")
 	if origin == "" {
-		return true // Non-browser clients
+		return true // Non-browser clients send no Origin.
 	}
-	u, err := url.Parse(origin)
-	if err != nil {
-		return false
-	}
-	originHost := u.Hostname()
 	for _, allowed := range h.allowedOrigins {
-		if allowed == "*" {
-			return true
-		}
-		au, err := url.Parse(allowed)
-		if err != nil {
-			continue // Skip unparseable entries
-		}
-		if strings.EqualFold(au.Hostname(), originHost) {
+		if allowed == "*" || strings.EqualFold(allowed, origin) {
 			return true
 		}
 	}

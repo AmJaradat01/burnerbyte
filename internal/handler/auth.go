@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -24,13 +25,14 @@ import (
 )
 
 type AuthHandler struct {
-	svc *service.AuthService
-	sso *auth.SSOManager
-	cfg *config.Config
+	svc      *service.AuthService
+	sso      *auth.SSOManager
+	cfg      *config.Config
+	ssoState *auth.SSOStateStore
 }
 
-func NewAuthHandler(svc *service.AuthService, sso *auth.SSOManager, cfg *config.Config) *AuthHandler {
-	return &AuthHandler{svc: svc, sso: sso, cfg: cfg}
+func NewAuthHandler(svc *service.AuthService, sso *auth.SSOManager, cfg *config.Config, ssoState *auth.SSOStateStore) *AuthHandler {
+	return &AuthHandler{svc: svc, sso: sso, cfg: cfg, ssoState: ssoState}
 }
 
 func (h *AuthHandler) PublicRoutes(r chi.Router, rl *middleware.RateLimiter) {
@@ -585,19 +587,30 @@ func (h *AuthHandler) SSORedirect(w http.ResponseWriter, r *http.Request) {
 		scheme = "https"
 	}
 
-	// Store state + intent + user_id (if linking) in cookie
-	stateValue := state
+	// The intent is recorded server-side against the random state value. The
+	// cookie carries only that opaque value, so a client that can write the
+	// cookie still cannot choose which account a link targets.
+	var linkUser *uuid.UUID
 	if intent == "link" {
 		uc := auth.GetUser(r.Context())
-		if uc != nil {
-			stateValue = state + "|link|" + uc.UserID.String()
-		} else {
-			stateValue = state + "|link|"
+		if uc == nil {
+			// A link must be started from an authenticated session. Without
+			// one there is no account to attach the identity to.
+			writeError(w, http.StatusUnauthorized, "sign in before linking an SSO account")
+			return
 		}
+		linkUser = &uc.UserID
+	} else {
+		intent = ""
+	}
+	if err := h.ssoState.Store(r.Context(), state, intent, origin, linkUser); err != nil {
+		slog.Error("failed to store SSO state", "error", err, "provider", providerName)
+		writeError(w, http.StatusInternalServerError, "failed to start SSO")
+		return
 	}
 
 	http.SetCookie(w, &http.Cookie{
-		Name: "sso_state", Value: stateValue, Path: "/", MaxAge: 600,
+		Name: "sso_state", Value: state, Path: "/", MaxAge: 600,
 		HttpOnly: true, SameSite: http.SameSiteLaxMode,
 		Secure: scheme == "https",
 	})
@@ -626,31 +639,27 @@ func (h *AuthHandler) SSOCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse state cookie: may be "state" or "state|link|userID"
-	cookieValue := cookie.Value
+	// The cookie must echo the state the provider returned; constant-time so
+	// the comparison leaks nothing about the expected value.
 	stateParam := r.URL.Query().Get("state")
-	intent := ""
-	linkUserID := ""
-
-	parts := strings.SplitN(cookieValue, "|", 3)
-	if len(parts) >= 2 {
-		if parts[0] != stateParam {
-			writeError(w, http.StatusBadRequest, "invalid state parameter")
-			return
-		}
-		intent = parts[1]
-		if len(parts) == 3 {
-			linkUserID = parts[2]
-		}
-	} else {
-		if cookieValue != stateParam {
-			writeError(w, http.StatusBadRequest, "invalid state parameter")
-			return
-		}
+	if stateParam == "" || subtle.ConstantTimeCompare([]byte(cookie.Value), []byte(stateParam)) != 1 {
+		writeError(w, http.StatusBadRequest, "invalid state parameter")
+		return
 	}
 
 	// Clear state cookie
 	http.SetCookie(w, &http.Cookie{Name: "sso_state", Path: "/", MaxAge: -1})
+
+	// The intent and the link target come from the server's own record, not
+	// from anything the client held. Consuming deletes it, so a callback
+	// cannot be replayed.
+	stateData, err := h.ssoState.Consume(r.Context(), stateParam)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid or expired state")
+		return
+	}
+	intent := stateData.Intent
+	linkUserID := stateData.UserID
 
 	// Read and clear origin cookie
 	frontendURL := h.cfg.Server.FrontendURL

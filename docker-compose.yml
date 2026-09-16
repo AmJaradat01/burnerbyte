@@ -38,6 +38,8 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
 
   redis:
     image: redis:7-alpine
@@ -50,6 +52,8 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
 
   minio:
     # MinIO no longer publishes to Docker Hub; quay.io is the official
@@ -67,6 +71,8 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
 
   # One-shot schema migration. Runs golang-migrate against postgres and exits;
   # api and smtpd wait for it to complete successfully. "up" is idempotent (a
@@ -147,6 +153,12 @@ services:
       retries: 5
       start_period: 20s
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    # A single static binary running as a non-root user: no capability is
+    # needed. (smtpd listens on 2525, so not even NET_BIND_SERVICE.)
+    cap_drop:
+      - ALL
 
   smtpd:
     build:
@@ -187,6 +199,12 @@ services:
       migrate:
         condition: service_completed_successfully
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    # A single static binary running as a non-root user: no capability is
+    # needed. (smtpd listens on 2525, so not even NET_BIND_SERVICE.)
+    cap_drop:
+      - ALL
 
   frontend:
     build:
@@ -209,6 +227,12 @@ services:
       api:
         condition: service_healthy
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    # A single static binary running as a non-root user: no capability is
+    # needed. (smtpd listens on 2525, so not even NET_BIND_SERVICE.)
+    cap_drop:
+      - ALL
 
 volumes:
   pgdata:

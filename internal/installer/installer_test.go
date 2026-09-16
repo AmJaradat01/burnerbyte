@@ -1,6 +1,7 @@
 package installer
 
 import (
+	"encoding/hex"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -102,15 +103,61 @@ func TestWriteConfigRoundTrip(t *testing.T) {
 	}
 }
 
-func TestWriteConfigOmitsBlankEncryption(t *testing.T) {
+// Leaving the key blank used to omit the encryption section entirely, so SSO
+// client secrets, SMTP passwords and storage credentials were written to
+// columns named *_encrypted in plain text — with a startup warning as the
+// only signal. The installer now generates one, making encryption at rest
+// what an operator gets by default.
+func TestWriteConfigGeneratesEncryptionKeyWhenBlank(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.yaml")
 	in := installInput{DatabaseURL: "postgres://h/db", RedisURL: "redis://h", JWTSecret: strings.Repeat("k", 40)}
 	if err := writeConfig(path, &config.Config{}, in); err != nil {
 		t.Fatalf("writeConfig: %v", err)
 	}
+	var doc struct {
+		Encryption struct {
+			Key string `yaml:"key"`
+		} `yaml:"encryption"`
+	}
 	raw, _ := os.ReadFile(path)
-	if strings.Contains(string(raw), "encryption") {
-		t.Error("encryption section should be omitted when no key is provided")
+	if err := yaml.Unmarshal(raw, &doc); err != nil {
+		t.Fatalf("unmarshal generated config: %v", err)
+	}
+	if len(doc.Encryption.Key) != 64 {
+		t.Fatalf("encryption key = %q, want 64 hex characters", doc.Encryption.Key)
+	}
+	if _, err := hex.DecodeString(doc.Encryption.Key); err != nil {
+		t.Errorf("encryption key is not hex: %v", err)
+	}
+
+	// Two installs must not share a key.
+	second := filepath.Join(t.TempDir(), "config.yaml")
+	if err := writeConfig(second, &config.Config{}, in); err != nil {
+		t.Fatalf("writeConfig: %v", err)
+	}
+	var doc2 struct {
+		Encryption struct {
+			Key string `yaml:"key"`
+		} `yaml:"encryption"`
+	}
+	raw2, _ := os.ReadFile(second)
+	_ = yaml.Unmarshal(raw2, &doc2)
+	if doc2.Encryption.Key == doc.Encryption.Key {
+		t.Error("two installs produced the same encryption key")
+	}
+}
+
+// An operator-supplied key is used as given.
+func TestWriteConfigKeepsProvidedEncryptionKey(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	provided := strings.Repeat("ab", 32)
+	in := installInput{DatabaseURL: "postgres://h/db", RedisURL: "redis://h", JWTSecret: strings.Repeat("k", 40), EncryptionKey: provided}
+	if err := writeConfig(path, &config.Config{}, in); err != nil {
+		t.Fatalf("writeConfig: %v", err)
+	}
+	raw, _ := os.ReadFile(path)
+	if !strings.Contains(string(raw), provided) {
+		t.Error("the provided encryption key was not written")
 	}
 }
 
