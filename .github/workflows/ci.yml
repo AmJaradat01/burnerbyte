@@ -141,10 +141,13 @@ jobs:
       # and mixing the two buries the ones that do. The threshold is "high":
       # moderates are reported without failing the build.
       #
-      # Known exception: image-size, pulled in by fumadocs to measure images
-      # while building the docs, carries two high advisories with no patched
-      # release upstream. Its parser only ever sees images committed to this
-      # repository, so there is no untrusted input on that path.
+      # There is no allowlist. image-size was excepted for one release on the
+      # grounds that no patched version existed — which came from trusting the
+      # advisory's own "patched_versions" field, where it was empty. A newer
+      # release did exist and fixed it. An exception that outlives its reason
+      # silently swallows the next advisory for the same package, so the list
+      # is gone rather than emptied: reinstating one has to be a deliberate
+      # edit, with the reasoning written down next to it.
       - name: pnpm audit
         working-directory: web
         run: |
@@ -154,15 +157,14 @@ jobs:
           import json, sys
           with open("audit.json") as f:
               data = json.load(f)
-          allowed = {"image-size"}
           blocking = [
               a for a in data.get("advisories", {}).values()
-              if a.get("severity") in ("high", "critical") and a.get("module_name") not in allowed
+              if a.get("severity") in ("high", "critical")
           ]
           for a in blocking:
               print(f"{a['severity']}: {a['module_name']} — {a['title']} (fix {a['patched_versions']})")
           if blocking:
               print(f"\n{len(blocking)} high or critical advisories in the production tree.")
               sys.exit(1)
-          print("No unexpected high or critical advisories in the production tree.")
+          print("No high or critical advisories in the production tree.")
           EOF
