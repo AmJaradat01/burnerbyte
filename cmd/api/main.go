@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -106,6 +107,10 @@ func main() {
 	}
 
 	// Auth components
+	auth.AllowTokenQueryParam = cfg.Security.AllowTokenQueryParam
+	if cfg.Security.AllowTokenQueryParam {
+		slog.Warn("security.allow_token_query_param is enabled: access tokens passed as ?token= are captured by reverse-proxy access logs and browser history; prefer the one-time /ws/ticket flow")
+	}
 	tokenMgr := auth.NewTokenManager(cfg.JWT)
 	lockout := auth.NewLockout(rdb, cfg.Lockout.MaxAttempts, cfg.Lockout.Duration)
 
@@ -321,6 +326,19 @@ func main() {
 			if parsed == nil || (!parsed.IsLoopback() && !parsed.IsPrivate()) {
 				http.Error(w, "forbidden", http.StatusForbidden)
 				return
+			}
+			// The address check above still rests on the proxy overwriting
+			// inbound X-Forwarded-For and X-Real-IP. A bearer token does not
+			// rest on anyone's proxy configuration, so when one is set it is
+			// required as well. Prometheus sends it via bearer_token.
+			if cfg.Metrics.Token != "" {
+				const prefix = "Bearer "
+				got := r.Header.Get("Authorization")
+				if len(got) <= len(prefix) || !strings.EqualFold(got[:len(prefix)], prefix) ||
+					subtle.ConstantTimeCompare([]byte(got[len(prefix):]), []byte(cfg.Metrics.Token)) != 1 {
+					http.Error(w, "forbidden", http.StatusForbidden)
+					return
+				}
 			}
 			promhttp.Handler().ServeHTTP(w, r)
 		}))

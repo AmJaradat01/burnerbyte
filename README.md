@@ -245,7 +245,7 @@ per-endpoint reference.
 
 ## Database
 
-47 migrations produce 36 tables, 74 indexes and 7 triggers. Migrations are
+49 migrations produce 36 tables, 74 indexes and 8 triggers. Migrations are
 applied by the `migrate` service in Docker, or by `make migrate-up` locally.
 
 <details>

@@ -144,6 +144,17 @@ logging:
 metrics:
   enabled: true
   path: /metrics
+  # When set, /metrics also requires "Authorization: Bearer <token>" on top of
+  # the loopback/private-address check, which otherwise depends on the proxy
+  # overwriting inbound X-Forwarded-For and X-Real-IP.
+  token: ""
+
+security:
+  # Re-enables "?token=<jwt>" on the WebSocket endpoints; the browser client
+  # uses the one-time ?ticket= flow instead.
+  allow_token_query_param: false
+  # Refuse password logins until the email address is confirmed.
+  require_email_verification: false
 
 workers:
   dns_recheck_interval: 1h

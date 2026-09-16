@@ -31,6 +31,7 @@ type Config struct {
 	Encryption        EncryptionConfig        `mapstructure:"encryption"`
 	Demo              DemoConfig              `mapstructure:"demo"`
 	AuthCookie        CookieConfig            `mapstructure:"auth_cookie"`
+	Security          SecurityConfig          `mapstructure:"security"`
 
 	// mu guards the runtime-mutable settings groups (Password, Lockout,
 	// Defaults, EmailVerification) that PUT /admin/platform updates while
@@ -255,9 +256,28 @@ type LoggingConfig struct {
 	Format string `mapstructure:"format"`
 }
 
+type SecurityConfig struct {
+	// AllowTokenQueryParam re-enables "?token=<jwt>" on the WebSocket
+	// endpoints. The browser client uses the one-time ?ticket= flow instead;
+	// a token in a URL lands in reverse-proxy access logs and browser
+	// history, so this is off unless a non-browser client still needs it.
+	AllowTokenQueryParam bool `mapstructure:"allow_token_query_param"`
+	// RequireEmailVerification refuses password logins until the address has
+	// been confirmed. Off by default: turning it on for an existing
+	// deployment would lock out every account created before verification
+	// was enforced.
+	RequireEmailVerification bool `mapstructure:"require_email_verification"`
+}
+
 type MetricsConfig struct {
 	Enabled bool   `mapstructure:"enabled"`
 	Path    string `mapstructure:"path"`
+	// Token, when set, is required as a bearer credential on /metrics in
+	// addition to the loopback/private-address check. The address check alone
+	// depends on the reverse proxy overwriting inbound X-Forwarded-For and
+	// X-Real-IP; a token does not depend on anyone's proxy configuration.
+	// Prometheus supports this natively via scrape_config.bearer_token.
+	Token string `mapstructure:"token"`
 }
 
 type WorkersConfig struct {
@@ -402,7 +422,7 @@ func Load() (*Config, error) {
 	// bcrypt.DefaultCost. auth.HashPassword already falls back to it when the
 	// value is out of range, so this only makes BB_PASSWORD_POLICY_BCRYPT_COST
 	// actually reachable.
-	v.SetDefault("password_policy.bcrypt_cost", 10)
+	v.SetDefault("password_policy.bcrypt_cost", 12)
 
 	// Platform defaults / limits
 	v.SetDefault("defaults.attachments_enabled", true)
@@ -435,8 +455,11 @@ func Load() (*Config, error) {
 	// Logging / metrics
 	v.SetDefault("logging.level", "info")
 	v.SetDefault("logging.format", "json")
+	v.SetDefault("security.allow_token_query_param", false)
+	v.SetDefault("security.require_email_verification", false)
 	v.SetDefault("metrics.enabled", true)
 	v.SetDefault("metrics.path", "/metrics")
+	v.SetDefault("metrics.token", "")
 
 	// Background-worker intervals — unregistered they unmarshal to 0 and the
 	// worker logs "invalid interval, skipping" instead of running.
