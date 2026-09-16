@@ -1,5 +1,5 @@
 # ── Build stage ──
-FROM golang:1.25-alpine3.23 AS builder
+FROM golang:1.26.8-alpine3.23 AS builder
 
 RUN apk add --no-cache git
 
@@ -22,7 +22,7 @@ RUN CGO_ENABLED=0 go build -ldflags "-X main.Version=${VERSION}" -o /bin/smtpd .
 # (every operational key has a registered default since v1.0.3), and config.yaml
 # is gitignored/per-deployment, so copying it would break the build on a clean
 # checkout. Mount one at /etc/burnerbyte/config.yaml to override via file instead.
-FROM alpine:3.20 AS api
+FROM alpine:3.23 AS api
 RUN apk add --no-cache ca-certificates tzdata && adduser -D -H appuser
 COPY --from=builder /bin/api /usr/local/bin/api
 COPY migrations /migrations
@@ -32,7 +32,7 @@ EXPOSE 8080
 ENTRYPOINT ["api"]
 
 # ── SMTP image ──
-FROM alpine:3.20 AS smtpd
+FROM alpine:3.23 AS smtpd
 RUN apk add --no-cache ca-certificates tzdata && adduser -D -H appuser
 COPY --from=builder /bin/smtpd /usr/local/bin/smtpd
 # Same local-storage fallback as the api image: if MinIO is unreachable at boot

@@ -25,9 +25,11 @@ export function buildSandboxedHtml(html: string, blockRemote: boolean): string {
       pre { overflow-x: auto; background: #f5f5f5; padding: 12px; border-radius: 6px; }
     </style>
   `;
-  // Inject CSP + base styles before closing </head> or at the start.
-  if (html.includes("</head>")) {
-    return html.replace("</head>", `${head}</head>`);
-  }
+  // Always prepend. Splicing the policy in before the sender's own </head>
+  // put it *after* anything they had already placed in that head, and a meta
+  // CSP only governs what follows it — so a <link rel="stylesheet"> or an
+  // @import higher up still fetched, leaking the reader's IP while the
+  // interface reported images as blocked. A policy at the very top of the
+  // document cannot be outrun by markup order.
   return `${head}${html}`;
 }

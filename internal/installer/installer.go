@@ -191,6 +191,9 @@ func validate(in installInput) string {
 	if len(in.JWTSecret) < 32 {
 		return "JWT secret must be at least 32 characters"
 	}
+	if config.IsPublishedDefaultJWTSecret(in.JWTSecret) {
+		return "that JWT secret is the placeholder published in this repository; generate a random one (openssl rand -hex 32)"
+	}
 	if in.EncryptionKey != "" {
 		if _, err := hex.DecodeString(in.EncryptionKey); err != nil || len(in.EncryptionKey) != 64 {
 			return "encryption key must be a 64-character hex string (32 bytes), or left blank"
@@ -245,9 +248,20 @@ func writeConfig(path string, cfg *config.Config, in installInput) error {
 		"redis":    map[string]any{"url": in.RedisURL},
 		"jwt":      map[string]any{"secret": in.JWTSecret},
 	}
-	if in.EncryptionKey != "" {
-		doc["encryption"] = map[string]any{"key": in.EncryptionKey}
+	// Left blank, the repositories fall back to storing SSO client secrets,
+	// SMTP passwords and object-storage credentials verbatim in columns named
+	// *_encrypted. That was the default, and a warning in the startup log was
+	// the only sign of it. Generate a key instead, so the secure path is the
+	// one an operator gets by doing nothing.
+	key := in.EncryptionKey
+	if key == "" {
+		buf := make([]byte, 32)
+		if _, err := rand.Read(buf); err != nil {
+			return fmt.Errorf("generate encryption key: %w", err)
+		}
+		key = hex.EncodeToString(buf)
 	}
+	doc["encryption"] = map[string]any{"key": key}
 	out, err := yaml.Marshal(doc)
 	if err != nil {
 		return err

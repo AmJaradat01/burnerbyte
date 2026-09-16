@@ -14,6 +14,7 @@ import (
 	"net/mail"
 	"net/smtp"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -27,6 +28,8 @@ import (
 	"github.com/amjaradat01/burnerbyte/internal/config"
 	"github.com/amjaradat01/burnerbyte/internal/domain"
 	"github.com/amjaradat01/burnerbyte/internal/mailer"
+	"github.com/amjaradat01/burnerbyte/internal/middleware"
+	"github.com/amjaradat01/burnerbyte/internal/netguard"
 	"github.com/amjaradat01/burnerbyte/internal/repository/postgres"
 )
 
@@ -54,9 +57,14 @@ var (
 	}
 	smtpNewClient = func(conn net.Conn, host string) (*smtp.Client, error) { return smtp.NewClient(conn, host) }
 	minioNew      = func(endpoint, accessKey, secretKey string, useSSL bool) (*minio.Client, error) {
+		// The unauthenticated setup endpoint reaches this with an
+		// operator-supplied host, so the transport validates every dial
+		// rather than trusting a lookup done earlier in the request.
+		transport := &http.Transport{DialContext: netguard.DialContext(10 * time.Second)}
 		return minio.New(endpoint, &minio.Options{
-			Creds:  credentials.NewStaticV4(accessKey, secretKey, ""),
-			Secure: useSSL,
+			Creds:     credentials.NewStaticV4(accessKey, secretKey, ""),
+			Secure:    useSSL,
+			Transport: transport,
 		})
 	}
 )
@@ -67,8 +75,16 @@ var (
 // validate the host first. Authenticated callers testing an operator-configured
 // relay (which may legitimately sit on a private network) call it directly.
 func smtpDialTest(host string, port int, username, password string, useTLS bool) (time.Duration, error) {
+	return smtpDialTestAt(fmt.Sprintf("%s:%d", host, port), host, username, password, useTLS)
+}
+
+// smtpDialTestAt connects to addr — which may be a validated IP literal —
+// while continuing to use host as the TLS server name and the AUTH realm.
+// Separating the two is what closes the DNS-rebinding window: the name is
+// resolved once, by the caller, and the address it produced is what reaches
+// the kernel.
+func smtpDialTestAt(addr, host string, username, password string, useTLS bool) (time.Duration, error) {
 	start := time.Now()
-	addr := fmt.Sprintf("%s:%d", host, port)
 	if useTLS {
 		conn, err := smtpTLSDial(addr, host)
 		if err != nil {
@@ -144,12 +160,15 @@ func NewSetupHandler(
 	}
 }
 
-func (h *SetupHandler) Routes(r chi.Router) {
+func (h *SetupHandler) Routes(r chi.Router, rl *middleware.RateLimiter) {
 	r.Route("/setup", func(r chi.Router) {
 		r.Get("/status", h.Status)
-		r.Post("/complete", h.Complete)
-		r.Post("/test-smtp", h.TestSMTP)
-		r.Post("/test-storage", h.TestStorage)
+		// Unauthenticated until setup completes, and the connectivity tests
+		// report distinguishable errors plus a round-trip time — enough to
+		// scan with. Rate-limited like the other public endpoints.
+		r.With(rl.LoginLimiter).Post("/complete", h.Complete)
+		r.With(rl.LoginLimiter).Post("/test-smtp", h.TestSMTP)
+		r.With(rl.LoginLimiter).Post("/test-storage", h.TestStorage)
 	})
 }
 
@@ -618,24 +637,26 @@ func (h *SetupHandler) TestSMTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Prevent SSRF - validate target is not a private IP
+	// Resolve once and dial the address that resolution produced. Handing the
+	// hostname to the dialer instead would resolve it a second time, and a
+	// record with a short TTL could answer 127.0.0.1 on that second lookup.
 	resolveHost := input.Host
 	if h2, _, err := net.SplitHostPort(resolveHost); err == nil {
 		resolveHost = h2
 	}
-	ips, err := net.LookupIP(resolveHost)
+	ips, err := netguard.ResolveSafe(r.Context(), resolveHost)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "cannot resolve host")
-		return
-	}
-	for _, ip := range ips {
-		if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() {
+		var blocked *netguard.ErrBlocked
+		if errors.As(err, &blocked) {
 			writeError(w, http.StatusBadRequest, "target host resolves to a private IP address")
 			return
 		}
+		writeError(w, http.StatusBadRequest, "cannot resolve host")
+		return
 	}
 
-	elapsed, testErr := smtpDialTest(input.Host, input.Port, input.Username, input.Password, input.TLS)
+	dialAddr := net.JoinHostPort(ips[0].String(), strconv.Itoa(input.Port))
+	elapsed, testErr := smtpDialTestAt(dialAddr, resolveHost, input.Username, input.Password, input.TLS)
 	if testErr != nil {
 		writeJSON(w, http.StatusOK, map[string]any{
 			"success":       false,
@@ -677,21 +698,21 @@ func (h *SetupHandler) TestStorage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Prevent SSRF - validate target is not a private IP
+	// Up-front check for a clear error message. The real guarantee is the
+	// validating dialer handed to the client below, which re-resolves and
+	// pins the connection at dial time.
 	resolveHost := input.Endpoint
 	if h2, _, err := net.SplitHostPort(resolveHost); err == nil {
 		resolveHost = h2
 	}
-	ips, err := net.LookupIP(resolveHost)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "cannot resolve host")
-		return
-	}
-	for _, ip := range ips {
-		if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() {
+	if _, err := netguard.ResolveSafe(r.Context(), resolveHost); err != nil {
+		var blocked *netguard.ErrBlocked
+		if errors.As(err, &blocked) {
 			writeError(w, http.StatusBadRequest, "target host resolves to a private IP address")
 			return
 		}
+		writeError(w, http.StatusBadRequest, "cannot resolve host")
+		return
 	}
 
 	start := time.Now()
