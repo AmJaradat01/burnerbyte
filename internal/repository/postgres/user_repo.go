@@ -30,9 +30,9 @@ func (r *UserRepo) WithTx(tx database.DBTX) *UserRepo {
 
 func (r *UserRepo) Create(ctx context.Context, u *domain.User) error {
 	_, err := r.db.Exec(ctx,
-		`INSERT INTO users (id, email, display_name, avatar_url, password_hash, sso_provider, sso_subject, is_system_admin, email_verified, password_changed_at, auth_method_lock, max_sessions)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-		u.ID, u.Email, u.DisplayName, u.AvatarURL, u.PasswordHash,
+		`INSERT INTO users (id, email, display_name, password_hash, sso_provider, sso_subject, is_system_admin, email_verified, password_changed_at, auth_method_lock, max_sessions)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+		u.ID, u.Email, u.DisplayName, u.PasswordHash,
 		u.SSOProvider, u.SSOSubject, u.IsSystemAdmin, u.EmailVerified, u.PasswordChangedAt, u.AuthMethodLock, u.MaxSessions,
 	)
 	if err != nil {
@@ -46,25 +46,25 @@ func (r *UserRepo) Create(ctx context.Context, u *domain.User) error {
 
 func (r *UserRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.User, error) {
 	return r.scanOne(ctx,
-		`SELECT id, email, display_name, avatar_url, password_hash, sso_provider, sso_subject,
+		`SELECT id, email, display_name, password_hash, sso_provider, sso_subject,
 		        is_system_admin, email_verified, password_changed_at, timezone, date_format, time_format, auth_method_lock, max_sessions, created_at, updated_at
 		 FROM users WHERE id = $1`, id)
 }
 
 func (r *UserRepo) GetByEmail(ctx context.Context, email string) (*domain.User, error) {
 	return r.scanOne(ctx,
-		`SELECT id, email, display_name, avatar_url, password_hash, sso_provider, sso_subject,
+		`SELECT id, email, display_name, password_hash, sso_provider, sso_subject,
 		        is_system_admin, email_verified, password_changed_at, timezone, date_format, time_format, auth_method_lock, max_sessions, created_at, updated_at
 		 FROM users WHERE email = $1`, email)
 }
 
 func (r *UserRepo) Update(ctx context.Context, u *domain.User) error {
 	_, err := r.db.Exec(ctx,
-		`UPDATE users SET email=$1, display_name=$2, avatar_url=$3, password_hash=$4,
-		 sso_provider=$5, sso_subject=$6, is_system_admin=$7, email_verified=$8, password_changed_at=$9,
-		 timezone=$10, date_format=$11, time_format=$12, auth_method_lock=$13, max_sessions=$14
-		 WHERE id=$15`,
-		u.Email, u.DisplayName, u.AvatarURL, u.PasswordHash,
+		`UPDATE users SET email=$1, display_name=$2, password_hash=$3,
+		 sso_provider=$4, sso_subject=$5, is_system_admin=$6, email_verified=$7, password_changed_at=$8,
+		 timezone=$9, date_format=$10, time_format=$11, auth_method_lock=$12, max_sessions=$13
+		 WHERE id=$14`,
+		u.Email, u.DisplayName, u.PasswordHash,
 		u.SSOProvider, u.SSOSubject, u.IsSystemAdmin, u.EmailVerified, u.PasswordChangedAt,
 		u.Timezone, u.DateFormat, u.TimeFormat, u.AuthMethodLock, u.MaxSessions, u.ID,
 	)
@@ -93,7 +93,7 @@ func (r *UserRepo) ListAll(ctx context.Context, page, perPage int) ([]domain.Use
 	}
 	offset := (page - 1) * perPage
 	rows, err := r.db.Query(ctx,
-		`SELECT u.id, u.email, u.display_name, u.avatar_url, u.sso_provider, u.sso_subject,
+		`SELECT u.id, u.email, u.display_name, u.sso_provider, u.sso_subject,
 		        u.is_system_admin, u.email_verified, u.password_changed_at, u.auth_method_lock, u.max_sessions, u.created_at, u.updated_at,
 		        (SELECT MAX(s.created_at) FROM sessions s WHERE s.user_id = u.id) AS last_login_at
 		 FROM users u ORDER BY u.created_at DESC LIMIT $1 OFFSET $2`, perPage, offset)
@@ -104,7 +104,7 @@ func (r *UserRepo) ListAll(ctx context.Context, page, perPage int) ([]domain.Use
 	var users []domain.User
 	for rows.Next() {
 		var u domain.User
-		if err := rows.Scan(&u.ID, &u.Email, &u.DisplayName, &u.AvatarURL,
+		if err := rows.Scan(&u.ID, &u.Email, &u.DisplayName,
 			&u.SSOProvider, &u.SSOSubject, &u.IsSystemAdmin, &u.EmailVerified,
 			&u.PasswordChangedAt, &u.AuthMethodLock, &u.MaxSessions, &u.CreatedAt, &u.UpdatedAt, &u.LastLoginAt); err != nil {
 			return nil, 0, err
@@ -117,7 +117,7 @@ func (r *UserRepo) ListAll(ctx context.Context, page, perPage int) ([]domain.Use
 func (r *UserRepo) scanOne(ctx context.Context, query string, args ...any) (*domain.User, error) {
 	var u domain.User
 	err := r.db.QueryRow(ctx, query, args...).Scan(
-		&u.ID, &u.Email, &u.DisplayName, &u.AvatarURL, &u.PasswordHash,
+		&u.ID, &u.Email, &u.DisplayName, &u.PasswordHash,
 		&u.SSOProvider, &u.SSOSubject, &u.IsSystemAdmin, &u.EmailVerified,
 		&u.PasswordChangedAt, &u.Timezone, &u.DateFormat, &u.TimeFormat, &u.AuthMethodLock, &u.MaxSessions, &u.CreatedAt, &u.UpdatedAt,
 	)

@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
@@ -67,7 +67,6 @@ export default function ProfilePage() {
       {/* Identity row */}
       <div className="flex items-center gap-4">
         <Avatar className="h-16 w-16 text-xl">
-          <AvatarImage src={user.avatar_url} alt={user.display_name || "User avatar"} />
           <AvatarFallback className="bg-primary/10 font-bold text-primary">{initials}</AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
@@ -131,16 +130,15 @@ export default function ProfilePage() {
 
 function ProfileForm({ user, onSaved }: { user: NonNullable<ReturnType<typeof useAuthStore.getState>["user"]>; onSaved: () => Promise<void> }) {
   const [displayName, setDisplayName] = useState(user.display_name ?? "");
-  const [avatarUrl, setAvatarUrl] = useState(user.avatar_url ?? "");
   const [saving, setSaving] = useState(false);
 
-  const dirty = displayName !== (user.display_name ?? "") || avatarUrl !== (user.avatar_url ?? "");
+  const dirty = displayName !== (user.display_name ?? "");
 
   const handleSave = async () => {
     if (!displayName.trim()) { toast.error("Display name is required"); return; }
     setSaving(true);
     try {
-      await api.patch("/auth/me", { display_name: displayName.trim(), avatar_url: avatarUrl.trim() || undefined });
+      await api.patch("/auth/me", { display_name: displayName.trim() });
       toast.success("Profile updated");
       // Refresh user data — non-critical, don't block on failure
       onSaved().catch(() => {});
@@ -162,11 +160,6 @@ function ProfileForm({ user, onSaved }: { user: NonNullable<ReturnType<typeof us
         <div className="space-y-1.5">
           <Label htmlFor="displayName" className="text-label">Display Name</Label>
           <Input id="displayName" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Your name" />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="avatar" className="text-label">Avatar URL</Label>
-          <Input id="avatar" value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} placeholder="https://..." />
-          <p className="text-xs text-muted-foreground">Direct image link. Leave empty for initials.</p>
         </div>
         {dirty && (
           <Button onClick={handleSave} disabled={saving} size="sm"><Save className="h-3.5 w-3.5 mr-1.5" />{saving ? "Saving…" : "Save"}</Button>

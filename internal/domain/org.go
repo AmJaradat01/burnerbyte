@@ -67,7 +67,6 @@ type OrgMemberSuggestion struct {
 	UserID      uuid.UUID `json:"user_id"`
 	Email       string    `json:"email"`
 	DisplayName string    `json:"display_name"`
-	AvatarURL   *string   `json:"avatar_url,omitempty"`
 }
 
 type ChangeRoleInput struct {

@@ -229,7 +229,6 @@ func TestProperty_BugCondition_SSOIdentityLookupSetsEmailVerified(t *testing.T) 
 						userID,      // id
 						email,       // email
 						displayName, // display_name
-						nilStr,      // avatar_url
 						nilStr,      // password_hash
 						nilStr,      // sso_provider
 						nilStr,      // sso_subject
@@ -252,11 +251,11 @@ func TestProperty_BugCondition_SSOIdentityLookupSetsEmailVerified(t *testing.T) 
 			execHandler: func(sql string, args ...any) (pgconn.CommandTag, error) {
 				if strings.Contains(sql, "UPDATE users") {
 					updateCalled = true
-					// Check if EmailVerified (arg index 7, 0-based) is true
-					// UPDATE users SET email=$1, display_name=$2, avatar_url=$3, password_hash=$4,
-					// sso_provider=$5, sso_subject=$6, is_system_admin=$7, email_verified=$8, ...
-					if len(args) >= 8 {
-						if ev, ok := args[7].(bool); ok {
+					// email_verified is arg index 6 (0-based):
+					// UPDATE users SET email=$1, display_name=$2, password_hash=$3,
+					// sso_provider=$4, sso_subject=$5, is_system_admin=$6, email_verified=$7, ...
+					if len(args) >= 7 {
+						if ev, ok := args[6].(bool); ok {
 							updatedEmailVerified = ev
 						}
 					}
@@ -386,7 +385,6 @@ func TestProperty_Preservation_AlreadyVerifiedIdentityLookup(t *testing.T) {
 						userID,
 						email,
 						displayName,
-						nilStr,  // avatar_url
 						nilStr,  // password_hash
 						nilStr,  // sso_provider
 						nilStr,  // sso_subject
@@ -494,9 +492,9 @@ func TestProperty_Preservation_NewSSOUser(t *testing.T) {
 			execHandler: func(sql string, args ...any) (pgconn.CommandTag, error) {
 				if strings.Contains(sql, "INSERT INTO users") {
 					createCalled = true
-					// email_verified is at arg index 8 (0-based) in the INSERT
-					if len(args) >= 9 {
-						if ev, ok := args[8].(bool); ok {
+					// email_verified is at arg index 7 (0-based) in the INSERT
+					if len(args) >= 8 {
+						if ev, ok := args[7].(bool); ok {
 							createdEmailVerified = ev
 						}
 					}
@@ -598,7 +596,6 @@ func TestProperty_Preservation_EmailLookupSSO(t *testing.T) {
 						userID,
 						email,
 						displayName,
-						nilStr,  // avatar_url
 						nilStr,  // password_hash
 						nilStr,  // sso_provider
 						nilStr,  // sso_subject
@@ -621,8 +618,8 @@ func TestProperty_Preservation_EmailLookupSSO(t *testing.T) {
 			execHandler: func(sql string, args ...any) (pgconn.CommandTag, error) {
 				if strings.Contains(sql, "UPDATE users") {
 					updateCalled = true
-					if len(args) >= 8 {
-						if ev, ok := args[7].(bool); ok {
+					if len(args) >= 7 {
+						if ev, ok := args[6].(bool); ok {
 							updatedEmailVerified = ev
 						}
 					}
@@ -714,7 +711,6 @@ func TestProperty_Security_UnverifiedEmailNoAutoLink(t *testing.T) {
 					var nilInt *int
 					return &mockRow{values: []any{
 						userID, email, displayName,
-						nilStr,  // avatar_url
 						nilStr,  // password_hash
 						nilStr,  // sso_provider
 						nilStr,  // sso_subject
@@ -1109,7 +1105,7 @@ func (m *mockRows) Scan(dest ...any) error {
 
 func (m *mockRows) Values() ([]any, error) { return m.rows[m.idx-1], nil }
 
-// userScanRow builds a mockRow matching UserRepo.scanOne's 17-column SELECT
+// userScanRow builds a mockRow matching UserRepo.scanOne's 16-column SELECT
 // (GetByID / GetByEmail) with the given identity-relevant fields and inert
 // defaults for the rest.
 func userScanRow(id uuid.UUID, email string, passwordHash, lock *string) *mockRow {
@@ -1121,7 +1117,6 @@ func userScanRow(id uuid.UUID, email string, passwordHash, lock *string) *mockRo
 		id,           // id
 		email,        // email
 		"Test User",  // display_name
-		nilStr,       // avatar_url
 		passwordHash, // password_hash
 		nilStr,       // sso_provider
 		nilStr,       // sso_subject
@@ -1288,10 +1283,10 @@ func TestProperty_Migration_Atomicity(t *testing.T) {
 				switch {
 				case strings.Contains(sql, "UPDATE users"):
 					updateCalled = true
-					if hp, ok := args[3].(*string); ok { // password_hash = $4
+					if hp, ok := args[2].(*string); ok { // password_hash = $3
 						updatedHash = hp
 					}
-					if lk, ok := args[12].(*string); ok { // auth_method_lock = $13
+					if lk, ok := args[11].(*string); ok { // auth_method_lock = $12
 						updatedLock = lk
 					}
 				case strings.Contains(sql, "UPDATE sessions"):

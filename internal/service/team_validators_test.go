@@ -13,27 +13,6 @@ import (
 // validators (tasks 14.1, 14.2).
 // ===========================================================================
 
-func TestValidateAvatarURL(t *testing.T) {
-	svc := &TeamService{}
-	cases := []struct {
-		url string
-		ok  bool
-	}{
-		{"https://cdn.example.com/a.png", true},
-		{"http://example.com/logo.svg", true},
-		{"ftp://example.com/x.png", false}, // wrong scheme
-		{"example.com/x.png", false},       // no scheme
-		{"", false},                        // empty
-		{"javascript:alert(1)", false},     // non-http scheme
-	}
-	for _, c := range cases {
-		err := svc.validateAvatarURL(c.url)
-		if (err == nil) != c.ok {
-			t.Errorf("validateAvatarURL(%q): got err=%v, want ok=%v", c.url, err, c.ok)
-		}
-	}
-}
-
 // validateMaxInboxesPerDomain accepts a value iff it is strictly positive.
 func TestProperty_ValidateMaxInboxesPerDomain(t *testing.T) {
 	svc := &TeamService{}

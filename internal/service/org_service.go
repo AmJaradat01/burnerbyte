@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net"
 	"net/mail"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -147,6 +148,11 @@ func (s *OrgService) UpdateOrg(ctx context.Context, orgID uuid.UUID, input domai
 		org.Slug = generateSlug(*input.Name)
 	}
 	if input.LogoURL != nil {
+		if *input.LogoURL != "" {
+			if err := validateLogoURL(*input.LogoURL); err != nil {
+				return nil, err
+			}
+		}
 		org.LogoURL = input.LogoURL
 	}
 
@@ -463,12 +469,12 @@ func (s *OrgService) InviteMember(ctx context.Context, orgID uuid.UUID, input do
 
 // AcceptInviteResult holds the result of accepting an invite, including optional team info.
 type AcceptInviteResult struct {
-	OrgID           uuid.UUID                  `json:"org_id"`
-	OrgName         string                     `json:"org_name"`
-	TeamID          *uuid.UUID                 `json:"team_id,omitempty"`
-	TeamName        string                     `json:"team_name,omitempty"`
-	TeamRole        string                     `json:"team_role,omitempty"`
-	TeamAssignments []domain.InviteTeamAssign   `json:"team_assignments,omitempty"`
+	OrgID           uuid.UUID                 `json:"org_id"`
+	OrgName         string                    `json:"org_name"`
+	TeamID          *uuid.UUID                `json:"team_id,omitempty"`
+	TeamName        string                    `json:"team_name,omitempty"`
+	TeamRole        string                    `json:"team_role,omitempty"`
+	TeamAssignments []domain.InviteTeamAssign `json:"team_assignments,omitempty"`
 }
 
 func (s *OrgService) AcceptInvite(ctx context.Context, token string, userID uuid.UUID, userEmail string) (*AcceptInviteResult, error) {
@@ -1061,4 +1067,29 @@ func (s *OrgService) isOrgMember(ctx context.Context, orgID uuid.UUID, email str
 func (s *OrgService) hasPendingInvite(ctx context.Context, orgID uuid.UUID, email string) bool {
 	_, err := s.orgRepo.GetPendingInviteByEmail(ctx, email)
 	return err == nil
+}
+
+// validateLogoURL constrains org branding to an https image URL.
+//
+// This was previously unvalidated, and the field is rendered as the src of an
+// <img> in the sidebar for every member of the org. https only, because the
+// logo loads on an authenticated page and a plain-http subresource would both
+// warn and leak the request over the wire. Credentials in the URL are
+// rejected: they would be handed to the remote host and shown in the settings
+// form to every admin who opens it.
+func validateLogoURL(raw string) error {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return fmt.Errorf("invalid logo URL")
+	}
+	if u.Scheme != "https" {
+		return fmt.Errorf("logo URL must use https")
+	}
+	if u.Host == "" {
+		return fmt.Errorf("logo URL must have a host")
+	}
+	if u.User != nil {
+		return fmt.Errorf("logo URL must not contain credentials")
+	}
+	return nil
 }

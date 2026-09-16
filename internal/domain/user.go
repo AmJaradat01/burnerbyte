@@ -10,7 +10,6 @@ type User struct {
 	ID                uuid.UUID  `json:"id"`
 	Email             string     `json:"email"`
 	DisplayName       string     `json:"display_name"`
-	AvatarURL         *string    `json:"avatar_url,omitempty"`
 	PasswordHash      *string    `json:"-"`
 	SSOProvider       *string    `json:"sso_provider,omitempty"`
 	SSOSubject        *string    `json:"-"`
@@ -67,7 +66,6 @@ type ChangePasswordInput struct {
 
 type UpdateProfileInput struct {
 	DisplayName *string `json:"display_name,omitempty"`
-	AvatarURL   *string `json:"avatar_url,omitempty"`
 	Timezone    *string `json:"timezone,omitempty"`
 	DateFormat  *string `json:"date_format,omitempty"`
 	TimeFormat  *string `json:"time_format,omitempty"`
@@ -83,15 +81,15 @@ type ResolveLoginInput struct {
 }
 
 type Session struct {
-	ID               uuid.UUID  `json:"id"`
-	UserID           uuid.UUID  `json:"user_id"`
-	RefreshTokenHash string     `json:"-"`
-	TokenFamily      uuid.UUID  `json:"-"`
-	IPAddress        *string    `json:"ip_address,omitempty"`
-	UserAgent        *string    `json:"user_agent,omitempty"`
-	SSOProviderName  *string    `json:"sso_provider_name,omitempty"`
-	LastUsedAt       time.Time  `json:"last_used_at"`
-	ExpiresAt        time.Time  `json:"expires_at"`
-	Revoked          bool       `json:"-"`
-	CreatedAt        time.Time  `json:"created_at"`
+	ID               uuid.UUID `json:"id"`
+	UserID           uuid.UUID `json:"user_id"`
+	RefreshTokenHash string    `json:"-"`
+	TokenFamily      uuid.UUID `json:"-"`
+	IPAddress        *string   `json:"ip_address,omitempty"`
+	UserAgent        *string   `json:"user_agent,omitempty"`
+	SSOProviderName  *string   `json:"sso_provider_name,omitempty"`
+	LastUsedAt       time.Time `json:"last_used_at"`
+	ExpiresAt        time.Time `json:"expires_at"`
+	Revoked          bool      `json:"-"`
+	CreatedAt        time.Time `json:"created_at"`
 }

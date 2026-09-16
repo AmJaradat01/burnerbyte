@@ -189,7 +189,7 @@ func (h *Handler) Process(ctx context.Context, email *InboundEmail) error {
 		ToAddress:      email.To,
 		Subject:        &email.Subject,
 		BodyText:       &email.BodyText,
-		BodyHTML:        &sanitizedHTML,
+		BodyHTML:       &sanitizedHTML,
 		HasAttachments: expectAttachments,
 		RawHeaders:     email.Headers,
 		SizeBytes:      email.SizeBytes,

@@ -31,14 +31,14 @@ func bypassDNS(t *testing.T) {
 	t.Cleanup(func() { lookupMX, lookupHost = origMX, origHost })
 }
 
-// teamGetByIDRow matches TeamRepo.GetByID's 11-column SELECT.
+// teamGetByIDRow matches TeamRepo.GetByID's 10-column SELECT.
 func teamGetByIDRow(id, orgID uuid.UUID) *mockRow {
 	now := time.Now()
 	var nilStr *string
 	var nilTime *time.Time
 	settings, _ := json.Marshal(domain.TeamSettings{})
 	return &mockRow{values: []any{
-		id, orgID, "Team", "team", nilStr, nilStr, false, nilTime, settings, now, now,
+		id, orgID, "Team", "team", nilStr, false, nilTime, settings, now, now,
 	}}
 }
 

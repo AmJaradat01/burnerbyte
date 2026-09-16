@@ -25,9 +25,9 @@ func (c *Client) Close() {
 }
 
 type Hub struct {
-	mu          sync.RWMutex
-	clients     map[uuid.UUID]map[*Client]bool
-	userConns   map[uuid.UUID]int
+	mu        sync.RWMutex
+	clients   map[uuid.UUID]map[*Client]bool
+	userConns map[uuid.UUID]int
 }
 
 func NewHub() *Hub {
@@ -73,7 +73,9 @@ func (h *Hub) Unregister(client *Client) {
 
 func (h *Hub) Broadcast(inboxID uuid.UUID, msg interface{}) {
 	data, err := json.Marshal(msg)
-	if err != nil { return }
+	if err != nil {
+		return
+	}
 
 	h.mu.RLock()
 	defer h.mu.RUnlock()

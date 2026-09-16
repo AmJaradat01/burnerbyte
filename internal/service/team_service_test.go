@@ -40,16 +40,16 @@ func newTeamSvcWithDB(db *mockDBTX) *TeamService {
 // (id, user_id, team_id, role, created_at).
 func teamMembershipRow(userID, teamID uuid.UUID, role string) *mockRow {
 	return &mockRow{values: []any{
-		uuid.New(),  // id
-		userID,      // user_id
-		teamID,      // team_id
-		role,        // role
-		time.Now(),  // created_at
+		uuid.New(), // id
+		userID,     // user_id
+		teamID,     // team_id
+		role,       // role
+		time.Now(), // created_at
 	}}
 }
 
-// teamRow builds the 11-column row that TeamRepo.GetByID scans:
-// (id, org_id, name, slug, description, avatar_url, is_archived, archived_at, settings, created_at, updated_at).
+// teamRow builds the 10-column row that TeamRepo.GetByID scans:
+// (id, org_id, name, slug, description, is_archived, archived_at, settings, created_at, updated_at).
 func teamRow(teamID, orgID uuid.UUID, isArchived bool) *mockRow {
 	var archivedAt *time.Time
 	if isArchived {
@@ -58,17 +58,16 @@ func teamRow(teamID, orgID uuid.UUID, isArchived bool) *mockRow {
 	}
 	settings, _ := json.Marshal(domain.TeamSettings{})
 	return &mockRow{values: []any{
-		teamID,          // id
-		orgID,           // org_id
-		"TestTeam",      // name
-		"testteam",      // slug
-		(*string)(nil),  // description
-		(*string)(nil),  // avatar_url
-		isArchived,      // is_archived
-		archivedAt,      // archived_at
-		settings,        // settings ([]byte)
-		time.Now(),      // created_at
-		time.Now(),      // updated_at
+		teamID,         // id
+		orgID,          // org_id
+		"TestTeam",     // name
+		"testteam",     // slug
+		(*string)(nil), // description
+		isArchived,     // is_archived
+		archivedAt,     // archived_at
+		settings,       // settings ([]byte)
+		time.Now(),     // created_at
+		time.Now(),     // updated_at
 	}}
 }
 
@@ -93,28 +92,28 @@ func countRow(n int) *mockRow {
 }
 
 // userRow builds the 17-column row that UserRepo.scanOne scans:
-// (id, email, display_name, avatar_url, password_hash, sso_provider, sso_subject,
-//  is_system_admin, email_verified, password_changed_at, timezone, date_format,
-//  time_format, auth_method_lock, max_sessions, created_at, updated_at).
+// (id, email, display_name, password_hash, sso_provider, sso_subject,
+//
+//	is_system_admin, email_verified, password_changed_at, timezone, date_format,
+//	time_format, auth_method_lock, max_sessions, created_at, updated_at).
 func userRow(email string) *mockRow {
 	return &mockRow{values: []any{
-		uuid.New(),          // id
-		email,               // email
-		"Test User",         // display_name
-		(*string)(nil),      // avatar_url
-		(*string)(nil),      // password_hash
-		(*string)(nil),      // sso_provider
-		(*string)(nil),      // sso_subject
-		false,               // is_system_admin
-		true,                // email_verified
-		(*time.Time)(nil),   // password_changed_at
-		(*string)(nil),      // timezone
-		(*string)(nil),      // date_format
-		(*string)(nil),      // time_format
-		(*string)(nil),      // auth_method_lock
-		(*int)(nil),         // max_sessions
-		time.Now(),          // created_at
-		time.Now(),          // updated_at
+		uuid.New(),        // id
+		email,             // email
+		"Test User",       // display_name
+		(*string)(nil),    // password_hash
+		(*string)(nil),    // sso_provider
+		(*string)(nil),    // sso_subject
+		false,             // is_system_admin
+		true,              // email_verified
+		(*time.Time)(nil), // password_changed_at
+		(*string)(nil),    // timezone
+		(*string)(nil),    // date_format
+		(*string)(nil),    // time_format
+		(*string)(nil),    // auth_method_lock
+		(*int)(nil),       // max_sessions
+		time.Now(),        // created_at
+		time.Now(),        // updated_at
 	}}
 }
 

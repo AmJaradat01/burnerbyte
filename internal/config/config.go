@@ -267,6 +267,21 @@ type SecurityConfig struct {
 	// deployment would lock out every account created before verification
 	// was enforced.
 	RequireEmailVerification bool `mapstructure:"require_email_verification"`
+	// EnforceSSOForSystemAdmins closes the gap that org-scoped enforce_sso
+	// structurally cannot reach.
+	//
+	// The org-level check joins through org_memberships, so a system admin
+	// who belongs to no organisation is never evaluated and can always sign
+	// in with a password — and that is the account which can grant
+	// is_system_admin, transfer teams between orgs and read every audit
+	// trail. The setup wizard also creates its owner with a password before
+	// SSO exists at all, so the bootstrap credential is permanent.
+	//
+	// With this on, any account carrying is_system_admin must use SSO once it
+	// has a linked identity. An admin with no linked identity is still let
+	// through, deliberately: locking the only administrator out of their own
+	// deployment is a worse failure than the one being prevented.
+	EnforceSSOForSystemAdmins bool `mapstructure:"enforce_sso_for_system_admins"`
 }
 
 type MetricsConfig struct {
@@ -457,6 +472,7 @@ func Load() (*Config, error) {
 	v.SetDefault("logging.format", "json")
 	v.SetDefault("security.allow_token_query_param", false)
 	v.SetDefault("security.require_email_verification", false)
+	v.SetDefault("security.enforce_sso_for_system_admins", false)
 	v.SetDefault("metrics.enabled", true)
 	v.SetDefault("metrics.path", "/metrics")
 	v.SetDefault("metrics.token", "")

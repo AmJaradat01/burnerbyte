@@ -570,7 +570,7 @@ function TeamMembersTab({ orgId, teamId, isAdmin }: { orgId: string; teamId: str
   const [memberEmail, setMemberEmail] = useState("");
   const [role, setRole] = useState("member");
   const [search, setSearch] = useState("");
-  const [suggestions, setSuggestions] = useState<{ user_id: string; email: string; display_name: string; avatar_url?: string }[]>([]);
+  const [suggestions, setSuggestions] = useState<{ user_id: string; email: string; display_name: string }[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const suggestionsRef = useRef<HTMLDivElement>(null);
@@ -586,7 +586,7 @@ function TeamMembersTab({ orgId, teamId, isAdmin }: { orgId: string; teamId: str
     }
     setSuggestionsLoading(true);
     try {
-      const results = await api.get<{ user_id: string; email: string; display_name: string; avatar_url?: string }[]>(
+      const results = await api.get<{ user_id: string; email: string; display_name: string }[]>(
         `/orgs/${orgId}/members/search`,
         { q: query, exclude_team: teamId }
       );

@@ -155,6 +155,11 @@ security:
   allow_token_query_param: false
   # Refuse password logins until the email address is confirmed.
   require_email_verification: false
+  # Require SSO for accounts with is_system_admin. The org-level enforce_sso
+  # setting joins through org membership and so never covers a system admin
+  # who belongs to no organisation. Enforced only once the admin has a linked
+  # SSO identity, so it cannot lock the last administrator out.
+  enforce_sso_for_system_admins: false
 
 workers:
   dns_recheck_interval: 1h

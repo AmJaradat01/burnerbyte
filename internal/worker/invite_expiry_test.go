@@ -132,7 +132,7 @@ func (m *stubRows) Scan(dest ...any) error {
 	return (&stubRow{values: m.rows[m.idx-1]}).Scan(dest...)
 }
 
-// userRow builds a stubRow matching UserRepo.scanOne's 17-column SELECT.
+// userRow builds a stubRow matching UserRepo.scanOne's 16-column SELECT.
 func userRow(id uuid.UUID, email string) *stubRow {
 	now := time.Now()
 	hash := "hash"
@@ -140,7 +140,7 @@ func userRow(id uuid.UUID, email string) *stubRow {
 	var nilTime *time.Time
 	var nilInt *int
 	return &stubRow{values: []any{
-		id, email, "Inviter", nilStr, &hash,
+		id, email, "Inviter", &hash,
 		nilStr, nilStr, false, true, nilTime,
 		nilStr, nilStr, nilStr, nilStr, nilInt, now, now,
 	}}
