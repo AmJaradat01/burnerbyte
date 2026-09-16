@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,6 +17,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/amjaradat01/burnerbyte/internal/auth"
+	"github.com/amjaradat01/burnerbyte/internal/clientip"
 	"github.com/amjaradat01/burnerbyte/internal/config"
 	"github.com/amjaradat01/burnerbyte/internal/domain"
 	"github.com/amjaradat01/burnerbyte/internal/middleware"
@@ -23,13 +25,14 @@ import (
 )
 
 type AuthHandler struct {
-	svc *service.AuthService
-	sso *auth.SSOManager
-	cfg *config.Config
+	svc      *service.AuthService
+	sso      *auth.SSOManager
+	cfg      *config.Config
+	ssoState *auth.SSOStateStore
 }
 
-func NewAuthHandler(svc *service.AuthService, sso *auth.SSOManager, cfg *config.Config) *AuthHandler {
-	return &AuthHandler{svc: svc, sso: sso, cfg: cfg}
+func NewAuthHandler(svc *service.AuthService, sso *auth.SSOManager, cfg *config.Config, ssoState *auth.SSOStateStore) *AuthHandler {
+	return &AuthHandler{svc: svc, sso: sso, cfg: cfg, ssoState: ssoState}
 }
 
 func (h *AuthHandler) PublicRoutes(r chi.Router, rl *middleware.RateLimiter) {
@@ -95,7 +98,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		setRefreshCookie(w, r, h.cfg, tokens.RefreshToken)
 		tokens = stripRefreshToken(tokens)
 	}
-	auditRecordEnhanced(r, uuid.Nil, "user.registered", "user", user.ID, user.Email, map[string]any{"email": user.Email, "display_name": user.DisplayName, "ip_address": r.RemoteAddr})
+	auditRecordEnhanced(r, uuid.Nil, "user.registered", "user", user.ID, user.Email, map[string]any{"email": user.Email, "display_name": user.DisplayName, "ip_address": clientip.From(r)})
 	writeJSON(w, http.StatusCreated, map[string]any{
 		"user":   user,
 		"tokens": tokens,
@@ -117,12 +120,12 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, tokens, err := h.svc.Login(r.Context(), input.LoginInput, r.RemoteAddr, r.UserAgent())
+	user, tokens, err := h.svc.Login(r.Context(), input.LoginInput, clientip.From(r), r.UserAgent())
 	if err != nil {
 		var lockedErr *service.LockedError
 		if errors.As(err, &lockedErr) {
-			auditRecordEnhanced(r, uuid.Nil, "user.locked", "user", uuid.Nil, input.Email, map[string]any{"email": input.Email, "ip_address": r.RemoteAddr, "lockout_duration": lockedErr.RetryAfter.String()})
-			auditRecordEnhanced(r, uuid.Nil, "user.login_failed", "user", uuid.Nil, input.Email, map[string]any{"email": input.Email, "ip_address": r.RemoteAddr, "reason": "account_locked"})
+			auditRecordEnhanced(r, uuid.Nil, "user.locked", "user", uuid.Nil, input.Email, map[string]any{"email": input.Email, "ip_address": clientip.From(r), "lockout_duration": lockedErr.RetryAfter.String()})
+			auditRecordEnhanced(r, uuid.Nil, "user.login_failed", "user", uuid.Nil, input.Email, map[string]any{"email": input.Email, "ip_address": clientip.From(r), "reason": "account_locked"})
 			w.Header().Set("Retry-After", strconv.Itoa(int(lockedErr.RetryAfter.Seconds())))
 			writeError(w, http.StatusLocked, err.Error())
 			return
@@ -147,7 +150,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(err.Error(), "SSO login required") {
 			reason = "sso_enforced"
 		}
-		auditRecordEnhanced(r, uuid.Nil, "user.login_failed", "user", uuid.Nil, input.Email, map[string]any{"email": input.Email, "ip_address": r.RemoteAddr, "reason": reason})
+		auditRecordEnhanced(r, uuid.Nil, "user.login_failed", "user", uuid.Nil, input.Email, map[string]any{"email": input.Email, "ip_address": clientip.From(r), "reason": reason})
 		writeError(w, http.StatusUnauthorized, err.Error())
 		return
 	}
@@ -156,7 +159,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		setRefreshCookie(w, r, h.cfg, tokens.RefreshToken)
 		tokens = stripRefreshToken(tokens)
 	}
-	auditRecordEnhanced(r, uuid.Nil, "user.login", "user", user.ID, user.Email, map[string]any{"email": user.Email, "user_agent": r.Header.Get("User-Agent"), "ip_address": r.RemoteAddr, "login_method": "password"})
+	auditRecordEnhanced(r, uuid.Nil, "user.login", "user", user.ID, user.Email, map[string]any{"email": user.Email, "user_agent": r.Header.Get("User-Agent"), "ip_address": clientip.From(r), "login_method": "password"})
 	writeJSON(w, http.StatusOK, map[string]any{
 		"user":   user,
 		"tokens": tokens,
@@ -178,7 +181,7 @@ func (h *AuthHandler) ResolveLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, tokens, err := h.svc.ResolveLogin(r.Context(), input.ResolveLoginInput, r.RemoteAddr, r.UserAgent())
+	user, tokens, err := h.svc.ResolveLogin(r.Context(), input.ResolveLoginInput, clientip.From(r), r.UserAgent())
 	if err != nil {
 		var limitErr *service.SessionLimitError
 		if errors.As(err, &limitErr) {
@@ -227,7 +230,7 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tokens, err := h.svc.Refresh(r.Context(), refreshToken, r.RemoteAddr, r.UserAgent())
+	tokens, err := h.svc.Refresh(r.Context(), refreshToken, clientip.From(r), r.UserAgent())
 	if err != nil {
 		if cookieMode {
 			// The cookie is dead (expired, revoked, or reused); expire it so
@@ -265,7 +268,7 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 			if u, err := h.svc.GetMe(r.Context(), session.UserID); err == nil && u != nil {
 				email = u.Email
 			}
-			auditRecordEnhanced(r, uuid.Nil, "user.logout", "user", session.UserID, email, map[string]any{"email": email, "session_id": session.ID.String(), "ip_address": r.RemoteAddr})
+			auditRecordEnhanced(r, uuid.Nil, "user.logout", "user", session.UserID, email, map[string]any{"email": email, "session_id": session.ID.String(), "ip_address": clientip.From(r)})
 		}
 	}
 
@@ -584,19 +587,30 @@ func (h *AuthHandler) SSORedirect(w http.ResponseWriter, r *http.Request) {
 		scheme = "https"
 	}
 
-	// Store state + intent + user_id (if linking) in cookie
-	stateValue := state
+	// The intent is recorded server-side against the random state value. The
+	// cookie carries only that opaque value, so a client that can write the
+	// cookie still cannot choose which account a link targets.
+	var linkUser *uuid.UUID
 	if intent == "link" {
 		uc := auth.GetUser(r.Context())
-		if uc != nil {
-			stateValue = state + "|link|" + uc.UserID.String()
-		} else {
-			stateValue = state + "|link|"
+		if uc == nil {
+			// A link must be started from an authenticated session. Without
+			// one there is no account to attach the identity to.
+			writeError(w, http.StatusUnauthorized, "sign in before linking an SSO account")
+			return
 		}
+		linkUser = &uc.UserID
+	} else {
+		intent = ""
+	}
+	if err := h.ssoState.Store(r.Context(), state, intent, origin, linkUser); err != nil {
+		slog.Error("failed to store SSO state", "error", err, "provider", providerName)
+		writeError(w, http.StatusInternalServerError, "failed to start SSO")
+		return
 	}
 
 	http.SetCookie(w, &http.Cookie{
-		Name: "sso_state", Value: stateValue, Path: "/", MaxAge: 600,
+		Name: "sso_state", Value: state, Path: "/", MaxAge: 600,
 		HttpOnly: true, SameSite: http.SameSiteLaxMode,
 		Secure: scheme == "https",
 	})
@@ -625,31 +639,27 @@ func (h *AuthHandler) SSOCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse state cookie: may be "state" or "state|link|userID"
-	cookieValue := cookie.Value
+	// The cookie must echo the state the provider returned; constant-time so
+	// the comparison leaks nothing about the expected value.
 	stateParam := r.URL.Query().Get("state")
-	intent := ""
-	linkUserID := ""
-
-	parts := strings.SplitN(cookieValue, "|", 3)
-	if len(parts) >= 2 {
-		if parts[0] != stateParam {
-			writeError(w, http.StatusBadRequest, "invalid state parameter")
-			return
-		}
-		intent = parts[1]
-		if len(parts) == 3 {
-			linkUserID = parts[2]
-		}
-	} else {
-		if cookieValue != stateParam {
-			writeError(w, http.StatusBadRequest, "invalid state parameter")
-			return
-		}
+	if stateParam == "" || subtle.ConstantTimeCompare([]byte(cookie.Value), []byte(stateParam)) != 1 {
+		writeError(w, http.StatusBadRequest, "invalid state parameter")
+		return
 	}
 
 	// Clear state cookie
 	http.SetCookie(w, &http.Cookie{Name: "sso_state", Path: "/", MaxAge: -1})
+
+	// The intent and the link target come from the server's own record, not
+	// from anything the client held. Consuming deletes it, so a callback
+	// cannot be replayed.
+	stateData, err := h.ssoState.Consume(r.Context(), stateParam)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid or expired state")
+		return
+	}
+	intent := stateData.Intent
+	linkUserID := stateData.UserID
 
 	// Read and clear origin cookie
 	frontendURL := h.cfg.Server.FrontendURL
@@ -673,7 +683,7 @@ func (h *AuthHandler) SSOCallback(w http.ResponseWriter, r *http.Request) {
 	result, err := h.sso.HandleCallback(r.Context(), providerName, r)
 	if err != nil {
 		auditRecordEnhanced(r, uuid.Nil, "user.sso_login_failed", "user", uuid.Nil, "", map[string]any{
-			"provider": providerName, "reason": err.Error(), "ip_address": r.RemoteAddr,
+			"provider": providerName, "reason": err.Error(), "ip_address": clientip.From(r),
 		})
 		// The browser is sitting on this callback URL, so send it back to the
 		// SPA login page (which surfaces #error) rather than rendering raw JSON.
@@ -686,7 +696,7 @@ func (h *AuthHandler) SSOCallback(w http.ResponseWriter, r *http.Request) {
 	if intent == "link" && linkUserID != "" {
 		userID, parseErr := uuid.Parse(linkUserID)
 		if parseErr != nil {
-			slog.Warn("invalid linkUserID in SSO callback state", "linkUserID", linkUserID, "provider", providerName, "ip", r.RemoteAddr)
+			slog.Warn("invalid linkUserID in SSO callback state", "linkUserID", linkUserID, "provider", providerName, "ip", clientip.From(r))
 			writeError(w, http.StatusBadRequest, "invalid user ID in link intent")
 			return
 		}
@@ -708,7 +718,7 @@ func (h *AuthHandler) SSOCallback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Default: login intent
-	user, tokens, err := h.svc.SSOLogin(r.Context(), result, r.RemoteAddr, r.UserAgent())
+	user, tokens, err := h.svc.SSOLogin(r.Context(), result, clientip.From(r), r.UserAgent())
 	if err != nil {
 		var limitErr *service.SessionLimitError
 		if errors.As(err, &limitErr) {

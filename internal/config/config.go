@@ -481,3 +481,23 @@ func Load() (*Config, error) {
 
 	return &cfg, nil
 }
+
+// publishedDefaultJWTSecrets are development fallbacks that ship in the
+// repository. They are long enough to satisfy the minimum-length check, so
+// without an explicit test an operator who never wrote a .env would run a
+// public signing key and never see a symptom.
+var publishedDefaultJWTSecrets = []string{
+	"dev-insecure-jwt-secret-change-me-min-32-chars",
+	"change-me-to-a-random-64-char-string",
+}
+
+// IsPublishedDefaultJWTSecret reports whether the configured signing key is
+// one of the placeholders committed to this repository.
+func IsPublishedDefaultJWTSecret(secret string) bool {
+	for _, known := range publishedDefaultJWTSecrets {
+		if secret == known {
+			return true
+		}
+	}
+	return false
+}
