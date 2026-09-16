@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -54,17 +53,6 @@ func teamSlug(name string) string {
 	return s
 }
 
-func (s *TeamService) validateAvatarURL(raw string) error {
-	u, err := url.Parse(raw)
-	if err != nil {
-		return fmt.Errorf("invalid avatar URL")
-	}
-	if u.Scheme != "http" && u.Scheme != "https" {
-		return fmt.Errorf("avatar URL must use http or https scheme")
-	}
-	return nil
-}
-
 func (s *TeamService) validateDefaultInboxTTL(ttl string, maxTTL string) error {
 	d, err := time.ParseDuration(ttl)
 	if err != nil {
@@ -93,11 +81,6 @@ func (s *TeamService) CreateTeam(ctx context.Context, orgID uuid.UUID, input dom
 	if len(input.Name) > 100 {
 		return nil, fmt.Errorf("name must be 100 characters or less")
 	}
-	if input.AvatarURL != nil && *input.AvatarURL != "" {
-		if err := s.validateAvatarURL(*input.AvatarURL); err != nil {
-			return nil, err
-		}
-	}
 
 	org, err := s.orgRepo.GetByID(ctx, orgID)
 	if err != nil {
@@ -122,7 +105,6 @@ func (s *TeamService) CreateTeam(ctx context.Context, orgID uuid.UUID, input dom
 		Name:        input.Name,
 		Slug:        slug,
 		Description: input.Description,
-		AvatarURL:   input.AvatarURL,
 	}
 
 	// Check if team name already exists in this org
@@ -353,14 +335,6 @@ func (s *TeamService) UpdateTeam(ctx context.Context, orgID, id uuid.UUID, input
 	}
 	if input.Description != nil {
 		team.Description = input.Description
-	}
-	if input.AvatarURL != nil {
-		if *input.AvatarURL != "" {
-			if err := s.validateAvatarURL(*input.AvatarURL); err != nil {
-				return nil, err
-			}
-		}
-		team.AvatarURL = input.AvatarURL
 	}
 	if input.Settings != nil {
 		if input.Settings.AttachmentsEnabled != nil {

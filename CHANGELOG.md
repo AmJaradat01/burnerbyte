@@ -5,6 +5,18 @@ All notable changes to this project are documented here. The format follows
 uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html): `feat:` work
 takes a minor bump, `fix:` / `docs:` / `test:` a patch.
 
+## v1.23.0 (September 2026) — Avatars removed; SSO enforced for system admins
+
+### Removed
+- **User and team avatars, entirely.** There was never an upload path: both columns held a URL the user typed in, so this frees no storage. What it removes is a feature that did not work and a privacy hole waiting to open. The frontend CSP is `img-src 'self' data: blob:`, so every external avatar was blocked by the browser and the interface fell back to initials — which is what everyone has actually been looking at. `teams.avatar_url` went further: full plumbing through domain, service, validator and repository, and never rendered anywhere. And `users.avatar_url` was unvalidated, unlike the team one, so relaxing the CSP to make it render would have handed every user a tracking pixel aimed at their colleagues — set the avatar to a host you control and collect the IP of every admin who opens the members list. The product blocks remote images in the mail reader for exactly that reason. Migration 50 drops both columns; the domain types, repositories, services, handlers, OpenAPI schema, profile form, admin user form and the SSO `picture`/`avatar_url` claim mapping all go with them.
+
+### Security
+- **`security.enforce_sso_for_system_admins`** closes a gap the org-level setting structurally could not reach. `enforce_sso` joins through `org_memberships`, so a system admin who belongs to no organisation was never evaluated and could always sign in with a password — and that is the account that grants `is_system_admin`, transfers teams between orgs and reads every audit trail. The setup wizard also creates its owner with a password before SSO exists at all. Enforcement applies only once the admin has a linked SSO identity, so it cannot lock the last administrator out of their own deployment, and it fails closed if the identity lookup errors, logging the reason rather than returning it.
+- **Organisation logos are validated and actually render.** `logo_url` was unvalidated and blocked by the same CSP as avatars, so branding never appeared. It is kept — an admin setting a logo for their own members is a different trust relationship from any user setting an image other members load — but it now requires https, a host, and no embedded credentials, and `img-src` allows `https:` so it displays.
+
+### Fixed
+- Two regressions the change surfaced, both caught by the existing suite. Dropping the column shifted every positional argument after `display_name`, so mocks asserting on hardcoded argument indexes were reading `password_changed_at` where they expected `email_verified`. And the SSO email-verified persistence had been riding on a `userRepo.Update` buried inside the avatar block — the identity-lookup path has its own explicit update, which is what the regression test was guarding all along.
+
 ## v1.22.0 (September 2026) — Remaining audit items closed; two verification gaps filled
 
 ### Corrected

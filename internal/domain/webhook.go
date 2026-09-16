@@ -7,18 +7,18 @@ import (
 )
 
 type Webhook struct {
-	ID            uuid.UUID `json:"id"`
-	TeamID        uuid.UUID `json:"team_id"`
-	CreatedBy     uuid.UUID `json:"created_by"`
-	URL           string    `json:"url"`
-	Secret        string    `json:"secret,omitempty"`
-	Events        []string  `json:"events"`
-	Active        bool      `json:"active"`
-	LastStatus    *int      `json:"last_status,omitempty"`
+	ID            uuid.UUID  `json:"id"`
+	TeamID        uuid.UUID  `json:"team_id"`
+	CreatedBy     uuid.UUID  `json:"created_by"`
+	URL           string     `json:"url"`
+	Secret        string     `json:"secret,omitempty"`
+	Events        []string   `json:"events"`
+	Active        bool       `json:"active"`
+	LastStatus    *int       `json:"last_status,omitempty"`
 	LastAttemptAt *time.Time `json:"last_attempt_at,omitempty"`
-	FailureCount  int       `json:"failure_count"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
+	FailureCount  int        `json:"failure_count"`
+	CreatedAt     time.Time  `json:"created_at"`
+	UpdatedAt     time.Time  `json:"updated_at"`
 }
 
 type CreateWebhookInput struct {

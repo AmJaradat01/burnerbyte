@@ -65,8 +65,12 @@ func (s *EmailService) ListByInbox(ctx context.Context, inboxID, userID uuid.UUI
 	if inbox.CreatedBy != userID {
 		return nil, 0, fmt.Errorf("forbidden: not your inbox")
 	}
-	if page < 1 { page = 1 }
-	if perPage < 1 || perPage > 100 { perPage = 20 }
+	if page < 1 {
+		page = 1
+	}
+	if perPage < 1 || perPage > 100 {
+		perPage = 20
+	}
 	return s.emailRepo.ListByInbox(ctx, inboxID, page, perPage)
 }
 
@@ -78,8 +82,12 @@ func (s *EmailService) Search(ctx context.Context, inboxID, userID uuid.UUID, qu
 	if inbox.CreatedBy != userID {
 		return nil, 0, fmt.Errorf("forbidden: not your inbox")
 	}
-	if page < 1 { page = 1 }
-	if perPage < 1 || perPage > 100 { perPage = 20 }
+	if page < 1 {
+		page = 1
+	}
+	if perPage < 1 || perPage > 100 {
+		perPage = 20
+	}
 	return s.emailRepo.Search(ctx, inboxID, query, page, perPage)
 }
 

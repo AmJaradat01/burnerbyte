@@ -328,11 +328,10 @@ func (s *SSOManager) handleGitHubCallback(ctx context.Context, ps *providerState
 	}
 
 	var ghUser struct {
-		ID        int64  `json:"id"`
-		Login     string `json:"login"`
-		Name      string `json:"name"`
-		Email     string `json:"email"`
-		AvatarURL string `json:"avatar_url"`
+		ID    int64  `json:"id"`
+		Login string `json:"login"`
+		Name  string `json:"name"`
+		Email string `json:"email"`
 	}
 	if err := json.NewDecoder(userResp.Body).Decode(&ghUser); err != nil {
 		return nil, fmt.Errorf("decode GitHub user response: %w", err)
@@ -363,10 +362,8 @@ func (s *SSOManager) handleGitHubCallback(ctx context.Context, ps *providerState
 		DisplayName:   displayName,
 		Provider:      ps.config.Name,
 		Subject:       strconv.FormatInt(ghUser.ID, 10),
-		AvatarURL:     ghUser.AvatarURL,
 		Claims: map[string]any{
-			"login":      ghUser.Login,
-			"avatar_url": ghUser.AvatarURL,
+			"login": ghUser.Login,
 		},
 	}, nil
 }
@@ -442,7 +439,6 @@ func (s *SSOManager) handleOIDCCallback(ctx context.Context, ps *providerState, 
 	}
 
 	subject, _ := claims["sub"].(string)
-	avatarURL, _ := claims["picture"].(string)
 
 	return &domain.SSOCallbackResult{
 		Email:         email,
@@ -450,7 +446,6 @@ func (s *SSOManager) handleOIDCCallback(ctx context.Context, ps *providerState, 
 		DisplayName:   displayName,
 		Provider:      ps.config.Name,
 		Subject:       subject,
-		AvatarURL:     avatarURL,
 		Claims:        claims,
 	}, nil
 }

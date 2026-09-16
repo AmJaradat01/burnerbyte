@@ -32,7 +32,7 @@ type Domain struct {
 }
 
 type DomainSettings struct {
-	AttachmentsEnabled  *string `json:"attachments_enabled,omitempty"`  // "inherit" | "enabled" | "disabled"
+	AttachmentsEnabled  *string `json:"attachments_enabled,omitempty"` // "inherit" | "enabled" | "disabled"
 	DefaultInboxTTL     *string `json:"default_inbox_ttl,omitempty"`
 	MaxInboxTTL         *string `json:"max_inbox_ttl,omitempty"`
 	MaxInboxesPerDomain *int    `json:"max_inboxes_per_domain,omitempty"`
