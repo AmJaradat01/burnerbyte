@@ -5,6 +5,19 @@ All notable changes to this project are documented here. The format follows
 uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html): `feat:` work
 takes a minor bump, `fix:` / `docs:` / `test:` a patch.
 
+## v1.20.0 (September 2026) — Private deployment tooling removed; screenshots recaptured
+
+### Removed
+- **`Jenkinsfile`.** It described one specific production deployment rather than a reusable pipeline: `https://burnerbyte.com` hardcoded as the frontend build args, three Jenkins credential IDs named in plain text (`burnerbyte-deploy-host`, `burnerbyte-deploy-key`, `gitlab-ssh-key`), and an `scp`/`ssh` deploy to a maintainer-held host. No contributor could run it, and publishing it mapped the deploy setup for no benefit. GitHub Actions already covers the verification half.
+- **`deploy/` (four scripts).** Same problem: `burnerbyte.com` baked into the Caddy site block and the systemd units, `vps-setup.sh` wired to a specific Infisical project, and `hetzner-setup.sh` provider-specific. The two "generic" and "Hetzner" variants had also forked — 195 lines apart after normalising the provider name away — so they were two runbooks, not one script with an option. Docker Compose is the supported deployment path.
+
+### Changed
+- The production guide documents deploying with Compose against external Postgres, Redis and S3 instead of listing scripts that no longer exist, and says plainly that reverse proxy, TLS and host hardening are the operator's to configure.
+- `docs/index` lists GitHub Actions under CI; `CONTRIBUTING.md` no longer describes a maintainer-only deploy pipeline; the `Makefile` and `docker-compose.yml` comments no longer name Jenkins or the deploy scripts.
+
+### Fixed
+- **The screenshot set was incomplete and stale.** The capture script signed in before its loop started, so the landing page and the sign-in screen were never photographed; `home.png` — the generate-an-inbox screen, the product's primary surface — and `settings.png` were captured but referenced from nowhere. Every existing shot also still showed "GitLab" in the footer and `vdev` in the sidebar. All eleven were recaptured against a clean demo instance with the version stamped, and landing, sign-in, home and settings are now wired into the README gallery, the docs gallery and the quick-start walkthrough. Every file in `web/public/screenshots` is referenced, and every reference resolves.
+
 ## v1.19.1 (September 2026) — CI fixes found by CI's first real run
 
 ### Fixed
