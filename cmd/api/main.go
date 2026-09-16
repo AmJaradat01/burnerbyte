@@ -250,7 +250,10 @@ func main() {
 		slog.Warn("failed to load SSO providers from database", "error", err)
 		ssoMgr.LoadProviders(ctx, nil)
 	}
-	authHandler := handler.NewAuthHandler(authSvc, ssoMgr, cfg)
+	// The SSO link intent is held server-side against the state value rather
+	// than in a client cookie; see internal/auth/sso_state.go.
+	ssoStateStore := auth.NewSSOStateStore(rdb, 10*time.Minute)
+	authHandler := handler.NewAuthHandler(authSvc, ssoMgr, cfg, ssoStateStore)
 	orgHandler := handler.NewOrgHandler(orgSvc, userRepo)
 	domainHandler := handler.NewDomainHandler(domainSvc, inboxRepo, cfg.SMTP.Hostname)
 	teamHandler := handler.NewTeamHandler(teamSvc)
@@ -326,7 +329,7 @@ func main() {
 	// API v1
 	r.Route("/api/v1", func(r chi.Router) {
 		// Public routes (no auth)
-		setupHandler.Routes(r)
+		setupHandler.Routes(r, rateLimiter)
 		authHandler.PublicRoutes(r, rateLimiter)
 		tryHandler.Routes(r, rateLimiter)
 		r.Get("/invites/{token}/preview", orgHandler.PreviewInvite)
@@ -767,6 +770,12 @@ func main() {
 			// WebSocket ticket endpoint - generates a short-lived ticket for WS auth
 			r.Post("/ws/ticket", func(w http.ResponseWriter, r *http.Request) {
 				uc := auth.GetUser(r.Context())
+				if uc == nil {
+					// Unreachable inside the authenticated group, but the
+					// dereference below is one route-move from a panic.
+					http.Error(w, "unauthorized", http.StatusUnauthorized)
+					return
+				}
 				ticket := uuid.New().String()
 				rdb.Set(r.Context(), "ws_ticket:"+ticket, uc.UserID.String(), 30*time.Second)
 				w.Header().Set("Content-Type", "application/json")

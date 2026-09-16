@@ -213,7 +213,7 @@ func (s *AuthService) Login(ctx context.Context, input domain.LoginInput, ip, us
 	if err != nil {
 		if errors.Is(err, postgres.ErrNotFound) {
 			// Perform a dummy bcrypt comparison to prevent timing-based user enumeration.
-			auth.DummyCheckPassword(input.Password)
+			auth.DummyCheckPassword(input.Password, s.cfg.PasswordPolicy())
 			return nil, nil, fmt.Errorf("invalid email or password")
 		}
 		return nil, nil, err

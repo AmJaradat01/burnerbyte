@@ -2,6 +2,7 @@ package auth
 
 import (
 	"fmt"
+	"sync"
 	"unicode"
 
 	"golang.org/x/crypto/bcrypt"
@@ -9,14 +10,34 @@ import (
 	"github.com/amjaradat01/burnerbyte/internal/config"
 )
 
-// dummyHash is a pre-computed bcrypt hash used to prevent timing attacks.
-// When a login attempt targets a non-existent email, we still run bcrypt
-// against this hash so the response time is indistinguishable from a
-// real password check.
-var dummyHash = func() string {
-	h, _ := bcrypt.GenerateFromPassword([]byte("timing-attack-dummy"), bcrypt.DefaultCost)
+// dummyHashes holds one pre-computed bcrypt hash per cost, used to keep a
+// login against a non-existent email as slow as a real password check.
+//
+// A single hash pinned to bcrypt.DefaultCost only equalises the timing while
+// the configured cost happens to be 10. Raising password_policy.bcrypt_cost
+// made real checks measurably slower than the dummy and quietly turned this
+// defence into the user-enumeration oracle it exists to prevent, so the
+// dummy is now derived from the same resolved cost.
+var (
+	dummyHashMu sync.Mutex
+	dummyHashes = map[int]string{}
+)
+
+func dummyHashForCost(cost int) string {
+	dummyHashMu.Lock()
+	defer dummyHashMu.Unlock()
+	if h, ok := dummyHashes[cost]; ok {
+		return h
+	}
+	h, err := bcrypt.GenerateFromPassword([]byte("timing-attack-dummy"), cost)
+	if err != nil {
+		// Only reachable for an out-of-range cost, which ResolveBcryptCost
+		// already excludes; fall back rather than fail the login path.
+		h, _ = bcrypt.GenerateFromPassword([]byte("timing-attack-dummy"), bcrypt.DefaultCost)
+	}
+	dummyHashes[cost] = string(h)
 	return string(h)
-}()
+}
 
 // ResolveBcryptCost returns the configured bcrypt cost, falling back to
 // bcrypt.DefaultCost (10) if the configured value is out of range.
@@ -40,12 +61,12 @@ func CheckPassword(hash, password string) bool {
 	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) == nil
 }
 
-// DummyCheckPassword performs a bcrypt comparison against a dummy hash.
-// This ensures that login attempts for non-existent users take the same
-// amount of time as attempts for real users, preventing timing-based
-// user enumeration.
-func DummyCheckPassword(password string) {
-	_ = bcrypt.CompareHashAndPassword([]byte(dummyHash), []byte(password))
+// DummyCheckPassword performs a bcrypt comparison against a dummy hash of the
+// configured cost, so a login for a non-existent user takes the same time as
+// one for a real user and cannot be told apart.
+func DummyCheckPassword(password string, cfg config.PasswordConfig) {
+	cost := ResolveBcryptCost(cfg)
+	_ = bcrypt.CompareHashAndPassword([]byte(dummyHashForCost(cost)), []byte(password))
 }
 
 func ValidatePassword(password string, cfg config.PasswordConfig) error {
