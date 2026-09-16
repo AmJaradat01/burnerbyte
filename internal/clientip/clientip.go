@@ -106,6 +106,7 @@ func (c *Resolver) Resolve(r *http.Request) string {
 func (c *Resolver) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.WithValue(r.Context(), clientIPKey{}, c.Resolve(r))
+		ctx = context.WithValue(ctx, schemeKey{}, c.IsHTTPS(r))
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
@@ -131,4 +132,61 @@ func FromContext(ctx context.Context) (string, bool) {
 // build a request outside the middleware chain.
 func With(ctx context.Context, ip string) context.Context {
 	return context.WithValue(ctx, clientIPKey{}, ip)
+}
+
+// ── Forwarded scheme ────────────────────────────────────────────────────
+//
+// X-Forwarded-Proto had the same problem the client IP did: three call sites
+// read it straight off the request, so behind a proxy that does not overwrite
+// it, a client sending "X-Forwarded-Proto: http" got its refresh cookie
+// issued without Secure. It is resolved here on the same trust rule.
+
+type schemeKey struct{}
+
+// IsHTTPS reports whether the client's connection to the edge was TLS.
+//
+// The trust rule is deliberately looser than the one for client IP, because
+// the two fail in opposite directions. A forged IP lets a caller pick its own
+// rate-limit bucket and allowlist entry, so an unverified header must be
+// ignored. A forged scheme only decides whether the refresh cookie carries
+// Secure and whether HSTS is sent — claiming HTTPS makes the response more
+// restrictive, never less, and no browser will send X-Forwarded-Proto on a
+// victim's behalf, so the downgrade direction is not reachable from a page.
+//
+// Against that, ignoring the header whenever trusted_proxies is unset would
+// strip Secure from every deployment that terminates TLS at a proxy without
+// having configured the list — a real regression for a theoretical gain. So:
+// a trusted proxy's header is authoritative, and where no proxies are
+// configured the header is still honoured.
+func (c *Resolver) IsHTTPS(r *http.Request) bool {
+	if r.TLS != nil {
+		return true
+	}
+	if len(c.trustedNets) > 0 && !c.isTrusted(extractIP(r.RemoteAddr)) {
+		// A proxy list exists and this peer is not on it, so anything it
+		// claims about the scheme is noise.
+		return false
+	}
+	if proto := r.Header.Get("X-Forwarded-Proto"); proto != "" {
+		// A proxy chain appends, so the leftmost entry is the scheme the
+		// client actually used to reach the edge.
+		first, _, _ := strings.Cut(proto, ",")
+		return strings.EqualFold(strings.TrimSpace(first), "https")
+	}
+	return false
+}
+
+// IsHTTPSFrom reports the resolved scheme for a request. Without the resolver
+// middleware in the chain it applies the no-trusted-proxies rule directly,
+// rather than reporting plain HTTP — under-reporting here would drop Secure
+// from a cookie on a connection that really is TLS-terminated upstream.
+func IsHTTPSFrom(r *http.Request) bool {
+	if v, ok := r.Context().Value(schemeKey{}).(bool); ok {
+		return v
+	}
+	if r.TLS != nil {
+		return true
+	}
+	first, _, _ := strings.Cut(r.Header.Get("X-Forwarded-Proto"), ",")
+	return strings.EqualFold(strings.TrimSpace(first), "https")
 }

@@ -250,6 +250,12 @@ func (s *AuthService) Login(ctx context.Context, input domain.LoginInput, ip, us
 		return nil, nil, fmt.Errorf("invalid email or password")
 	}
 
+	// Checked after the password, not before: answering "verify your email"
+	// to a wrong password would confirm the address exists.
+	if s.cfg.Security.RequireEmailVerification && !user.EmailVerified {
+		return nil, nil, &EmailNotVerifiedError{Email: user.Email}
+	}
+
 	// Reset lockout on success
 	_ = s.lockout.Reset(ctx, user.ID)
 
@@ -1655,4 +1661,14 @@ func (s *AuthService) SetAuthMethodLock(ctx context.Context, userID uuid.UUID, l
 		"user_id", userID, "email", user.Email, "lock", lock)
 
 	return user, nil
+}
+
+// EmailNotVerifiedError is returned when security.require_email_verification
+// is on and the account has not confirmed its address. It is distinct from a
+// credential failure so the UI can offer to resend the verification mail —
+// and it is only ever returned after the password has already been checked.
+type EmailNotVerifiedError struct{ Email string }
+
+func (e *EmailNotVerifiedError) Error() string {
+	return "email address not verified"
 }
