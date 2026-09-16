@@ -5,6 +5,16 @@ All notable changes to this project are documented here. The format follows
 uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html): `feat:` work
 takes a minor bump, `fix:` / `docs:` / `test:` a patch.
 
+## v1.19.1 (September 2026) — CI fixes found by CI's first real run
+
+### Fixed
+- **`pnpm typecheck` failed on any clean checkout.** Fumadocs generates `.source/` at build time and it is gitignored, so `tsc` could not resolve `fumadocs-mdx:collections/server` unless an earlier build had left the directory behind. The script only ever passed locally for that reason — precisely the "works on my machine" gap it was added to catch. A `postinstall` running `fumadocs-mdx` now generates it after every install, fixing CI, fresh clones, and anyone running typecheck before their first build.
+- **That postinstall then broke the Docker build**, which had been passing: the frontend deps stage copies the manifest but not the source, so `fumadocs-mdx` ran without `source.config.ts`. The stage now installs with `--ignore-scripts`; it exists only to produce `node_modules`, and the builder stage regenerates `.source` during `pnpm build` as it always did.
+- `pnpm/action-setup` could not find `packageManager`, because the pnpm project lives in `web/` rather than the repository root.
+
+### Added
+- `workflow_dispatch` on the CI workflow, so the suite can be re-run from the Actions tab without an empty commit.
+
 ## v1.19.0 (September 2026) — Migrated to GitHub; public CI
 
 ### Changed
