@@ -103,3 +103,60 @@ func TestFromFallsBackToPeerWithoutMiddleware(t *testing.T) {
 		t.Error("FromContext reported a value that was never set")
 	}
 }
+
+// The scheme trust rule is deliberately looser than the IP one, because the
+// two fail in opposite directions: a forged IP picks your rate-limit bucket,
+// a forged scheme can only make the response more restrictive.
+func TestIsHTTPS(t *testing.T) {
+	cases := []struct {
+		name    string
+		proxies []string
+		peer    string
+		header  string
+		want    bool
+	}{
+		{"no header, no tls", nil, "198.51.100.7:1", "", false},
+		{"header honoured when no proxies are configured", nil, "198.51.100.7:1", "https", true},
+		{"trusted proxy is believed", []string{"10.0.0.0/8"}, "10.1.2.3:1", "https", true},
+		{"untrusted peer is ignored once a list exists", []string{"10.0.0.0/8"}, "198.51.100.7:1", "https", false},
+		{"http from a trusted proxy stays http", []string{"10.0.0.0/8"}, "10.1.2.3:1", "http", false},
+		{"leftmost entry of a chain wins", []string{"10.0.0.0/8"}, "10.1.2.3:1", "https, http", true},
+		{"case insensitive", nil, "198.51.100.7:1", "HTTPS", true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := request(tc.peer, nil)
+			if tc.header != "" {
+				r.Header.Set("X-Forwarded-Proto", tc.header)
+			}
+			if got := New(tc.proxies).IsHTTPS(r); got != tc.want {
+				t.Errorf("IsHTTPS = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+// Without the middleware installed the fallback must still honour the header:
+// under-reporting here would strip Secure from a cookie on a connection that
+// really is TLS-terminated upstream.
+func TestIsHTTPSFromFallbackHonoursHeader(t *testing.T) {
+	r := request("198.51.100.7:1", map[string]string{"X-Forwarded-Proto": "https"})
+	if !IsHTTPSFrom(r) {
+		t.Error("fallback ignored X-Forwarded-Proto; refresh cookies would lose Secure")
+	}
+	plain := request("198.51.100.7:1", nil)
+	if IsHTTPSFrom(plain) {
+		t.Error("plain HTTP reported as TLS")
+	}
+}
+
+func TestMiddlewarePublishesScheme(t *testing.T) {
+	var got bool
+	h := New(nil).Middleware(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		got = IsHTTPSFrom(r)
+	}))
+	h.ServeHTTP(httptest.NewRecorder(), request("198.51.100.7:1", map[string]string{"X-Forwarded-Proto": "https"}))
+	if !got {
+		t.Error("resolved scheme did not reach the handler")
+	}
+}

@@ -77,7 +77,7 @@ func seedTeam(t *testing.T, pool *pgxpool.Pool, orgID uuid.UUID, archived bool) 
 func seedInvite(t *testing.T, pool *pgxpool.Pool, orgID uuid.UUID, email, token string) uuid.UUID {
 	id := uuid.New()
 	mustExec(t, pool,
-		`INSERT INTO invites (id, org_id, email, org_role, token, expires_at, allowed_auth)
+		`INSERT INTO invites (id, org_id, email, org_role, token_hash, expires_at, allowed_auth)
 		 VALUES ($1,$2,$3,'member',$4,$5,'["any"]'::jsonb)`,
 		id, orgID, email, postgres.HashToken(token), time.Now().Add(48*time.Hour))
 	return id
