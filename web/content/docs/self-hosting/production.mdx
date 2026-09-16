@@ -16,6 +16,9 @@ description: Hardening BurnerByte for production use.
 - Review rate limiting settings
 - Set `BB_RATE_LIMIT_TRUSTED_PROXIES` to your reverse proxy's CIDR if you run behind one. Left empty (the default), forwarded headers are ignored entirely and the client IP is always the peer address — correct for a directly-exposed deployment. Getting this wrong now costs accuracy, not safety: rate limits, the API-key IP allowlist, the audit trail and the `/metrics` gate all read the same resolved value
 - Prometheus metrics are on by default at `/metrics` and answer only loopback and RFC1918-private clients, so scrape from inside your network. Your proxy should still overwrite inbound `X-Forwarded-For` / `X-Real-IP` as a matter of hygiene
+- Set `BB_METRICS_TOKEN` if `/metrics` is reachable from anywhere but your scrape host. The loopback/private-address check still rests on your proxy overwriting inbound `X-Forwarded-For` and `X-Real-IP`; a bearer token rests on nothing but itself. Prometheus sends it with `bearer_token` in the scrape config
+- Consider `BB_SECURITY_REQUIRE_EMAIL_VERIFICATION=true` on a new deployment. It refuses password logins until the address is confirmed, and it is off by default only because enabling it on an existing instance locks out every account created beforehand
+- Leave `BB_SECURITY_ALLOW_TOKEN_QUERY_PARAM=false` unless a non-browser client needs `?token=` on the WebSocket endpoints. The browser client uses the one-time `/ws/ticket` flow; a token in a URL is captured by proxy access logs and browser history
 - Set `LOG_LEVEL=info` and `LOG_FORMAT=json`
 
 ## Minimal Production Environment

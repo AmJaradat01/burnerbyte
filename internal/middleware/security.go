@@ -1,6 +1,10 @@
 package middleware
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/amjaradat01/burnerbyte/internal/clientip"
+)
 
 // SecurityHeaders sets baseline security headers on every API response. The SPA
 // configures its own headers in next.config; this hardens the API surface,
@@ -30,7 +34,7 @@ func SecurityHeaders(next http.Handler) http.Handler {
 		// HTTP is ignored by browsers, and self-hosted deployments on a
 		// plain-HTTP LAN address must not be pinned to a scheme they do not
 		// serve.
-		if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
+		if clientip.IsHTTPSFrom(r) {
 			h.Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
 		}
 		next.ServeHTTP(w, r)

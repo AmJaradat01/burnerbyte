@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"github.com/amjaradat01/burnerbyte/internal/clientip"
 	"net/http"
 	"time"
 
@@ -23,10 +24,11 @@ const (
 )
 
 // requestIsHTTPS reports whether the client connection is HTTPS, looking
-// through a TLS-terminating proxy via X-Forwarded-Proto (same convention as
-// the SSO redirect flow).
+// through a TLS-terminating proxy. The forwarded header is believed only
+// when the peer is a configured trusted proxy — reading it from any caller
+// let a client ask for its own refresh cookie to be issued without Secure.
 func requestIsHTTPS(r *http.Request) bool {
-	return r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https"
+	return clientip.IsHTTPSFrom(r)
 }
 
 // refreshCookieSameSite maps the configured policy to a SameSite mode and
