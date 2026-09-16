@@ -5,6 +5,12 @@ All notable changes to this project are documented here. The format follows
 uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html): `feat:` work
 takes a minor bump, `fix:` / `docs:` / `test:` a patch.
 
+## v1.23.1 (September 2026) — Zero advisories; the CI allowlist is gone
+
+### Fixed
+- **`image-size` 2.0.4 clears the last two advisories**, taking the production dependency tree to zero at every severity. They were recorded as accepted in v1.23.0 on the grounds that no patched release existed — which came from reading the advisory's own empty `patched_versions` field rather than checking whether a newer version had shipped. One had: the tree was pinned at 2.0.2 and 2.0.4 was current. The reasoning that followed (build-time only, no untrusted input) was true but beside the point, because the premise was wrong.
+- **The CI vulnerability gate no longer has an allowlist.** It is removed rather than emptied: an exception that outlives its reason silently swallows the next advisory for the same package, and this one would have hidden every future `image-size` finding. Reinstating one is now a deliberate edit with the reasoning written beside it.
+
 ## v1.23.0 (September 2026) — Avatars removed; SSO enforced for system admins
 
 ### Removed
