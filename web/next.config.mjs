@@ -24,7 +24,12 @@ const config = {
           "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
           "style-src 'self' 'unsafe-inline'",
           `connect-src 'self' ${apiUrl} ${wsUrl} ${apiUrl.replace('/api/v1', '')} ${wsUrl.replace('/api/v1/ws', '')}`,
-          "img-src 'self' data: blob:",
+          // https: is needed for organisation branding — the logo an admin sets is
+          // rendered in the sidebar for that org's members. Kept to https only, and
+          // the server validates the scheme on write. User-settable avatars were
+          // removed rather than allowed here: those would have let any member point
+          // a tracking pixel at their colleagues.
+          "img-src 'self' https: data: blob:",
           "font-src 'self' data:",
           "frame-src 'self'",
           "base-uri 'self'",

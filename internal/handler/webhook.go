@@ -27,18 +27,28 @@ func (h *WebhookHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
-	if err != nil { writeError(w, http.StatusBadRequest, "invalid org ID"); return }
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid org ID")
+		return
+	}
 	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
-	if err != nil { writeError(w, http.StatusBadRequest, "invalid team ID"); return }
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid team ID")
+		return
+	}
 	if checkTeamPermission(w, r, orgID, teamID, "team.webhooks.manage") {
 		return
 	}
 	var input domain.CreateWebhookInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body"); return
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
 	}
 	wh, err := h.svc.Create(r.Context(), teamID, uc.UserID, input)
-	if err != nil { writeServiceError(w, err); return }
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
 	auditRecordEnhanced(r, orgID, "webhook.created", "webhook", wh.ID, input.URL, map[string]any{"url": input.URL})
 	writeJSON(w, http.StatusCreated, wh)
 }
@@ -50,15 +60,24 @@ func (h *WebhookHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
-	if err != nil { writeError(w, http.StatusBadRequest, "invalid org ID"); return }
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid org ID")
+		return
+	}
 	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
-	if err != nil { writeError(w, http.StatusBadRequest, "invalid team ID"); return }
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid team ID")
+		return
+	}
 	if checkTeamPermission(w, r, orgID, teamID, "team.webhooks.view") {
 		return
 	}
 	page, perPage := parsePagination(r)
 	webhooks, total, err := h.svc.List(r.Context(), teamID, page, perPage)
-	if err != nil { writeError(w, http.StatusInternalServerError, "failed"); return }
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed")
+		return
+	}
 	writeJSON(w, http.StatusOK, paginatedResponse(webhooks, total, page, perPage))
 }
 
@@ -69,24 +88,37 @@ func (h *WebhookHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
-	if err != nil { writeError(w, http.StatusBadRequest, "invalid org ID"); return }
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid org ID")
+		return
+	}
 	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
-	if err != nil { writeError(w, http.StatusBadRequest, "invalid team ID"); return }
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid team ID")
+		return
+	}
 	if checkTeamPermission(w, r, orgID, teamID, "team.webhooks.manage") {
 		return
 	}
 	id, err := uuid.Parse(chi.URLParam(r, "webhookId"))
-	if err != nil { writeError(w, http.StatusBadRequest, "invalid webhook ID"); return }
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid webhook ID")
+		return
+	}
 
 	// Fetch webhook before update for diff
 	beforeWh, _ := h.svc.GetByID(r.Context(), teamID, id)
 
 	var input domain.UpdateWebhookInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body"); return
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
 	}
 	wh, err := h.svc.Update(r.Context(), teamID, id, input)
-	if err != nil { writeServiceError(w, err); return }
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
 
 	meta := map[string]any{"url": input.URL, "events": input.Events, "active": input.Active}
 	if beforeWh != nil {
@@ -104,14 +136,23 @@ func (h *WebhookHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
-	if err != nil { writeError(w, http.StatusBadRequest, "invalid org ID"); return }
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid org ID")
+		return
+	}
 	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
-	if err != nil { writeError(w, http.StatusBadRequest, "invalid team ID"); return }
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid team ID")
+		return
+	}
 	if checkTeamPermission(w, r, orgID, teamID, "team.webhooks.manage") {
 		return
 	}
 	id, err := uuid.Parse(chi.URLParam(r, "webhookId"))
-	if err != nil { writeError(w, http.StatusBadRequest, "invalid webhook ID"); return }
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid webhook ID")
+		return
+	}
 
 	// Fetch webhook before deletion for audit
 	webhookURL := ""
@@ -122,7 +163,8 @@ func (h *WebhookHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.svc.Delete(r.Context(), teamID, id); err != nil {
-		writeError(w, http.StatusInternalServerError, "failed"); return
+		writeError(w, http.StatusInternalServerError, "failed")
+		return
 	}
 	auditRecordEnhanced(r, orgID, "webhook.deleted", "webhook", id, resourceName, map[string]any{"webhook_id": id.String(), "webhook_url": webhookURL})
 	w.WriteHeader(http.StatusNoContent)
@@ -135,17 +177,29 @@ func (h *WebhookHandler) ListDeliveryLogs(w http.ResponseWriter, r *http.Request
 		return
 	}
 	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
-	if err != nil { writeError(w, http.StatusBadRequest, "invalid org ID"); return }
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid org ID")
+		return
+	}
 	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
-	if err != nil { writeError(w, http.StatusBadRequest, "invalid team ID"); return }
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid team ID")
+		return
+	}
 	if checkTeamPermission(w, r, orgID, teamID, "team.webhooks.view") {
 		return
 	}
 	webhookID, err := uuid.Parse(chi.URLParam(r, "webhookId"))
-	if err != nil { writeError(w, http.StatusBadRequest, "invalid webhook ID"); return }
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid webhook ID")
+		return
+	}
 	page, perPage := parsePagination(r)
 	logs, total, err := h.svc.ListDeliveryLogs(r.Context(), teamID, webhookID, page, perPage)
-	if err != nil { writeError(w, http.StatusInternalServerError, "failed"); return }
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed")
+		return
+	}
 	writeJSON(w, http.StatusOK, paginatedResponse(logs, total, page, perPage))
 }
 
@@ -156,15 +210,27 @@ func (h *WebhookHandler) WebhookStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	orgID, err := uuid.Parse(chi.URLParam(r, "orgId"))
-	if err != nil { writeError(w, http.StatusBadRequest, "invalid org ID"); return }
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid org ID")
+		return
+	}
 	teamID, err := uuid.Parse(chi.URLParam(r, "teamId"))
-	if err != nil { writeError(w, http.StatusBadRequest, "invalid team ID"); return }
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid team ID")
+		return
+	}
 	if checkTeamPermission(w, r, orgID, teamID, "team.webhooks.view") {
 		return
 	}
 	webhookID, err := uuid.Parse(chi.URLParam(r, "webhookId"))
-	if err != nil { writeError(w, http.StatusBadRequest, "invalid webhook ID"); return }
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid webhook ID")
+		return
+	}
 	stats, err := h.svc.GetWebhookStats(r.Context(), webhookID)
-	if err != nil { writeError(w, http.StatusInternalServerError, "failed"); return }
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed")
+		return
+	}
 	writeJSON(w, http.StatusOK, stats)
 }

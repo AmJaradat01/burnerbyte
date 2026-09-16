@@ -62,7 +62,6 @@ type SSOCallbackResult struct {
 	DisplayName   string         `json:"display_name"`
 	Provider      string         `json:"provider"`
 	Subject       string         `json:"subject"`
-	AvatarURL     string         `json:"avatar_url,omitempty"`
 	Claims        map[string]any `json:"claims,omitempty"`
 }
 

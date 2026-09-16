@@ -224,6 +224,7 @@ without them. See [Production Deployment](/docs/self-hosting/production).
 |---|---|---|---|
 | `security.allow_token_query_param` | `BB_SECURITY_ALLOW_TOKEN_QUERY_PARAM` | `false` | Re-enables `?token=<jwt>` on the WebSocket endpoints. The browser client uses the one-time `/ws/ticket` flow instead; a token in a URL is captured by reverse-proxy access logs and browser history |
 | `security.require_email_verification` | `BB_SECURITY_REQUIRE_EMAIL_VERIFICATION` | `false` | Refuse password logins until the address is confirmed. Off by default because enabling it on an existing deployment locks out every account created beforehand. The check runs after the password, so it never reveals whether an address exists |
+| `security.enforce_sso_for_system_admins` | `BB_SECURITY_ENFORCE_SSO_FOR_SYSTEM_ADMINS` | `false` | Require SSO for accounts carrying `is_system_admin`. The org-level `enforce_sso` setting joins through org membership, so it never covers a system admin who belongs to no organisation — the account that can grant `is_system_admin`, transfer teams and read every audit trail. Enforced only once that admin has a linked SSO identity, so it cannot lock out the last administrator |
 
 ## Auth Cookie
 

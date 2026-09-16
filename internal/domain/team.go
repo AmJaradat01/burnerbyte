@@ -12,7 +12,6 @@ type Team struct {
 	Name        string       `json:"name"`
 	Slug        string       `json:"slug"`
 	Description *string      `json:"description,omitempty"`
-	AvatarURL   *string      `json:"avatar_url,omitempty"`
 	IsArchived  bool         `json:"is_archived"`
 	ArchivedAt  *time.Time   `json:"archived_at,omitempty"`
 	Settings    TeamSettings `json:"settings"`
@@ -51,10 +50,9 @@ type TeamMembership struct {
 }
 
 type CreateTeamInput struct {
-	Name        string                 `json:"name"`
-	Description *string                `json:"description,omitempty"`
-	AvatarURL   *string                `json:"avatar_url,omitempty"`
-	Members     []AddTeamMemberInput   `json:"members,omitempty"`
+	Name        string                  `json:"name"`
+	Description *string                 `json:"description,omitempty"`
+	Members     []AddTeamMemberInput    `json:"members,omitempty"`
 	Domains     []CreateTeamDomainInput `json:"domains,omitempty"`
 }
 
@@ -66,7 +64,6 @@ type CreateTeamDomainInput struct {
 type UpdateTeamInput struct {
 	Name        *string       `json:"name,omitempty"`
 	Description *string       `json:"description,omitempty"`
-	AvatarURL   *string       `json:"avatar_url,omitempty"`
 	Settings    *TeamSettings `json:"settings,omitempty"`
 }
 

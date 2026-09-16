@@ -337,7 +337,6 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
   const [displayName, setDisplayName] = useState(u.display_name);
   const [isAdminFlag, setIsAdminFlag] = useState(u.is_system_admin);
   const [verified, setVerified] = useState(u.email_verified);
-  const [avatarURL, setAvatarURL] = useState(u.avatar_url ?? "");
   const [timezone, setTimezone] = useState(u.timezone ?? "");
   const [dateFormat, setDateFormat] = useState(u.date_format ?? "");
   const [timeFormat, setTimeFormat] = useState(u.time_format ?? "");
@@ -349,7 +348,7 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
   const [migrating, setMigrating] = useState(false);
   const [maxSessions, setMaxSessions] = useState<string>(u.max_sessions != null ? String(u.max_sessions) : "");
 
-  const dirty = displayName !== u.display_name || isAdminFlag !== u.is_system_admin || verified !== u.email_verified || avatarURL !== (u.avatar_url ?? "") || timezone !== (u.timezone ?? "") || dateFormat !== (u.date_format ?? "") || timeFormat !== (u.time_format ?? "") || authMethodLock !== (u.auth_method_lock ?? "any") || maxSessions !== (u.max_sessions != null ? String(u.max_sessions) : "");
+  const dirty = displayName !== u.display_name || isAdminFlag !== u.is_system_admin || verified !== u.email_verified || timezone !== (u.timezone ?? "") || dateFormat !== (u.date_format ?? "") || timeFormat !== (u.time_format ?? "") || authMethodLock !== (u.auth_method_lock ?? "any") || maxSessions !== (u.max_sessions != null ? String(u.max_sessions) : "");
 
   const copyId = () => {
     navigator.clipboard.writeText(u.id);
@@ -364,7 +363,6 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
         const maxSessionsChanged = maxSessions !== (u.max_sessions != null ? String(u.max_sessions) : "");
         await api.patch(`/admin/users/${u.id}`, {
           display_name: displayName !== u.display_name ? displayName : undefined,
-          avatar_url: avatarURL !== (u.avatar_url ?? "") ? avatarURL : undefined,
           is_system_admin: isAdminFlag !== u.is_system_admin ? isAdminFlag : undefined,
           email_verified: verified !== u.email_verified ? verified : undefined,
           auth_method_lock: authMethodLock !== (u.auth_method_lock ?? "any") ? (authMethodLock === "any" ? null : authMethodLock) : undefined,
@@ -472,7 +470,7 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
   return (
     <Dialog open={open} onOpenChange={(v) => {
       setOpen(v);
-      if (v) { setDisplayName(u.display_name); setIsAdminFlag(u.is_system_admin); setVerified(u.email_verified); setAvatarURL(u.avatar_url ?? ""); setTimezone(u.timezone ?? ""); setDateFormat(u.date_format ?? ""); setTimeFormat(u.time_format ?? ""); setCopied(false); setAuthMethodLock(u.auth_method_lock ?? "any"); setMigratePasswordOpen(false); setMigratePassword(""); setMaxSessions(u.max_sessions != null ? String(u.max_sessions) : ""); }
+      if (v) { setDisplayName(u.display_name); setIsAdminFlag(u.is_system_admin); setVerified(u.email_verified); setTimezone(u.timezone ?? ""); setDateFormat(u.date_format ?? ""); setTimeFormat(u.time_format ?? ""); setCopied(false); setAuthMethodLock(u.auth_method_lock ?? "any"); setMigratePasswordOpen(false); setMigratePassword(""); setMaxSessions(u.max_sessions != null ? String(u.max_sessions) : ""); }
     }}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="w-[95vw] max-w-6xl max-h-[92vh] overflow-y-auto">
@@ -592,12 +590,6 @@ function UserDetailDialog({ user: u, orgId, isYou, isAdmin, children }: { user: 
                     <Label>Email</Label>
                     <Input value={u.email} disabled className="bg-muted font-mono text-sm" />
                   </div>
-                  {isAdmin && (
-                    <div className="space-y-2">
-                      <Label>Avatar URL</Label>
-                      <Input value={avatarURL} onChange={(e) => setAvatarURL(e.target.value)} placeholder="https://..." />
-                    </div>
-                  )}
                   {(isAdmin || isYou) && (
                     <div className="grid grid-cols-3 gap-3">
                       <div className="space-y-2">

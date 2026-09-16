@@ -387,7 +387,6 @@ func (h *AdminHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	}
 	var input struct {
 		DisplayName    *string `json:"display_name,omitempty"`
-		AvatarURL      *string `json:"avatar_url,omitempty"`
 		IsSystemAdmin  *bool   `json:"is_system_admin,omitempty"`
 		EmailVerified  *bool   `json:"email_verified,omitempty"`
 		AuthMethodLock *string `json:"auth_method_lock,omitempty"`
@@ -417,7 +416,7 @@ func (h *AdminHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	// Fetch user before update for diff
 	beforeUser, _ := h.authSvc.GetMe(r.Context(), userID)
 
-	user, err := h.authSvc.AdminUpdateUser(r.Context(), userID, input.DisplayName, input.AvatarURL, input.IsSystemAdmin, input.EmailVerified, input.MaxSessions)
+	user, err := h.authSvc.AdminUpdateUser(r.Context(), userID, input.DisplayName, input.IsSystemAdmin, input.EmailVerified, input.MaxSessions)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to update user")
 		return
@@ -438,8 +437,8 @@ func (h *AdminHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 
 	meta := map[string]any{"email": user.Email, "display_name": input.DisplayName, "is_system_admin": input.IsSystemAdmin, "email_verified": input.EmailVerified, "auth_method_lock": input.AuthMethodLock, "max_sessions": input.MaxSessions}
 	if beforeUser != nil {
-		meta["before"] = map[string]any{"display_name": beforeUser.DisplayName, "avatar_url": beforeUser.AvatarURL, "is_system_admin": beforeUser.IsSystemAdmin, "email_verified": beforeUser.EmailVerified, "max_sessions": beforeUser.MaxSessions}
-		meta["after"] = map[string]any{"display_name": user.DisplayName, "avatar_url": user.AvatarURL, "is_system_admin": user.IsSystemAdmin, "email_verified": user.EmailVerified, "max_sessions": user.MaxSessions}
+		meta["before"] = map[string]any{"display_name": beforeUser.DisplayName, "is_system_admin": beforeUser.IsSystemAdmin, "email_verified": beforeUser.EmailVerified, "max_sessions": beforeUser.MaxSessions}
+		meta["after"] = map[string]any{"display_name": user.DisplayName, "is_system_admin": user.IsSystemAdmin, "email_verified": user.EmailVerified, "max_sessions": user.MaxSessions}
 	}
 	auditRecordEnhanced(r, uuid.Nil, "admin.user_updated", "user", userID, user.Email, meta)
 	writeJSON(w, http.StatusOK, user)

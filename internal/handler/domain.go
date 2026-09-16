@@ -350,9 +350,9 @@ func (h *DomainHandler) BulkVerify(w http.ResponseWriter, r *http.Request) {
 	}
 
 	auditRecordEnhanced(r, orgID, "domain.bulk_verified", "domain", uuid.Nil, "", map[string]any{
-		"domain_ids":    input.DomainIDs,
+		"domain_ids":     input.DomainIDs,
 		"verified_count": len(result.Results),
-		"failed_count":  len(result.Failed),
+		"failed_count":   len(result.Failed),
 	})
 	writeJSON(w, http.StatusOK, result)
 }
@@ -442,10 +442,10 @@ func (h *DomainHandler) TransferDomain(w http.ResponseWriter, r *http.Request) {
 
 	// Audit in source org
 	auditRecordEnhanced(r, orgID, "domain.transferred_out", "domain", domainID, result.Domain.DomainName, map[string]any{
-		"domain_name":              result.Domain.DomainName,
-		"target_org_id":            input.TargetOrgID.String(),
-		"removed_assignments":      result.RemovedAssignmentsCount,
-		"deactivated_inboxes":      result.DeactivatedInboxesCount,
+		"domain_name":         result.Domain.DomainName,
+		"target_org_id":       input.TargetOrgID.String(),
+		"removed_assignments": result.RemovedAssignmentsCount,
+		"deactivated_inboxes": result.DeactivatedInboxesCount,
 	})
 	// Audit in target org
 	auditRecordEnhanced(r, input.TargetOrgID, "domain.transferred_in", "domain", domainID, result.Domain.DomainName, map[string]any{
