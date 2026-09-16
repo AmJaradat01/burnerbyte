@@ -52,6 +52,12 @@ type TicketResolver interface {
 	Resolve(ctx context.Context, ticket string) (uuid.UUID, bool)
 }
 
+// AllowTokenQueryParam mirrors config.Security.AllowTokenQueryParam. A token
+// in a URL is captured by reverse-proxy access logs and browser history, so
+// the "?token=" fallback is off unless an operator turns it back on for a
+// non-browser client. Browsers use the one-time ?ticket= flow.
+var AllowTokenQueryParam = false
+
 func Middleware(tm *TokenManager, userRepo UserRepo, apikeyRepo APIKeyRepo, revocationCache SessionRevocationChecker, ticketResolver ...TicketResolver) func(http.Handler) http.Handler {
 	var resolver TicketResolver
 	if len(ticketResolver) > 0 {
@@ -83,8 +89,10 @@ func Middleware(tm *TokenManager, userRepo UserRepo, apikeyRepo APIKeyRepo, revo
 			}
 
 			header := r.Header.Get("Authorization")
-			// WebSocket connections can't set headers — allow token via query param
-			if header == "" {
+			// WebSocket connections can't set headers. The supported answer is
+			// the one-time ticket handled above; this raw-token fallback is
+			// opt-in because the value ends up in URLs.
+			if header == "" && AllowTokenQueryParam {
 				if t := r.URL.Query().Get("token"); t != "" {
 					header = "Bearer " + t
 				}
