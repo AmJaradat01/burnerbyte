@@ -6,7 +6,7 @@ description: Hardening BurnerByte for production use.
 ## Checklist
 
 - Set a strong, random `JWT_SECRET` (64+ characters)
-- Set `ENCRYPTION_KEY` to a 32-byte hex key (`openssl rand -hex 32`) — encrypts SSO secrets, SMTP passwords and storage credentials at rest. (`BB_ENCRYPTION_KEY` works too when running the binary directly, but Docker Compose forwards only the unprefixed name.)
+- Set `ENCRYPTION_KEY` to a 32-byte hex key (`openssl rand -hex 32`) — encrypts SSO secrets, SMTP passwords and storage credentials at rest. The first-run installer generates one for you; set it explicitly when you configure through the environment instead, or those credentials are stored in plain text. (`BB_ENCRYPTION_KEY` works too when running the binary directly, but Docker Compose forwards only the unprefixed name.)
 - Change default database and MinIO passwords
 - Configure `FRONTEND_URL` and `API_BASE_URL` with your actual domain
 - Set `BB_CORS_ALLOWED_ORIGINS` to your frontend domain only
@@ -14,7 +14,8 @@ description: Hardening BurnerByte for production use.
 - Configure outbound SMTP (mailer) for invites and password resets
 - Set up DNS records for your email domain (MX + TXT)
 - Review rate limiting settings
-- Prometheus metrics are already on by default at `/metrics`; the endpoint answers only loopback and RFC1918-private clients, so scrape it from inside your network and make sure your proxy overwrites inbound `X-Forwarded-For` / `X-Real-IP`
+- Set `BB_RATE_LIMIT_TRUSTED_PROXIES` to your reverse proxy's CIDR if you run behind one. Left empty (the default), forwarded headers are ignored entirely and the client IP is always the peer address — correct for a directly-exposed deployment. Getting this wrong now costs accuracy, not safety: rate limits, the API-key IP allowlist, the audit trail and the `/metrics` gate all read the same resolved value
+- Prometheus metrics are on by default at `/metrics` and answer only loopback and RFC1918-private clients, so scrape from inside your network. Your proxy should still overwrite inbound `X-Forwarded-For` / `X-Real-IP` as a matter of hygiene
 - Set `LOG_LEVEL=info` and `LOG_FORMAT=json`
 
 ## Minimal Production Environment
@@ -78,5 +79,12 @@ services, and drop the `postgres`, `redis` and `minio` services from the
 Compose file once nothing points at them.
 
 The repository ships no provider-specific provisioning scripts. Reverse proxy,
-TLS, firewall and host hardening are yours to configure — BurnerByte expects to
-sit behind a proxy that terminates TLS and rewrites `X-Forwarded-For`.
+TLS, firewall and host hardening are yours to configure.
+
+<Callout type="warn">
+If you put a proxy in front, name it in `BB_RATE_LIMIT_TRUSTED_PROXIES`.
+Otherwise every request appears to come from the proxy's own address and all
+per-client rate limiting collapses onto one bucket. Forwarded headers from
+anywhere else are ignored by design — a client cannot choose the address it is
+rate-limited, allowlisted or audited under.
+</Callout>
