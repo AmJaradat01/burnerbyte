@@ -137,5 +137,5 @@ Two separate Go binaries scale independently:
 | Cache | Redis 7 (inbox routing, analytics cache, rate limiting) |
 | Storage | MinIO or any S3-compatible store for attachments, with a local-filesystem fallback |
 | Infrastructure | Docker, Docker Compose |
-| CI/CD | Jenkins (`Jenkinsfile`) — test, build Go + frontend, tag-driven deploy |
+| CI | GitHub Actions (`.github/workflows/ci.yml`) — Go tests against live Postgres and Redis, frontend lint/typecheck/test/build, and a full `docker compose build` |
 | Testing | `pgregory.net/rapid` for property-based testing |

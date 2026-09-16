@@ -60,15 +60,23 @@ another.
 - **MinIO** — Use MinIO's built-in replication or backup the data volume
 - **Redis** — Ephemeral cache, no backup needed (reconciler rebuilds from PostgreSQL)
 
-## Deployment Scripts
+## Deploying
 
-The `deploy/` directory includes ready-to-use deployment scripts:
+Docker Compose is the supported deployment path. The same `docker-compose.yml`
+that runs locally runs in production — point it at your own Postgres, Redis and
+S3-compatible storage instead of the bundled ones:
 
-| Script | Purpose |
-|---|---|
-| `deploy/vps-setup.sh` | Generic VPS initial setup (Docker, firewall, swap) |
-| `deploy/hetzner-setup.sh` | Hetzner Cloud-specific setup |
-| `deploy/remote-deploy.sh` | Remote deployment via SSH |
-| `deploy/remote-deploy-hetzner.sh` | Hetzner-specific remote deployment |
+```bash
+git clone https://github.com/AmJaradat01/burnerbyte.git
+cd burnerbyte
+cp .env.example .env    # fill in the values from the section above
+docker compose up -d --build
+```
 
-These scripts handle Docker installation, firewall configuration, SSL certificate setup, and application deployment.
+Set `EXTERNAL_DATABASE_URL` and `EXTERNAL_REDIS_URL` in `.env` to use managed
+services, and drop the `postgres`, `redis` and `minio` services from the
+Compose file once nothing points at them.
+
+The repository ships no provider-specific provisioning scripts. Reverse proxy,
+TLS, firewall and host hardening are yours to configure — BurnerByte expects to
+sit behind a proxy that terminates TLS and rewrites `X-Forwarded-For`.
