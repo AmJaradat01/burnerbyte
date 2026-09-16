@@ -1,6 +1,5 @@
-# The gates a contributor's pull request must pass. Jenkins still owns
-# deployment (it needs credentials no fork has); this owns verification, and
-# needs no secrets at all.
+# The gates a contributor's pull request must pass. Verification only — it
+# deploys nothing and needs no secrets, so it runs on forks too.
 name: CI
 
 on:
