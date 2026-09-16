@@ -4,8 +4,8 @@
 # git-flow back-merges each release into develop, so develop always sits one
 # commit past its tag and a plain describe reads "v1.17.0-1-gcc5c815". A "-dirty"
 # marker is appended when the tree has uncommitted changes, so a modified build
-# never claims to be a clean release. Jenkins overrides this with the exact tag
-# it was asked to build, so deployments stay precise.
+# never claims to be a clean release. A release pipeline can pass VERSION
+# explicitly to stamp the exact tag it was asked to build.
 VERSION ?= $(shell git describe --tags --abbrev=0 2>/dev/null || echo dev)$(shell git diff --quiet HEAD 2>/dev/null || echo -dirty)
 export VERSION
 
