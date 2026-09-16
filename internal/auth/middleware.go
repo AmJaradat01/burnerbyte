@@ -13,6 +13,8 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/amjaradat01/burnerbyte/internal/clientip"
+
 	"github.com/amjaradat01/burnerbyte/internal/domain"
 )
 
@@ -122,17 +124,17 @@ func Middleware(tm *TokenManager, userRepo UserRepo, apikeyRepo APIKeyRepo, revo
 					return
 				}
 
-				// IP allowlist enforcement
+				// IP allowlist enforcement. The resolved client IP, not
+				// r.RemoteAddr: a caller must not be able to satisfy its own
+				// allowlist by naming an address in a forwarded header.
+				remoteIP := clientip.From(r)
 				if len(key.AllowedIPs) > 0 {
-					remoteIP := extractIP(r.RemoteAddr)
 					if !ipAllowed(remoteIP, key.AllowedIPs) {
 						writeJSON(w, http.StatusForbidden, map[string]string{"error": "IP not allowed for this API key"})
 						return
 					}
 				}
 
-				// Usage tracking
-				remoteIP := extractIP(r.RemoteAddr)
 				if err := apikeyRepo.UpdateLastUsedWithTracking(r.Context(), key.ID, remoteIP); err != nil {
 					slog.Error("failed to update API key tracking", "error", err, "key_id", key.ID)
 				}
@@ -192,10 +194,15 @@ func Middleware(tm *TokenManager, userRepo UserRepo, apikeyRepo APIKeyRepo, revo
 			}
 
 			ctx := context.WithValue(r.Context(), UserContextKey, &UserContext{
-				UserID:        userID,
-				Email:         claims.Email,
-				DisplayName:   user.DisplayName,
-				IsSystemAdmin: claims.IsSystemAdmin,
+				UserID:      userID,
+				Email:       claims.Email,
+				DisplayName: user.DisplayName,
+				// From the row, not from claims.IsSystemAdmin. The user is
+				// already loaded for the password_changed_at check, and
+				// trusting the claim meant a demoted admin kept system-admin
+				// until their access token expired — up to the full 15-minute
+				// TTL after the privilege was revoked.
+				IsSystemAdmin: user.IsSystemAdmin,
 			})
 
 			next.ServeHTTP(w, r.WithContext(ctx))

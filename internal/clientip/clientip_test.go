@@ -1,0 +1,105 @@
+package clientip
+
+import (
+	"net/http"
+	"net/http/httptest"
+	"testing"
+)
+
+// The bug these guard against: chi's middleware.RealIP rewrote r.RemoteAddr
+// from True-Client-IP / X-Real-IP / X-Forwarded-For with no trusted-proxy
+// check, so the /metrics loopback gate, every rate limiter, the API-key IP
+// allowlist and the audit trail all keyed on a value the caller chose. A
+// header must never be able to change the answer unless the peer is a
+// configured proxy.
+
+func request(remoteAddr string, headers map[string]string) *http.Request {
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.RemoteAddr = remoteAddr
+	for k, v := range headers {
+		r.Header.Set(k, v)
+	}
+	return r
+}
+
+func TestUntrustedPeerCannotSpoofItsAddress(t *testing.T) {
+	// Default configuration: no trusted proxies at all.
+	res := New(nil)
+	for _, header := range []string{"True-Client-IP", "X-Real-IP", "X-Forwarded-For"} {
+		t.Run(header, func(t *testing.T) {
+			r := request("198.51.100.7:44321", map[string]string{header: "127.0.0.1"})
+			if got := res.Resolve(r); got != "198.51.100.7" {
+				t.Errorf("%s spoofed the client IP: got %q, want the real peer 198.51.100.7", header, got)
+			}
+		})
+	}
+}
+
+func TestTrustedProxyForwardedHeaderIsHonoured(t *testing.T) {
+	res := New([]string{"10.0.0.0/8"})
+	r := request("10.1.2.3:9000", map[string]string{"X-Forwarded-For": "203.0.113.9"})
+	if got := res.Resolve(r); got != "203.0.113.9" {
+		t.Errorf("trusted proxy's X-Forwarded-For ignored: got %q", got)
+	}
+}
+
+func TestTrustedProxyUsesRightmostForwardedEntry(t *testing.T) {
+	// Only the last entry was appended by our own proxy; everything to its
+	// left is client-supplied and must not be believed.
+	res := New([]string{"10.0.0.0/8"})
+	r := request("10.1.2.3:9000", map[string]string{"X-Forwarded-For": "127.0.0.1, 203.0.113.9"})
+	if got := res.Resolve(r); got != "203.0.113.9" {
+		t.Errorf("client-supplied leftmost entry was trusted: got %q", got)
+	}
+}
+
+func TestBareTrustedProxyAddressIsTreatedAsSingleHost(t *testing.T) {
+	res := New([]string{"10.1.2.3"})
+	trusted := request("10.1.2.3:9000", map[string]string{"X-Real-IP": "203.0.113.9"})
+	if got := res.Resolve(trusted); got != "203.0.113.9" {
+		t.Errorf("bare trusted address not honoured: got %q", got)
+	}
+	other := request("10.1.2.4:9000", map[string]string{"X-Real-IP": "203.0.113.9"})
+	if got := res.Resolve(other); got != "10.1.2.4" {
+		t.Errorf("a neighbouring address was treated as trusted: got %q", got)
+	}
+}
+
+func TestGarbageForwardedValueFallsBackToPeer(t *testing.T) {
+	res := New([]string{"10.0.0.0/8"})
+	r := request("10.1.2.3:9000", map[string]string{"X-Forwarded-For": "not-an-ip"})
+	if got := res.Resolve(r); got != "10.1.2.3" {
+		t.Errorf("unparseable header should fall back to the peer: got %q", got)
+	}
+}
+
+func TestMiddlewarePublishesResolvedIPAndLeavesRemoteAddrAlone(t *testing.T) {
+	res := New(nil)
+	var seen string
+	var remoteAddr string
+	h := res.Middleware(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		seen = From(r)
+		remoteAddr = r.RemoteAddr
+	}))
+	r := request("198.51.100.7:44321", map[string]string{"True-Client-IP": "127.0.0.1"})
+	h.ServeHTTP(httptest.NewRecorder(), r)
+
+	if seen != "198.51.100.7" {
+		t.Errorf("context carried a spoofed IP: %q", seen)
+	}
+	// chi's RealIP overwrote this; ours must not, so a handler reading it
+	// directly still sees the true peer.
+	if remoteAddr != "198.51.100.7:44321" {
+		t.Errorf("RemoteAddr was rewritten: %q", remoteAddr)
+	}
+}
+
+func TestFromFallsBackToPeerWithoutMiddleware(t *testing.T) {
+	r := request("198.51.100.7:44321", map[string]string{"X-Forwarded-For": "127.0.0.1"})
+	if got := From(r); got != "198.51.100.7" {
+		t.Errorf("fallback trusted a header: got %q", got)
+	}
+	if _, ok := FromContext(r.Context()); ok {
+		t.Error("FromContext reported a value that was never set")
+	}
+}

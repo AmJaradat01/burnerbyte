@@ -26,6 +26,7 @@ import (
 	"github.com/amjaradat01/burnerbyte/internal/auth"
 	"github.com/amjaradat01/burnerbyte/internal/auth/rbac"
 	"github.com/amjaradat01/burnerbyte/internal/cfgsync"
+	"github.com/amjaradat01/burnerbyte/internal/clientip"
 	"github.com/amjaradat01/burnerbyte/internal/config"
 	appcrypto "github.com/amjaradat01/burnerbyte/internal/crypto"
 	"github.com/amjaradat01/burnerbyte/internal/database"
@@ -67,6 +68,16 @@ func main() {
 
 	if len(cfg.JWT.Secret) < 32 {
 		slog.Error("JWT secret must be at least 32 characters", "current_length", len(cfg.JWT.Secret))
+		os.Exit(1)
+	}
+	// docker-compose.yml carries a development fallback long enough to clear
+	// the length check above, so a deployment that never wrote a .env used to
+	// boot happily on a signing key published in a public repository — and
+	// anyone could then mint a token with is_system_admin set. Fail closed.
+	if config.IsPublishedDefaultJWTSecret(cfg.JWT.Secret) {
+		slog.Error("JWT secret is the development default published in docker-compose.yml; " +
+			"anyone could forge an admin token. Set JWT_SECRET in .env to a random value " +
+			"(openssl rand -hex 32) before starting.")
 		os.Exit(1)
 	}
 
@@ -265,10 +276,16 @@ func main() {
 	rateLimiter := mw.NewRateLimiter(cfg.RateLimit)
 	rateLimiter.WithRedis(rdb)
 
+	// Client IP resolution. Deliberately NOT chi's middleware.RealIP: that
+	// rewrites r.RemoteAddr from client-supplied headers with no trusted-proxy
+	// check, which handed the /metrics gate, every rate limiter, the API-key IP
+	// allowlist and the audit trail's source IP to the caller.
+	clientIPs := clientip.New(cfg.RateLimit.TrustedProxies)
+
 	// Router
 	r := chi.NewRouter()
 	r.Use(chimw.RequestID)
-	r.Use(chimw.RealIP)
+	r.Use(clientIPs.Middleware)
 	r.Use(requestLogger(logger))
 	r.Use(chimw.Recoverer)
 	r.Use(mw.SecurityHeaders)
@@ -295,11 +312,9 @@ func main() {
 	r.Get("/readyz", readyz(pool, rdb))
 	if cfg.Metrics.Enabled {
 		r.Handle(cfg.Metrics.Path, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ip := r.RemoteAddr
-			if h, _, err := net.SplitHostPort(ip); err == nil {
-				ip = h
-			}
-			parsed := net.ParseIP(ip)
+			// clientip.From, not r.RemoteAddr: the caller must not be able to
+			// name its own source address and read the metrics.
+			parsed := net.ParseIP(clientip.From(r))
 			if parsed == nil || (!parsed.IsLoopback() && !parsed.IsPrivate()) {
 				http.Error(w, "forbidden", http.StatusForbidden)
 				return
@@ -894,7 +909,7 @@ func requestLogger(logger *slog.Logger) func(http.Handler) http.Handler {
 				"status", ww.Status(),
 				"duration_ms", time.Since(start).Milliseconds(),
 				"request_id", chimw.GetReqID(r.Context()),
-				"remote_addr", r.RemoteAddr,
+				"remote_addr", clientip.From(r),
 			)
 		})
 	}
