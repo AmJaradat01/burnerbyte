@@ -227,9 +227,11 @@ per-endpoint reference.
 
 | | |
 |---|---|
-| ![Dashboard](web/public/screenshots/dashboard.png) **Dashboard** — volume, activity and storage at a glance | ![Inbox](web/public/screenshots/inbox.png) **Inbox** — live list with TTL countdown and renew |
-| ![Domains](web/public/screenshots/domains.png) **Domains** — DNS verification state per domain | ![Teams](web/public/screenshots/teams.png) **Teams** — members, domains and inbox counts |
-| ![Analytics](web/public/screenshots/analytics.png) **Analytics** — time series, peak hours, top senders | ![Audit log](web/public/screenshots/audit.png) **Audit log** — filterable trail with CSV export |
+| ![Landing](web/public/screenshots/landing.png) **Landing** — what a signed-out visitor sees | ![Sign in](web/public/screenshots/login.png) **Sign in** — email and password, or SSO when configured |
+| ![Home](web/public/screenshots/home.png) **Home** — generate an inbox, then watch the grid | ![Inbox](web/public/screenshots/inbox.png) **Inbox** — live list with TTL countdown and renew |
+| ![Dashboard](web/public/screenshots/dashboard.png) **Dashboard** — volume, activity and storage at a glance | ![Domains](web/public/screenshots/domains.png) **Domains** — DNS verification state per domain |
+| ![Teams](web/public/screenshots/teams.png) **Teams** — members, domains and inbox counts | ![Analytics](web/public/screenshots/analytics.png) **Analytics** — time series, peak hours, top senders |
+| ![Audit log](web/public/screenshots/audit.png) **Audit log** — filterable trail with CSV export | ![Settings](web/public/screenshots/settings.png) **Settings** — org, members, roles, SSO and system config |
 
 ## Tech stack
 
