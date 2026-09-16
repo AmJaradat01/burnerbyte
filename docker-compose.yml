@@ -70,8 +70,8 @@ services:
 
   # One-shot schema migration. Runs golang-migrate against postgres and exits;
   # api and smtpd wait for it to complete successfully. "up" is idempotent (a
-  # no-op when already current), so re-running the stack is safe. Pinned to the
-  # same migrate version the deploy scripts install.
+  # no-op when already current), so re-running the stack is safe. The version
+  # is pinned so every environment applies migrations with the same tool.
   migrate:
     image: migrate/migrate:v4.18.3
     volumes:
