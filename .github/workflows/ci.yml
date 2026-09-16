@@ -8,6 +8,8 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+  # Lets the suite be re-run from the Actions tab without an empty commit.
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -68,7 +70,12 @@ jobs:
         working-directory: web
     steps:
       - uses: actions/checkout@v4
+      # The pnpm project lives in web/, not the repository root, so the action
+      # has to be told where "packageManager" is — it looks at the root by
+      # default and fails with "No pnpm version is specified".
       - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: web/package.json
       - uses: actions/setup-node@v4
         with:
           node-version: 22
