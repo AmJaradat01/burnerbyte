@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -197,7 +198,7 @@ func (h *AuditHandler) Export(w http.ResponseWriter, r *http.Request) {
 			}
 			metaJSON, _ := json.Marshal(e.Metadata)
 
-			cw.Write([]string{
+			cw.Write(csvRow(
 				e.ID.String(),
 				e.CreatedAt.UTC().Format(time.RFC3339),
 				e.OrgID.String(),
@@ -213,7 +214,7 @@ func (h *AuditHandler) Export(w http.ResponseWriter, r *http.Request) {
 				ipAddress,
 				e.UserAgent,
 				string(metaJSON),
-			})
+			))
 		}
 		cw.Flush()
 
@@ -227,4 +228,43 @@ func (h *AuditHandler) Export(w http.ResponseWriter, r *http.Request) {
 		}
 		json.NewEncoder(w).Encode(entries)
 	}
+}
+
+// csvSafe neutralises spreadsheet formula injection.
+//
+// encoding/csv quotes a field so it parses back as CSV, but a spreadsheet
+// reads a leading =, +, - or @ as the start of a formula regardless of the
+// quoting. Several columns in this export carry attacker-supplied text —
+// user_agent is a raw request header, and actor_display_name, resource_name
+// and metadata all contain user-chosen strings — so an attacker who merely
+// touches the API can plant =HYPERLINK(...) or a DDE payload and wait for an
+// administrator to open the export.
+//
+// Prefixing with a single quote is the conventional fix: spreadsheets treat
+// the value as literal text, and a plain CSV reader sees one extra leading
+// character rather than a formula. A leading control character is stripped
+// for the same reason (it can hide the sigil from a reviewer's eye while
+// Excel still parses it).
+func csvSafe(s string) string {
+	if s == "" {
+		return s
+	}
+	trimmed := strings.TrimLeft(s, "\t\r\n ")
+	if trimmed == "" {
+		return s
+	}
+	switch trimmed[0] {
+	case '=', '+', '-', '@':
+		return "'" + s
+	}
+	return s
+}
+
+// csvRow applies csvSafe to every field of a row.
+func csvRow(fields ...string) []string {
+	out := make([]string, len(fields))
+	for i, f := range fields {
+		out[i] = csvSafe(f)
+	}
+	return out
 }
