@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { Logo } from "@/components/logo";
 import { ExternalLink } from "lucide-react";
+import { docsUrl } from "@/lib/docs-url";
 
 export function Footer() {
   return (
@@ -14,7 +14,15 @@ export function Footer() {
             <span className="hidden sm:inline">· Self-hosted temporary email</span>
           </div>
           <div className="flex items-center gap-3 sm:gap-4">
-            <Link href="/docs" className="hover:text-foreground transition-colors duration-150">Docs</Link>
+            <a
+              href={docsUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 hover:text-foreground transition-colors duration-150"
+            >
+              Docs
+              <ExternalLink className="h-2.5 w-2.5" />
+            </a>
             <a
               href="https://github.com/AmJaradat01/burnerbyte"
               target="_blank"

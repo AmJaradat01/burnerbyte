@@ -9,6 +9,7 @@ import { NotificationCenter } from "@/components/notification-center";
 import { useTranslations } from "next-intl";
 import { Home, BookOpen, LogOut } from "lucide-react";
 import { Logo } from "@/components/logo";
+import { docsUrl } from "@/lib/docs-url";
 
 export function TopNav() {
   const pathname = usePathname();
@@ -19,7 +20,7 @@ export function TopNav() {
 
   const links = [
     { href: "/", label: t("home"), icon: Home },
-    { href: "/docs", label: t("docs"), icon: BookOpen },
+    { href: docsUrl(), label: t("docs"), icon: BookOpen, external: true },
   ];
 
   const userInitial = user?.display_name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || "?";
@@ -35,11 +36,17 @@ export function TopNav() {
           </Link>
           <nav className="flex items-center gap-1">
             {links.map((link) => {
-              const active = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
+              const active = link.external
+                ? false
+                : link.href === "/"
+                  ? pathname === "/"
+                  : pathname.startsWith(link.href);
+              const Anchor = link.external ? "a" : Link;
               return (
-                <Link
+                <Anchor
                   key={link.href}
                   href={link.href}
+                  {...(link.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
                   className={cn(
                     "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-150",
                     active
@@ -49,7 +56,7 @@ export function TopNav() {
                 >
                   <link.icon className={cn("h-3.5 w-3.5 transition-colors duration-150", active && "text-primary")} />
                   {link.label}
-                </Link>
+                </Anchor>
               );
             })}
           </nav>

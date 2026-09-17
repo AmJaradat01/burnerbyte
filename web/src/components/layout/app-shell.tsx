@@ -36,12 +36,11 @@ const publicPaths = [
   "/invite",
   "/setup",
   "/onboarding",
-  "/docs",
 ];
 
 /**
  * Public paths that should redirect authenticated users away to "/".
- * Paths NOT in this list (e.g. /onboarding, /invite, /setup, /docs)
+ * Paths NOT in this list (e.g. /onboarding, /invite, /setup)
  * remain accessible to authenticated users — they have legitimate reasons
  * to be there (completing onboarding, accepting invites, etc.).
  */
