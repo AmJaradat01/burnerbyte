@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/stores/auth-store";
 import {
   Home,
-  BookOpen,
   LayoutDashboard,
   Inbox,
   Globe,
@@ -44,7 +43,6 @@ const navigationItems: CommandItem[] = [
   { label: "Settings", path: "/settings", icon: Settings, group: "Navigation" },
   { label: "Profile", path: "/profile", icon: User, group: "Navigation" },
   { label: "Profile Sessions", path: "/profile/sessions", icon: Monitor, group: "Navigation" },
-  { label: "Documentation", path: "/docs", icon: BookOpen, group: "Navigation" },
   { label: "Home", path: "/", icon: Home, group: "Navigation" },
 ];
 
