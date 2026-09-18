@@ -106,11 +106,43 @@ git flow release start X.Y.Z
 # update CHANGELOG.md
 # bump info.version in internal/handler/docs/openapi.json to X.Y.Z
 # commit both
-GIT_MERGE_AUTOEDIT=no git flow release finish X.Y.Z
+GIT_MERGE_AUTOEDIT=no git flow release finish -m "vX.Y.Z - one-line description" X.Y.Z
 git push origin main develop vX.Y.Z
 ```
 
 `feat:` changes take a minor bump; `fix:`, `test:` and `docs:` take a patch.
+
+Pass the real message to `-m`. git-flow appends the tag name, so
+`-m "v1.4.0 - Thing"` produces the tag message `v1.4.0 - Thing v1.4.0`,
+which is the convention this repository already uses — there is no need to
+delete and recreate the tag afterwards. A placeholder here is not harmless:
+git-flow back-merges the tag into `develop`, so whatever you pass ends up
+quoted in that merge commit, and from there in the description of any merge
+request opened from `develop`.
+
+#### One-time signing setup
+
+Commits and tags are signed with an SSH key (`gpg.format = ssh`). Two settings
+are needed locally, and skipping them corrupts release commit messages rather
+than failing loudly:
+
+```bash
+# Let git verify SSH signatures. Without this, merging a signed tag records
+# the literal line "gpg verification failed." in the merge commit message —
+# git could not verify, not the signature being bad.
+printf '%s %s\n' "you@example.com" "$(cat ~/.ssh/id_ed25519.pub)" > ~/.ssh/allowed_signers
+chmod 600 ~/.ssh/allowed_signers
+git config --global gpg.ssh.allowedSignersFile ~/.ssh/allowed_signers
+
+# Strip comment lines from commit messages. GIT_MERGE_AUTOEDIT=no skips the
+# editor, and with it the cleanup pass that would normally remove them — so
+# the commented-out signature block git adds when merging a signed tag gets
+# committed as message body.
+git config commit.cleanup strip
+```
+
+The second one means a message line starting with `#` is dropped, so write
+issue references inline (`fixes #123`) rather than at the start of a line.
 
 ## Continuous integration
 
