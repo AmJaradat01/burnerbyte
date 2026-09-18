@@ -5,6 +5,24 @@ All notable changes to this project are documented here. The format follows
 uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html): `feat:` work
 takes a minor bump, `fix:` / `docs:` / `test:` a patch.
 
+## v1.24.0 (September 2026) — Documentation moved out of this repository
+
+### Removed
+- **The in-app documentation site, and the MDX behind it.** `/docs` was served by the frontend from 27 MDX files under `web/content/docs`, rendered by Fumadocs. Both the source and the renderer now live in [burnerbyte-landing](https://github.com/AmJaradat01/burnerbyte-landing), which publishes them at [burnerbyte.com/docs](https://burnerbyte.com/docs). Co-location is the usual advice and it did not hold here: migration 50 landed in v1.23.0 and left four pages claiming 49 migrations, in this repository, in the same release. What catches that is a check, not proximity — and the repository that publishes the docs is where such a check can run. It now does: dead internal links fail its build, every page must carry complete social metadata, and it warns when the docs fall behind a release here. Three other things follow. The install instructions no longer require a running install to read. Every instance shipped a sitemap advertising sixteen `${BASE_URL}/docs/...` URLs that defaulted to `https://burnerbyte.com` and 404'd, so the app already assumed the docs lived there. And two public instances serving `/docs` were two copies of the same pages competing for the same queries.
+- **`fumadocs-ui`, `fumadocs-core`, `fumadocs-mdx`, `shiki` and `@types/mdx`** — 298 entries out of `web/pnpm-lock.yaml`. With them go the `/docs` route, the `/api/search` route handler, `lib/source.ts`, `lib/docs-layout.tsx`, `source.config.ts`, `mdx-components.tsx`, the `fumadocs-mdx` `postinstall` step, the `createMDX` wrapper, the `.source` tsconfig alias and two stylesheets imported into `globals.css`.
+- **`sitemap.ts` and `robots.ts` no longer claim `/docs`.** Sixteen sitemap entries and two `allow` rules, all for URLs this app does not serve.
+- **`.github/workflows/publish-docs.yml`**, which existed to tell the landing repository that docs here had changed. Nothing here changes them now.
+
+### Added
+- **`DOCS_URL` (`NEXT_PUBLIC_DOCS_URL`)** repoints every "Docs" link in the app, for a deployment with no outbound internet that mirrors the documentation itself. Threaded through `docker-compose.yml`, `Dockerfile.frontend` and `.env.example`. It is a build arg like the other `NEXT_PUBLIC_*` values, so changing it needs a frontend rebuild.
+
+### Changed
+- The sidebar, top navigation, footer and landing page open the documentation externally, with an external-link affordance rather than a `next/link` into a route that no longer exists. The command palette's "Documentation" entry is gone; the `/docs` paths are removed from the app shell's public-path list and the onboarding skip list.
+- The `.well-known/api-catalog` `service-doc` link points at the published API reference. The OpenAPI document itself is unchanged and still served at `/api/v1/docs/openapi.json`.
+
+### Note
+- A behaviour change here and its documentation are now two pull requests in two repositories, and nothing enforces that they land together. That has to be a habit; it is called out in `README.md` and in `web/src/lib/docs-url.ts`.
+
 ## v1.23.1 (September 2026) — Zero advisories; the CI allowlist is gone
 
 ### Fixed
