@@ -7,6 +7,7 @@ import { ArrowRight, Github, Inbox, Users, Zap, Webhook, KeyRound, Server } from
 import { api, tryGetStatus } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/logo";
+import { docsUrl } from "@/lib/docs-url";
 import { LiveInboxDemo } from "./live-inbox-demo";
 
 /** Canonical repository, from the go.mod module path (github.com/amjaradat01/burnerbyte). */
@@ -86,9 +87,14 @@ export function LandingPage() {
             <Logo />
           </Link>
           <nav className="flex items-center gap-0.5 text-sm sm:gap-1">
-            <Link href="/docs" className="rounded-md px-3 py-2 text-muted-foreground transition-colors duration-150 hover:text-foreground">
+            <a
+              href={docsUrl()}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-md px-3 py-2 text-muted-foreground transition-colors duration-150 hover:text-foreground"
+            >
               {t("nav.docs")}
-            </Link>
+            </a>
             <a
               href={REPO_URL}
               target="_blank"
@@ -146,12 +152,23 @@ export function LandingPage() {
                   {allowRegistration ? t("hero.getStarted") : t("cta.signIn")}
                   <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
                 </Link>
-                <Link
-                  href={demoEnabled ? "/try" : "/docs"}
-                  className="inline-flex h-12 items-center rounded-lg border border-border bg-background px-7 text-sm font-medium transition-all duration-150 hover:bg-muted hover:border-border/80 active:translate-y-px"
-                >
-                  {demoEnabled ? t("hero.tryIt") : t("hero.docs")}
-                </Link>
+                {demoEnabled ? (
+                  <Link
+                    href="/try"
+                    className="inline-flex h-12 items-center rounded-lg border border-border bg-background px-7 text-sm font-medium transition-all duration-150 hover:bg-muted hover:border-border/80 active:translate-y-px"
+                  >
+                    {t("hero.tryIt")}
+                  </Link>
+                ) : (
+                  <a
+                    href={docsUrl()}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex h-12 items-center rounded-lg border border-border bg-background px-7 text-sm font-medium transition-all duration-150 hover:bg-muted hover:border-border/80 active:translate-y-px"
+                  >
+                    {t("hero.docs")}
+                  </a>
+                )}
               </div>
               <ul
                 className="anim-rise mt-9 flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground"
@@ -284,13 +301,15 @@ export function LandingPage() {
               </h2>
               <p className={cn("mt-5 max-w-lg text-pretty leading-relaxed", dark.body)}>{t("trust.body")}</p>
               <p className={cn("mt-8 font-mono text-xs", dark.dim)}>{t("trust.facts")}</p>
-              <Link
-                href="/docs/self-hosting/production"
+              <a
+                href={docsUrl("self-hosting/production")}
+                target="_blank"
+                rel="noreferrer"
                 className={cn("group mt-8 inline-flex items-center gap-2 text-sm font-medium transition-colors duration-150", dark.accent, dark.accentHover)}
               >
                 {t("trust.cta")}
                 <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
-              </Link>
+              </a>
             </div>
 
             <div className={cn("overflow-hidden rounded-xl border", dark.border, dark.panel)}>
@@ -332,12 +351,14 @@ export function LandingPage() {
                 {allowRegistration ? t("cta.getStarted") : t("cta.signIn")}
                 <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
               </Link>
-              <Link
-                href="/docs/self-hosting/production"
+              <a
+                href={docsUrl("self-hosting/production")}
+                target="_blank"
+                rel="noreferrer"
                 className="inline-flex h-12 items-center rounded-lg border border-border bg-background px-7 text-sm font-medium transition-all duration-150 hover:bg-muted hover:border-border/80 active:translate-y-px"
               >
                 {t("trust.cta")}
-              </Link>
+              </a>
             </div>
           </div>
         </div>
@@ -356,9 +377,15 @@ export function LandingPage() {
               {allowRegistration && <FooterLink href="/register">{t("nav.getStarted")}</FooterLink>}
             </FooterCol>
             <FooterCol label={t("footer.resourcesLabel")}>
-              <FooterLink href="/docs">{t("footer.docs")}</FooterLink>
-              <FooterLink href="/docs/api">{t("footer.api")}</FooterLink>
-              <FooterLink href="/docs/self-hosting/production">{t("footer.selfHosting")}</FooterLink>
+              <FooterLink href={docsUrl()} external>
+                {t("footer.docs")}
+              </FooterLink>
+              <FooterLink href={docsUrl("api")} external>
+                {t("footer.api")}
+              </FooterLink>
+              <FooterLink href={docsUrl("self-hosting/production")} external>
+                {t("footer.selfHosting")}
+              </FooterLink>
             </FooterCol>
             <FooterCol label={t("footer.projectLabel")}>
               <FooterLink href={REPO_URL} external>

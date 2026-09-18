@@ -12,9 +12,11 @@ import { Logo } from "@/components/logo";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { docsUrl } from "@/lib/docs-url";
 import {
   ChevronsLeft,
   ChevronsRight,
+  ExternalLink,
   LogOut,
   Home,
   BookOpen,
@@ -31,12 +33,18 @@ import {
 
 /* ── Nav Link ── */
 
-function NavLink({ href, icon: Icon, label, active, collapsed, badge }: {
-  href: string; icon: LucideIcon; label: string; active: boolean; collapsed: boolean; badge?: number;
+function NavLink({ href, icon: Icon, label, active, collapsed, badge, external }: {
+  href: string; icon: LucideIcon; label: string; active: boolean; collapsed: boolean; badge?: number; external?: boolean;
 }) {
+  // The documentation is off-site now, so the item has to leave the app
+  // properly rather than being routed by next/link into a 404.
+  const Anchor = external ? "a" : Link;
+  const anchorProps = external ? { target: "_blank" as const, rel: "noopener noreferrer" } : {};
+
   return (
-    <Link
+    <Anchor
       href={href}
+      {...anchorProps}
       title={collapsed ? label : undefined}
       className={cn(
         "relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150",
@@ -64,7 +72,10 @@ function NavLink({ href, icon: Icon, label, active, collapsed, badge }: {
       {collapsed && badge !== undefined && badge > 0 && (
         <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-destructive" />
       )}
-    </Link>
+      {external && !collapsed && (
+        <ExternalLink className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden />
+      )}
+    </Anchor>
   );
 }
 
@@ -93,7 +104,10 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
   const navItems = [
     { href: "/", label: t("home"), icon: Home },
-    { href: "/docs", label: t("docs"), icon: BookOpen },
+    // The documentation is published at burnerbyte.com/docs from this repo's
+    // own web/content/docs, so it is readable before you have an instance and
+    // indexed exactly once rather than once per deployment.
+    { href: docsUrl(), label: t("docs"), icon: BookOpen, external: true },
   ];
 
   const manageItems = [
@@ -200,7 +214,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             key={item.href}
             {...item}
             collapsed={collapsed}
-            active={item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)}
+            active={item.external ? false : item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)}
           />
         ))}
 

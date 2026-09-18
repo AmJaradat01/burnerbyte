@@ -1,4 +1,0 @@
-{
-  "title": "Concepts",
-  "pages": ["rbac", "domains", "inboxes", "emails", "webhooks", "api-keys", "sso", "demo-mode", "settings-cascade"]
-}

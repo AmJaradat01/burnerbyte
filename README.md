@@ -162,7 +162,7 @@ from inside the app. Docker and systemd deployments set `DATABASE_URL` and
 - Light-only by design — a dark theme is intentionally not shipped
 - OKLCH semantic color tokens, WCAG AA contrast, reduced-motion support
 - Pull-to-refresh on mobile
-- Built-in documentation site at `/docs`
+- Links out to the documentation at [burnerbyte.com/docs](https://burnerbyte.com/docs), or a mirror you set with `DOCS_URL`
 - Localization scaffolding via `next-intl` (English is the only bundled locale)
 
 ## API
@@ -221,7 +221,6 @@ per-endpoint reference.
 | `/settings` | Organization settings, members, roles, SSO, system config |
 | `/profile`, `/profile/sessions`, `/profile/delete` | Account management |
 | `/admin` | Platform administration |
-| `/docs` | Documentation site |
 
 ## Screenshots
 
@@ -238,7 +237,8 @@ per-endpoint reference.
 - **Backend** — Go 1.25, Chi v5, pgx/pgxpool, go-redis, minio-go, Prometheus
 - **Frontend** — Next.js 16.1, React 19.2, Tailwind CSS 4, shadcn/ui, Zustand,
   TanStack Query, Recharts, next-intl
-- **Docs** — Fumadocs (MDX with full-text search), served at `/docs`
+- **Docs** — [burnerbyte.com/docs](https://burnerbyte.com/docs), built from
+  [burnerbyte-landing](https://github.com/AmJaradat01/burnerbyte-landing)
 - **Storage** — PostgreSQL 16, Redis 7, MinIO or any S3-compatible store
 - **Tests** — Go `testing` with `rapid` property tests; Vitest and Testing
   Library on the frontend
@@ -291,11 +291,30 @@ instance it is connected to, with credentials stripped.
 
 ## Documentation
 
-The running frontend serves full documentation at `/docs` — installation,
-Docker, configuration reference, architecture, RBAC, domains, inboxes, webhooks,
-API keys, SSO, the settings cascade, production hardening, reverse proxy, DNS
-setup, monitoring, and troubleshooting. The source lives in
-[`web/content/docs`](web/content/docs).
+**[burnerbyte.com/docs](https://burnerbyte.com/docs)** — installation, Docker,
+the configuration reference, architecture, RBAC, domains, inboxes, webhooks, API
+keys, SSO, the settings cascade, production hardening, reverse proxy, DNS setup,
+monitoring, and troubleshooting.
+
+The source lives in
+[burnerbyte-landing](https://github.com/AmJaradat01/burnerbyte-landing) under
+`content/docs`, and that is where corrections go — every published page links to
+its own file. Each page also states which release it has been checked against,
+and that repo's CI warns when the docs fall behind a new tag here.
+
+Earlier releases served the docs from the app itself at `/docs`, rendered from
+MDX in this repository. Publishing them instead means they are readable before
+you have an instance to read them on, indexed once rather than once per
+deployment, and this image no longer carries a documentation renderer, a syntax
+highlighter and a search endpoint it used for nothing else.
+
+Set `DOCS_URL` to repoint every "Docs" link in the app at a mirror you host. It
+is a build arg like the other `NEXT_PUBLIC_*` values, so rebuild the frontend
+image after changing it.
+
+**When you change behaviour, update the docs in the other repo in the same
+change.** They are no longer in this tree, which makes that a habit rather than
+something the diff reminds you of.
 
 Design documentation lives in [`PRODUCT.md`](PRODUCT.md) (users, principles) and
 [`DESIGN.md`](DESIGN.md) (palette, typography, components).

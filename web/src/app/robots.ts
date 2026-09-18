@@ -8,7 +8,7 @@ export default function robots(): MetadataRoute.Robots {
       // Allow search engines to index public pages
       {
         userAgent: "*",
-        allow: ["/", "/login", "/docs", "/docs/"],
+        allow: ["/", "/login"],
         disallow: [
           "/dashboard",
           "/settings",
@@ -40,7 +40,7 @@ export default function robots(): MetadataRoute.Robots {
       },
       {
         userAgent: "OAI-SearchBot",
-        allow: ["/", "/docs/"],
+        allow: ["/"],
         disallow: ["/dashboard", "/settings", "/api/"],
       },
       {
