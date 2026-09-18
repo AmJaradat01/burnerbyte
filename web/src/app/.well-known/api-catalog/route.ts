@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { docsUrl } from "@/lib/docs-url";
 
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://burnerbyte.com";
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || `${BASE_URL}/api/v1`;
@@ -16,7 +17,7 @@ export function GET() {
         ],
         "service-doc": [
           {
-            href: `${BASE_URL}/docs/api`,
+            href: docsUrl("api"),
             type: "text/html",
           },
         ],

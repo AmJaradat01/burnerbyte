@@ -9,7 +9,7 @@ import { useOrgStore } from "@/stores/org-store";
  * Paths where the onboarding redirect should NOT fire.
  * These are flows the user may be in the middle of that should not be interrupted.
  */
-const ONBOARDING_SKIP_PATHS = ["/onboarding", "/invite", "/setup", "/docs", "/profile"];
+const ONBOARDING_SKIP_PATHS = ["/onboarding", "/invite", "/setup", "/profile"];
 
 export function useOrgBootstrap() {
   const user = useAuthStore((s) => s.user);
